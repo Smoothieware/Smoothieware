@@ -179,9 +179,6 @@ void Jogger::on_main_loop(void *argument)
                 std::string g(command, n);
                 Gcode gc(g, &(StreamOutput::NullStream));
                 THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
-
-                //debug use: echo the command
-                //THEKERNEL->streams->printf(">>> %s\n", command);
             }
         }
         else {
@@ -189,21 +186,13 @@ void Jogger::on_main_loop(void *argument)
             //only activate the module if the conveyor is idle (i.e. not half-way through a job/print)
             if (THECONVEYOR->is_idle()) {
                 this->is_jogging = true;
-                THEKERNEL->streams->printf(">>> ENABLED\n");
 
-                //check if the robot is in absolute mode
-                if (THEROBOT->absolute_mode) {
-                    //change the mode to relatiive with G91
-                    Gcode gcrel("G91", &(StreamOutput::NullStream));
-                    THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcrel);
+                //save the current robot state (abs/rel mode, seek rate)
+                THEROBOT->push_state();
 
-                    //remember to change back to absolute later
-                    this->changed_mode = true;
-                }
-                else {
-                    //no need to make a change to abs/rel mode
-                    this->changed_mode = false;
-                }
+                //change the mode to relative with G91
+                Gcode gcrel("G91", &(StreamOutput::NullStream));
+                THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcrel);
             }
         }
     }
@@ -212,14 +201,9 @@ void Jogger::on_main_loop(void *argument)
         //check if the robot is done moving from previous jogging
         if (THECONVEYOR->is_idle()) {
             this->is_jogging = false;
-            THEKERNEL->streams->printf(">>> DISABLED\n");
 
-            //check if the jogger changed the robot's mode when enabling jogging
-            if (this->changed_mode) {
-                //change the mode back to absolute with G90
-                Gcode gcabs("G90", &(StreamOutput::NullStream));
-                THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcabs);
-            }
+            //restore the robot's state before jogging (abs/rel mode, seek rate)
+            THEROBOT->pop_state();
         }
     }
 }
