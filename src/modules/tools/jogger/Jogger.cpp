@@ -173,8 +173,8 @@ void Jogger::on_main_loop(void *argument)
                 }
                 spd = sqrtf(spd);
 
-                //use segment frequency (f) to calculate step scale factor (ssf = speed/f)
-                float ssf = spd / this->segment_frequency;
+                //use segment frequency (f) to calculate step scale factor (ssf (mm/segment) = speed (mm/s) / f (segments/s))
+                float ssf = spd / 60 / this->segment_frequency;
 
                 //issue the Gcode for a small movement
                 char command[32];
