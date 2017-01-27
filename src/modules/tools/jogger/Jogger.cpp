@@ -72,7 +72,7 @@ void Jogger::on_gcode_received(void *argument)
     if (gcode->has_m) {
         if (gcode->m == 777) {
             //print out parameters
-            THEKERNEL->streams->printf("%+0.2f, %+0.2f    Max: %0.1f, Dead: %f, Nl: %f, SF: %f, Rate: %d\n", this->position[0], this->position[1], max_speed, dead_zone, nonlinearity, step_scale_factor, refresh_rate);
+            THEKERNEL->streams->printf("%+0.2f, %+0.2f    Max: %0.1f, Dead: %f, Nl: %f, SF: %d, Rate: %d\n", this->position[0], this->position[1], max_speed, dead_zone, nonlinearity, segment_frequency, refresh_rate);
         }
     }
 }
