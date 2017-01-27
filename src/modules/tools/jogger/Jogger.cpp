@@ -34,6 +34,9 @@
 #define axis4_data_source_checksum          CHECKSUM("data_source_epsilon")
 #define axis5_data_source_checksum          CHECKSUM("data_source_zeta")
 
+#define m_code_set_checksum                 CHECKSUM("m_code_set")
+#define m_code_toggle_checksum              CHECKSUM("m_code_toggle")
+
 #define abs(a) ((a<0.0f) ? -a : a)
 #define sign(a) ((a<0.0f) ? -1 : 1)
 
@@ -64,15 +67,17 @@ void Jogger::on_module_loaded()
 
 }
 
-//add config for which M-code(s) to respond to
-//add code to respond to M-codes for plane change
+//TODO: add code to respond to M-codes for jog axis changes
 void Jogger::on_gcode_received(void *argument)
 {
     Gcode* gcode = static_cast<Gcode*>(argument);
     if (gcode->has_m) {
-        if (gcode->m == 777) {
-            //print out parameters
-            THEKERNEL->streams->printf("%+0.2f, %+0.2f    Max: %0.1f, Dead: %f, Nl: %f, SF: %d, Rate: %d\n", this->position[0], this->position[1], max_speed, dead_zone, nonlinearity, segment_frequency, refresh_rate);
+        if (gcode->m == this->m_code_set) {
+            //print out the command as a test
+            THEKERNEL->streams->printf(">>> %s\n", gcode->get_command());
+        }
+        else if (gcode->m == this->m_code_toggle) {
+            THEKERNEL->streams->printf(">>> TOGGLE\n");
         }
     }
 }
@@ -87,6 +92,8 @@ void Jogger::on_config_reload(void *argument)
     this->nonlinearity = THEKERNEL->config->value(jogger_checksum, nonlinearity_checksum)->by_default(this->nonlinearity)->as_number();
     this->refresh_rate = THEKERNEL->config->value(jogger_checksum, refresh_rate_checksum)->by_default(this->refresh_rate)->as_number();
     this->segment_frequency = THEKERNEL->config->value(jogger_checksum, segment_frequency_checksum)->by_default(this->segment_frequency)->as_number();
+    this->m_code_set = THEKERNEL->config->value(jogger_checksum, m_code_set_checksum)->by_default(this->m_code_set)->as_number();
+    this->m_code_toggle = THEKERNEL->config->value(jogger_checksum, m_code_toggle_checksum)->by_default(this->m_code_toggle)->as_number();
     
     //load the names of the joystick modules where each axis will get its data
     uint16_t axisN_data_source_checksum[] = { axis0_data_source_checksum, axis1_data_source_checksum, axis2_data_source_checksum, axis3_data_source_checksum, axis4_data_source_checksum, axis5_data_source_checksum };
@@ -174,7 +181,7 @@ void Jogger::on_main_loop(void *argument)
                 spd = sqrtf(spd);
 
                 //use segment frequency (f) to calculate step scale factor (ssf (mm/segment) = speed (mm/s) / f (segments/s))
-                float ssf = spd / 60 / this->segment_frequency;
+                float ssf = spd / 60.0f / this->segment_frequency;
 
                 //issue the Gcode for a small movement
                 char command[32];

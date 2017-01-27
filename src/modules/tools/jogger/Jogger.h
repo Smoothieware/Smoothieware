@@ -39,6 +39,9 @@ private:
     int refresh_rate = 100; //number of jog speed updates per second (absolute max = base_step_frequency (100 kHz))
     int segment_frequency = 100; //approximate number of segments per second during jogging
 
+    uint16_t m_code_set = 777; //m-code number to use when setting jog axes
+    uint16_t m_code_toggle = 778; //m-code number to use when toggling jog axes
+
     uint16_t axis_data_source[NUM_JOG_AXES] = {}; //checksums of the joystick module name from which to obtain data for axis n
 
 };
