@@ -136,16 +136,9 @@ void DirectJogScreen::on_exit()
 
 void DirectJogScreen::get_actuator_pos()
 {
-        // get real time positions
-        ActuatorCoordinates current_position{
-            THEROBOT->actuators[X_AXIS]->get_current_position(),
-            THEROBOT->actuators[Y_AXIS]->get_current_position(),
-            THEROBOT->actuators[Z_AXIS]->get_current_position()
-        };
-
         // get machine position from the actuator position using FK
         float mpos[3];
-        THEROBOT->arm_solution->actuator_to_cartesian(current_position, mpos);
+        THEROBOT->get_current_machine_position(mpos);
         Robot::wcs_t wpos= THEROBOT->mcs2wcs(mpos);
         this->pos[0]= THEROBOT->from_millimeters(std::get<X_AXIS>(wpos));
         this->pos[1]= THEROBOT->from_millimeters(std::get<Y_AXIS>(wpos));

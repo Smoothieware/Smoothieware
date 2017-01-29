@@ -26,6 +26,7 @@ public:
     void on_second_tick(void *);
     static bool parse_command(const char *cmd, string args, StreamOutput *stream);
     static void print_mem(StreamOutput *stream) { mem_command("", stream); }
+    static void version_command(string parameters, StreamOutput *stream );
 
 private:
     static void ls_command(string parameters, StreamOutput *stream );
@@ -41,7 +42,6 @@ private:
     static void reset_command(string parameters, StreamOutput *stream );
     static void dfu_command(string parameters, StreamOutput *stream );
     static void help_command(string parameters, StreamOutput *stream );
-    static void version_command(string parameters, StreamOutput *stream );
     static void get_command(string parameters, StreamOutput *stream );
     static void set_temp_command(string parameters, StreamOutput *stream );
     static void calc_thermistor_command( string parameters, StreamOutput *stream);

@@ -876,7 +876,7 @@ void TMC26X::dumpStatus(StreamOutput *stream, bool readable)
         }
 
         int value = getReadoutValue();
-        stream->printf("Microstep postion phase A: %d\n", value);
+        stream->printf("Microstep position phase A: %d\n", value);
 
         value = getCurrentStallGuardReading();
         stream->printf("Stall Guard value: %d\n", value);

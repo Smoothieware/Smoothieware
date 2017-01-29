@@ -59,7 +59,7 @@ class MotorDriverControl : public Module {
         uint32_t current; // in milliamps
         uint32_t microsteps;
 
-        char designator;
+        char axis;
 
         struct{
             uint8_t id:4;

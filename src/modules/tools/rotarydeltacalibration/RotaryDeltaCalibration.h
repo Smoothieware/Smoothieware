@@ -14,5 +14,5 @@ public:
 
 private:
     void on_gcode_received(void *argument);
-    float *get_homing_offset();
+    bool get_homing_offset(float*);
 };

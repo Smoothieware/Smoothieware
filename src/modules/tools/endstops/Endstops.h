@@ -8,13 +8,15 @@
 #pragma once
 
 #include "libs/Module.h"
-#include "libs/Pin.h"
+#include "Pin.h"
 
 #include <bitset>
 #include <array>
+#include <map>
 
 class StepperMotor;
 class Gcode;
+class Pin;
 
 class Endstops : public Module{
     public:
@@ -23,40 +25,68 @@ class Endstops : public Module{
         void on_gcode_received(void* argument);
 
     private:
-        void load_config();
-        void home(std::bitset<3> a);
+        bool load_old_config();
+        bool load_config();
+        void get_global_configs();
+        using axis_bitmap_t = std::bitset<6>;
+        void home(axis_bitmap_t a);
         void home_xy();
-        void back_off_home(std::bitset<3> axis);
-        void move_to_origin(std::bitset<3> axis);
+        void back_off_home(axis_bitmap_t axis);
+        void move_to_origin(axis_bitmap_t axis);
         void on_get_public_data(void* argument);
         void on_set_public_data(void* argument);
         void on_idle(void *argument);
-        bool debounced_get(int pin);
+        bool debounced_get(Pin *pin);
         void process_home_command(Gcode* gcode);
         void set_homing_offset(Gcode* gcode);
         uint32_t read_endstops(uint32_t dummy);
+        void handle_park(Gcode * gcode);
 
-        float homing_position[3];
-        float home_offset[3];
+        // global settings
         float saved_position[3]{0}; // save G28 (in grbl mode)
-        float alpha_max, beta_max, gamma_max;
-
         uint32_t debounce_count;
         uint32_t  debounce_ms;
-        float  retract_mm[3];
-        float  trim_mm[3];
-        float  fast_rates[3];
-        float  slow_rates[3];
-        Pin    pins[6];
-        std::array<uint16_t, 3> debounce;
+        axis_bitmap_t axis_to_home;
 
-        std::bitset<3> home_direction;
-        std::bitset<3> limit_enable;
-        std::bitset<3> axis_to_home;
+        float trim_mm[3];
 
+        // per endstop settings
+        using endstop_info_t = struct {
+            Pin pin;
+            struct {
+                uint16_t debounce:16;
+                char axis:8; // one of XYZABC
+                uint8_t axis_index:3;
+                bool limit_enable:1;
+            };
+        };
+
+        using homing_info_t = struct {
+            float homing_position;
+            float home_offset;
+            float max_travel;
+            float retract;
+            float fast_rate;
+            float slow_rate;
+            endstop_info_t *pin_info;
+
+            struct {
+                char axis:8; // one of XYZABC
+                uint8_t axis_index:3;
+                bool home_direction:1; // true min or false max
+                bool homed:1;
+            };
+        };
+
+        // array of endstops
+        std::vector<endstop_info_t *> endstops;
+
+        // axis that can be homed, 0,1,2 always there and optionally 3 is A, 4 is B, 5 is C
+        std::vector<homing_info_t> homing_axis;
+
+        // Global state
         struct {
-            uint8_t homing_order:6;
-            uint8_t bounce_cnt:4;
+            uint32_t homing_order:18;
             volatile char status:3;
             bool is_corexy:1;
             bool is_delta:1;

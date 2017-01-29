@@ -26,7 +26,7 @@ private:
     float findBed();
     void setAdjustFunction(bool on);
     void print_bed_level(StreamOutput *stream);
-    void doCompensation(float target[3]);
+    void doCompensation(float *target, bool inverse);
     void reset_bed_level();
     void save_grid(StreamOutput *stream);
     bool load_grid(StreamOutput *stream);

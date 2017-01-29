@@ -51,8 +51,8 @@ class Kernel {
         bool is_grbl_mode() const { return grbl_mode; }
         bool is_ok_per_line() const { return ok_per_line; }
 
-        void set_feed_hold(bool f) { feed_hold= f; }
-        bool get_feed_hold() const { return feed_hold; }
+        // void set_feed_hold(bool f) { feed_hold= f; }
+        // bool get_feed_hold() const { return feed_hold; }
 
         std::string get_query_string();
 
