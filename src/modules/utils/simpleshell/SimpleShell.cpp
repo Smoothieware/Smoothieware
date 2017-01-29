@@ -175,6 +175,13 @@ void SimpleShell::on_gcode_received(void *argument)
 
     if (gcode->has_m) {
         if (gcode->m == 20) { // list sd card
+
+            if (gcode->has_letter('S')) {
+                int s_value = static_cast<int>(gcode->get_value('S'));
+                if (s_value == 2) {
+                    return; // Bail to have Reporter handle the JSON output
+                }
+            }
             gcode->stream->printf("Begin file list\r\n");
             ls_command("/sd", gcode->stream);
             gcode->stream->printf("End file list\r\n");
@@ -1142,4 +1149,3 @@ void SimpleShell::help_command( string parameters, StreamOutput *stream )
     stream->printf("thermistors - print out the predefined thermistors\r\n");
     stream->printf("md5sum file - prints md5 sum of the given file\r\n");
 }
-

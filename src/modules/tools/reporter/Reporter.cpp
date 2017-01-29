@@ -28,6 +28,7 @@
 #include "checksumm.h"
 #include "ConfigValue.h"
 #include "Config.h"
+#include "DirHandle.h"
 
 #include <math.h>
 #include <vector>
@@ -157,6 +158,74 @@ static std::string get_probe_state()
     return string_stream.getOutput().substr(probe_start + probe_label.length());
 }
 
+void json_ls_command(string path, StreamOutput *stream)
+{
+    // If the S2 parameter is used on RepRapFirmware, then the file list is returned in JSON format
+    // as a single array called "files" with each name that corresponds to a subdirectory preceded
+    // by an asterisk, and the directory is returned in variable "dir". Example:
+    //     M20 S2 P/gcodes
+    //     {"dir":"\/gcodes","files":["4-piece-1-2-3-4.gcode","Hinged_Box.gcode","*Calibration pieces"]}
+
+    if (path.compare("0:/gcodes") == 0)
+        // TODO: remove this hack. PanelDue send default path for RepRapFirmware
+        path = "/";
+
+    path = absolute_from_relative(path);
+
+    stream->printf("{\"dir\":\"%s\"", path.c_str());
+    stream->printf(",\"files\":");
+
+    char ch = '[';
+
+    DIR *d;
+    struct dirent *p;
+    d = opendir(path.c_str());
+
+    if (d != NULL) {
+        while ((p = readdir(d)) != NULL) {
+            stream->printf("%c\"%s%s\"", ch, ((p->d_isdir) ? "*" : ""), lc(string(p->d_name)).c_str());
+            ch = ',';
+        }
+
+        closedir(d);
+    }
+
+    stream->printf((ch == '[') ? "[]}\r\n" : "]}\r\n");
+}
+
+void json_file_info(string file, StreamOutput *stream)
+{
+    // M36 filename.gco
+    // Returns information for the specified SD card file in JSON format. A sample response is:
+    // {"err":0,"size":457574,"height":4.00,"layerHeight":0.25,"filament":[6556.3],
+    //   "generatedBy":"Slic3r 1.1.7 on 2014-11-09 at 17:11:32"}
+    //  The "err" field is zero if successful, nonzero if the file was not found or an error occurred
+    // while processing it. The "size" field should always be present if the operation was successful.
+    // The presence or absence of other fields depends on whether the corresponding values could be found
+    // by reading the file.
+    // The "filament" field is an array of the filament lengths required from each spool. The size is in
+    // bytes, all other values are in mm. The fields may appear in any order, and additional fields may be
+    // present.
+    // If the file name parameter is not supplied and a file on the SD card is currently being printed,
+    // then information for that file is returned including additional field "fileName".
+    // This feature is used by the web interface and by PanelDue, so that if a connection is made when a
+    // file is already being printed, the name and other information about that file can be shown.
+
+    file = absolute_from_relative(file);
+
+    stream->printf("{\"err\":%d", 0);
+    stream->printf(",\"size\":%d", 12345);
+    stream->printf(",\"height\":%f", 40.00);
+    stream->printf(",\"layerHeight\":%f", 0.20);
+    stream->printf(",\"filament\":[%f]",123.4);
+
+    stream->printf(",\"generatedBy\":\"%s\"", file.c_str());
+    // TODO: remove me
+    // hijack for debuging file path output
+    // stream->printf(",\"generatedBy\":\"%s\"", "<Not implemented>");
+
+    stream->printf("}\r\n");
+}
 
 Reporter::Reporter()
 {
@@ -367,7 +436,7 @@ void Reporter::on_gcode_received(void *argument)
                 // one of "cartesian", "delta", "corexy, "corexz" etc.
                 gcode->stream->printf(",\"geometry\":\"%s\"", geometry.c_str());
 
-                gcode->stream->printf(",\"firmwareName\":\"Smoothieware\"");
+                gcode->stream->printf(",\"firmwareName\":\"Smoothie\"");
 
                 gcode->stream->printf(",\"numTools\":%d", tool_count);
             }
@@ -383,7 +452,35 @@ void Reporter::on_gcode_received(void *argument)
             }
 
             // JSon must have an EOL
-            gcode->stream->printf("}\n");
+            gcode->stream->printf("}\r\n");
         }
+    } else if (gcode->has_m && gcode->m == 20 && gcode->has_letter('S')) {
+        int s_value = static_cast<int>(gcode->get_value('S'));
+
+        if (s_value != 2)
+            return;             // _Only_ handle M20 S2: JSON output
+
+        std::string dir = "/";
+
+        if (gcode->has_letter('P')) {
+            string possible_command = gcode->get_command();
+
+            size_t beginning = possible_command.find_first_of("P");
+
+            if (beginning != string::npos)
+                dir = possible_command.substr(beginning + 1, possible_command.size() - beginning + 1);
+        }
+        json_ls_command(dir, gcode->stream);
+    } else if (gcode->has_m && gcode->m == 36) {
+        string possible_command = gcode->get_command();
+
+        size_t beginning = possible_command.find_first_of(" ");
+
+        std::string file = "";
+
+        if (beginning != string::npos)
+            file = possible_command.substr(beginning + 1, possible_command.size() - beginning + 1);
+
+        json_file_info(file, gcode->stream);
     }
 }
