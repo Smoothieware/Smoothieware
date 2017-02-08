@@ -222,8 +222,15 @@ bool DeltaGridStrategy::load_grid(StreamOutput *stream)
     }
 
     if(radius != grid_radius) {
-        stream->printf("warning:grid radius is different read %f - config %f, overriding config\n", radius, grid_radius);
-        grid_radius = radius;
+        if(is_square) {
+            stream->printf("error:bed dimensions changed read %f - config %f\n", radius, grid_radius);
+            fclose(fp);
+            return false;
+
+        }else{
+            stream->printf("warning:grid radius is different read %f - config %f, overriding config\n", radius, grid_radius);
+            grid_radius = radius;
+        }
     }
 
     for (int y = 0; y < grid_size; y++) {
