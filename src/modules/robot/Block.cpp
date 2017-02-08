@@ -306,8 +306,8 @@ void Block::prepare()
         if(steps == 0) continue;
 
         float aratio = inv * steps;
-        this->tick_info[m].steps_per_tick = STEPTICKER_TOFP((this->initial_rate * aratio) / STEP_TICKER_FREQUENCY); // steps/sec / tick frequency to get steps per tick in 2.30 fixed point
-        this->tick_info[m].counter = 0; // 2.30 fixed point
+        this->tick_info[m].steps_per_tick = STEPTICKER_TOFP((this->initial_rate * aratio) / STEP_TICKER_FREQUENCY); // steps/sec / tick frequency to get steps per tick in 2.62 fixed point
+        this->tick_info[m].counter = 0; // 2.62 fixed point
         this->tick_info[m].step_count = 0;
         this->tick_info[m].next_accel_event = this->total_move_ticks + 1;
 
