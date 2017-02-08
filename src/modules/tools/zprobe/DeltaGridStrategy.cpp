@@ -122,14 +122,19 @@ bool DeltaGridStrategy::handleConfig()
       y_max = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, y_max_checksum)->by_default(0.0F)->as_number();
 
       // intelligently set defaults.
-      if (x_max >= 1.0F) grid_radius = x_max;
-      if (x_max < 1.0F) x_max = grid_radius;
-      if (y_max >= 1.0F) grid_radius = y_max;
-      if (y_max < 1.0F) y_max = grid_radius;
-      if (x_max >= 1.0F && y_max >= 1.0F) grid_radius = std::max(x_max, y_max);
+      // make grid_radius big enough so that the square defined by x_max and y_max
+      // is located fully within (circumscribed)
+      if (x_max >= 0.0F) grid_radius = x_max;
+      if (x_max < 0.0F) x_max = grid_radius;
+      if (y_max >= 0.0F) grid_radius = y_max;
+      if (y_max < 0.0F) y_max = grid_radius;
+      if (x_max >= 0.0F && y_max >= 0.0F) grid_radius = std::max(x_max, y_max);
+      if (x_max >= 0.0F || y_max >= 0.0F) grid_radius = sqrtf(powf(grid_radius,2.0F) + powf(grid_radius,2.0F));
     }
     else
     {
+      // default here defines a square whose sides are tangental to the circle
+      // defined by grid_radius
       x_max = grid_radius;
       y_max = grid_radius;
     }
