@@ -86,25 +86,33 @@ void ZProbe::config_load()
     for( auto cs : modules ){
         if( THEKERNEL->config->value(leveling_strategy_checksum, cs, enable_checksum )->as_bool() ){
             bool found= false;
+            LevelingStrategy *ls= nullptr;
+
             // check with each known strategy and load it if it matches
             switch(cs) {
                 case delta_calibration_strategy_checksum:
-                    this->strategies.push_back(new DeltaCalibrationStrategy(this));
+                    ls= new DeltaCalibrationStrategy(this);
                     found= true;
                     break;
 
                 case three_point_leveling_strategy_checksum:
                     // NOTE this strategy is mutually exclusive with the delta calibration strategy
-                    this->strategies.push_back(new ThreePointStrategy(this));
+                    ls= new ThreePointStrategy(this);
                     found= true;
                     break;
 
                 case delta_grid_leveling_strategy_checksum:
-                    this->strategies.push_back(new DeltaGridStrategy(this));
+                    ls= new DeltaGridStrategy(this);
                     found= true;
                     break;
             }
-            if(found) this->strategies.back()->handleConfig();
+            if(found) {
+                if(ls->handleConfig()) {
+                    this->strategies.push_back(ls);
+                }else{
+                    delete ls;
+                }
+            }
         }
     }
 

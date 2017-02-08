@@ -91,8 +91,8 @@
 #define save_checksum                CHECKSUM("save")
 #define probe_offsets_checksum       CHECKSUM("probe_offsets")
 #define initial_height_checksum      CHECKSUM("initial_height")
-#define x_max_checksum               CHECKSUM("x_max")
-#define y_max_checksum               CHECKSUM("y_max")
+#define x_max_checksum               CHECKSUM("max_x")
+#define y_max_checksum               CHECKSUM("max_y")
 #define do_home_checksum             CHECKSUM("do_home")
 #define is_square_checksum           CHECKSUM("is_square")
 
@@ -121,7 +121,7 @@ bool DeltaGridStrategy::handleConfig()
         x_max = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, x_max_checksum)->by_default(0.0F)->as_number();
         y_max = THEKERNEL->config->value(leveling_strategy_checksum, delta_grid_leveling_strategy_checksum, y_max_checksum)->by_default(0.0F)->as_number();
 
-        if (x_max >= 0.0F && y_max >= 0.0F) {
+        if (x_max > 0.0F && y_max > 0.0F) {
             grid_radius = hypotf(x_max, y_max);
 
         }else{
@@ -454,6 +454,9 @@ bool DeltaGridStrategy::doProbe(Gcode *gc)
     }
 
     gc->stream->printf("Probe start ht is %f mm, probe radius is %f mm, grid size is %dx%d\n", initial_z, radius, grid_size, grid_size);
+    if(is_square) {
+        gc->stream->printf("  rectangular bed x +/-%f, y +/-%f\n", x_max, y_max);
+    }
 
     // do first probe for 0,0
     float mm;
@@ -481,6 +484,7 @@ bool DeltaGridStrategy::doProbe(Gcode *gc)
             // avoid probing outside of x min/max on a cartesian
             if (is_square) {
                 if (xProbe < -x_max || xProbe > x_max || yProbe < -y_max || yProbe > y_max) continue;
+
             } else {
                 // Avoid probing the corners (outside the round or hexagon print surface) on a delta printer.
                 float distance_from_center = sqrtf(xProbe * xProbe + yProbe * yProbe);
