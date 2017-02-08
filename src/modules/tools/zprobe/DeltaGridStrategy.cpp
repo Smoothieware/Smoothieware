@@ -91,8 +91,8 @@
 #define save_checksum                CHECKSUM("save")
 #define probe_offsets_checksum       CHECKSUM("probe_offsets")
 #define initial_height_checksum      CHECKSUM("initial_height")
-#define x_max_checksum               CHECKSUM("x_max")
-#define y_max_checksum               CHECKSUM("y_max")
+#define x_max_checksum               CHECKSUM("max_x")
+#define y_max_checksum               CHECKSUM("max_y")
 #define do_home_checksum             CHECKSUM("do_home")
 #define is_square_checksum           CHECKSUM("is_square")
 
