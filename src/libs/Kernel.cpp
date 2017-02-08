@@ -75,7 +75,8 @@ Kernel::Kernel(){
 
     this->current_path   = "/";
 
-    // add Juicyboard I2C as part of kernel
+    // Juicyware
+    // add Juicyboard I2C as part of kernel to save memory
     this->i2c = new R1000A_I2C();
 
     // Configure UART depending on MRI config

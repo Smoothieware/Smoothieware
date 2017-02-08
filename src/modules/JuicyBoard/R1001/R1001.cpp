@@ -89,7 +89,6 @@ const uint16_t motordecay_checksum[] = {
 
 R1001::R1001(){
     // Default Constructor
-    //this->i2c = new R1000A_I2C;
 }
 
 void R1001::on_module_loaded(){
@@ -261,7 +260,7 @@ void R1001::setMotorCurrent(int slotnum, int idrv){
 
     i2cbuf[0] = idrvl;
     i2cbuf[1] = idrvh;
-    if (this->i2c.I2C_WriteREG(slotnum, REG_IDRVL, i2cbuf,2) == 0){
+    if (THEKERNEL->i2c->I2C_WriteREG(slotnum, REG_IDRVL, i2cbuf,2) == 0){
         // execute only if reading operation is successful
         THEKERNEL->streams->printf("Written 0x%x to IDRVL\r\n", i2cbuf[0]);
         THEKERNEL->streams->printf("Written 0x%x to IDRVH\r\n", i2cbuf[1]);
@@ -280,7 +279,7 @@ void R1001::setSTP(int slotnum, int stepres){
     char i2cbuf[2];
 
     i2cbuf[0] = (char) stepres;
-    if (this->i2c.I2C_WriteREG(slotnum, REG_STP, i2cbuf,1) == 0){
+    if (THEKERNEL->i2c->I2C_WriteREG(slotnum, REG_STP, i2cbuf,1) == 0){
         // execute only if reading operation is successful
         THEKERNEL->streams->printf("#%d Step resolution 2^(%d) = %d\r\n", slotnum, stepres, 1 << stepres);
     }
@@ -310,7 +309,7 @@ void R1001::setDriverSleep(int slotnum, int sleep){
     }
 
     i2cbuf[0] = MCTL;
-    if (this->i2c.I2C_WriteREG(slotnum, REG_MCTL, i2cbuf,1) == 0){
+    if (THEKERNEL->i2c->I2C_WriteREG(slotnum, REG_MCTL, i2cbuf,1) == 0){
         // execute only if reading operation is successful
         THEKERNEL->streams->printf("Set #%d Sleep to %d\r\n", slotnum, sleep);
     }
@@ -351,7 +350,7 @@ void R1001::setDecay(int slotnum, int decay){
 
     THEKERNEL->streams->printf("mode\r\n");
     i2cbuf[0] = MCTL;
-    if (!(this->i2c.I2C_WriteREG(slotnum, REG_MCTL, i2cbuf,1) == 0)) {
+    if (!(THEKERNEL->i2c->I2C_WriteREG(slotnum, REG_MCTL, i2cbuf,1) == 0)) {
         // output an error message
         THEKERNEL->streams->printf("Slot %d did not ack!\r\n", slotnum);
     }
@@ -369,7 +368,7 @@ void R1001::resetDriver(int slotnum){
     MCTL |= 0x80;          // set reset bit to 1
 
     i2cbuf[0] = MCTL;
-    if (this->i2c.I2C_WriteREG(slotnum, REG_MCTL, i2cbuf,1) == 0){
+    if (THEKERNEL->i2c->I2C_WriteREG(slotnum, REG_MCTL, i2cbuf,1) == 0){
         // execute only if reading operation is successful
         THEKERNEL->streams->printf("Resetting #%d motor driver...\r\n", slotnum);
         wait_ms(DRESET_DELAY);              // add some delay to wait for driver to be reset
@@ -390,7 +389,7 @@ int R1001::getSTP(int slotnum){
 
     char i2cbuf[2];
 
-    if (this->i2c.I2C_ReadREG(slotnum, REG_STP, i2cbuf,1) == 0){
+    if (THEKERNEL->i2c->I2C_ReadREG(slotnum, REG_STP, i2cbuf,1) == 0){
         // if execution is successfull return current value
         return i2cbuf[0];
     }
@@ -406,7 +405,7 @@ int R1001::getMCTL(int slotnum){
 
     char i2cbuf[2];
 
-    if (this->i2c.I2C_ReadREG(slotnum, REG_MCTL, i2cbuf,1) == 0){
+    if (THEKERNEL->i2c->I2C_ReadREG(slotnum, REG_MCTL, i2cbuf,1) == 0){
         // if execution is successfull return current value
         return i2cbuf[0];
     }
@@ -422,7 +421,7 @@ int R1001::getMSTAT(int slotnum){
 
     char i2cbuf[2];
 
-    if (this->i2c.I2C_ReadREG(slotnum, REG_MSTAT, i2cbuf,1) == 0){
+    if (THEKERNEL->i2c->I2C_ReadREG(slotnum, REG_MSTAT, i2cbuf,1) == 0){
         // if execution is successfull return current value
         return i2cbuf[0];
     }
@@ -438,7 +437,7 @@ int R1001::getMotorCurrent(int slotnum){
 
     char i2cbuf[2];
 
-    if (this->i2c.I2C_ReadREG(slotnum, REG_IDRVL, i2cbuf,2) == 0){
+    if (THEKERNEL->i2c->I2C_ReadREG(slotnum, REG_IDRVL, i2cbuf,2) == 0){
         // if execution is successfull return current value
         return 256*(unsigned int)i2cbuf[1] + (unsigned int)i2cbuf[0];
     }

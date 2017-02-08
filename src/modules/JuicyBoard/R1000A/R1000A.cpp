@@ -30,7 +30,6 @@
 
 R1000A::R1000A(){
     // Default Constructor
-    //this->i2c = new R1000A_I2C;
     this->ModResetPin = new Pin();                      // define new
     //this->ModResetPin->from_string("1.0");
     this->ModResetPin->from_string("3.25");
@@ -95,16 +94,6 @@ void R1000A::on_console_line_received(void* argument){
             // reset all modules
             readPowerMon();
         }
-        else if (cmd == "testfunc"){
-            // test voltage conversion functions
-            char tmp[2];
-            tmp[0] = 0xc1;
-            tmp[1] = 0x80;
-            THEKERNEL->streams->printf("Converting CURR 0x%x%x = %.2f mV\r\n", tmp[0], tmp[1], evalCURR(tmp));
-            tmp[0] = 0x3e;
-            tmp[1] = 0x80;
-            THEKERNEL->streams->printf("Converting CURR 0x%x%x = %.2f mV\r\n", tmp[0], tmp[1], evalCURR(tmp));
-        }
     }
 }
 
@@ -121,12 +110,12 @@ void R1000A::ScanI2CBus(){
     
     for (i=1; i<=15; i++){
         // check for slave ack
-        if (i2c.I2C_WriteREG(i, 0x01, i2cbuf, 1) == 0){
+        if (THEKERNEL->i2c->I2C_WriteREG(i, 0x01, i2cbuf, 1) == 0){
             // continue reading from slave
             SlotPlatID[i] = (int)i2cbuf[0];
-            i2c.I2C_ReadREG(i, 0x02, i2cbuf, 2);      // get device ID
+            THEKERNEL->i2c->I2C_ReadREG(i, 0x02, i2cbuf, 2);      // get device ID
             SlotDevID[i] = (int)i2cbuf[0];
-            i2c.I2C_ReadREG(i, 0x03, i2cbuf, 2);      // get firmware version
+            THEKERNEL->i2c->I2C_ReadREG(i, 0x03, i2cbuf, 2);      // get firmware version
             SlotDevFW[i] = (int)i2cbuf[0];
 
         }
@@ -167,7 +156,7 @@ void R1000A::getTemp(string slotnum){
     if ((slotn >0) && (slotn < 16)){
         // execute only if a valid slot number range between 0 and 15
         char i2cbuf[2];
-        if (this->i2c.I2C_ReadREG(slotn, REG_TEMP, i2cbuf, 1) == 0){
+        if (THEKERNEL->i2c->I2C_ReadREG(slotn, REG_TEMP, i2cbuf, 1) == 0){
             // execute only if reading operation is successful
             THEKERNEL->streams->printf("Slot %lu Temp : %d\r\n", slotn, i2cbuf[0]);
         }
@@ -202,18 +191,19 @@ void R1000A::InitPowerMon(void){
         THEKERNEL->streams->printf("Readback INL322 Config 0x%x%x\r\n", i2cbuf[0], i2cbuf[1]);
     }
     else{
-        THEKERNEL->streams->printf("Unable to read INL322 config!\r\n");
+        this->i2creaderr();
     }
 
     // enable all 3 channels, set sampling rate to 1.1ms for bus and shunt, enable 16x averaging
-    i2cbuf[0] = 0x75;
+//    i2cbuf[0] = 0x75;               // set 16x averaging
+    i2cbuf[0] = 0x77;               // set 64x averaging
     i2cbuf[1] = 0x27;
     if (THEKERNEL->i2c->I2C_WriteREG(PWRMON_SLOT, 0x00, i2cbuf, 2) == 0){
         // successfully wrote config to INL chip
         THEKERNEL->streams->printf("Successfully wrote config 0x%x%x to INL322\r\n", i2cbuf[0], i2cbuf[1]);
     }
     else{
-        THEKERNEL->streams->printf("Unable to write INL322 config!\r\n");
+        this->i2creaderr();
     }
 
     // readback power monitor config buffer
@@ -222,7 +212,7 @@ void R1000A::InitPowerMon(void){
         THEKERNEL->streams->printf("Readback INL322 Config 0x%x%x\r\n", i2cbuf[0], i2cbuf[1]);
     }
     else{
-        THEKERNEL->streams->printf("Unable to read INL322 config!\r\n");
+        this->i2creaderr();
     }
 
 
@@ -238,7 +228,7 @@ void R1000A::getPowerMonCfg(void){
         THEKERNEL->streams->printf("INL322 Config Register: 0x%x%x\r\n", i2cbuf[0], i2cbuf[1]);
     }
     else{
-        THEKERNEL->streams->printf("Unable to read INL322 config!\r\n");
+        this->i2creaderr();
     }
 
     // readback manufacturer ID
@@ -247,7 +237,7 @@ void R1000A::getPowerMonCfg(void){
         THEKERNEL->streams->printf("INL322 Manufacturer ID (0x5449): 0x%x%x\r\n", i2cbuf[0], i2cbuf[1]);
     }
     else{
-        THEKERNEL->streams->printf("Unable to read INL322 config!\r\n");
+        this->i2creaderr();
     }
 
     // read back die ID
@@ -256,7 +246,7 @@ void R1000A::getPowerMonCfg(void){
         THEKERNEL->streams->printf("INL322 Die ID (0x3220): 0x%x%x\r\n", i2cbuf[0], i2cbuf[1]);
     }
     else{
-        THEKERNEL->streams->printf("Unable to read INL322 config!\r\n");
+        this->i2creaderr();
     }
 }
 
@@ -264,66 +254,54 @@ void R1000A::readPowerMon(void){
     // reads shut and bus voltages from all channels of the power monitor
     char i2cbuf[2];
 
+    float ch1i,ch1v,ch2i,ch2v,ch3i,ch3v;
+    // initialize variables with improbable values to reflect any I2C communication error
+    ch1i = -1e6;
+    ch1v = -1e6;
+    ch2i = -1e6;
+    ch2v = -1e6;
+    ch3i = -1e6;
+    ch3v = -1e6;
+
+
     // read Ch1 shunt voltage
     if (THEKERNEL->i2c->I2C_ReadREG(PWRMON_SLOT, 0x01, i2cbuf, 2) == 0){
         // successfully wrote config to INL chip
-//        THEKERNEL->streams->printf("INL322 CH1 CURR: 0x%x%x\r\n", i2cbuf[0], i2cbuf[1]);
-        THEKERNEL->streams->printf("INL322 CH1 CURR: %.2f mA\r\n", evalCURR(i2cbuf)/RES_CH1);
-    }
-    else{
-        THEKERNEL->streams->printf("Unable to read INL322 config!\r\n");
+        ch1i = evalCURR(i2cbuf)/RES_CH1;
     }
 
     // read Ch1 bus voltage
     if (THEKERNEL->i2c->I2C_ReadREG(PWRMON_SLOT, 0x02, i2cbuf, 2) == 0){
         // successfully wrote config to INL chip
-        THEKERNEL->streams->printf("INL322 CH1 VOLT: 0x%x%x\r\n", i2cbuf[0], i2cbuf[1]);
-        THEKERNEL->streams->printf("INL322 CH1 VOLT: %d mV\r\n", evalVOLT(i2cbuf));
+        ch1v = evalVOLT(i2cbuf);
     }
-    else{
-        THEKERNEL->streams->printf("Unable to read INL322 config!\r\n");
-    }
+
 
     // read Ch2 shunt voltage
     if (THEKERNEL->i2c->I2C_ReadREG(PWRMON_SLOT, 0x03, i2cbuf, 2) == 0){
         // successfully wrote config to INL chip
-//        THEKERNEL->streams->printf("INL322 CH2 CURR: 0x%x%x\r\n", i2cbuf[0], i2cbuf[1]);
-        THEKERNEL->streams->printf("INL322 CH2 CURR: %.2f mA\r\n", evalCURR(i2cbuf)/RES_CH2);
-    }
-    else{
-        THEKERNEL->streams->printf("Unable to read INL322 config!\r\n");
+        ch2i = evalCURR(i2cbuf)/RES_CH2;
     }
 
     // read Ch2 bus voltage
     if (THEKERNEL->i2c->I2C_ReadREG(PWRMON_SLOT, 0x04, i2cbuf, 2) == 0){
         // successfully wrote config to INL chip
-        THEKERNEL->streams->printf("INL322 CH2 VOLT: 0x%x%x\r\n", i2cbuf[0], i2cbuf[1]);
-        THEKERNEL->streams->printf("INL322 CH2 VOLT: %d mV\r\n", evalVOLT(i2cbuf));
-    }
-    else{
-        THEKERNEL->streams->printf("Unable to read INL322 config!\r\n");
+        ch2v = evalVOLT(i2cbuf);
     }
 
     // read Ch3 shunt voltage
     if (THEKERNEL->i2c->I2C_ReadREG(PWRMON_SLOT, 0x05, i2cbuf, 2) == 0){
         // successfully wrote config to INL chip
-//        THEKERNEL->streams->printf("INL322 CH3 CURR: 0x%x%x\r\n", i2cbuf[0], i2cbuf[1]);
-        THEKERNEL->streams->printf("INL322 CH3 CURR: %.2f mA\r\n", evalCURR(i2cbuf)/RES_CH3);
-    }
-    else{
-        THEKERNEL->streams->printf("Unable to read INL322 config!\r\n");
+        ch3i = evalCURR(i2cbuf)/RES_CH3;
     }
 
     // read Ch3 bus voltage
     if (THEKERNEL->i2c->I2C_ReadREG(PWRMON_SLOT, 0x06, i2cbuf, 2) == 0){
         // successfully wrote config to INL chip
-        THEKERNEL->streams->printf("INL322 CH3 VOLT: 0x%x%x\r\n", i2cbuf[0], i2cbuf[1]);
-        THEKERNEL->streams->printf("INL322 CH3 VOLT: %d mV\r\n", evalVOLT(i2cbuf));
+        ch3v = evalVOLT(i2cbuf);
 
     }
-    else{
-        THEKERNEL->streams->printf("Unable to read INL322 config!\r\n");
-    }
+    THEKERNEL->streams->printf("PMON:%.2fmA,%.3fV,%.2fmA,%.3fV,%.2fmA,%.3fV\r\n", ch1i, ch1v, ch2i, ch2v, ch3i, ch3v);
 }
 
 float R1000A::evalCURR(char * i2cbuf){
@@ -344,13 +322,13 @@ float R1000A::evalCURR(char * i2cbuf){
     }
 }
 
-int R1000A::evalVOLT(char * i2cbuf){
+float R1000A::evalVOLT(char * i2cbuf){
     // this function converts shunt I2C buffer data to mV
     // first check the sign bit
     char sign = i2cbuf[0] & 0x80;
     if (sign == 0){
         // sign bit is 0, number is positive
-        return (int)((((unsigned int)(i2cbuf[0] & 0x7f)<<5) | (unsigned int)(i2cbuf[1] >> 3))*8);
+        return (float)((((unsigned int)(i2cbuf[0] & 0x7f)<<5) | (unsigned int)(i2cbuf[1] >> 3))*0.008);
     }
     else {
         // sign bit is 1, number is negative
@@ -358,6 +336,11 @@ int R1000A::evalVOLT(char * i2cbuf){
         adcval = adcval - 1;                // subtract 1
         adcval = (~adcval) & 0x00007fff;    // complement and mask
         adcval = adcval >> 3;               // shift 3 bits to divide by 8
-        return (int)(adcval * -8);
+        return (float)(adcval * -0.008);
     }
+}
+
+void R1000A::i2creaderr(void){
+    // prints out I2C read error
+    THEKERNEL->streams->printf("I2C Read Error!\r\n");
 }

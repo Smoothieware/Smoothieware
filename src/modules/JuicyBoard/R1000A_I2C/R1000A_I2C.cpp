@@ -10,7 +10,7 @@
 R1000A_I2C::R1000A_I2C(){
     // Default Constructor
     this->i2c = new mbed::I2C(P0_27, P0_28);    // define master i2c comm class
-    this->i2c->frequency(100000);               // set I2C bus freq in Hz
+    this->i2c->frequency(200000);               // set I2C bus freq in Hz
 }
 
 R1000A_I2C::~R1000A_I2C(){
