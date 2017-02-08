@@ -63,6 +63,15 @@ int R1000A_I2C::I2C_WriteREG(int slotnum, char REGAddr, char * data, int length)
 
 char R1000A_I2C::getSlotI2CAdd(int slotnum){
     // returns I2C address of the specific slot
-    return ((R1000_I2C_BASE + slotnum - 1) << 1);
+    // This slot numbers are ordered as follows
+    // Slots 1~15 are pluggable modules
+    // Slot 100 is reserved for the power monitor chip
+    // Slot 200 is reserved for the EEPROM
+    if (slotnum == PWRMON_SLOT){
+        return (PWRMON_BASE << 1);
+    }
+    else{
+        return ((R1000_I2C_BASE + slotnum - 1) << 1);
+    }
 }
 

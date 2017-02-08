@@ -17,6 +17,9 @@
 #include <vector>
 #include <string>
 
+// Juicyboard specific
+#include "modules/JuicyBoard/R1000A_I2C/R1000A_I2C.h"
+
 //Module manager
 class Config;
 class Module;
@@ -66,6 +69,9 @@ class Kernel {
         Conveyor*         conveyor;
         Configurator*     configurator;
         SimpleShell*      simpleshell;
+
+        // adding I2C for Juicyboard
+        R1000A_I2C*       i2c;
 
         int debug;
         SlowTicker*       slow_ticker;

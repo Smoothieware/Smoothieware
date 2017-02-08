@@ -11,6 +11,9 @@ using std::string;
 
 #define REG_TEMP            0x10        // I2C register address of temperature readback
 #define RESET_DELAY         50          // 100ms module reset delay
+#define RES_CH1             0.0333      // channel 1 sense resistor value, from board hardware
+#define RES_CH2             0.0333      // channel 2 sense resistor value, from board hardware
+#define RES_CH3             0.0333      // channel 3 sense resistor value, from board hardware
 
 class StreamOutput;
 
@@ -41,6 +44,11 @@ class R1000A : public Module {
         // reset all modules
         void ResetMods(void);
 
+        // power monitor functions
+        void InitPowerMon(void);
+        void getPowerMonCfg(void);
+        void readPowerMon(void);
+
     private:
         // Member variables
         R1000A_I2C i2c;                 // I2C class
@@ -54,6 +62,10 @@ class R1000A : public Module {
         void getTemp(string);
 
         int alphaslot, betaslot, gammaslot;
+
+        // power monitor converging functions
+        float evalCURR(char *);               // converts I2C shunt reading to mV
+        int evalVOLT(char *);               // converts I2C bus reading to mV
 };
 
 #endif

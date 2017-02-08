@@ -29,6 +29,9 @@
 #include "Configurator.h"
 #include "SimpleShell.h"
 
+// Juicyboard specific
+#include "modules/JuicyBoard/R1000A_I2C/R1000A_I2C.h"
+
 #include "platform_memory.h"
 
 #include <malloc.h>
@@ -71,6 +74,9 @@ Kernel::Kernel(){
     this->streams = new StreamOutputPool();
 
     this->current_path   = "/";
+
+    // add Juicyboard I2C as part of kernel
+    this->i2c = new R1000A_I2C();
 
     // Configure UART depending on MRI config
     // Match up the SerialConsole to MRI UART. This makes it easy to use only one UART for both debug and actual commands.

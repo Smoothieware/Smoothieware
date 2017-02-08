@@ -9,6 +9,11 @@
 #define SRC_MODULES_JUICYBOARD_R1000A_I2C_R1000A_I2C_H_
 
 #define R1000_I2C_BASE      0x10        // I2C address base for R1000A module
+#define PWRMON_BASE         0x40        // I2C address of on board power monitor
+
+#define PWRMON_SLOT         100         // slot number for power monitor
+
+//#define EEPROM_BASE         0x68      // on board EEPROM address
 
 #include "I2C.h"            // mbed.h lib
 
