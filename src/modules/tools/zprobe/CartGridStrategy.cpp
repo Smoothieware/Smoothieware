@@ -11,48 +11,46 @@
     -------------
     The strategy must be enabled in the config as well as zprobe.
 
-      leveling-strategy.delta-grid.enable         true
-
-    The radius of the bed must be specified with...
-
-      leveling-strategy.delta-grid.radius        50
-
-      this needs to be at least as big as the maximum printing radius as moves outside of this will not be compensated for correctly
+      leveling-strategy.rectangular-grid.enable         true
 
     The size of the grid can be set with...
 
-      leveling-strategy.delta-grid.size        7
+      leveling-strategy.rectangular-grid.size        7
 
       this is the X and Y size of the grid, it must be an odd number, the default is 7 which is 49 probe points
 
+    The width and length of the rectangle that is proned is set with...
+
+      leveling-strategy.rectangular-grid.width       100
+      leveling-strategy.rectangular-grid.length       90
+
    Optionally probe offsets from the nozzle or tool head can be defined with...
 
-      leveling-strategy.delta-grid.probe_offsets  0,0,0  # probe offsetrs x,y,z
+      leveling-strategy.rectangular-grid.probe_offsets  0,0,0  # probe offsetrs x,y,z
 
       they may also be set with M565 X0 Y0 Z0
 
     If the saved grid is to be loaded on boot then this must be set in the config...
 
-      leveling-strategy.delta-grid.save        true
+      leveling-strategy.rectangular-grid.save        true
 
       Then when M500 is issued it will save M375 which will cause the grid to be loaded on boot. The default is to not autoload the grid on boot
 
     Optionally an initial_height can be set that tell the intial probe where to stop the fast decent before it probes, this should be around 5-10mm above the bed
-      leveling-strategy.delta-grid.initial_height  10
+      leveling-strategy.rectangular-grid.initial_height  10
 
 
     Usage
     -----
-    G29 test probes in a spiral pattern within the radius producing a map of offsets, this can be imported into a graphing program to visualize the bed heights
-        optional parameters {{In}} sets the number of points to the value n, {{Jn}} sets the radius for this probe.
+    G29 test probes a rectangle which defaults to the width and height, can be overidden with Xnnn and Ynnn
 
     G31 probes the grid and turns the compensation on, this will remain in effect until reset or M561/M370
-        optional parameters {{Jn}} sets the radius for this probe, which gets saved with M375
+        optional parameters {{Xn}} {{Yn}} sets the size for this rectangular probe, which gets saved with M375
 
     M370 clears the grid and turns off compensation
-    M374 Save grid to /sd/delta.grid
-    M374.1 delete /sd/delta.grid
-    M375 Load the grid from /sd/delta.grid and enable compensation
+    M374 Save grid to /sd/cartesian.grid
+    M374.1 delete /sd/cartesian.grid
+    M375 Load the grid from /sd/cartesian.grid and enable compensation
     M375.1 display the current grid
     M561 clears the grid and turns off compensation
     M565 defines the probe offsets from the nozzle or tool head
@@ -90,8 +88,8 @@
 #define save_checksum                CHECKSUM("save")
 #define probe_offsets_checksum       CHECKSUM("probe_offsets")
 #define initial_height_checksum      CHECKSUM("initial_height")
-#define x_size_checksum              CHECKSUM("x")
-#define y_size_checksum              CHECKSUM("y")
+#define x_size_checksum              CHECKSUM("width")
+#define y_size_checksum              CHECKSUM("length")
 #define do_home_checksum             CHECKSUM("do_home")
 
 #define GRIDFILE "/sd/cartesian.grid"
@@ -250,17 +248,16 @@ bool CartGridStrategy::probe_grid(int n, float x_size, float y_size, StreamOutpu
     float initial_z = findBed();
     if(isnan(initial_z)) return false;
 
+    float x_step= x_size / n;
+    float y_step= y_size / n;
     for (int c = 0; c < n; ++c) {
-        float y = y_size * c;
+        float y = y_step * c;
         for (int r = 0; r < n; ++r) {
-            float x = x_size * r;
-            // Avoid probing the corners (outside the round or hexagon print surface) on a delta printer.
+            float x = x_step * r;
             float z = 0.0F;
-            if (x >= 0 && x <= x_size && y >= 0 && y <= y_size) {
-                float mm;
-                if(!zprobe->doProbeAt(mm, x, y)) return false;
-                z = zprobe->getProbeHeight() - mm;
-            }
+            float mm;
+            if(!zprobe->doProbeAt(mm, x, y)) return false;
+            z = zprobe->getProbeHeight() - mm;
             stream->printf("%8.4f ", z);
         }
         stream->printf("\n");
@@ -277,11 +274,11 @@ bool CartGridStrategy::handleGcode(Gcode *gcode)
 
             int n = gcode->has_letter('I') ? gcode->get_value('I') : 0;
             float x = x_size, y = y_size;
-            if(gcode->has_letter('X')) x = gcode->get_value('X'); // override default probe radius
-            if(gcode->has_letter('Y')) y = gcode->get_value('Y'); // override default probe radius
+            if(gcode->has_letter('X')) x = gcode->get_value('X'); // override default probe width
+            if(gcode->has_letter('Y')) y = gcode->get_value('Y'); // override default probe length
             if(n == 0) n = 7;
             probe_grid(n, x, y, gcode->stream);
-            
+
             return true;
 
         } else if( gcode->g == 31 ) { // do a grid probe
@@ -397,8 +394,8 @@ bool CartGridStrategy::doProbe(Gcode *gc)
     setAdjustFunction(false);
     reset_bed_level();
 
-    if(gc->has_letter('X')) x_size = gc->get_value('X'); // override default probe X bed, will get saved
-    if(gc->has_letter('Y')) x_size = gc->get_value('Y'); // override default probe Y bed, will get saved
+    if(gc->has_letter('X')) x_size = gc->get_value('X'); // override default probe width, will get saved
+    if(gc->has_letter('Y')) y_size = gc->get_value('Y'); // override default probe length, will get saved
 
     // find bed, and leave probe probe height above bed
     float initial_z = findBed();
@@ -407,7 +404,7 @@ bool CartGridStrategy::doProbe(Gcode *gc)
         return false;
     }
 
-    gc->stream->printf("Probe start ht is %f mm, rectangular bed x %fmm, y %fmm, grid size is %dx%d\n", initial_z, x_size, y_size, grid_size, grid_size);
+    gc->stream->printf("Probe start ht is %f mm, rectangular bed width %fmm, height %fmm, grid size is %dx%d\n", initial_z, x_size, y_size, grid_size, grid_size);
 
     // do first probe for 0,0
     float mm;
@@ -415,7 +412,7 @@ bool CartGridStrategy::doProbe(Gcode *gc)
     float z_reference = zprobe->getProbeHeight() - mm; // this should be zero
     gc->stream->printf("probe at 0,0 is %f mm\n", z_reference);
 
-    // probe all the points in the grid within the given radius
+    // probe all the points of the grid
     for (int yCount = 0; yCount < grid_size; yCount++) {
         float yProbe = FRONT_PROBE_BED_POSITION + AUTO_BED_LEVELING_GRID_Y * yCount;
         int xStart, xStop, xInc;

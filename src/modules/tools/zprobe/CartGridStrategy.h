@@ -5,7 +5,7 @@
 #include <string.h>
 #include <tuple>
 
-#define cart_grid_leveling_strategy_checksum CHECKSUM("cart-grid")
+#define cart_grid_leveling_strategy_checksum CHECKSUM("rectangular-grid")
 
 class StreamOutput;
 class Gcode;
