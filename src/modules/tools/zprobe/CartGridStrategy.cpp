@@ -19,10 +19,10 @@
 
       this is the X and Y size of the grid, it must be an odd number, the default is 7 which is 49 probe points
 
-    The width and length of the rectangle that is proned is set with...
+    The width and length of the rectangle that is probed is set with...
 
-      leveling-strategy.rectangular-grid.width       100
-      leveling-strategy.rectangular-grid.length       90
+      leveling-strategy.rectangular-grid.x_size       100
+      leveling-strategy.rectangular-grid.y_size       90
 
    Optionally probe offsets from the nozzle or tool head can be defined with...
 
@@ -88,8 +88,8 @@
 #define save_checksum                CHECKSUM("save")
 #define probe_offsets_checksum       CHECKSUM("probe_offsets")
 #define initial_height_checksum      CHECKSUM("initial_height")
-#define x_size_checksum              CHECKSUM("width")
-#define y_size_checksum              CHECKSUM("length")
+#define x_size_checksum              CHECKSUM("x_size")
+#define y_size_checksum              CHECKSUM("y_size")
 #define do_home_checksum             CHECKSUM("do_home")
 
 #define GRIDFILE "/sd/cartesian.grid"
