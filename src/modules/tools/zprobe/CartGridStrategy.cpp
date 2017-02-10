@@ -393,7 +393,7 @@ float CartGridStrategy::findBed()
 
 bool CartGridStrategy::doProbe(Gcode *gc)
 {
-    gc->stream->printf("Delta Grid Probe...\n");
+    gc->stream->printf("Cartesian Grid Probe...\n");
     setAdjustFunction(false);
     reset_bed_level();
 
