@@ -395,7 +395,7 @@ float CartGridStrategy::findBed()
 
 bool CartGridStrategy::doProbe(Gcode *gc)
 {
-    gc->stream->printf("Rectanular Grid Probe...\n");
+    gc->stream->printf("Rectangular Grid Probe...\n");
     setAdjustFunction(false);
     reset_bed_level();
 
