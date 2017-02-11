@@ -482,17 +482,16 @@ void CartGridStrategy::extrapolate_unprobed_bed_level()
 void CartGridStrategy::doCompensation(float *target, bool inverse)
 {
     // Adjust print surface height by linear interpolation over the bed_level array.
-    int half = (grid_size - 1) / 2;
-    float grid_x = std::max(0.001F - half, std::min(half - 0.001F, target[X_AXIS] / AUTO_BED_LEVELING_GRID_X));
-    float grid_y = std::max(0.001F - half, std::min(half - 0.001F, target[Y_AXIS] / AUTO_BED_LEVELING_GRID_Y));
+    float grid_x = std::max(0.001F, target[X_AXIS] / AUTO_BED_LEVELING_GRID_X);
+    float grid_y = std::max(0.001F, target[Y_AXIS] / AUTO_BED_LEVELING_GRID_Y);
     int floor_x = floorf(grid_x);
     int floor_y = floorf(grid_y);
     float ratio_x = grid_x - floor_x;
     float ratio_y = grid_y - floor_y;
-    float z1 = grid[(floor_x + half) + ((floor_y + half) * grid_size)];
-    float z2 = grid[(floor_x + half) + ((floor_y + half + 1) * grid_size)];
-    float z3 = grid[(floor_x + half + 1) + ((floor_y + half) * grid_size)];
-    float z4 = grid[(floor_x + half + 1) + ((floor_y + half + 1) * grid_size)];
+    float z1 = grid[(floor_x) + ((floor_y) * grid_size)];
+    float z2 = grid[(floor_x) + ((floor_y + 1) * grid_size)];
+    float z3 = grid[(floor_x + 1) + ((floor_y) * grid_size)];
+    float z4 = grid[(floor_x + 1) + ((floor_y + 1) * grid_size)];
     float left = (1 - ratio_y) * z1 + ratio_y * z2;
     float right = (1 - ratio_y) * z3 + ratio_y * z4;
     float offset = (1 - ratio_x) * left + ratio_x * right;
