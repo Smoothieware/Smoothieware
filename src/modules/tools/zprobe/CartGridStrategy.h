@@ -20,8 +20,6 @@ public:
 
 private:
 
-    void extrapolate_one_point(int x, int y, int xdir, int ydir);
-    void extrapolate_unprobed_bed_level();
     bool doProbe(Gcode *gc);
     float findBed();
     void setAdjustFunction(bool on);

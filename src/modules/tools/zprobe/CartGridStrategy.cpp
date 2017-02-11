@@ -441,47 +441,11 @@ bool CartGridStrategy::doProbe(Gcode *gc)
         }
     }
 
-    extrapolate_unprobed_bed_level();
     print_bed_level(gc->stream);
 
     setAdjustFunction(true);
 
     return true;
-}
-
-void CartGridStrategy::extrapolate_one_point(int x, int y, int xdir, int ydir)
-{
-    if (!isnan(grid[x + (grid_size * y)])) {
-        return;  // Don't overwrite good values.
-    }
-    float a = 2 * grid[(x + xdir) + (y * grid_size)] - grid[(x + xdir * 2) + (y * grid_size)]; // Left to right.
-    float b = 2 * grid[x + ((y + ydir) * grid_size)] - grid[x + ((y + ydir * 2) * grid_size)]; // Front to back.
-    float c = 2 * grid[(x + xdir) + ((y + ydir) * grid_size)] - grid[(x + xdir * 2) + ((y + ydir * 2) * grid_size)]; // Diagonal.
-    float median = c;  // Median is robust (ignores outliers).
-    if (a < b) {
-        if (b < c) median = b;
-        if (c < a) median = a;
-    } else {  // b <= a
-        if (c < b) median = b;
-        if (a < c) median = a;
-    }
-    grid[x + (grid_size * y)] = median;
-}
-
-// Fill in the unprobed points (corners of circular print surface)
-// using linear extrapolation, away from the center.
-void CartGridStrategy::extrapolate_unprobed_bed_level()
-{
-    int half = (grid_size - 1) / 2;
-    for (int y = 0; y <= half; y++) {
-        for (int x = 0; x <= half; x++) {
-            if (x + y < 3) continue;
-            extrapolate_one_point(half - x, half - y, x > 1 ? +1 : 0, y > 1 ? +1 : 0);
-            extrapolate_one_point(half + x, half - y, x > 1 ? -1 : 0, y > 1 ? +1 : 0);
-            extrapolate_one_point(half - x, half + y, x > 1 ? +1 : 0, y > 1 ? -1 : 0);
-            extrapolate_one_point(half + x, half + y, x > 1 ? -1 : 0, y > 1 ? -1 : 0);
-        }
-    }
 }
 
 void CartGridStrategy::doCompensation(float *target, bool inverse)
