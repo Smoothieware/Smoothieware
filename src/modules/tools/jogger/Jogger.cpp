@@ -67,11 +67,12 @@ void Jogger::on_module_loaded()
 
 }
 
-//TODO: add code to respond to M-codes for jog axis changes
+// respond to possible M-codes for jog axis change
 void Jogger::on_gcode_received(void *argument)
 {
     Gcode* gcode = static_cast<Gcode*>(argument);
     if (gcode->has_m) {
+        //TODO: add code to respond to these M-codes
         if (gcode->m == this->m_code_set) {
             //print out the command as a test
             THEKERNEL->streams->printf(">>> %s\n", gcode->get_command());
@@ -167,12 +168,6 @@ void Jogger::on_main_loop(void *argument)
             //joystick both active and jogging, keep jogging
             //add moves to the conveyor, only if it is not already full with moves to be done
             if (!THECONVEYOR->is_queue_full()) {
-                //create a new G-code to move a small distance in the direction given by the joystick, at the speed defined by the joystick position
-                //TODO: build this command using variable axis letters
-                //e.g. this->position[0] comes from data_source_alpha, which maps to axis "X"
-                //the axis mapping should be changeable through M-code or maybe a plane select G-code (e.g. 17/18/19)
-                //note that it should be possible to specify that no machine axis be mapped to a joystick axis
-                
                 //get the magnitude of the speed (sqrt of sum of axis speeds squared)
                 float spd = 0.0f;
                 for (int c = 0; c < NUM_JOG_AXES; c++) {
@@ -183,7 +178,10 @@ void Jogger::on_main_loop(void *argument)
                 //use segment frequency (f) to calculate step scale factor (ssf (mm/segment) = speed (mm/s) / f (segments/s))
                 float ssf = spd / 60.0f / this->segment_frequency;
 
-                //issue the Gcode for a small movement
+                //create a new G-code to move a small distance in the direction given by the joystick, at the speed defined by the joystick position
+                //TODO: build this command using variable axis letters
+                //e.g. this->position[0] comes from data_source_alpha, which maps to axis "X"
+                //note that it should be possible to specify that no machine axis be mapped to a joystick axis
                 char command[32];
                 int n = snprintf(command, sizeof(command), "G1 X%1.2f Y%1.2f F%1.1f", this->position[0] * ssf, this->position[1] * ssf, spd);
                 std::string g(command, n);
