@@ -6,6 +6,8 @@
  */
 
 #include "R1000A_I2C.h"
+#include "libs/Kernel.h"
+
 
 R1000A_I2C::R1000A_I2C(){
     // Default Constructor
@@ -69,6 +71,10 @@ char R1000A_I2C::getSlotI2CAdd(int slotnum){
     // Slot 200 is reserved for the EEPROM
     if (slotnum == PWRMON_SLOT){
         return (PWRMON_BASE << 1);
+    }
+    else if ((slotnum >= EEPROM_SLOT_BASE) && (slotnum < (EEPROM_SLOT_BASE + EEPROM_NUM_SLOTS))){
+        // this returns the address of EEPROM section, limit is 4 sections x 256 bytes
+        return ((EEPROM_I2C_BASE + slotnum - EEPROM_SLOT_BASE) << 1);
     }
     else{
         return ((R1000_I2C_BASE + slotnum - 1) << 1);

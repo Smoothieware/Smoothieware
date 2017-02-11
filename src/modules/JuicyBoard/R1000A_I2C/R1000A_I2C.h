@@ -13,7 +13,12 @@
 
 #define PWRMON_SLOT         100         // slot number for power monitor
 
-//#define EEPROM_BASE         0x68      // on board EEPROM address
+#define EEPROM_SLOT_BASE    200         // base slot number for EEPROM
+#define EEPROM_NUM_SLOTS    4           // 1kbyte EEPROM can address 4 slots (200,201,202,203)
+
+#define EEPROM_PAGE_SIZE    16          // number of bytes/page
+
+#define EEPROM_I2C_BASE     0x50        // on board EEPROM address base
 
 #include "I2C.h"            // mbed.h lib
 
@@ -29,9 +34,6 @@ class R1000A_I2C {
         // low level I2C operations
         int I2C_ReadREG(int, char, char*, int);         // burst read
         int I2C_WriteREG(int, char, char*, int);        // burst write
-
-        // Accessor functions
-        int getSlotDevID(int) const;
 
     private:
         // Member variables

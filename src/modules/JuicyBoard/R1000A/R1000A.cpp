@@ -18,15 +18,15 @@
 #include "checksumm.h"
 #include "ConfigValue.h"
 
-// Juicyboard modules
-//FIXME remove this include after done
-#include "modules/JuicyBoard/R1001/R1001.h"
+// Juicyware includes
+#include <string.h>
+//#include <sstream>
 
 // define configuration checksums here
 
-#define alpha_slot_num                        CHECKSUM("alpha_slot_num")
-#define beta_slot_num                         CHECKSUM("beta_slot_num")
-#define gamma_slot_num                        CHECKSUM("gamma_slot_num")
+//#define alpha_slot_num                        CHECKSUM("alpha_slot_num")
+//#define beta_slot_num                         CHECKSUM("beta_slot_num")
+//#define gamma_slot_num                        CHECKSUM("gamma_slot_num")
 
 R1000A::R1000A(){
     // Default Constructor
@@ -35,10 +35,6 @@ R1000A::R1000A(){
     this->ModResetPin->from_string("3.25");
     this->ModResetPin->as_open_drain();
     this->ModResetPin->set(true);                       // set to high
-
-    alphaslot = THEKERNEL->config->value(alpha_slot_num)->by_default(0)->as_int();
-    betaslot = THEKERNEL->config->value(beta_slot_num)->by_default(0)->as_int();
-    gammaslot = THEKERNEL->config->value(gamma_slot_num)->by_default(0)->as_int();
 }
 
 void R1000A::on_module_loaded(){
@@ -71,21 +67,6 @@ void R1000A::on_console_line_received(void* argument){
             // reset all modules
             ResetMods();
         }
-        else if (cmd == "showconfig"){
-            //FIXME this command is only for test, delete it
-            // this shows configuration values for alpha/beta/gamma motor slots
-
-//            int alphaslot = THEKERNEL->config->value(alpha_slot_num)->by_default(0)->as_int();
-            //int betaslot = THEKERNEL->config->value(beta_slot_num)->by_default(0)->as_int();
-            //int gammaslot = THEKERNEL->config->value(gamma_slot_num)->by_default(0)->as_int();
-
-            THEKERNEL->streams->printf("reporting config values\r\n");
-            THEKERNEL->streams->printf("alpha_slot_num %d\r\n", alphaslot);
-            MotorPins CurrentMotorPins = getMotorPins(alphaslot);
-            THEKERNEL->streams->printf("dir_pin: %s\r\n", CurrentMotorPins.dir_pin.c_str());
-            THEKERNEL->streams->printf("beta_slot_num %d\r\n", betaslot);
-            THEKERNEL->streams->printf("gamma_slot_num %d\r\n", gammaslot);
-        }
         else if (cmd == "getpmoncfg"){
             // reset all modules
             getPowerMonCfg();
@@ -93,6 +74,85 @@ void R1000A::on_console_line_received(void* argument){
         else if (cmd == "readpmon"){
             // reset all modules
             readPowerMon();
+        }
+        else if (cmd == "printarg"){
+            //FIXME for test, delete
+            // This function prints out the string argument that follows
+//            string nextarg = shift_parameter(possible_command);
+            THEKERNEL->streams->printf("length:%d\r\n",possible_command.length());
+            THEKERNEL->streams->printf("strlen:%d\r\n",(unsigned)strlen(possible_command.c_str()));
+            THEKERNEL->streams->printf("%s\r\n",possible_command.c_str());
+        }
+        else if (cmd == "eeread"){
+            // This function reads data from EEPROM, byte by byte
+
+            // evaluate the length of data to be read, integer
+            int readlen = atoi(shift_parameter(possible_command).c_str());
+            int eeadr = (int)strtol(shift_parameter(possible_command).c_str(),NULL,0);
+
+            THEKERNEL->streams->printf("Reading %d bytes from addr 0x%x\r\n", readlen, eeadr);
+            // do some checks on the input arguments
+            if (readlen > 0) {
+                // now the read length is > 0
+                // perform byte by byte EEPROM read
+//                char bufout;
+                do {
+                    if (eeadr <= EEPROM_NUM_SLOTS*256) {
+                        // address is within a valid range
+//                        bufout[0] = this->readEEbyte(eeadr);
+                        THEKERNEL->streams->printf("%c",this->readEEbyte(eeadr));
+                        ++eeadr;      // increment address
+                    }
+                    --readlen;
+                } while (readlen > 0);
+            }
+            THEKERNEL->streams->printf("\r\n");
+        }
+        else if (cmd == "eereadhex"){
+            // This function reads data from EEPROM, byte by byte
+
+            // evaluate the length of data to be read, integer
+            int readlen = atoi(shift_parameter(possible_command).c_str());
+            int eeadr = (int)strtol(shift_parameter(possible_command).c_str(),NULL,0);
+
+            THEKERNEL->streams->printf("Reading %d bytes from addr 0x%x\r\n", readlen, eeadr);
+            // do some checks on the input arguments
+            if (readlen > 0) {
+                // now the read length is > 0
+                // perform byte by byte EEPROM read
+                char bufout[1];
+                do {
+                    bufout[0] = this->readEEbyte(eeadr);
+                    THEKERNEL->streams->printf(":%02X",(unsigned int)bufout[0]);
+                    ++eeadr;      // increment address
+                    --readlen;
+                } while (readlen > 0);
+            }
+            THEKERNEL->streams->printf("\r\n");
+        }
+        else if (cmd == "eewrite"){
+                // This function reads data from EEPROM, byte by byte
+
+                // evaluate the length of data to be read, integer
+                unsigned int eeadr = (unsigned int)strtol(shift_parameter(possible_command).c_str(),NULL,0);
+                int writelen = strlen(possible_command.c_str());
+
+                THEKERNEL->streams->printf("Writing EEPROM addr 0x%x\r\n", eeadr);
+                THEKERNEL->streams->printf("Writing %d bytes:\r\n", writelen);
+                THEKERNEL->streams->printf("%s\r\n", possible_command.c_str());
+                // do some checks on the input arguments
+                if (writelen > 0) {
+                    // now write length is > 0
+                    // perform byte by byte EEPROM write
+                    int i;
+                    for (i=0; i<writelen ;i++){
+                        if (this->writeEEbyte(eeadr, possible_command.c_str()[i]) != 0){
+                            THEKERNEL->streams->printf("EEPROM write did not ACK!\r\n");
+                        }
+                        ++eeadr;
+                    }
+                }
+                THEKERNEL->streams->printf("\r\n");
         }
     }
 }
@@ -301,7 +361,7 @@ void R1000A::readPowerMon(void){
         ch3v = evalVOLT(i2cbuf);
 
     }
-    THEKERNEL->streams->printf("PMON:%.2fmA,%.3fV,%.2fmA,%.3fV,%.2fmA,%.3fV\r\n", ch1i, ch1v, ch2i, ch2v, ch3i, ch3v);
+    THEKERNEL->streams->printf("POWERMON:%.2fmA,%.3fV,%.2fmA,%.3fV,%.2fmA,%.3fV\r\n", ch1i, ch1v, ch2i, ch2v, ch3i, ch3v);
 }
 
 float R1000A::evalCURR(char * i2cbuf){
@@ -343,4 +403,38 @@ float R1000A::evalVOLT(char * i2cbuf){
 void R1000A::i2creaderr(void){
     // prints out I2C read error
     THEKERNEL->streams->printf("I2C Read Error!\r\n");
+}
+
+char R1000A::readEEbyte(unsigned int eeadr){
+    // This function reads a byte from EEPROM and returns a char
+    // identify slot number
+    int slotnum = (int)(0x3 & (eeadr >> 8)) + EEPROM_SLOT_BASE;
+    char memaddr = (0xff & eeadr);
+    char i2cbuf[1];
+    i2cbuf[0] = '%';
+    // first write memory address to device
+    if (THEKERNEL->i2c->I2C_ReadREG(slotnum, memaddr, i2cbuf, 1) != 0){
+        i2creaderr();               // spit out an error message
+    }
+    return i2cbuf[0];
+}
+
+char R1000A::writeEEbyte(unsigned int eeadr, char data){
+    // This function writes a byte to EEPROM and returns a status
+    // if returned status is 0 then write was successfull
+    // if returned status is -1 then write didn't complete, probably due to write protection
+    // identify slot number
+    int slotnum = (int)(0x3 & (eeadr >> 8)) + EEPROM_SLOT_BASE;
+    char memaddr = (0xff & eeadr);
+    char i2cbuf[1];
+    i2cbuf[0] = data;
+
+    wait_ms(EE_TW);             // add a delay to allow any previous write operation to complete
+
+    // first write memory address to device
+    if (THEKERNEL->i2c->I2C_WriteREG(slotnum, memaddr, i2cbuf, 1) != 0){
+
+        return -1;
+    }
+    return 0;
 }

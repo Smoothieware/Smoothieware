@@ -15,6 +15,8 @@ using std::string;
 #define RES_CH2             0.05        // channel 2 sense resistor value, from board hardware
 #define RES_CH3             0.05        // channel 3 sense resistor value, from board hardware
 
+#define EE_TW               5           // EEPROM write time in ms
+
 class StreamOutput;
 
 // R1000A class declaration goes here
@@ -49,9 +51,11 @@ class R1000A : public Module {
         void getPowerMonCfg(void);
         void readPowerMon(void);
 
+        // EEPROM functions
+
+
     private:
         // Member variables
-//        R1000A_I2C i2c;                 // I2C class
         Pin *ModResetPin;               // define reset pin
 
         int SlotPlatID[16];             // module platform ID
@@ -62,11 +66,13 @@ class R1000A : public Module {
         void getTemp(string);
         void i2creaderr(void);          // spits out I2C read error message
 
-        int alphaslot, betaslot, gammaslot;
-
         // power monitor converging functions
-        float evalCURR(char *);               // converts I2C shunt reading to mV
-        float evalVOLT(char *);               // converts I2C bus reading to V
+        float evalCURR(char *);                 // converts I2C shunt reading to mV
+        float evalVOLT(char *);                 // converts I2C bus reading to V
+
+        // eeprom private functions
+        char readEEbyte(unsigned int);          // read a single byte from EEPROM
+        char writeEEbyte(unsigned int,char);    // write a single byte from EEPROM
 };
 
 #endif
