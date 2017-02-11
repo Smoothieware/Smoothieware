@@ -55,8 +55,6 @@
 #define STEPS_PER_MM(a) (STEPPER[a]->get_steps_per_mm())
 #define Z_STEPS_PER_MM STEPS_PER_MM(Z_AXIS)
 
-#define abs(a) ((a<0) ? -a : a)
-
 void ZProbe::on_module_loaded()
 {
     // if the module is disabled -> do nothing
@@ -71,7 +69,7 @@ void ZProbe::on_module_loaded()
     // register event-handlers
     register_for_event(ON_GCODE_RECEIVED);
 
-    // we read the probe in this timer, currently only for G38 probes.
+    // we read the probe in this timer
     probing= false;
     THEKERNEL->slow_ticker->attach(1000, this, &ZProbe::read_probe);
 }
