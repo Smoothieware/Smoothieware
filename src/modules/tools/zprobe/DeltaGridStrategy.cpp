@@ -131,6 +131,11 @@ bool DeltaGridStrategy::handleConfig()
     // allocate in AHB0
     grid = (float *)AHB0.alloc(grid_size * grid_size * sizeof(float));
 
+    if(grid == nullptr) {
+        THEKERNEL->streams->printf("Error: Not enough memory\n");
+        return false;
+    }
+
     reset_bed_level();
 
     return true;
