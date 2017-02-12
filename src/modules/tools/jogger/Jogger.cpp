@@ -74,8 +74,9 @@ void Jogger::on_gcode_received(void *argument)
     if (gcode->has_m) {
         //TODO: add code to respond to these M-codes
         if (gcode->m == this->m_code_set) {
-            //print out the command as a test
-            THEKERNEL->streams->printf(">>> %s\n", gcode->get_command());
+            //update the current machine jog axes to the given string
+            //note the +1 is because the gcode command will have a leading space which needs to be ignored
+            update_Axes(gcode->get_command()+1);
         }
         else if (gcode->m == this->m_code_toggle) {
             //increment the index of the current machine axis settings
@@ -85,29 +86,20 @@ void Jogger::on_gcode_received(void *argument)
             }
 
             //update the current machine axis settings
-            update_Axes();
+            update_Axes(this->jog_axes[this->axis_index]);
 
-            //test
-            THEKERNEL->streams->printf("TOGGLE %d of %d\n", this->axis_index+1, this->jog_axes.size());
+            //debug only
+            THEKERNEL->streams->printf("Jog Axis Preset %d of %d\n", this->axis_index+1, this->jog_axes.size());
         }
         else if (gcode->m == 776) {
+            //debug only, print the Gcode that is being run in the jog loop
             std::string g = get_Gcode();
-            THEKERNEL->streams->printf(">>%s<<\n", g.c_str());
-        }
-    }
-}
+            THEKERNEL->streams->printf(">>> %s\n", g.c_str());
 
-//update the current machine axis settings
-void Jogger::update_Axes()
-{
-    //loop through all possible jog axes
-    for (unsigned int i = 0; i < NUM_JOG_AXES; i++) {
-        if (i < this->jog_axes[this->axis_index].length()) {
-            //get the letter for this axis in the list
-            this->axis_letter[i] = toupper(this->jog_axes[this->axis_index][i]);
-        }
-        else { //no character specified, use signal char = 0 to indicate no axis to control
-            this->axis_letter[i] = 0;
+            //print each axis letter
+            for (unsigned int i = 0; i < NUM_JOG_AXES; i++) {
+                THEKERNEL->streams->printf(">>> %c\n", this->axis_letter[i]);
+            }
         }
     }
 }
@@ -138,7 +130,7 @@ void Jogger::on_config_reload(void *argument)
     this->jog_axes = split(letterlist.c_str(), ',');
 
     //update the current machine axis settings
-    update_Axes();
+    update_Axes(this->jog_axes[this->axis_index]);
 }
 
 //map a position from -1 to 1 into a speed from -max to max
@@ -192,7 +184,6 @@ uint32_t Jogger::update_tick(uint32_t dummy)
 //runs whenever the smoothie is in the main loop, safe to send Gcode here
 void Jogger::on_main_loop(void *argument)
 {   
-    
     //THREE POSSIBLE STATES TO CHECK:
     //1: joystick active and jogging -> keep jogging
     //2: joystick active but not jogging -> start jogging
@@ -206,7 +197,7 @@ void Jogger::on_main_loop(void *argument)
             //joystick both active and jogging, keep jogging
             //add moves to the conveyor, only if it is not already full with moves to be done
             if (!THECONVEYOR->is_queue_full()) {
-                //create a new G-code to move a small distance in the direction given by the joystick, at the speed defined by the joystick position
+                //get the Gcode needed to make a small move in the right direction, and submit it
                 std::string g = get_Gcode();
                 Gcode gc(g, &(StreamOutput::NullStream));
                 THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
@@ -239,6 +230,7 @@ void Jogger::on_main_loop(void *argument)
     }
 }
 
+//create a new G-code to move a small distance in the direction given by the joystick, at the speed defined by the joystick position
 std::string Jogger::get_Gcode(void)
 {
     //get the magnitude of the speed (sqrt of sum of axis speeds squared)
@@ -280,4 +272,19 @@ std::string Jogger::get_Gcode(void)
     //return the string
     std::string g(command, n);
     return g;
+}
+
+//update the current machine axis settings
+void Jogger::update_Axes(std::string axisstr)
+{
+    //loop through all possible jog axes
+    for (unsigned int i = 0; i < NUM_JOG_AXES; i++) {
+        if (i < axisstr.length()) {
+            //get the letter for this axis in the list
+            this->axis_letter[i] = toupper(axisstr[i]);
+        }
+        else { //no character specified, use signal char = '-' to indicate no axis to control
+            this->axis_letter[i] = '-';
+        }
+    }
 }

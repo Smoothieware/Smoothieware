@@ -23,10 +23,10 @@ public:
     void on_module_loaded();
     void on_config_reload(void* argument);
     void on_gcode_received(void* argument);
-    void update_Axes();
     uint32_t update_tick(uint32_t dummy);
     void on_main_loop(void* argument);
     std::string get_Gcode(void);
+    void update_Axes(std::string axisstr);
 
 private:
     float get_speed(float pos); //function to return a speed given a unitless joystick reading
