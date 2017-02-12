@@ -22,7 +22,3 @@ debug
 /win_install.log
 /linux_install.log
 /src/default_excludes.mk
-/SmoothiewareVS/
-smoothie-upload.bat
-debug.bat
-smoothie-upload - G.bat
