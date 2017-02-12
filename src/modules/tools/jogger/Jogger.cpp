@@ -231,6 +231,7 @@ void Jogger::on_main_loop(void *argument)
 }
 
 //create a new G-code to move a small distance in the direction given by the joystick, at the speed defined by the joystick position
+//TODO: check if need to pass string by reference
 std::string Jogger::get_Gcode(void)
 {
     //get the magnitude of the speed (sqrt of sum of axis speeds squared)
@@ -275,6 +276,7 @@ std::string Jogger::get_Gcode(void)
 }
 
 //update the current machine axis settings
+//TODO: check if need to pass string by reference
 void Jogger::update_Axes(std::string axisstr)
 {
     //loop through all possible jog axes
