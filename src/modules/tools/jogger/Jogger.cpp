@@ -14,7 +14,6 @@
 #include "JoystickPublicAccess.h"
 #include "PublicData.h"
 #include "utils.h"
-#include "string.h"
 
 #include "StreamOutputPool.h" //just for debugging
 
@@ -36,6 +35,7 @@
 
 #define m_code_set_checksum                 CHECKSUM("m_code_set")
 #define m_code_toggle_checksum              CHECKSUM("m_code_toggle")
+#define jog_axes_checksum                   CHECKSUM("jog_axes")
 
 #define abs(a) ((a<0.0f) ? -a : a)
 #define sign(a) ((a<0.0f) ? -1 : 1)
@@ -78,7 +78,36 @@ void Jogger::on_gcode_received(void *argument)
             THEKERNEL->streams->printf(">>> %s\n", gcode->get_command());
         }
         else if (gcode->m == this->m_code_toggle) {
-            THEKERNEL->streams->printf(">>> TOGGLE\n");
+            //increment the index of the current machine axis settings
+            this->axis_index++;
+            if (this->axis_index == this->jog_axes.size()) {
+                this->axis_index = 0;
+            }
+
+            //update the current machine axis settings
+            update_Axes();
+
+            //test
+            THEKERNEL->streams->printf("TOGGLE %d of %d\n", this->axis_index+1, this->jog_axes.size());
+        }
+        else if (gcode->m == 776) {
+            std::string g = get_Gcode();
+            THEKERNEL->streams->printf(">>%s<<\n", g.c_str());
+        }
+    }
+}
+
+//update the current machine axis settings
+void Jogger::update_Axes()
+{
+    //loop through all possible jog axes
+    for (unsigned int i = 0; i < NUM_JOG_AXES; i++) {
+        if (i < this->jog_axes[this->axis_index].length()) {
+            //get the letter for this axis in the list
+            this->axis_letter[i] = toupper(this->jog_axes[this->axis_index][i]);
+        }
+        else { //no character specified, use signal char = 0 to indicate no axis to control
+            this->axis_letter[i] = 0;
         }
     }
 }
@@ -101,6 +130,15 @@ void Jogger::on_config_reload(void *argument)
     for (int i = 0; i < NUM_JOG_AXES; i++) {
         this->axis_data_source[i] = get_checksum(THEKERNEL->config->value(jogger_checksum, axisN_data_source_checksum[i])->by_default("")->as_string());
     }
+
+    //load the machine axis letters that the joystick will control
+    std::string letterlist = THEKERNEL->config->value(jogger_checksum, jog_axes_checksum)->by_default("XYZABC")->as_string();
+
+    //parse the letter list into substrings
+    this->jog_axes = split(letterlist.c_str(), ',');
+
+    //update the current machine axis settings
+    update_Axes();
 }
 
 //map a position from -1 to 1 into a speed from -max to max
@@ -168,23 +206,8 @@ void Jogger::on_main_loop(void *argument)
             //joystick both active and jogging, keep jogging
             //add moves to the conveyor, only if it is not already full with moves to be done
             if (!THECONVEYOR->is_queue_full()) {
-                //get the magnitude of the speed (sqrt of sum of axis speeds squared)
-                float spd = 0.0f;
-                for (int c = 0; c < NUM_JOG_AXES; c++) {
-                    spd += (this->target_speed[c] * this->target_speed[c]);
-                }
-                spd = sqrtf(spd);
-
-                //use segment frequency (f) to calculate step scale factor (ssf (mm/segment) = speed (mm/s) / f (segments/s))
-                float ssf = spd / 60.0f / this->segment_frequency;
-
                 //create a new G-code to move a small distance in the direction given by the joystick, at the speed defined by the joystick position
-                //TODO: build this command using variable axis letters
-                //e.g. this->position[0] comes from data_source_alpha, which maps to axis "X"
-                //note that it should be possible to specify that no machine axis be mapped to a joystick axis
-                char command[32];
-                int n = snprintf(command, sizeof(command), "G1 X%1.2f Y%1.2f F%1.1f", this->position[0] * ssf, this->position[1] * ssf, spd);
-                std::string g(command, n);
+                std::string g = get_Gcode();
                 Gcode gc(g, &(StreamOutput::NullStream));
                 THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
             }
@@ -214,4 +237,47 @@ void Jogger::on_main_loop(void *argument)
             THEROBOT->pop_state();
         }
     }
+}
+
+std::string Jogger::get_Gcode(void)
+{
+    //get the magnitude of the speed (sqrt of sum of axis speeds squared)
+    float spd = 0.0f;
+    for (int c = 0; c < NUM_JOG_AXES; c++) {
+        spd += (this->target_speed[c] * this->target_speed[c]);
+    }
+    spd = sqrtf(spd);
+
+    //use segment frequency (f) to calculate step scale factor (ssf (mm/segment) = speed (mm/s) / f (segments/s))
+    float ssf = spd / 60.0f / this->segment_frequency;
+
+    //build the Gcode up
+    char command[64];
+    int n = 0;
+
+    //start with a G1
+    n += snprintf(command + n, sizeof(command) - n, "G1");
+
+    //for each possible jog axis letter
+    for (int i = 0; i < NUM_JOG_AXES; i++) {
+        //skip the letter if it isn't a valid machine axis letter
+        if (this->axis_letter[i] != 'X' &&
+            this->axis_letter[i] != 'Y' &&
+            this->axis_letter[i] != 'Z' &&
+            this->axis_letter[i] != 'A' &&
+            this->axis_letter[i] != 'B' &&
+            this->axis_letter[i] != 'C') {
+            continue;
+        }
+
+        //append the machine axis letter and its required distance
+        n += snprintf(command + n, sizeof(command) - n, " %c%1.2f", this->axis_letter[i], this->position[i] * ssf);
+    }
+
+    //append a feedrate command
+    n += snprintf(command + n, sizeof(command) - n, " F%1.1f", spd);
+
+    //return the string
+    std::string g(command, n);
+    return g;
 }

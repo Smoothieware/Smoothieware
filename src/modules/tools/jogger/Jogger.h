@@ -13,6 +13,8 @@ you should have received a copy of the gnu general public license along with smo
 
 #include "Module.h"
 #include <stdint.h>
+#include <string>
+#include <vector>
 
 class Jogger : public Module {
 public:
@@ -21,8 +23,10 @@ public:
     void on_module_loaded();
     void on_config_reload(void* argument);
     void on_gcode_received(void* argument);
+    void update_Axes();
     uint32_t update_tick(uint32_t dummy);
     void on_main_loop(void* argument);
+    std::string get_Gcode(void);
 
 private:
     float get_speed(float pos); //function to return a speed given a unitless joystick reading
@@ -33,6 +37,9 @@ private:
 
     float position[NUM_JOG_AXES] = {}; //keeps track of the joystick positions for each axis
     float target_speed[NUM_JOG_AXES] = {}; //keeps track of the target speed of each axis
+    char axis_letter[NUM_JOG_AXES] = {}; //keeps track of which machine axis is controlled by each joystick axis
+    std::vector<std::string> jog_axes; //stores the list of machine axes controlled by the joystick
+    unsigned int axis_index = 0; //stores which item in the list of machine axis configs is in use
     bool is_active = false; //keeps track of whether the joystick is being moved
     bool is_jogging = false; //keeps track of whether the robot is jogging
 
