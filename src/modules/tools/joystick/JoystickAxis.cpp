@@ -11,8 +11,6 @@
 #include "SlowTicker.h"
 #include "PublicDataRequest.h"
 
-//#include "StreamOutputPool.h" //just for debugging
-
 #define joystick_checksum                   CHECKSUM("joystick")
 #define pin_checksum                        CHECKSUM("pin")
 #define zero_offset_checksum                CHECKSUM("zero_offset")
@@ -22,9 +20,8 @@
 #define refresh_rate_checksum               CHECKSUM("refresh_rate")
 #define start_value_checksum                CHECKSUM("start_value")
 
-
-#define abs(a) ((a<0) ? -a : a)
-#define sign(a) ((a<0) ? -1 : 1)
+#define abs(a) ((a<0.0f) ? -a : a)
+#define sign(a) ((a<0.0f) ? -1 : 1)
 
 
 JoystickAxis::JoystickAxis() {}
@@ -36,7 +33,6 @@ JoystickAxis::JoystickAxis(uint16_t name)
 
 void JoystickAxis::on_module_loaded()
 {
-
     //load configuration for this module
     this->on_config_reload(this);
 
@@ -46,21 +42,11 @@ void JoystickAxis::on_module_loaded()
 
     //ask the kernel to run "update_tick" every "refresh_interval" milliseconds
     THEKERNEL->slow_ticker->attach(this->refresh_rate, this, &JoystickAxis::update_tick);
-
 }
-
-//debug only
-//void JoystickAxis::on_gcode_received(void *argument)
-//{
-//    //testing code here
-//    //print out parameters
-//    THEKERNEL->streams->printf("%+0.2f     ADC: %0.2f, Zero: %0.2f, End: %0.2f, AutoZ: %d, Startup: %d, StartT: %d, Rate: %d\n", this->position, read_pos(), zero_offset, endpoint, auto_zero, in_startup, startup_time, refresh_rate);
-//}
 
 //read config file values for this module
 void JoystickAxis::on_config_reload(void *argument)
 {
-
     //pin for ADC readings
     this->axis_pin.from_string(THEKERNEL->config->value(joystick_checksum, this->name_checksum, pin_checksum)->by_default("nc")->as_string())->as_input();
     THEKERNEL->adc->enable_pin(&axis_pin);
@@ -107,7 +93,7 @@ float JoystickAxis::get_normalized(float pos)
 
     //convert 0 to Adc.get_max_value() to +/- centered on zero
     //then scale the output to +/- 1 boundary
-    norm = (pos - zero_offset) / abs(endpoint - zero_offset);
+    norm = (pos - this->zero_offset) / abs(this->endpoint - this->zero_offset);
 
     //constrain to within +/- 1
     if(abs(norm) > 1) {
@@ -120,7 +106,6 @@ float JoystickAxis::get_normalized(float pos)
 //runs on a timer to update the joystick position
 uint32_t JoystickAxis::update_tick(uint32_t dummy)
 {
-
     //if still in the "startup" period and auto-zero is enabled
     if (this->in_startup && this->auto_zero) {
         //get the current ADC reading
