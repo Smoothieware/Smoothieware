@@ -192,7 +192,7 @@ void init() {
     #ifndef NO_UTILS_MOTORDRIVERCONTROL
     kernel->add_module( new MotorDriverControl(0) );
     #endif
-	#ifndef NO_TOOLS_JOYSTICK
+    #ifndef NO_TOOLS_JOYSTICK
     JoystickAxisPool *jp = new JoystickAxisPool();
     jp->load_tools();
     delete jp;
