@@ -286,7 +286,7 @@ bool CartGridStrategy::handleGcode(Gcode *gcode)
 
             return true;
 
-        } else if( gcode->g == 31 ) { // do a grid probe
+        } else if( gcode->g == 31 || gcode->g == 32) { // do a grid probe
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_idle();
 
