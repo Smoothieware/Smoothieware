@@ -152,6 +152,29 @@ float Jogger::get_speed(float pos) {
 //runs on a timer to update the jog speeds (default 100 Hz update rate)
 uint32_t Jogger::update_tick(uint32_t dummy)
 {
+    //set a flag indicating we need to update the joystick reading when in the main loop
+    this->do_reading = true;
+
+    return 0;
+}
+
+//runs whenever the smoothie is in the main loop, safe to send Gcode here
+void Jogger::on_main_loop(void *argument)
+{   
+    if (this->do_reading) {
+        //flag was set, means it's time to update the joystick reading
+        update_Joystick();
+        this->do_reading = false;
+    }
+
+    //update the jogging functionality
+    update_Jogging();
+
+}
+
+//perform a public data request from the joystick, also determine from the result if the joystick is active
+void Jogger::update_Joystick(void)
+{
     bool allzero = true; //will determine whether the joystick is at rest or not
 
     //read the joysticks for each axis and map their values to a target speed
@@ -177,13 +200,11 @@ uint32_t Jogger::update_tick(uint32_t dummy)
 
     //set the joystick's current activity (active if not all axes are zero)
     this->is_active = !allzero;
-
-    return 0;
 }
 
-//runs whenever the smoothie is in the main loop, safe to send Gcode here
-void Jogger::on_main_loop(void *argument)
-{   
+//perform tasks pertinent to axis movement and enabling/disabling the jogger
+void Jogger::update_Jogging(void)
+{
     //THREE POSSIBLE STATES TO CHECK:
     //1: joystick active and jogging -> keep jogging
     //2: joystick active but not jogging -> start jogging

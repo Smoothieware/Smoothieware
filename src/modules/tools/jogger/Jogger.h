@@ -25,8 +25,6 @@ public:
     void on_gcode_received(void* argument);
     uint32_t update_tick(uint32_t dummy);
     void on_main_loop(void* argument);
-    std::string get_Gcode(void);
-    void update_Axes(std::string axisstr);
 
 private:
     float get_speed(float pos); //function to return a speed given a unitless joystick reading
@@ -42,6 +40,7 @@ private:
     unsigned int axis_index = 0; //stores which item in the list of machine axis configs is in use
     bool is_active = false; //keeps track of whether the joystick is being moved
     bool is_jogging = false; //keeps track of whether the robot is jogging
+    bool do_reading = false; //flag for when a joystick reading should occur
 
     int refresh_rate = 100; //number of jog speed updates per second (absolute max = base_step_frequency (100 kHz))
     int segment_frequency = 100; //approximate number of segments per second during jogging
@@ -51,6 +50,10 @@ private:
 
     uint16_t axis_data_source[NUM_JOG_AXES] = {}; //checksums of the joystick module name from which to obtain data for axis n
 
+    void update_Joystick(void);
+    void update_Jogging(void);
+    std::string get_Gcode(void);
+    void update_Axes(std::string axisstr);
 };
 
 #endif //JOGGER_H
