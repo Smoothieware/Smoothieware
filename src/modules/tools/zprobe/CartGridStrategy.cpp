@@ -96,6 +96,7 @@
 #define do_home_checksum             CHECKSUM("do_home")
 
 #define GRIDFILE "/sd/cartesian.grid"
+#define GRIDFILE_NM "/sd/cartesian_nm.grid"
 
 CartGridStrategy::CartGridStrategy(ZProbe *zprobe) : LevelingStrategy(zprobe)
 {
@@ -168,7 +169,7 @@ void CartGridStrategy::save_grid(StreamOutput *stream)
         return;
     }
 
-    FILE *fp = fopen(GRIDFILE, "w");
+    FILE *fp = (configured_grid_x_size == configured_grid_y_size)?fopen(GRIDFILE, "w"):fopen(GRIDFILE_NM, "w");
     if(fp == NULL) {
         stream->printf("error:Failed to open grid file %s\n", GRIDFILE);
         return;
@@ -180,10 +181,12 @@ void CartGridStrategy::save_grid(StreamOutput *stream)
         return;
     }
 
-    if(fwrite(&configured_grid_y_size, sizeof(uint8_t), 1, fp) != 1) {
-        stream->printf("error:Failed to write grid y size\n");
-        fclose(fp);
-        return;
+    if(configured_grid_y_size != configured_grid_x_size){
+        if(fwrite(&configured_grid_y_size, sizeof(uint8_t), 1, fp) != 1) {
+            stream->printf("error:Failed to write grid y size\n");
+            fclose(fp);
+            return;
+        }
     }
 
     if(fwrite(&x_size, sizeof(float), 1, fp) != 1)  {
@@ -213,7 +216,7 @@ void CartGridStrategy::save_grid(StreamOutput *stream)
 
 bool CartGridStrategy::load_grid(StreamOutput *stream)
 {
-    FILE *fp = fopen(GRIDFILE, "r");
+    FILE *fp = (configured_grid_x_size == configured_grid_y_size)?fopen(GRIDFILE, "r"):fopen(GRIDFILE_NM, "r");
     if(fp == NULL) {
         stream->printf("error:Failed to open grid %s\n", GRIDFILE);
         return false;
@@ -234,16 +237,20 @@ bool CartGridStrategy::load_grid(StreamOutput *stream)
         return false;
     }
 
-    if(fread(&load_grid_y_size, sizeof(uint8_t), 1, fp) != 1) {
-        stream->printf("error:Failed to read grid size\n");
-        fclose(fp);
-        return false;
-    }
+    load_grid_y_size = load_grid_x_size;
 
-    if(load_grid_y_size != configured_grid_y_size) {
-        stream->printf("error:grid size y is different read %d - config %d\n", load_grid_y_size, configured_grid_x_size);
-        fclose(fp);
-        return false;
+    if(configured_grid_x_size != configured_grid_y_size){
+        if(fread(&load_grid_y_size, sizeof(uint8_t), 1, fp) != 1) {
+            stream->printf("error:Failed to read grid size\n");
+            fclose(fp);
+            return false;
+        }
+
+        if(load_grid_y_size != configured_grid_y_size) {
+            stream->printf("error:grid size y is different read %d - config %d\n", load_grid_y_size, configured_grid_x_size);
+            fclose(fp);
+            return false;
+        }
     }
 
     if(fread(&x, sizeof(float), 1, fp) != 1) {
