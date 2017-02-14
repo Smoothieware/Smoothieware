@@ -84,6 +84,7 @@
 #include <cmath>
 #include <fastmath.h>
 
+#define grid_size_checksum           CHECKSUM("size")
 #define grid_x_size_checksum         CHECKSUM("grid_x_size")
 #define grid_y_size_checksum         CHECKSUM("grid_y_size")
 #define tolerance_checksum           CHECKSUM("tolerance")
@@ -108,10 +109,16 @@ CartGridStrategy::~CartGridStrategy()
 
 bool CartGridStrategy::handleConfig()
 {
-    configured_grid_x_size = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, grid_x_size_checksum)->by_default(7)->as_number();
-    current_grid_x_size = configured_grid_x_size;
-    configured_grid_y_size = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, grid_y_size_checksum)->by_default(7)->as_number();
-    current_grid_y_size = configured_grid_y_size;
+
+    uint8_t grid_size = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, grid_size_checksum)->by_default(7)->as_number();
+    current_grid_x_size = configured_grid_x_size = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, grid_x_size_checksum)->by_default(0)->as_number();
+    if(0 == configured_grid_x_size){
+        current_grid_x_size = configured_grid_x_size = grid_size;
+    }
+    current_grid_y_size = configured_grid_y_size = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, grid_y_size_checksum)->by_default(0)->as_number();
+    if(0 == configured_grid_y_size){
+        current_grid_y_size = configured_grid_y_size = grid_size;
+    }
     tolerance = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, tolerance_checksum)->by_default(0.03F)->as_number();
     save = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, save_checksum)->by_default(false)->as_bool();
     do_home = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, do_home_checksum)->by_default(true)->as_bool();
@@ -273,7 +280,7 @@ bool CartGridStrategy::load_grid(StreamOutput *stream)
 
 bool CartGridStrategy::probe_grid(int n, int m, float x_size, float y_size, StreamOutput *stream)
 {
-    if((n < 5)||(n < 5)) {
+    if((n < 5)||(m < 5)) {
         stream->printf("Need at least a 5x5 grid to probe\n");
         return true;
     }
