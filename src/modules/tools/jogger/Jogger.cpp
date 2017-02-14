@@ -40,7 +40,12 @@
 #define abs(a) ((a<0.0f) ? -a : a)
 #define sign(a) ((a<0.0f) ? -1 : 1)
 
-Jogger::Jogger() {}
+Jogger::Jogger() {
+    for (int c = 0; c < NUM_JOG_AXES; c++) {
+        this->position[c] = 0.0f;
+        this->target_speed[c] = 0.0f;
+    }
+}
 
 //TODO: find examples of other modules, determine if necessary
 //deconstructor: THEKERNEL->unregister_for_event(ON_GCODE_RECEIVED, this); //unregister for on_main_loop too
