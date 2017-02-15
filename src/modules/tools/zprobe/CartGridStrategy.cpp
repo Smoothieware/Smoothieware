@@ -295,8 +295,8 @@ bool CartGridStrategy::probe_grid(int n, int m, float x_size, float y_size, Stre
     float initial_z = findBed();
     if(isnan(initial_z)) return false;
 
-    float x_step= x_size / (n -1);
-    float y_step= y_size / (m -1);
+    float x_step= x_size / n;
+    float y_step= y_size / m;
     for (int c = 0; c < n; ++c) {
         float y = y_step * c;
         for (int r = 0; r < n; ++r) {
@@ -319,8 +319,8 @@ bool CartGridStrategy::handleGcode(Gcode *gcode)
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_idle();
 
-            int n = gcode->has_letter('I') ? gcode->get_value('I') : 7;
-            int m = gcode->has_letter('J') ? gcode->get_value('J') : 7;
+            int n = gcode->has_letter('I') ? gcode->get_value('I') : configured_grid_x_size;
+            int m = gcode->has_letter('J') ? gcode->get_value('J') : configured_grid_y_size;
            
             float x = x_size, y = y_size;
             if(gcode->has_letter('X')) x = gcode->get_value('X'); // override default probe width
@@ -447,13 +447,13 @@ bool CartGridStrategy::doProbe(Gcode *gc)
 
     if(gc->has_letter('I')) current_grid_x_size = gc->get_value('I'); // override default grid x size
     if(current_grid_x_size > configured_grid_x_size){
-        gc->stream->printf("Grid X size bigger than configerd. Unable to allocate memory\n");
+        gc->stream->printf("Grid X size bigger than configured. Chande configuration.\n");
         return false;
     }
 
     if(gc->has_letter('J')) current_grid_y_size = gc->get_value('J'); // override default grid y size
     if(current_grid_y_size > configured_grid_y_size){
-        gc->stream->printf("Grid Y size bigger than configerd. Unable to allocate memory\n");
+        gc->stream->printf("Grid Y size bigger than configured. Chande configuration.\n");
         return false;
     }
 
