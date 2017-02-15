@@ -448,13 +448,13 @@ bool CartGridStrategy::doProbe(Gcode *gc)
 
     if(gc->has_letter('I')) current_grid_x_size = gc->get_value('I'); // override default grid x size
     if(current_grid_x_size > configured_grid_x_size){
-        gc->stream->printf("Grid X size bigger than configured. Chande configuration.\n");
+        gc->stream->printf("Grid X size bigger than configured. Change configuration.\n");
         return false;
     }
 
     if(gc->has_letter('J')) current_grid_y_size = gc->get_value('J'); // override default grid y size
     if(current_grid_y_size > configured_grid_y_size){
-        gc->stream->printf("Grid Y size bigger than configured. Chande configuration.\n");
+        gc->stream->printf("Grid Y size bigger than configured. Change configuration.\n");
         return false;
     }
 
