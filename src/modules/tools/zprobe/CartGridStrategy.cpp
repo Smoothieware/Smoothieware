@@ -174,15 +174,16 @@ void CartGridStrategy::save_grid(StreamOutput *stream)
         stream->printf("error:Failed to open grid file %s\n", GRIDFILE);
         return;
     }
-
-    if(fwrite(&configured_grid_x_size, sizeof(uint8_t), 1, fp) != 1) {
+    uint8_t tmp_configured_grid_size = configured_grid_x_size;
+    if(fwrite(&tmp_configured_grid_size, sizeof(uint8_t), 1, fp) != 1) {
         stream->printf("error:Failed to write grid x size\n");
         fclose(fp);
         return;
     }
 
+    tmp_configured_grid_size = configured_grid_y_size;
     if(configured_grid_y_size != configured_grid_x_size){
-        if(fwrite(&configured_grid_y_size, sizeof(uint8_t), 1, fp) != 1) {
+        if(fwrite(&tmp_configured_grid_size, sizeof(uint8_t), 1, fp) != 1) {
             stream->printf("error:Failed to write grid y size\n");
             fclose(fp);
             return;

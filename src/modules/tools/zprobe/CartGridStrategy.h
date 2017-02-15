@@ -35,9 +35,14 @@ private:
 
     float *grid;
     std::tuple<float, float, float> probe_offsets;
-    uint8_t configured_grid_x_size, configured_grid_y_size;
-    uint8_t current_grid_x_size, current_grid_y_size;
     float x_size,y_size;
+
+    struct {
+        uint8_t configured_grid_x_size:8;
+        uint8_t configured_grid_y_size:8;
+        uint8_t current_grid_x_size:8;
+        uint8_t current_grid_y_size:8;
+    };
 
     struct {
         bool save:1;
