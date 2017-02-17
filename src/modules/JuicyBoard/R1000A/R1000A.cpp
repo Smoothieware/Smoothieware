@@ -177,7 +177,15 @@ void R1000A::on_console_line_received(void* argument){
         }
         else if (cmd == "dumphex"){
             // analyzes and dumps hex file to console
+            //FIXME delete this command
             dumphex(shift_parameter(possible_command).c_str());
+        }
+        else if (cmd == "wrhex2bl"){
+            // analyzes and dumps hex file to console
+            //FIXME delete this command
+            int slotnum =  (int)strtol(shift_parameter(possible_command).c_str(), NULL, 10);
+            string hexfname = shift_parameter(possible_command);
+            wrhex2bl(hexfname.c_str(), slotnum);
         }
     }
 }
@@ -496,15 +504,46 @@ void R1000A::dumphex(const char * filename){
                 // line is complete, execute here
                 // perform checksum on line
                 // set byte address
+                // ignore empty lines
                 if (lineptr > 0){
-                    // ignore empty lines
-                    THEKERNEL->streams->printf("> ");
-                    int i;
-                    for (i=0; i<lineptr;i++){
-                        // print every character
-                        THEKERNEL->streams->printf("%c",line[i]);
+                    // if it's a valid line, that starts with a colon
+                    if (line[0] == ':'){
+                        unsigned char ll = retcharval(line[1],line[2]);                     // record length
+                        unsigned char ah = retcharval(line[3],line[4]);                     // address high byte
+                        unsigned char al = retcharval(line[5],line[6]);                     // address low byte
+                        unsigned char tt = retcharval(line[7],line[8]);                     // record type
+                        unsigned char cc = retcharval(line[lineptr-2],line[lineptr-1]);     // record checksum
+                        unsigned char record[ll];                                           // record content
+                        int i;
+                        // fill record contents
+                        for (i=0;i<ll;i++){
+                            record[i] = retcharval(line[9+2*i],line[10+2*i]);
+                        }
+
+                        //  verify line checksum
+                        unsigned char cceval = 0;
+                        cceval += ll;
+                        cceval += ah;
+                        cceval += al;
+                        cceval += tt;
+                        for (i=0;i<ll;i++){
+                            cceval += record[i];
+                        }
+                        cceval = ~cceval;               // NOT
+                        cceval += 1;                    // eval two'2 complement
+                        if (cceval == cc){
+                            // checksum is good
+                        }
+                        else{
+                            // checksum is not good, error
+                        }
+
+                        THEKERNEL->streams->printf("> %02X%02X%02X%02X-",ll,ah,al,tt);
+                        for (i=0;i<ll;i++){
+                            THEKERNEL->streams->printf("%02X",record[i]);
+                        }
+                        THEKERNEL->streams->printf("-%02X-%02X\r\n",cc,cceval);
                     }
-                    THEKERNEL->streams->printf(" (%d) \r\n",lineptr);
                 }
                 lineptr = 0;
             }
@@ -513,3 +552,94 @@ void R1000A::dumphex(const char * filename){
     fclose(fp);
 }
 
+unsigned char R1000A::retcharval(char u,char l){
+    // u: upper nibble
+    // l: lower nibble
+    char tmparr[3] = {u,l,0};
+    return (unsigned char)strtol(tmparr,NULL,16);
+}
+
+void R1000A::wrhex2bl(const char * filename, int slotnum){
+    // this function reads, analyzes hex file then writes it to the module mounted on slotnum
+    FILE * fp;
+    int fchar = 0;
+    int lineptr = 0;
+    int linenum = 1;            // keep track of line number
+    char line[128];
+    line[0] = 0;
+
+    fp = fopen(filename, "r");
+    if (fp == NULL){
+        THEKERNEL->streams->printf("Couldn't open file %s..\r\n", filename);
+    }
+    else{
+        // check slot number is within proper range
+        // check if the selected slot is in bootloader mode (acks on 0x2X address)
+        // (optional) check to bootloader version??
+
+        THEKERNEL->streams->printf("Flashing file %s to slot #%d\r\n", filename, slotnum);
+        while (fchar != EOF){
+            // line by line read operations
+            fchar = fgetc(fp);
+            if ((fchar != '\n') && (fchar != EOF)){
+                // add the character to the line
+                if (fchar != '\r'){
+                    // '\r' is in case of windows generated text files
+                    line[lineptr] = (char)fchar;
+                    lineptr += 1;
+                }
+            }
+            else{
+                // line is complete, execute here
+                // perform checksum on line
+                // set byte address
+                // ignore empty lines
+                if (lineptr > 0){
+                    // if it's a valid line, that starts with a colon
+                    if (line[0] == ':'){
+                        unsigned char ll = retcharval(line[1],line[2]);                     // record length
+                        unsigned char ah = retcharval(line[3],line[4]);                     // address high byte
+                        unsigned char al = retcharval(line[5],line[6]);                     // address low byte
+                        unsigned char tt = retcharval(line[7],line[8]);                     // record type
+                        unsigned char cc = retcharval(line[lineptr-2],line[lineptr-1]);     // record checksum
+                        unsigned char record[ll];                                           // record content
+                        int i;
+                        // fill record contents
+                        for (i=0;i<ll;i++){
+                            record[i] = retcharval(line[9+2*i],line[10+2*i]);
+                        }
+
+                        //  verify line checksum
+                        unsigned char cceval = 0;
+                        cceval += ll;
+                        cceval += ah;
+                        cceval += al;
+                        cceval += tt;
+                        for (i=0;i<ll;i++){
+                            cceval += record[i];
+                        }
+                        cceval = ~cceval;               // NOT
+                        cceval += 1;                    // eval two'2 complement
+                        if (cceval == cc){
+                            // checksum is good
+                            THEKERNEL->streams->printf("Flashing line \r\n");
+                        }
+                        else{
+                            // checksum is not good, error
+                            THEKERNEL->streams->printf(" CHEKSUM ERROR (line %d)> %02X%02X%02X%02X",linenum,ll,ah,al,tt);
+                            for (i=0;i<ll;i++){
+                                THEKERNEL->streams->printf("%02X",record[i]);
+                            }
+                            THEKERNEL->streams->printf("%02X\r\n",cc);
+                            THEKERNEL->streams->printf("STOPPING FLASH !!!\r\n");
+                            fchar = -1;         // force exit from while loop
+                        }
+                    }
+                }
+                lineptr = 0;
+                ++linenum;
+            }
+        }
+    }
+    fclose(fp);
+}

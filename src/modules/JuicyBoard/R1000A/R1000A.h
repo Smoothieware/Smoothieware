@@ -75,7 +75,9 @@ class R1000A : public Module {
         char writeEEbyte(unsigned int,char);    // write a single byte from EEPROM
 
         // hex file private functions
-        void dumphex(const char *);                   // analyzes hex file, assumes
+        void dumphex(const char *);             //FIXME analyzes hex file, assumes (delete this function)
+        void wrhex2bl(const char *, int);       // write hex file to bootloader
+        unsigned char retcharval(char,char);    // returns a char (numerical byte value) of given upper and lower characters
 };
 
 #endif
