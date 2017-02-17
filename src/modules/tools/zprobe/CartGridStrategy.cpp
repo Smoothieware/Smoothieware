@@ -112,14 +112,8 @@ bool CartGridStrategy::handleConfig()
 {
 
     uint8_t grid_size = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, grid_size_checksum)->by_default(7)->as_number();
-    current_grid_x_size = configured_grid_x_size = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, grid_x_size_checksum)->by_default(0)->as_number();
-    if(0 == configured_grid_x_size){
-        current_grid_x_size = configured_grid_x_size = grid_size;
-    }
-    current_grid_y_size = configured_grid_y_size = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, grid_y_size_checksum)->by_default(0)->as_number();
-    if(0 == configured_grid_y_size){
-        current_grid_y_size = configured_grid_y_size = grid_size;
-    }
+    current_grid_x_size = configured_grid_x_size = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, grid_x_size_checksum)->by_default(grid_size)->as_number();
+    current_grid_y_size = configured_grid_y_size = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, grid_y_size_checksum)->by_default(grid_size)->as_number();
     tolerance = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, tolerance_checksum)->by_default(0.03F)->as_number();
     save = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, save_checksum)->by_default(false)->as_bool();
     do_home = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, do_home_checksum)->by_default(true)->as_bool();
@@ -447,16 +441,13 @@ bool CartGridStrategy::doProbe(Gcode *gc)
     if(gc->has_letter('Y')) y_size = gc->get_value('Y'); // override default probe length, will get saved
 
     if(gc->has_letter('I')) current_grid_x_size = gc->get_value('I'); // override default grid x size
-    if(current_grid_x_size > configured_grid_x_size){
-        gc->stream->printf("Grid X size bigger than configured. Change configuration.\n");
+    if(gc->has_letter('J')) current_grid_y_size = gc->get_value('J'); // override default grid y size
+
+    if((current_grid_x_size * current_grid_y_size)  > (configured_grid_x_size * configured_grid_y_size)){
+        gc->stream->printf("Grid size (%d x %d = %d) bigger than configured (%d x %d = %d). Change configuration.\n", current_grid_x_size, current_grid_y_size, current_grid_x_size*current_grid_x_size,                             configured_grid_x_size, configured_grid_y_size, configured_grid_x_size*configured_grid_y_size);
         return false;
     }
 
-    if(gc->has_letter('J')) current_grid_y_size = gc->get_value('J'); // override default grid y size
-    if(current_grid_y_size > configured_grid_y_size){
-        gc->stream->printf("Grid Y size bigger than configured. Change configuration.\n");
-        return false;
-    }
 
     // find bed, and leave probe probe height above bed
     float initial_z = findBed();
