@@ -63,6 +63,22 @@ int R1000A_I2C::I2C_WriteREG(int slotnum, char REGAddr, char * data, int length)
     return 0;
 }
 
+int R1000A_I2C::I2C_CheckAddr(char I2CAddr){
+    // check if I2C address acknowledges
+    // set the register to access
+    this->i2c->start();
+    if (this->i2c->write((I2CAddr << 1) | 0x01) != 1){        // check for slave ack
+        // slave I2C is not acknowledging, exit function
+        this->i2c->stop();
+        return -1;
+    }
+    else
+    {
+        this->i2c->stop();
+        return 0;
+    }
+}
+
 char R1000A_I2C::getSlotI2CAdd(int slotnum){
     // returns I2C address of the specific slot
     // This slot numbers are ordered as follows
@@ -79,5 +95,11 @@ char R1000A_I2C::getSlotI2CAdd(int slotnum){
     else{
         return ((R1000_I2C_BASE + slotnum - 1) << 1);
     }
+}
+
+char R1000A_I2C::getBLSlotI2CAdd(int slotnum){
+    // returns I2C address of the specific slot
+    // when in bootloader mode
+    return ((R1000_I2C_BLBASE + slotnum - 1) << 1);
 }
 

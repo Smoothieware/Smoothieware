@@ -73,6 +73,9 @@ class R1000A : public Module {
         // eeprom private functions
         char readEEbyte(unsigned int);          // read a single byte from EEPROM
         char writeEEbyte(unsigned int,char);    // write a single byte from EEPROM
+
+        // hex file private functions
+        void dumphex(const char *);                   // analyzes hex file, assumes
 };
 
 #endif

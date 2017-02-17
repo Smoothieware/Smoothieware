@@ -19,8 +19,11 @@
 #include "ConfigValue.h"
 
 // Juicyware includes
-#include <string.h>
+//#include <string.h>
+//#include <stdlib.h>
+#include <stdio.h>
 //#include <sstream>
+
 
 // define configuration checksums here
 
@@ -32,7 +35,7 @@ R1000A::R1000A(){
     // Default Constructor
     this->ModResetPin = new Pin();                      // define new
     //this->ModResetPin->from_string("1.0");
-    this->ModResetPin->from_string("3.25");
+    this->ModResetPin->from_string("2.10");
     this->ModResetPin->as_open_drain();
     this->ModResetPin->set(true);                       // set to high
 }
@@ -154,6 +157,28 @@ void R1000A::on_console_line_received(void* argument){
                 }
                 THEKERNEL->streams->printf("\r\n");
         }
+        else if (cmd == "scani2c"){
+            // This scans the whole range of I2C addresses for acknowledges
+            unsigned char i;
+            for ( i=1; i<0x80; i++){
+                wait_ms(5);
+                if (THEKERNEL->i2c->I2C_CheckAddr(i) == 0){
+                    THEKERNEL->streams->printf("A:0x%02X Acked...\r\n",i);
+                }
+            }
+        }
+        else if (cmd == "checki2c"){
+            // This scans the whole range of I2C addresses for acknowledges
+            unsigned char i = (unsigned char)strtol(shift_parameter(possible_command).c_str(),NULL,0);
+
+            if (THEKERNEL->i2c->I2C_CheckAddr(i) == 0){
+                THEKERNEL->streams->printf("A:0x%02X Acked...\r\n",i);
+            }
+        }
+        else if (cmd == "dumphex"){
+            // analyzes and dumps hex file to console
+            dumphex(shift_parameter(possible_command).c_str());
+        }
     }
 }
 
@@ -170,7 +195,7 @@ void R1000A::ScanI2CBus(){
     
     for (i=1; i<=15; i++){
         // check for slave ack
-        if (THEKERNEL->i2c->I2C_WriteREG(i, 0x01, i2cbuf, 1) == 0){
+        if (THEKERNEL->i2c->I2C_ReadREG(i, 0x01, i2cbuf, 1) == 0){
             // continue reading from slave
             SlotPlatID[i] = (int)i2cbuf[0];
             THEKERNEL->i2c->I2C_ReadREG(i, 0x02, i2cbuf, 2);      // get device ID
@@ -438,3 +463,53 @@ char R1000A::writeEEbyte(unsigned int eeadr, char data){
     }
     return 0;
 }
+
+void R1000A::dumphex(const char * filename){
+    // this function reads, analyzes hex file then dumps results to console
+    FILE * fp;
+//    char * line = NULL;
+//    char * line = "Dumping hex...";
+//    size_t len = 0;
+//    ssize_t read;
+    int fchar = 0;
+    int lineptr = 0;
+    char line[128];
+    line[0] = 0;
+
+    fp = fopen(filename, "r");
+    if (fp == NULL){
+        THEKERNEL->streams->printf("Couldn't open file %s..\r\n", filename);
+    }
+    else{
+        THEKERNEL->streams->printf("Opening file %s..\r\n", filename);
+        while (fchar != EOF){
+            fchar = fgetc(fp);
+            if ((fchar != '\n') && (fchar != EOF)){
+                // add the character to the line
+                if (fchar != '\r'){
+                    // '\r' is in case of windows generated text files
+                    line[lineptr] = (char)fchar;
+                    lineptr += 1;
+                }
+            }
+            else{
+                // line is complete, execute here
+                // perform checksum on line
+                // set byte address
+                if (lineptr > 0){
+                    // ignore empty lines
+                    THEKERNEL->streams->printf("> ");
+                    int i;
+                    for (i=0; i<lineptr;i++){
+                        // print every character
+                        THEKERNEL->streams->printf("%c",line[i]);
+                    }
+                    THEKERNEL->streams->printf(" (%d) \r\n",lineptr);
+                }
+                lineptr = 0;
+            }
+        }
+    }
+    fclose(fp);
+}
+
