@@ -40,6 +40,8 @@
     Optionally an initial_height can be set that tell the intial probe where to stop the fast decent before it probes, this should be around 5-10mm above the bed
       leveling-strategy.rectangular-grid.initial_height  10
 
+    Display mode of current grid can be changed to human redable mode (table with coordinates) by using 
+       leveling-strategy.rectangular-grid.human_readable  true
 
     Usage
     -----
@@ -94,6 +96,7 @@
 #define x_size_checksum              CHECKSUM("x_size")
 #define y_size_checksum              CHECKSUM("y_size")
 #define do_home_checksum             CHECKSUM("do_home")
+#define human_readable_checksum      CHECKSUM("human_readable")
 
 #define GRIDFILE "/sd/cartesian.grid"
 #define GRIDFILE_NM "/sd/cartesian_nm.grid"
@@ -117,6 +120,7 @@ bool CartGridStrategy::handleConfig()
     tolerance = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, tolerance_checksum)->by_default(0.03F)->as_number();
     save = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, save_checksum)->by_default(false)->as_bool();
     do_home = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, do_home_checksum)->by_default(true)->as_bool();
+    human_readable = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, human_readable_checksum)->by_default(false)->as_bool();
 
     x_size = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, x_size_checksum)->by_default(0.0F)->as_number();
     y_size = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, y_size_checksum)->by_default(0.0F)->as_number();
@@ -540,12 +544,43 @@ void CartGridStrategy::doCompensation(float *target, bool inverse)
 // Print calibration results for plotting or manual frame adjustment.
 void CartGridStrategy::print_bed_level(StreamOutput *stream)
 {
-    for (int y = 0; y < current_grid_y_size; y++) {
-        for (int x = 0; x < current_grid_x_size; x++) {
-            stream->printf("%10.4f ", grid[x + (current_grid_x_size * y)]);
+    if(!human_readable){
+        for (int y = 0; y < current_grid_y_size; y++) {
+            for (int x = 0; x < current_grid_x_size; x++) {
+                stream->printf("%10.4f ", grid[x + (current_grid_x_size * y)]);
+            }
+            stream->printf("\n");
+        }
+    } else {
+        
+        int xStart = (x_size>0) ? 0 : (current_grid_x_size - 1);
+        int xStop = (x_size>0) ? current_grid_x_size : -1;
+        int xInc = (x_size>0) ? 1: -1;
+
+        int yStart = (y_size<0) ? 0 : (current_grid_y_size - 1);
+        int yStop = (y_size<0) ? current_grid_y_size : -1;
+        int yInc = (y_size<0) ? 1: -1;
+
+        for (int y = yStart; y != yStop; y += yInc) {
+            stream->printf("%10.4f|", y * AUTO_BED_LEVELING_GRID_Y);
+            for (int x = xStart; x != xStop; x += xInc) {
+                stream->printf("%10.4f ",  grid[x + (current_grid_x_size * y)]);
+            }
+            stream->printf("\n");
+        }
+        stream->printf("           ");
+        for (int x = xStart; x != xStop; x += xInc) {
+            stream->printf("-----+-----");
         }
         stream->printf("\n");
+        stream->printf("           ");
+        for (int x = xStart; x != xStop; x += xInc) {
+            stream->printf("%10.4f ",  x * AUTO_BED_LEVELING_GRID_X);
+        }
+            stream->printf("\n");
+
     }
+
 }
 
 // Reset calibration results to zero.

@@ -47,5 +47,6 @@ private:
     struct {
         bool save:1;
         bool do_home:1;
+        bool human_readable:1;
     };
 };
