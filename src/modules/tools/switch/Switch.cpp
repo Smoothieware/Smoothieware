@@ -89,7 +89,6 @@ void Switch::on_module_loaded()
 void Switch::on_config_reload(void *argument)
 {
     this->input_pin.from_string( THEKERNEL->config->value(switch_checksum, this->name_checksum, input_pin_checksum )->by_default("nc")->as_string())->as_input();
-    this->input_pin_behavior = THEKERNEL->config->value(switch_checksum, this->name_checksum, input_pin_behavior_checksum )->by_default(momentary_checksum)->as_number();
     this->subcode = THEKERNEL->config->value(switch_checksum, this->name_checksum, command_subcode_checksum )->by_default(0)->as_number();
     std::string input_on_command = THEKERNEL->config->value(switch_checksum, this->name_checksum, input_on_command_checksum )->by_default("")->as_string();
     std::string input_off_command = THEKERNEL->config->value(switch_checksum, this->name_checksum, input_off_command_checksum )->by_default("")->as_string();
@@ -99,6 +98,9 @@ void Switch::on_config_reload(void *argument)
     string type = THEKERNEL->config->value(switch_checksum, this->name_checksum, output_type_checksum )->by_default("pwm")->as_string();
     this->failsafe= THEKERNEL->config->value(switch_checksum, this->name_checksum, failsafe_checksum )->by_default(0)->as_number();
     this->ignore_on_halt= THEKERNEL->config->value(switch_checksum, this->name_checksum, ignore_onhalt_checksum )->by_default(false)->as_bool();
+
+    std::string ipb = THEKERNEL->config->value(switch_checksum, this->name_checksum, input_pin_behavior_checksum )->by_default("momentary")->as_string();
+    this->input_pin_behavior = (ipb == "momentary") ? momentary_checksum : toggle_checksum;
 
     if(type == "pwm"){
         this->output_type= SIGMADELTA;
