@@ -300,7 +300,7 @@ bool CartGridStrategy::probe_grid(int n, int m, float x_size, float y_size, Stre
             float mm;
             if(!zprobe->doProbeAt(mm, x, y)) return false;
             z = zprobe->getProbeHeight() - mm;
-            stream->printf("%10.4f ", z);
+            stream->printf("%1.4f ", z);
         }
         stream->printf("\n");
     }
@@ -483,7 +483,7 @@ bool CartGridStrategy::doProbe(Gcode *gc)
 
             if(!zprobe->doProbeAt(mm, xProbe - X_PROBE_OFFSET_FROM_EXTRUDER, yProbe - Y_PROBE_OFFSET_FROM_EXTRUDER)) return false;
             float measured_z = zprobe->getProbeHeight() - mm - z_reference; // this is the delta z from bed at 0,0
-            gc->stream->printf("DEBUG: X%10.4f, Y%10.4f, Z%10.4f\n", xProbe, yProbe, measured_z);
+            gc->stream->printf("DEBUG: X%1.4f, Y%1.4f, Z%1.4f\n", xProbe, yProbe, measured_z);
             grid[xCount + (current_grid_x_size * yCount)] = measured_z;
         }
     }
@@ -542,7 +542,7 @@ void CartGridStrategy::print_bed_level(StreamOutput *stream)
 {
     for (int y = 0; y < current_grid_y_size; y++) {
         for (int x = 0; x < current_grid_x_size; x++) {
-            stream->printf("%10.4f ", grid[x + (current_grid_x_size * y)]);
+            stream->printf("%1.4f ", grid[x + (current_grid_x_size * y)]);
         }
         stream->printf("\n");
     }
