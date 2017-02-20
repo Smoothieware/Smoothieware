@@ -50,7 +50,7 @@ class Robot : public Module {
         float to_millimeters( float value ) const { return this->inch_mode ? value * 25.4F : value; }
         float from_millimeters( float value) const { return this->inch_mode ? value/25.4F : value;  }
         float get_axis_position(int axis) const { return(this->machine_position[axis]); }
-        void get_axis_position(float position[], size_t n= N_PRIMARY_AXIS) const { memcpy(position, this->machine_position, n*sizeof(float)); }
+        void get_axis_position(float position[], size_t n= 3) const { memcpy(position, this->machine_position, n*sizeof(float)); }
         wcs_t get_axis_position() const { return wcs_t(machine_position[X_AXIS], machine_position[Y_AXIS], machine_position[Z_AXIS]); }
         void get_current_machine_position(float *pos) const;
         int print_position(uint8_t subcode, char *buf, size_t bufsize) const;
