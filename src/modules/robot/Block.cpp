@@ -84,9 +84,9 @@ void Block::debug() const
 {
     THEKERNEL->streams->printf("%p: steps-X:%lu Y:%lu Z:%lu ", this, this->steps[0], this->steps[1], this->steps[2]);
     for (size_t i = E_AXIS; i < n_actuators; ++i) {
-        THEKERNEL->streams->printf("E%d:%lu ", i-E_AXIS, this->steps[i]);
+        THEKERNEL->streams->printf("%c:%lu ", 'A' + i-E_AXIS, this->steps[i]);
     }
-    THEKERNEL->streams->printf("(max:%lu) nominal:r%1.4f/s%1.4f mm:%1.4f acc:%1.2f accu:%lu decu:%lu ticks:%lu rates:%1.4f entry/max:%1.4f/%1.4f exit:%1.4f primary:%d ready:%d locked:%d ticking:%d recalc:%d nomlen:%d time:%f\r\n",
+    THEKERNEL->streams->printf("(max:%lu) nominal:r%1.4f/s%1.4f mm:%1.4f acc:%1.2f accu:%lu decu:%lu ticks:%lu rates:%1.4f/%1.4f entry/max:%1.4f/%1.4f exit:%1.4f primary:%d ready:%d locked:%d ticking:%d recalc:%d nomlen:%d time:%f\r\n",
                                this->steps_event_count,
                                this->nominal_rate,
                                this->nominal_speed,
@@ -96,6 +96,7 @@ void Block::debug() const
                                this->decelerate_after,
                                this->total_move_ticks,
                                this->initial_rate,
+                               this->maximum_rate,
                                this->entry_speed,
                                this->max_entry_speed,
                                this->exit_speed,
@@ -201,7 +202,7 @@ void Block::calculate_trapezoid( float entryspeed, float exitspeed )
     // Now figure out the acceleration PER TICK, this should ideally be held as a float, even a double if possible as it's very critical to the block timing
     // steps/tick^2
 
-    this->acceleration_per_tick =  acceleration_in_steps / STEP_TICKER_FREQUENCY_2;
+    this->acceleration_per_tick = acceleration_in_steps / STEP_TICKER_FREQUENCY_2;
     this->deceleration_per_tick = deceleration_in_steps / STEP_TICKER_FREQUENCY_2;
 
     // We now have everything we need for this block to call a Steppermotor->move method !!!!
