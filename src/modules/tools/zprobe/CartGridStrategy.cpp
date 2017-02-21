@@ -595,7 +595,7 @@ void CartGridStrategy::print_bed_level(StreamOutput *stream)
     if(!human_readable){
         for (int y = 0; y < current_grid_y_size; y++) {
             for (int x = 0; x < current_grid_x_size; x++) {
-                stream->printf("%10.4f ", grid[x + (current_grid_x_size * y)]);
+                stream->printf("%1.4f ", grid[x + (current_grid_x_size * y)]);
             }
             stream->printf("\n");
         }
