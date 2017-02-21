@@ -178,8 +178,9 @@ void Block::calculate_trapezoid( float entryspeed, float exitspeed )
     // the exact rate we want
 
     // First off round total time, acceleration time and deceleration time in ticks
-    uint32_t acceleration_ticks = floorf( time_to_accelerate * STEP_TICKER_FREQUENCY );
-    uint32_t deceleration_ticks = floorf( time_to_decelerate * STEP_TICKER_FREQUENCY );
+    // NOTE we need to make sure this is no less than 1 which would happen if the time to accelerate was less than the current step period
+    uint32_t acceleration_ticks = ceilf( time_to_accelerate * STEP_TICKER_FREQUENCY );
+    uint32_t deceleration_ticks = ceilf( time_to_decelerate * STEP_TICKER_FREQUENCY );
     uint32_t total_move_ticks   = floorf( total_move_time    * STEP_TICKER_FREQUENCY );
 
     // Now deduce the plateau time for those new values expressed in tick
@@ -189,8 +190,8 @@ void Block::calculate_trapezoid( float entryspeed, float exitspeed )
     float acceleration_time = acceleration_ticks / STEP_TICKER_FREQUENCY;  // This can be moved into the operation below, separated for clarity, note we need to do this instead of using time_to_accelerate(seconds) directly because time_to_accelerate(seconds) and acceleration_ticks(seconds) do not have the same value anymore due to the rounding
     float deceleration_time = deceleration_ticks / STEP_TICKER_FREQUENCY;
 
-    float acceleration_in_steps = (acceleration_time > 0.0F ) ? ( this->maximum_rate - initial_rate ) / acceleration_time : 0;
-    float deceleration_in_steps =  (deceleration_time > 0.0F ) ? ( this->maximum_rate - final_rate ) / deceleration_time : 0;
+    float acceleration_in_steps = ( this->maximum_rate - initial_rate ) / acceleration_time;
+    float deceleration_in_steps = ( this->maximum_rate - final_rate ) / deceleration_time;
 
     // we have a potential race condition here as we could get interrupted anywhere in the middle of this call, we need to lock
     // the updates to the blocks to get around it
