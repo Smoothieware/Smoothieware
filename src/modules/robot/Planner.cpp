@@ -22,6 +22,7 @@ using namespace std;
 #include "checksumm.h"
 #include "Robot.h"
 #include "ConfigValue.h"
+#include <StepTicker.h>
 
 #include <math.h>
 #include <algorithm>
@@ -106,18 +107,27 @@ bool Planner::append_block( ActuatorCoordinates &actuator_pos, uint8_t n_motors,
         }
     }
 
-    block->acceleration = acceleration; // save in block
-
     // Max number of steps, for all axes
     auto mi = std::max_element(block->steps.begin(), block->steps.end());
     block->steps_event_count = *mi;
-
     block->millimeters = distance;
+
+    // check that acceleration/sec does not exceed step frequency
+    float acceleration_per_second = (acceleration * block->steps_event_count) / block->millimeters;
+    if(acceleration_per_second > THEKERNEL->step_ticker->get_frequency()) {
+        // we need to reduce acceleration to keep it under this frequency
+        acceleration= floorf((block->millimeters * THEKERNEL->step_ticker->get_frequency()) / block->steps_event_count);
+    }
+
+    block->acceleration = acceleration; // save in block
 
     // Calculate speed in mm/sec for each axis. No divide by zero due to previous checks.
     if( distance > 0.0F ) {
         block->nominal_speed = rate_mm_s;           // (mm/s) Always > 0
         block->nominal_rate = block->steps_event_count * rate_mm_s / distance; // (step/s) Always > 0
+        // must be >= 1.0 step/sec otherwise timing is off
+        if(block->nominal_rate < 1.0F) block->nominal_rate= 1.0F;
+
     } else {
         block->nominal_speed = 0.0F;
         block->nominal_rate  = 0;
