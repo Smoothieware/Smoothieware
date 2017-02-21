@@ -78,14 +78,6 @@ void R1000A::on_console_line_received(void* argument){
             // reset all modules
             readPowerMon();
         }
-        else if (cmd == "printarg"){
-            //FIXME for test, delete
-            // This function prints out the string argument that follows
-//            string nextarg = shift_parameter(possible_command);
-            THEKERNEL->streams->printf("length:%d\r\n",possible_command.length());
-            THEKERNEL->streams->printf("strlen:%d\r\n",(unsigned)strlen(possible_command.c_str()));
-            THEKERNEL->streams->printf("%s\r\n",possible_command.c_str());
-        }
         else if (cmd == "eeread"){
             // This function reads data from EEPROM, byte by byte
 
@@ -98,11 +90,9 @@ void R1000A::on_console_line_received(void* argument){
             if (readlen > 0) {
                 // now the read length is > 0
                 // perform byte by byte EEPROM read
-//                char bufout;
                 do {
                     if (eeadr <= EEPROM_NUM_SLOTS*256) {
                         // address is within a valid range
-//                        bufout[0] = this->readEEbyte(eeadr);
                         THEKERNEL->streams->printf("%c",this->readEEbyte(eeadr));
                         ++eeadr;      // increment address
                     }
@@ -175,17 +165,30 @@ void R1000A::on_console_line_received(void* argument){
                 THEKERNEL->streams->printf("A:0x%02X Acked...\r\n",i);
             }
         }
-        else if (cmd == "dumphex"){
-            // analyzes and dumps hex file to console
-            //FIXME delete this command
-            dumphex(shift_parameter(possible_command).c_str());
-        }
         else if (cmd == "wrhex2bl"){
-            // analyzes and dumps hex file to console
-            //FIXME delete this command
+            // write hex file to module (has to be in bootloader mode)
             int slotnum =  (int)strtol(shift_parameter(possible_command).c_str(), NULL, 10);
             string hexfname = shift_parameter(possible_command);
             wrhex2bl(hexfname.c_str(), slotnum);
+        }
+        else if (cmd == "dumphex"){
+            // analyzes and dumps hex from module in bootloader mode to console
+            int slotnum =  (int)strtol(shift_parameter(possible_command).c_str(), NULL, 10);
+            dumphex(slotnum);
+        }
+        else if (cmd == "chkfwsig"){
+            // checks firmware signature on mounted module
+            int slotnum =  (int)strtol(shift_parameter(possible_command).c_str(), NULL, 10);
+            int tmp = checkfwsig(slotnum);
+            if (tmp == 0){
+                THEKERNEL->streams->printf("APP FW Signature CORRECT\r\n");
+            }
+            else if (tmp == -2){
+                THEKERNEL->streams->printf("APP FW Signature INVALID!\r\n");
+            }
+            else{
+                THEKERNEL->streams->printf("I2C Error\r\n");
+            }
         }
     }
 }
@@ -472,86 +475,6 @@ char R1000A::writeEEbyte(unsigned int eeadr, char data){
     return 0;
 }
 
-void R1000A::dumphex(const char * filename){
-    // this function reads, analyzes hex file then dumps results to console
-    FILE * fp;
-//    char * line = NULL;
-//    char * line = "Dumping hex...";
-//    size_t len = 0;
-//    ssize_t read;
-    int fchar = 0;
-    int lineptr = 0;
-    char line[128];
-    line[0] = 0;
-
-    fp = fopen(filename, "r");
-    if (fp == NULL){
-        THEKERNEL->streams->printf("Couldn't open file %s..\r\n", filename);
-    }
-    else{
-        THEKERNEL->streams->printf("Opening file %s..\r\n", filename);
-        while (fchar != EOF){
-            fchar = fgetc(fp);
-            if ((fchar != '\n') && (fchar != EOF)){
-                // add the character to the line
-                if (fchar != '\r'){
-                    // '\r' is in case of windows generated text files
-                    line[lineptr] = (char)fchar;
-                    lineptr += 1;
-                }
-            }
-            else{
-                // line is complete, execute here
-                // perform checksum on line
-                // set byte address
-                // ignore empty lines
-                if (lineptr > 0){
-                    // if it's a valid line, that starts with a colon
-                    if (line[0] == ':'){
-                        unsigned char ll = retcharval(line[1],line[2]);                     // record length
-                        unsigned char ah = retcharval(line[3],line[4]);                     // address high byte
-                        unsigned char al = retcharval(line[5],line[6]);                     // address low byte
-                        unsigned char tt = retcharval(line[7],line[8]);                     // record type
-                        unsigned char cc = retcharval(line[lineptr-2],line[lineptr-1]);     // record checksum
-                        unsigned char record[ll];                                           // record content
-                        int i;
-                        // fill record contents
-                        for (i=0;i<ll;i++){
-                            record[i] = retcharval(line[9+2*i],line[10+2*i]);
-                        }
-
-                        //  verify line checksum
-                        unsigned char cceval = 0;
-                        cceval += ll;
-                        cceval += ah;
-                        cceval += al;
-                        cceval += tt;
-                        for (i=0;i<ll;i++){
-                            cceval += record[i];
-                        }
-                        cceval = ~cceval;               // NOT
-                        cceval += 1;                    // eval two'2 complement
-                        if (cceval == cc){
-                            // checksum is good
-                        }
-                        else{
-                            // checksum is not good, error
-                        }
-
-                        THEKERNEL->streams->printf("> %02X%02X%02X%02X-",ll,ah,al,tt);
-                        for (i=0;i<ll;i++){
-                            THEKERNEL->streams->printf("%02X",record[i]);
-                        }
-                        THEKERNEL->streams->printf("-%02X-%02X\r\n",cc,cceval);
-                    }
-                }
-                lineptr = 0;
-            }
-        }
-    }
-    fclose(fp);
-}
-
 unsigned char R1000A::retcharval(char u,char l){
     // u: upper nibble
     // l: lower nibble
@@ -567,79 +490,276 @@ void R1000A::wrhex2bl(const char * filename, int slotnum){
     int linenum = 1;            // keep track of line number
     char line[128];
     line[0] = 0;
+    int i;                      // for loop variable
 
-    fp = fopen(filename, "r");
-    if (fp == NULL){
-        THEKERNEL->streams->printf("Couldn't open file %s..\r\n", filename);
-    }
-    else{
-        // check slot number is within proper range
-        // check if the selected slot is in bootloader mode (acks on 0x2X address)
-        // (optional) check to bootloader version??
-
-        THEKERNEL->streams->printf("Flashing file %s to slot #%d\r\n", filename, slotnum);
-        while (fchar != EOF){
-            // line by line read operations
-            fchar = fgetc(fp);
-            if ((fchar != '\n') && (fchar != EOF)){
-                // add the character to the line
-                if (fchar != '\r'){
-                    // '\r' is in case of windows generated text files
-                    line[lineptr] = (char)fchar;
-                    lineptr += 1;
-                }
+    // check slot number is within proper range
+    if ((slotnum > 0) && (slotnum < 16)){
+        // check if the selected slot is in bootloader mode (acks and BLSTAT = 0x03)
+        if ((THEKERNEL->i2c->I2C_CheckAck(slotnum) == 0) & (THEKERNEL->i2c->I2C_CheckBLMode(slotnum) == 0)){
+            fp = fopen(filename, "r");
+            if (fp == NULL){
+                THEKERNEL->streams->printf("Couldn't open file %s..\r\n", filename);
             }
             else{
-                // line is complete, execute here
-                // perform checksum on line
-                // set byte address
-                // ignore empty lines
-                if (lineptr > 0){
-                    // if it's a valid line, that starts with a colon
-                    if (line[0] == ':'){
-                        unsigned char ll = retcharval(line[1],line[2]);                     // record length
-                        unsigned char ah = retcharval(line[3],line[4]);                     // address high byte
-                        unsigned char al = retcharval(line[5],line[6]);                     // address low byte
-                        unsigned char tt = retcharval(line[7],line[8]);                     // record type
-                        unsigned char cc = retcharval(line[lineptr-2],line[lineptr-1]);     // record checksum
-                        unsigned char record[ll];                                           // record content
-                        int i;
-                        // fill record contents
-                        for (i=0;i<ll;i++){
-                            record[i] = retcharval(line[9+2*i],line[10+2*i]);
-                        }
+                // erase application flash pages on the target device
+                // 0x400 to 1DFF
+                for (i=4;i<=0x1C;i+=2){
+                    // loop through and erase every page
+                    // Command Format:
+                    // [0] Command
+                    // [1] flash key code0
+                    // [2] flash key code1
+                    // [3] addr0 (LSB)
+                    // [4] addr1 (MSB)
+                    // [5] N/A
 
-                        //  verify line checksum
-                        unsigned char cceval = 0;
-                        cceval += ll;
-                        cceval += ah;
-                        cceval += al;
-                        cceval += tt;
-                        for (i=0;i<ll;i++){
-                            cceval += record[i];
-                        }
-                        cceval = ~cceval;               // NOT
-                        cceval += 1;                    // eval two'2 complement
-                        if (cceval == cc){
-                            // checksum is good
-                            THEKERNEL->streams->printf("Flashing line \r\n");
+                    char i2cbuf[4];
+                    i2cbuf[0] = 0;                  // no key
+                    i2cbuf[1] = 0;                  // no key
+                    i2cbuf[2] = 0x00;               // LSB address
+                    i2cbuf[3] = (unsigned char)i;   // LSB address
+                    if (THEKERNEL->i2c->I2C_WriteREG(slotnum, TGT_CMD_ERASE_FLASH_PAGE, i2cbuf, 4) == 0){
+                        THEKERNEL->streams->printf("Erasing page 0x%02X00\r\n",i);
+                    }
+                    else{
+                        THEKERNEL->streams->printf("I2C ERROR CANNOT ERASE PAGE 0x%02X00\r\n",i);
+                    }
+                    wait_ms(10);                    // give some delay for erase flash to execute
+                    // check if page erase was successfull
+                    if (THEKERNEL->i2c->I2C_Read(slotnum, i2cbuf, 1) == 0){
+                        if (i2cbuf[0] == TGT_RSP_OK){
+                            THEKERNEL->streams->printf("Successfully erased page 0x%02X00\r\n",i);
                         }
                         else{
-                            // checksum is not good, error
-                            THEKERNEL->streams->printf(" CHEKSUM ERROR (line %d)> %02X%02X%02X%02X",linenum,ll,ah,al,tt);
-                            for (i=0;i<ll;i++){
-                                THEKERNEL->streams->printf("%02X",record[i]);
-                            }
-                            THEKERNEL->streams->printf("%02X\r\n",cc);
-                            THEKERNEL->streams->printf("STOPPING FLASH !!!\r\n");
-                            fchar = -1;         // force exit from while loop
+                            THEKERNEL->streams->printf("ERASE PAGE FAILED! RESP=0x%02X00\r\n",i2cbuf[0]);
                         }
                     }
+                    else{
+                        THEKERNEL->streams->printf("I2C ERROR CANNOT READ BACK FLASH ERASE STATUS 0x%02X00\r\n",i);
+                    }
+
                 }
-                lineptr = 0;
-                ++linenum;
+
+                // mounted module acked on the correct address, it is in bootloader mode
+                THEKERNEL->streams->printf("Flashing file %s to slot #%d\r\n", filename, slotnum);
+                while (fchar != EOF){
+                    // line by line read operations
+                    fchar = fgetc(fp);
+                    if ((fchar != '\n') && (fchar != EOF)){
+                        // add the character to the line
+                        if (fchar != '\r'){
+                            // '\r' is in case of windows generated text files
+                            line[lineptr] = (char)fchar;
+                            lineptr += 1;
+                        }
+                    }
+                    else{
+                        // line is complete, execute here
+                        // perform checksum on line
+                        // set byte address
+                        // ignore empty lines
+                        if (lineptr > 0){
+                            // if it's a valid line, that starts with a colon
+                            if (line[0] == ':'){
+                                unsigned char ll = retcharval(line[1],line[2]);                     // record length
+                                unsigned char ah = retcharval(line[3],line[4]);                     // address high byte
+                                unsigned char al = retcharval(line[5],line[6]);                     // address low byte
+                                unsigned char tt = retcharval(line[7],line[8]);                     // record type
+                                unsigned char cc = retcharval(line[lineptr-2],line[lineptr-1]);     // record checksum
+                                unsigned char record[ll];                                           // record content
+
+                                // fill record contents
+                                for (i=0;i<ll;i++){
+                                    record[i] = retcharval(line[9+2*i],line[10+2*i]);
+                                }
+
+                                //  verify line checksum
+                                unsigned char cceval = 0;
+                                cceval += ll;
+                                cceval += ah;
+                                cceval += al;
+                                cceval += tt;
+                                for (i=0;i<ll;i++){
+                                    cceval += record[i];
+                                }
+                                cceval = ~cceval;               // NOT
+                                cceval += 1;                    // eval two'2 complement
+                                if (cceval == cc){
+                                    // checksum is good
+                                    if (tt == 0x00){
+
+                                        char i2cbuf[40];
+                                        // Command Format:
+                                        // [0] Command
+                                        // [1] flash key code0
+                                        // [2] flash key code1
+                                        // [3] addr0 (LSB)
+                                        // [4] addr1 (MSB)
+                                        // [5] numbytes
+
+                                        // Bytes to write:
+                                        // [6] byte0
+                                        // [7] byte1
+                                        // [.] ...
+                                        // [6+numbytes-1] byte(numbytes-1)
+
+                                        i2cbuf[0] = 0;              // no key
+                                        i2cbuf[1] = 0;              // no key
+                                        i2cbuf[2] = al;             // address LSB
+                                        i2cbuf[3] = ah;             // address MSB
+                                        i2cbuf[4] = ll;             // record length
+
+                                        for (i=0;i<ll;i++){
+                                            i2cbuf[5+i] = record[i];
+                                        }
+                                        // now fire off i2c command
+                                        if (THEKERNEL->i2c->I2C_WriteREG(slotnum, TGT_CMD_WRITE_FLASH_BYTES, i2cbuf, ll+5) == 0){
+                                            THEKERNEL->streams->printf("FLASHED %d > %02X%02X%02X%02X",linenum,ll,ah,al,tt);
+                                            for (i=0;i<ll;i++){
+                                                THEKERNEL->streams->printf("%02X",record[i]);
+                                            }
+                                            THEKERNEL->streams->printf("-%02X\r\n",cc);
+                                        }
+                                        else{
+                                            THEKERNEL->streams->printf("I2C ERROR, CANNOT FLASH line %d\r\n",linenum);
+                                        }
+                                        wait_ms(3);         // extra delay for writing to flash
+                                    }
+                                }
+                                else{
+                                    // checksum is not good, error
+                                    THEKERNEL->streams->printf(" CHEKSUM ERROR (line %d)> %02X%02X%02X%02X",linenum,ll,ah,al,tt);
+                                    for (i=0;i<ll;i++){
+                                        THEKERNEL->streams->printf("%02X",record[i]);
+                                    }
+                                    THEKERNEL->streams->printf("-%02X!=%02X\r\n",cc,cceval);
+                                    THEKERNEL->streams->printf("STOPPING FLASH !!!\r\n");
+                                    fchar = -1;         // force exit from while loop
+                                }
+                            }
+                        }
+                        lineptr = 0;
+                        ++linenum;
+                    }
+                }
             }
+            fclose(fp);
+        }
+        else{
+            // module is not mounted or isn't in bootloader mode
+            THEKERNEL->streams->printf("Module in slot #%d isn't in bootloader mode or maybe not mounted\r\n",slotnum);
         }
     }
-    fclose(fp);
+    else{
+        THEKERNEL->streams->printf("Invalid slot #%d\r\n",slotnum);
+    }
+}
+
+void R1000A::dumphex(int slotnum){
+    // This function dumps the module flash memory to the console
+    // the module has to be in bootloader mode
+
+    char i2cbuf[30];        // I2C buffer
+
+
+    if ((slotnum > 0) && (slotnum < 16)){
+        // check if the selected slot acks and is in bootloader mode
+//        if (THEKERNEL->i2c->I2C_ReadREG(slotnum, TGT_CMD_CHECK_BLSTAT, i2cbuf, 1) == 0){
+//            THEKERNEL->streams->printf("BLSTAT: 0x%02X\r\n",i2cbuf[0]);
+//        }
+        if ((THEKERNEL->i2c->I2C_CheckAck(slotnum) == 0) & (THEKERNEL->i2c->I2C_CheckBLMode(slotnum) == 0)){
+            // cycle from the start address, 16 bytes at a time
+            int i;
+            for (i=MOD_FADDR_START;i<=MOD_FADDR_END;i+=16){
+                // read 16 bytes through I2C
+                // Command Format:
+
+                // [0] Command
+                // [1] flash key code0
+                // [2] flash key code1
+                // [3] addr0 (LSB)
+                // [4] addr1 (MSB)
+                // [5] numbytes
+
+                // Response:
+                // [0] Response code
+                // [1] byte0
+                // [2] byte1
+                // [.] ...
+                // [numbytes] byte(numbytes-1)
+
+                i2cbuf[0] = 0x0;                                // 0 keys
+                i2cbuf[1] = 0x0;
+                i2cbuf[2] = (char)(i & 0xFF);                   // Address lower byte
+                i2cbuf[3] = (char)((i >> 8) & 0xFF);            // Address upper byte
+                i2cbuf[4] = 16;                                 // read 16 bytes
+                // now fire off i2c command
+                if (THEKERNEL->i2c->I2C_WriteREG(slotnum, TGT_CMD_READ_FLASH_BYTES, i2cbuf, 20) == 0){
+                    // no I2C error, now we add some delay and read the response
+                    wait_ms(10);
+                    if (THEKERNEL->i2c->I2C_ReadREG(slotnum, TGT_CMD_READ_FLASH_BYTES, i2cbuf, 17) == 0){
+                        if (i2cbuf[0] == TGT_RSP_OK){
+                            // response is ok, now we dump values
+                            int j;
+                            THEKERNEL->streams->printf(":10%04X00",i);
+                            //  calculate checksum
+                            unsigned char cceval = 0;
+                            cceval += 0x10;
+                            cceval += (i >> 8) & 0xFF;
+                            cceval += i & 0xFF;
+                            cceval += 0x00;
+
+                            for (j=1;j<17;j++){
+                                THEKERNEL->streams->printf("%02X",i2cbuf[j]);
+                                cceval += i2cbuf[j];
+                            }
+
+                            cceval = ~cceval;               // NOT
+                            cceval += 1;                    // eval two'2 complement
+
+                            THEKERNEL->streams->printf("%02X\r\n",cceval);
+                        }
+                    }
+                    else{
+                        THEKERNEL->streams->printf("I2C ERROR - FLASH READBACK\r\n");
+                    }
+
+                }
+                else{
+                    // I2C error
+                    THEKERNEL->streams->printf("I2C ERROR - CAN'T READ FLASH\r\n");
+                }
+
+            }
+        }
+        else{
+            // module is not mounted or isn't in bootloader mode
+            THEKERNEL->streams->printf("Module in slot #%d isn't in bootloader mode or maybe not mounted\r\n",slotnum);
+        }
+    }
+    else{
+        THEKERNEL->streams->printf("Invalid slot #%d\r\n",slotnum);
+    }
+}
+
+int R1000A::checkfwsig(int slotnum){
+    // This function checks if firmware signature is correct
+    // returns:
+    //      0 : signature is correct
+    //     -1 : I2C communication error, didn't ack
+    //     -2 : signature is invalid
+
+    char i2cbuf[1];
+    if (THEKERNEL->i2c->I2C_ReadREG(slotnum, TGT_CMD_CHECK_SIG, i2cbuf, 1) == 0){
+        if (i2cbuf[0] == TGT_RSP_OK){
+            return 0;
+        }
+        else{
+            return -2;
+        }
+    }
+    else{
+        return -1;
+    }
+
 }
