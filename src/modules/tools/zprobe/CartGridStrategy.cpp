@@ -43,6 +43,8 @@
     If two corners rectangular mode activated using "leveling-strategy.rectangular-grid.only_by_two_corners  true" then G29/31/32 will not work without providing XYAB parameters
         XY - start point, AB rectangle size from starting point
 
+    Display mode of current grid can be changed to human redable mode (table with coordinates) by using 
+       leveling-strategy.rectangular-grid.human_readable  true
 
     Usage
     -----
@@ -98,6 +100,7 @@
 #define y_size_checksum              CHECKSUM("y_size")
 #define do_home_checksum             CHECKSUM("do_home")
 #define only_by_two_corners_checksum CHECKSUM("only_by_two_corners")
+#define human_readable_checksum      CHECKSUM("human_readable")
 
 #define GRIDFILE "/sd/cartesian.grid"
 #define GRIDFILE_NM "/sd/cartesian_nm.grid"
@@ -122,6 +125,7 @@ bool CartGridStrategy::handleConfig()
     save = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, save_checksum)->by_default(false)->as_bool();
     do_home = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, do_home_checksum)->by_default(true)->as_bool();
     only_by_two_corners = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, only_by_two_corners_checksum)->by_default(false)->as_bool();
+    human_readable = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, human_readable_checksum)->by_default(false)->as_bool();
 
     x_start = 0.0F;
     y_start = 0.0F;
@@ -588,12 +592,43 @@ void CartGridStrategy::doCompensation(float *target, bool inverse)
 // Print calibration results for plotting or manual frame adjustment.
 void CartGridStrategy::print_bed_level(StreamOutput *stream)
 {
-    for (int y = 0; y < current_grid_y_size; y++) {
-        for (int x = 0; x < current_grid_x_size; x++) {
-            stream->printf("%1.4f ", grid[x + (current_grid_x_size * y)]);
+    if(!human_readable){
+        for (int y = 0; y < current_grid_y_size; y++) {
+            for (int x = 0; x < current_grid_x_size; x++) {
+                stream->printf("%10.4f ", grid[x + (current_grid_x_size * y)]);
+            }
+            stream->printf("\n");
+        }
+    } else {
+        
+        int xStart = (x_size>0) ? 0 : (current_grid_x_size - 1);
+        int xStop = (x_size>0) ? current_grid_x_size : -1;
+        int xInc = (x_size>0) ? 1: -1;
+
+        int yStart = (y_size<0) ? 0 : (current_grid_y_size - 1);
+        int yStop = (y_size<0) ? current_grid_y_size : -1;
+        int yInc = (y_size<0) ? 1: -1;
+
+        for (int y = yStart; y != yStop; y += yInc) {
+            stream->printf("%10.4f|", y * AUTO_BED_LEVELING_GRID_Y);
+            for (int x = xStart; x != xStop; x += xInc) {
+                stream->printf("%10.4f ",  grid[x + (current_grid_x_size * y)]);
+            }
+            stream->printf("\n");
+        }
+        stream->printf("           ");
+        for (int x = xStart; x != xStop; x += xInc) {
+            stream->printf("-----+-----");
         }
         stream->printf("\n");
+        stream->printf("           ");
+        for (int x = xStart; x != xStop; x += xInc) {
+            stream->printf("%1.4f ",  x * AUTO_BED_LEVELING_GRID_X);
+        }
+            stream->printf("\n");
+
     }
+
 }
 
 // Reset calibration results to zero.

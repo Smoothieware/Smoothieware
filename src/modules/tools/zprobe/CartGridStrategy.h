@@ -49,5 +49,6 @@ private:
         bool save:1;
         bool do_home:1;
         bool only_by_two_corners:1;
+        bool human_readable:1;
     };
 };
