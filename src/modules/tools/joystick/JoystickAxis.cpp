@@ -38,7 +38,6 @@ void JoystickAxis::on_module_loaded()
 
     //register for events with the kernel
     this->register_for_event(ON_GET_PUBLIC_DATA);
-    this->register_for_event(ON_GCODE_RECEIVED);
 
     //ask the kernel to run "update_tick" every "refresh_interval" milliseconds
     THEKERNEL->slow_ticker->attach(this->refresh_rate, this, &JoystickAxis::update_tick);
