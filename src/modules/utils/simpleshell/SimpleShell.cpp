@@ -817,7 +817,7 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
 
    } else if (what == "pos") {
         // convenience to call all the various M114 variants
-        char buf[64];
+        char buf[128];
         THEROBOT->print_position(0, buf, sizeof buf); stream->printf("last %s\n", buf);
         THEROBOT->print_position(1, buf, sizeof buf); stream->printf("realtime %s\n", buf);
         THEROBOT->print_position(2, buf, sizeof buf); stream->printf("%s\n", buf);

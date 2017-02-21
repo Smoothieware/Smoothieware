@@ -626,7 +626,7 @@ void Robot::on_gcode_received(void *argument)
                 return;
 
             case 114:{
-                char buf[64];
+                char buf[128];
                 int n= print_position(gcode->subcode, buf, sizeof buf);
                 if(n > 0) gcode->txt_after_ok.append(buf, n);
                 return;
