@@ -38,8 +38,8 @@ class Block {
         float initial_rate;       // Initial rate in steps per second
         float maximum_rate;
 
-        float acceleration_per_tick{0};
-        float deceleration_per_tick {0};
+        double acceleration_per_tick{0};
+        double deceleration_per_tick {0};
 
         float max_entry_speed;
 

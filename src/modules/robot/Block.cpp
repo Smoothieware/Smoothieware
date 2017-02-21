@@ -18,12 +18,13 @@
 #include "StepTicker.h"
 
 #include "mri.h"
+#include <inttypes.h>
 
 using std::string;
 #include <vector>
 
 #define STEP_TICKER_FREQUENCY THEKERNEL->step_ticker->get_frequency()
-#define STEP_TICKER_FREQUENCY_2 (STEP_TICKER_FREQUENCY*STEP_TICKER_FREQUENCY)
+#define STEP_TICKER_FREQUENCY_2 (((double)STEP_TICKER_FREQUENCY)*STEP_TICKER_FREQUENCY)
 
 uint8_t Block::n_actuators= 0;
 
@@ -209,13 +210,16 @@ void Block::calculate_trapezoid( float entryspeed, float exitspeed )
     // Theorically, if accel is done per tick, the speed curve should be perfect.
     this->total_move_ticks = total_move_ticks;
 
-    //puts "accelerate_until: #{this->accelerate_until}, decelerate_after: #{this->decelerate_after}, acceleration_per_tick: #{this->acceleration_per_tick}, total_move_ticks: #{this->total_move_ticks}"
+    //puts "accelerate_until: #{this->accelerate_until}, decelerate_after: #{this->decelerate_after}, g: #{this->acceleration_per_tick}, total_move_ticks: #{this->total_move_ticks}"
 
     this->initial_rate = initial_rate;
     this->exit_speed = exitspeed;
 
     // prepare the block for stepticker
     this->prepare();
+
+    this->debug();
+
     this->locked= false;
 }
 
@@ -312,7 +316,7 @@ void Block::prepare()
         this->tick_info[m].step_count = 0;
         this->tick_info[m].next_accel_event = this->total_move_ticks + 1;
 
-        float acceleration_change = 0;
+        double acceleration_change = 0;
         if(this->accelerate_until != 0) { // If the next accel event is the end of accel
             this->tick_info[m].next_accel_event = this->accelerate_until;
             acceleration_change = this->acceleration_per_tick;
@@ -330,6 +334,19 @@ void Block::prepare()
         this->tick_info[m].acceleration_change= STEPTICKER_TOFP(acceleration_change * aratio);
         this->tick_info[m].deceleration_change= -STEPTICKER_TOFP(this->deceleration_per_tick * aratio);
         this->tick_info[m].plateau_rate= STEPTICKER_TOFP((this->maximum_rate * aratio) / STEP_TICKER_FREQUENCY);
+
+        #if 0
+        THEKERNEL->streams->printf("spt: %08lX %08lX, ac: %08lX %08lX, dc: %08lX %08lX, pr: %08lX %08lX\n",
+            (uint32_t)(this->tick_info[m].steps_per_tick>>32), // 2.62 fixed point
+            (uint32_t)(this->tick_info[m].steps_per_tick&0xFFFFFFFF), // 2.62 fixed point
+            (uint32_t)(this->tick_info[m].acceleration_change>>32), // 2.62 fixed point signed
+            (uint32_t)(this->tick_info[m].acceleration_change&0xFFFFFFFF), // 2.62 fixed point signed
+            (uint32_t)(this->tick_info[m].deceleration_change>>32), // 2.62 fixed point
+            (uint32_t)(this->tick_info[m].deceleration_change&0xFFFFFFFF), // 2.62 fixed point
+            (uint32_t)(this->tick_info[m].plateau_rate>>32), // 2.62 fixed point
+            (uint32_t)(this->tick_info[m].plateau_rate&0xFFFFFFFF) // 2.62 fixed point
+        );
+        #endif
     }
 }
 
