@@ -31,6 +31,7 @@
 #include "DeltaCalibrationStrategy.h"
 #include "ThreePointStrategy.h"
 #include "DeltaGridStrategy.h"
+#include "CartGridStrategy.h"
 
 #define enable_checksum          CHECKSUM("enable")
 #define probe_pin_checksum       CHECKSUM("probe_pin")
@@ -54,8 +55,6 @@
 #define STEPS_PER_MM(a) (STEPPER[a]->get_steps_per_mm())
 #define Z_STEPS_PER_MM STEPS_PER_MM(Z_AXIS)
 
-#define abs(a) ((a<0) ? -a : a)
-
 void ZProbe::on_module_loaded()
 {
     // if the module is disabled -> do nothing
@@ -70,7 +69,7 @@ void ZProbe::on_module_loaded()
     // register event-handlers
     register_for_event(ON_GCODE_RECEIVED);
 
-    // we read the probe in this timer, currently only for G38 probes.
+    // we read the probe in this timer
     probing= false;
     THEKERNEL->slow_ticker->attach(1000, this, &ZProbe::read_probe);
 }
@@ -86,25 +85,38 @@ void ZProbe::config_load()
     for( auto cs : modules ){
         if( THEKERNEL->config->value(leveling_strategy_checksum, cs, enable_checksum )->as_bool() ){
             bool found= false;
+            LevelingStrategy *ls= nullptr;
+
             // check with each known strategy and load it if it matches
             switch(cs) {
                 case delta_calibration_strategy_checksum:
-                    this->strategies.push_back(new DeltaCalibrationStrategy(this));
+                    ls= new DeltaCalibrationStrategy(this);
                     found= true;
                     break;
 
                 case three_point_leveling_strategy_checksum:
                     // NOTE this strategy is mutually exclusive with the delta calibration strategy
-                    this->strategies.push_back(new ThreePointStrategy(this));
+                    ls= new ThreePointStrategy(this);
                     found= true;
                     break;
 
                 case delta_grid_leveling_strategy_checksum:
-                    this->strategies.push_back(new DeltaGridStrategy(this));
+                    ls= new DeltaGridStrategy(this);
+                    found= true;
+                    break;
+
+                case cart_grid_leveling_strategy_checksum:
+                    ls= new CartGridStrategy(this);
                     found= true;
                     break;
             }
-            if(found) this->strategies.back()->handleConfig();
+            if(found) {
+                if(ls->handleConfig()) {
+                    this->strategies.push_back(ls);
+                }else{
+                    delete ls;
+                }
+            }
         }
     }
 
