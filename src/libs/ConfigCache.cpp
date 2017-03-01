@@ -26,6 +26,13 @@ void ConfigCache::add(ConfigValue *v)
     store.push_back(v);
 }
 
+void ConfigCache::pop()
+{
+    auto cv= store.back();
+    store.pop_back();
+    delete cv;
+}
+
 // If we find an existing value, replace it, otherwise, push it at the back of the list
 void ConfigCache::replace_or_push_back(ConfigValue *new_value)
 {
