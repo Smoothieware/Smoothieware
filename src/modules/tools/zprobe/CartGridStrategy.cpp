@@ -84,8 +84,8 @@
 #include <fastmath.h>
 
 #define grid_size_checksum           CHECKSUM("size")
-#define grid_size_x_checksum         CHECKSUM("gx_size")
-#define grid_size_y_checksum         CHECKSUM("gy_size")
+#define grid_size_x_checksum           CHECKSUM("size_x")
+#define grid_size_y_checksum           CHECKSUM("size_y")
 #define tolerance_checksum           CHECKSUM("tolerance")
 #define save_checksum                CHECKSUM("save")
 #define probe_offsets_checksum       CHECKSUM("probe_offsets")
@@ -93,6 +93,10 @@
 #define x_size_checksum              CHECKSUM("x_size")
 #define y_size_checksum              CHECKSUM("y_size")
 #define do_home_checksum             CHECKSUM("do_home")
+#define m_attach_checksum            CHECKSUM("m_attach")
+
+
+
 
 #define GRIDFILE "/sd/cartesian.grid"
 
@@ -109,12 +113,14 @@ CartGridStrategy::~CartGridStrategy()
 bool CartGridStrategy::handleConfig()
 {
     grid_size = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, grid_size_checksum)->by_default(7)->as_number();
-    // Backwards compatible with cart_grit config: Add separate X and Y grid sizes
     grid_size_x = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, grid_size_x_checksum)->by_default(grid_size)->as_number();
     grid_size_y = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, grid_size_y_checksum)->by_default(grid_size)->as_number();
     tolerance = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, tolerance_checksum)->by_default(0.03F)->as_number();
     save = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, save_checksum)->by_default(false)->as_bool();
     do_home = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, do_home_checksum)->by_default(true)->as_bool();
+
+    do_manual_attach = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, m_attach_checksum)->by_default(true)->as_bool();
+
 
     x_size = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, x_size_checksum)->by_default(0.0F)->as_number();
     y_size = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, y_size_checksum)->by_default(0.0F)->as_number();
@@ -133,6 +139,16 @@ bool CartGridStrategy::handleConfig()
         std::vector<float> v = parse_number_list(po.c_str());
         if(v.size() >= 3) {
             this->probe_offsets = std::make_tuple(v[0], v[1], v[2]);
+        }
+    }
+
+    //  manual attachment point xxx,yyy,zzz
+    if (do_manual_attach)
+    {
+        std::string ap = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, m_attach_checksum)->by_default("0,0,50")->as_string();
+        std::vector<float> w = parse_number_list(ap.c_str());
+        if(w.size() >= 3) {
+            this->m_attach = std::make_tuple(w[0], w[1], w[2]);
         }
     }
 
@@ -382,7 +398,7 @@ void CartGridStrategy::setAdjustFunction(bool on)
 
 float CartGridStrategy::findBed()
 {
-    if (do_home) zprobe->home();
+    if (do_home && !do_manual_attach) zprobe->home();
     // move to an initial position fast so as to not take all day, we move down max_z - initial_height, which is set in config, default 10mm
     float deltaz = initial_height;
     zprobe->coordinated_move(NAN, NAN, deltaz, zprobe->getFastFeedrate());
@@ -390,7 +406,10 @@ float CartGridStrategy::findBed()
 
     // find bed at 0,0 run at slow rate so as to not hit bed hard
     float mm;
-    if(!zprobe->run_probe_return(mm, zprobe->getSlowFeedrate())) return NAN;
+    if(!zprobe->run_probe_return(mm, zprobe->getSlowFeedrate()), true) {
+        THEKERNEL->streams->printf("//DEBUG: mm= %f\n", mm);
+        return NAN;
+    }
 
     float dz = zprobe->getProbeHeight() - mm;
     zprobe->coordinated_move(NAN, NAN, dz, zprobe->getFastFeedrate(), true); // relative move
@@ -406,6 +425,25 @@ bool CartGridStrategy::doProbe(Gcode *gc)
 
     if(gc->has_letter('X')) x_size = gc->get_value('X'); // override default probe width, will get saved
     if(gc->has_letter('Y')) y_size = gc->get_value('Y'); // override default probe length, will get saved
+
+    if (do_manual_attach) {
+        // Move to the attachment point defined
+        if (do_home) zprobe->home();
+
+        float x, y, z;
+        std::tie(x, y, z) = m_attach;
+        zprobe->coordinated_move( x, y, z , zprobe->getFastFeedrate());
+
+        gc->stream->printf(" ************************************************************\n");
+        gc->stream->printf(" *** Ensure probe is attached and trigger probe when done ***\n");
+        gc->stream->printf(" ************************************************************\n");
+
+
+        while( !zprobe->getProbeStatus()) {
+            THEKERNEL->call_event(ON_IDLE);
+        }
+
+    }
 
     // find bed, and leave probe probe height above bed
     float initial_z = findBed();
@@ -447,6 +485,23 @@ bool CartGridStrategy::doProbe(Gcode *gc)
     }
 
     print_bed_level(gc->stream);
+
+    if (do_manual_attach) {
+        // Move to the attachment point defined for removal of probe
+
+        float x, y, z;
+        std::tie(x, y, z) = m_attach;
+        zprobe->coordinated_move( x, y, z , zprobe->getFastFeedrate());
+
+        gc->stream->printf(" ********************\n");
+        gc->stream->printf(" *** Remove probe ***\n");
+        gc->stream->printf(" ********************\n");
+        //while( !zprobe->getProbeStatus()) {
+        //    THEKERNEL->call_event(ON_IDLE);
+        //}
+
+    }
+
 
     setAdjustFunction(true);
 
