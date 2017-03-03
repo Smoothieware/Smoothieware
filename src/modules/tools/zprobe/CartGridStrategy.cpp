@@ -294,12 +294,15 @@ bool CartGridStrategy::handleGcode(Gcode *gcode)
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_idle();
 
-            int m = gcode->has_letter('I') ? gcode->get_value('I') : grid_size_x;
-            int n = gcode->has_letter('J') ? gcode->get_value('J') : grid_size_y;
+            int n = gcode->has_letter('I') ? gcode->get_value('I') : 7;
+
+            // Add option to specify X and Y independent grid sizes
+            int o = gcode->has_letter('J') ? gcode->get_value('I') : n;
+
             float x = x_size, y = y_size;
             if(gcode->has_letter('X')) x = gcode->get_value('X'); // override default probe width
             if(gcode->has_letter('Y')) y = gcode->get_value('Y'); // override default probe length
-            probe_grid(m, n, x, y, gcode->stream);
+            probe_grid(n, o, x, y, gcode->stream);
 
             return true;
 
