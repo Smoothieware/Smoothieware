@@ -342,9 +342,9 @@ bool CartGridStrategy::handleGcode(Gcode *gcode)
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_idle();
 
-            int n = gcode->has_letter('I') ? gcode->get_value('I') : (gcode->has_letter('J') ? gcode->get_value('J') : configured_grid_x_size);
-            int m = gcode->has_letter('J') ? gcode->get_value('J') : (gcode->has_letter('I') ? gcode->get_value('I') : configured_grid_y_size);
-
+            int n = gcode->has_letter('I') ? gcode->get_value('I') : configured_grid_x_size;
+            int m = gcode->has_letter('J') ? gcode->get_value('J') : configured_grid_y_size;
+            
             float _x_size = this->x_size, _y_size = this->x_size;
             float _x_start = this->x_start, _y_start = this->y_start;
 
@@ -485,9 +485,9 @@ bool CartGridStrategy::doProbe(Gcode *gc)
     setAdjustFunction(false);
     reset_bed_level();
 
-    this->current_grid_x_size = gc->has_letter('I') ? gc->get_value('I') : (gc->has_letter('J') ? gc->get_value('J') : this->current_grid_x_size); // If I provided update x grid size, if not try J.
-    this->current_grid_y_size = gc->has_letter('J') ? gc->get_value('J') : (gc->has_letter('I') ? gc->get_value('I') : this->current_grid_y_size); // If J provided update y grid size, if not try I. 
-
+    if(gc->has_letter('I')) current_grid_x_size = gc->get_value('I'); // override default grid x size
+    if(gc->has_letter('J')) current_grid_y_size = gc->get_value('J'); // override default grid y size
+    
     if((this->current_grid_x_size * this->current_grid_y_size)  > (this->configured_grid_x_size * this->configured_grid_y_size)){
         gc->stream->printf("Grid size (%d x %d = %d) bigger than configured (%d x %d = %d). Change configuration.\n", 
                             this->current_grid_x_size, this->current_grid_y_size, this->current_grid_x_size*this->current_grid_x_size,
