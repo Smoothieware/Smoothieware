@@ -14,11 +14,17 @@
       leveling-strategy.rectangular-grid.enable         true
 
     The size of the grid can be set with...
-
+      leveling-strategy.rectangular-grid.size        7
+    or
       leveling-strategy.rectangular-grid.grid_x_size        7
       leveling-strategy.rectangular-grid.grid_y_size        7
+    this is the X and Y size of the grid, it must be an odd number, the default is 7 which is 49 probe points
 
-      this is the X and Y size of the grid, it must be an odd number, the default is 7 which is 49 probe points
+    If both "size" and "grid_x_size" and "grid_x_size defined "grid_x_size" and "grid_x_size" will be used.
+    If "grid_x_size" and "grid_x_size" omitted then "size" will be used.
+    If "size" omitted default value will be used.
+
+    I and J params used for grid size. If both omitted values from config will be used. If only one provided (I or J) then it will be used for both x_size and y-size.  
 
     The width and length of the rectangle that is probed is set with...
 
@@ -42,7 +48,7 @@
 
     If two corners rectangular mode activated using "leveling-strategy.rectangular-grid.only_by_two_corners true" then G29/31/32 will not work without providing XYAB parameters
         XY - start point, AB rectangle size from starting point
-        “Two corners” not absolutely correct name for this mode, because it use only one corner and rectangle size. 
+        "Two corners"" not absolutely correct name for this mode, because it use only one corner and rectangle size. 
 
     Display mode of current grid can be changed to human redable mode (table with coordinates) by using 
        leveling-strategy.rectangular-grid.human_readable  true
