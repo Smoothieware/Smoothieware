@@ -28,7 +28,7 @@ private:
     void reset_bed_level();
     void save_grid(StreamOutput *stream);
     bool load_grid(StreamOutput *stream);
-    bool probe_grid(int n, int m, float x_start, float y_start, float x_size, float y_size, StreamOutput *stream);
+    bool probe_grid(int n, int m, float _x_start, float _y_start, float _x_size, float _y_size, StreamOutput *stream);
 
     float initial_height;
     float tolerance;
