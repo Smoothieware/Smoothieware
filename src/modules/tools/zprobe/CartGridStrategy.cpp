@@ -40,8 +40,9 @@
     Optionally an initial_height can be set that tell the intial probe where to stop the fast decent before it probes, this should be around 5-10mm above the bed
       leveling-strategy.rectangular-grid.initial_height  10
 
-    If two corners rectangular mode activated using "leveling-strategy.rectangular-grid.only_by_two_corners  true" then G29/31/32 will not work without providing XYAB parameters
+    If two corners rectangular mode activated using "leveling-strategy.rectangular-grid.only_by_two_corners true" then G29/31/32 will not work without providing XYAB parameters
         XY - start point, AB rectangle size from starting point
+        “Two corners” not absolutely correct name for this mode, because it use only one corner and rectangle size. 
 
     Display mode of current grid can be changed to human redable mode (table with coordinates) by using 
        leveling-strategy.rectangular-grid.human_readable  true
@@ -335,8 +336,8 @@ bool CartGridStrategy::handleGcode(Gcode *gcode)
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_idle();
 
-            int n = gcode->has_letter('I') ? gcode->get_value('I') : configured_grid_x_size;
-            int m = gcode->has_letter('J') ? gcode->get_value('J') : configured_grid_y_size;
+            int n = gcode->has_letter('I') ? gcode->get_value('I') : (gcode->has_letter('J') ? gcode->get_value('J') : configured_grid_x_size);
+            int m = gcode->has_letter('J') ? gcode->get_value('J') : (gcode->has_letter('I') ? gcode->get_value('I') : configured_grid_y_size);
 
             float x_size = this->x_size, y_size = this->x_size;
             float x_start = this->x_start, y_start = this->y_start;
@@ -489,8 +490,8 @@ bool CartGridStrategy::doProbe(Gcode *gc)
     setAdjustFunction(false);
     reset_bed_level();
 
-    if(gc->has_letter('I')) current_grid_x_size = gc->get_value('I'); // override default grid x size
-    if(gc->has_letter('J')) current_grid_y_size = gc->get_value('J'); // override default grid y size
+    current_grid_x_size = gc->has_letter('I') ? gc->get_value('I') : (gc->has_letter('J') ? gc->get_value('J') : current_grid_x_size); // If I provided update x grid size, if not try J.
+    current_grid_y_size = gc->has_letter('J') ? gc->get_value('J') : (gc->has_letter('I') ? gc->get_value('I') : current_grid_y_size); // If J provided update y grid size, if not try I. 
 
     if((current_grid_x_size * current_grid_y_size)  > (configured_grid_x_size * configured_grid_y_size)){
         gc->stream->printf("Grid size (%d x %d = %d) bigger than configured (%d x %d = %d). Change configuration.\n", current_grid_x_size, current_grid_y_size, current_grid_x_size*current_grid_x_size, configured_grid_x_size, configured_grid_y_size, configured_grid_x_size*configured_grid_y_size);
