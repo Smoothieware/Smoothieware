@@ -238,8 +238,8 @@ bool ZProbe::run_probe_return(float& mm, float feedrate, float max_dist, bool re
         if(fr > this->fast_feedrate) fr = this->fast_feedrate; // unless that is greater than fast feedrate
     }
 
-    // absolute move back to saved starting position
-    coordinated_move(save_pos[0], save_pos[1], save_pos[2], fr, false);
+    // absolute move back to saved starting position: Only in Z direction
+    coordinated_move(NAN, NAN, save_pos[2], fr, false);
 
     return ok;
 }

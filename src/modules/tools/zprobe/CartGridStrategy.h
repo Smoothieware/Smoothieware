@@ -28,18 +28,20 @@ private:
     void reset_bed_level();
     void save_grid(StreamOutput *stream);
     bool load_grid(StreamOutput *stream);
-    bool probe_grid(int n, float x_size, float y_size, StreamOutput *stream);
+    bool probe_grid(int m, int n, float x_size, float y_size, StreamOutput *stream);
 
     float initial_height;
     float tolerance;
 
     float *grid;
     std::tuple<float, float, float> probe_offsets;
-    uint8_t grid_size;
+    std::tuple<float, float, float> m_attach;
+    uint8_t grid_size, grid_size_x, grid_size_y;
     float x_size,y_size;
 
     struct {
         bool save:1;
         bool do_home:1;
+        bool do_manual_attach:1;
     };
 };
