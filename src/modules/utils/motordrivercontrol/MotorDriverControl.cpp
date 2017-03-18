@@ -310,7 +310,7 @@ void MotorDriverControl::on_gcode_received(void *argument)
                 gcode->stream->printf("Motor %d (%c)...\n", id, axis);
                 dump_status(gcode->stream, true);
 
-            }else if(gcode->get_value('P') == id || gcode->has_letter(axis)) {
+            }else if( (gcode->has_letter('P') && gcode->get_value('P') == id) || gcode->has_letter(axis)) {
                 if(gcode->subcode == 1) {
                     dump_status(gcode->stream, !gcode->has_letter('R'));
 

@@ -246,15 +246,15 @@ void Extruder::on_gcode_received(void *argument)
             char buf[16];
             if(gcode->subcode == 0) {
                 float pos = THEROBOT->get_axis_position(motor_id);
-                int n = snprintf(buf, sizeof(buf), " E:%1.3f ", pos);
+                int n = snprintf(buf, sizeof(buf), " E:%1.4f ", pos);
                 gcode->txt_after_ok.append(buf, n);
 
             } else if(gcode->subcode == 1) { // realtime position
-                int n = snprintf(buf, sizeof(buf), " E:%1.3f ", stepper_motor->get_current_position() / get_e_scale());
+                int n = snprintf(buf, sizeof(buf), " E:%1.4f ", stepper_motor->get_current_position() / get_e_scale());
                 gcode->txt_after_ok.append(buf, n);
 
             } else if(gcode->subcode == 3) { // realtime actuator position
-                int n = snprintf(buf, sizeof(buf), " E:%1.3f ", stepper_motor->get_current_position());
+                int n = snprintf(buf, sizeof(buf), " E:%1.4f ", stepper_motor->get_current_position());
                 gcode->txt_after_ok.append(buf, n);
             }
 
