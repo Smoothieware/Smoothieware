@@ -591,7 +591,8 @@ void SimpleShell::mem_command( string parameters, StreamOutput *stream)
         AHB1.debug(stream);
     }
 
-    stream->printf("Block size: %u bytes\n", sizeof(Block));
+    size_t n= sizeof(Block::tickinfo_t) * Block::n_actuators;
+    stream->printf("Block size: %u bytes\n", sizeof(Block) + n);
 }
 
 static uint32_t getDeviceType()
