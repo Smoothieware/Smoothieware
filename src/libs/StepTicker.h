@@ -23,7 +23,7 @@ class Block;
 
 // handle 2.62 Fixed point
 #define STEPTICKER_FPSCALE (1LL<<62)
-#define STEPTICKER_TOFP(x) ((int64_t)round((double)(x)*STEPTICKER_FPSCALE))
+
 #define STEPTICKER_FROMFP(x) ((float)(x)/STEPTICKER_FPSCALE)
 
 class StepTicker{

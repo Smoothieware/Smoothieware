@@ -8,7 +8,7 @@
 #include "libs/Module.h"
 #include "libs/Kernel.h"
 #include "libs/nuts_bolts.h"
-#include <math.h>
+#include <cmath>
 #include <string>
 #include "Block.h"
 #include "Planner.h"
@@ -24,7 +24,6 @@ using std::string;
 #include <vector>
 
 #define STEP_TICKER_FREQUENCY THEKERNEL->step_ticker->get_frequency()
-#define STEP_TICKER_FREQUENCY_2 (((double)STEP_TICKER_FREQUENCY)*STEP_TICKER_FREQUENCY)
 
 uint8_t Block::n_actuators= 0;
 
@@ -63,8 +62,6 @@ void Block::clear()
     locked              = false;
     s_value             = 0.0F;
 
-    acceleration_per_tick= 0;
-    deceleration_per_tick= 0;
     total_move_ticks= 0;
     if(tick_info.size() != n_actuators) {
         tick_info.resize(n_actuators);
@@ -200,12 +197,6 @@ void Block::calculate_trapezoid( float entryspeed, float exitspeed )
     this->accelerate_until = acceleration_ticks;
     this->decelerate_after = total_move_ticks - deceleration_ticks;
 
-    // Now figure out the acceleration PER TICK, this should ideally be held as a float, even a double if possible as it's very critical to the block timing
-    // steps/tick^2
-
-    this->acceleration_per_tick = acceleration_in_steps / STEP_TICKER_FREQUENCY_2;
-    this->deceleration_per_tick = deceleration_in_steps / STEP_TICKER_FREQUENCY_2;
-
     // We now have everything we need for this block to call a Steppermotor->move method !!!!
     // Theorically, if accel is done per tick, the speed curve should be perfect.
     this->total_move_ticks = total_move_ticks;
@@ -216,9 +207,7 @@ void Block::calculate_trapezoid( float entryspeed, float exitspeed )
     this->exit_speed = exitspeed;
 
     // prepare the block for stepticker
-    this->prepare();
-
-    this->debug();
+    this->prepare(acceleration_in_steps, deceleration_in_steps);
 
     this->locked= false;
 }
@@ -302,7 +291,7 @@ float Block::max_exit_speed()
 
 // prepare block for the step ticker, called everytime the block changes
 // this is done during planning so does not delay tick generation and step ticker can simply grab the next block during the interrupt
-void Block::prepare()
+void Block::prepare(float acceleration_in_steps, float deceleration_in_steps)
 {
     float inv = 1.0F / this->steps_event_count;
     for (uint8_t m = 0; m < n_actuators; m++) {
@@ -311,19 +300,25 @@ void Block::prepare()
         if(steps == 0) continue;
 
         float aratio = inv * steps;
-        this->tick_info[m].steps_per_tick = STEPTICKER_TOFP((this->initial_rate * aratio) / STEP_TICKER_FREQUENCY); // steps/sec / tick frequency to get steps per tick in 2.62 fixed point
+
+        this->tick_info[m].steps_per_tick = (int64_t)round((((double)this->initial_rate * aratio) / STEP_TICKER_FREQUENCY) * STEPTICKER_FPSCALE); // steps/sec / tick frequency to get steps per tick in 2.62 fixed point
         this->tick_info[m].counter = 0; // 2.62 fixed point
         this->tick_info[m].step_count = 0;
         this->tick_info[m].next_accel_event = this->total_move_ticks + 1;
 
+        // Now figure out the acceleration PER TICK, this should ideally be held as a double as it's very critical to the block timing
+        // steps/tick^2
+        double acceleration_per_tick = acceleration_in_steps / std::pow(STEP_TICKER_FREQUENCY, 2.0);
+        double deceleration_per_tick = deceleration_in_steps / std::pow(STEP_TICKER_FREQUENCY, 2.0);
         double acceleration_change = 0;
+
         if(this->accelerate_until != 0) { // If the next accel event is the end of accel
             this->tick_info[m].next_accel_event = this->accelerate_until;
-            acceleration_change = this->acceleration_per_tick;
+            acceleration_change = acceleration_per_tick;
 
         } else if(this->decelerate_after == 0 /*&& this->accelerate_until == 0*/) {
             // we start off decelerating
-            acceleration_change = -this->deceleration_per_tick;
+            acceleration_change = -deceleration_per_tick;
 
         } else if(this->decelerate_after != this->total_move_ticks /*&& this->accelerate_until == 0*/) {
             // If the next event is the start of decel ( don't set this if the next accel event is accel end )
@@ -331,9 +326,10 @@ void Block::prepare()
         }
 
         // convert to fixed point after scaling
-        this->tick_info[m].acceleration_change= STEPTICKER_TOFP(acceleration_change * aratio);
-        this->tick_info[m].deceleration_change= -STEPTICKER_TOFP(this->deceleration_per_tick * aratio);
-        this->tick_info[m].plateau_rate= STEPTICKER_TOFP((this->maximum_rate * aratio) / STEP_TICKER_FREQUENCY);
+        //#define STEPTICKER_TOFP(x) ((int64_t)round((double)(x)*STEPTICKER_FPSCALE))
+        this->tick_info[m].acceleration_change= (int64_t)round((acceleration_change * aratio) * STEPTICKER_FPSCALE);
+        this->tick_info[m].deceleration_change= -(int64_t)round((deceleration_per_tick * aratio) * STEPTICKER_FPSCALE);
+        this->tick_info[m].plateau_rate= (int64_t)round(((this->maximum_rate * aratio) / STEP_TICKER_FREQUENCY) * STEPTICKER_FPSCALE);
 
         #if 0
         THEKERNEL->streams->printf("spt: %08lX %08lX, ac: %08lX %08lX, dc: %08lX %08lX, pr: %08lX %08lX\n",

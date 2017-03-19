@@ -15,7 +15,6 @@ class Block {
     public:
         Block();
         void calculate_trapezoid( float entry_speed, float exit_speed );
-        float max_allowable_speed( float acceleration, float target_velocity, float distance);
 
         float reverse_pass(float exit_speed);
         float forward_pass(float next_entry_speed);
@@ -23,10 +22,13 @@ class Block {
         void debug() const;
         void ready() { is_ready= true; }
         void clear();
-        void prepare();
-
         float get_trapezoid_rate(int i) const;
 
+    private:
+        float max_allowable_speed( float acceleration, float target_velocity, float distance);
+        void prepare(float acceleration_in_steps, float deceleration_in_steps);
+
+    public:
         std::array<uint32_t, k_max_actuators> steps; // Number of steps for each axis for this block
         uint32_t steps_event_count;  // Steps for the longest axis
         float nominal_rate;       // Nominal rate in steps per second
@@ -37,9 +39,6 @@ class Block {
         float acceleration;       // the acceleration for this block
         float initial_rate;       // Initial rate in steps per second
         float maximum_rate;
-
-        double acceleration_per_tick{0};
-        double deceleration_per_tick {0};
 
         float max_entry_speed;
 
