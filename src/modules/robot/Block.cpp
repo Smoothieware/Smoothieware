@@ -294,6 +294,11 @@ float Block::max_exit_speed()
 void Block::prepare(float acceleration_in_steps, float deceleration_in_steps)
 {
     float inv = 1.0F / this->steps_event_count;
+    // Now figure out the acceleration PER TICK, this should ideally be held as a double as it's very critical to the block timing
+    // steps/tick^2
+    double acceleration_per_tick = acceleration_in_steps / std::pow(STEP_TICKER_FREQUENCY, 2.0);
+    double deceleration_per_tick = deceleration_in_steps / std::pow(STEP_TICKER_FREQUENCY, 2.0);
+
     for (uint8_t m = 0; m < n_actuators; m++) {
         uint32_t steps = this->steps[m];
         this->tick_info[m].steps_to_move = steps;
@@ -306,12 +311,7 @@ void Block::prepare(float acceleration_in_steps, float deceleration_in_steps)
         this->tick_info[m].step_count = 0;
         this->tick_info[m].next_accel_event = this->total_move_ticks + 1;
 
-        // Now figure out the acceleration PER TICK, this should ideally be held as a double as it's very critical to the block timing
-        // steps/tick^2
-        double acceleration_per_tick = acceleration_in_steps / std::pow(STEP_TICKER_FREQUENCY, 2.0);
-        double deceleration_per_tick = deceleration_in_steps / std::pow(STEP_TICKER_FREQUENCY, 2.0);
         double acceleration_change = 0;
-
         if(this->accelerate_until != 0) { // If the next accel event is the end of accel
             this->tick_info[m].next_accel_event = this->accelerate_until;
             acceleration_change = acceleration_per_tick;
