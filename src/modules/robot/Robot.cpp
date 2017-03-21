@@ -551,12 +551,14 @@ void Robot::on_gcode_received(void *argument)
                 #if MAX_ROBOT_ACTUATORS > 3
                 if(gcode->subcode == 0 && (gcode->has_letter('E') || gcode->get_num_args() == 0)){
                     // reset the E position, legacy for 3d Printers to be reprap compatible
-                    // find the selected extruder
-                    int selected_extruder= get_active_extruder();
-                    if(selected_extruder > 0) {
-                        float e= gcode->has_letter('E') ? gcode->get_value('E') : 0;
-                        machine_position[selected_extruder]= compensated_machine_position[selected_extruder]= e;
-                        actuators[selected_extruder]->change_last_milestone(get_e_scale_fnc ? e*get_e_scale_fnc() : e);
+                    float e= gcode->has_letter('E') ? gcode->get_value('E') : 0;
+                    // find selected extruders
+                    for (int i = E_AXIS; i < n_motors; ++i) {
+                        // for each selected extruder
+                        if(actuators[i]->is_extruder() && actuators[i]->is_selected()) {
+                            machine_position[i]= compensated_machine_position[i]= e;
+                            actuators[i]->change_last_milestone(get_e_scale_fnc ? e*get_e_scale_fnc() : e);
+                        }
                     }
                 }
                 #endif
@@ -592,10 +594,11 @@ void Robot::on_gcode_received(void *argument)
                     }
                     // handle E parameter as currently selected extruder ABC
                     if(gcode->has_letter('E')) {
-                        // find first selected extruder
-                        int i= get_active_extruder();
-                        if(i > 0) {
-                            bm |= (0x02<<i); // set appropriate bit
+                        // find all selected extruders
+                        for (int i = E_AXIS; i < n_motors; ++i) {
+                            if(actuators[i]->is_extruder() && actuators[i]->is_selected()) { 
+                                bm |= (0x02<<i); // set appropriate bit
+                            }
                         }
                     }
 
@@ -865,15 +868,6 @@ void Robot::on_gcode_received(void *argument)
     next_command_is_MCS = false; // must be on same line as G0 or G1
 }
 
-int Robot::get_active_extruder() const
-{
-    for (int i = E_AXIS; i < n_motors; ++i) {
-        // find first selected extruder
-        if(actuators[i]->is_extruder() && actuators[i]->is_selected()) return i;
-    }
-    return 0;
-}
-
 // process a G0/G1/G2/G3
 void Robot::process_move(Gcode *gcode, enum MOTION_MODE_T motion_mode)
 {
@@ -933,22 +927,25 @@ void Robot::process_move(Gcode *gcode, enum MOTION_MODE_T motion_mode)
 
     #if MAX_ROBOT_ACTUATORS > 3
     // process extruder parameters, for active extruder only (only one active extruder at a time)
-    int selected_extruder= 0;
     if(gcode->has_letter('E')) {
-        selected_extruder= get_active_extruder();
         param[E_AXIS]= gcode->get_value('E');
-    }
-
-    // do E for the selected extruder
-    if(selected_extruder > 0 && !isnan(param[E_AXIS])) {
-        if(this->e_absolute_mode) {
-            target[selected_extruder]= param[E_AXIS];
-            delta_e= target[selected_extruder] - machine_position[selected_extruder];
-        }else{
-            delta_e= param[E_AXIS];
-            target[selected_extruder] = delta_e + machine_position[selected_extruder];
+        if(!isnan(param[E_AXIS])) {
+            for (int i = E_AXIS; i < n_motors; ++i) {
+                // find selected extruders
+                if(actuators[i]->is_extruder() && actuators[i]->is_selected()) {
+                    // do E for each selected extruder
+                    if(this->e_absolute_mode) {
+                        target[i]= param[E_AXIS];
+                        delta_e= target[i] - machine_position[i];
+                    }else{
+                        delta_e= param[E_AXIS];
+                        target[i] = delta_e + machine_position[i];
+                    }
+                }
+            }
         }
     }
+
 
     // process ABC axis, this is mutually exclusive to using E for an extruder, so if E is used and A then the results are undefined
     for (int i = A_AXIS; i < n_motors; ++i) {

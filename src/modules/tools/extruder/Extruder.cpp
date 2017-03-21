@@ -71,6 +71,7 @@
 Extruder::Extruder( uint16_t config_identifier)
 {
     this->selected = false;
+    this->always_on = false;
     this->identifier = config_identifier;
     this->retracted = false;
     this->volumetric_multiplier = 1.0F;
@@ -146,9 +147,11 @@ void Extruder::select()
 
 void Extruder::deselect()
 {
-    selected = false;
-    stepper_motor->set_selected(false);
-    THEROBOT->get_e_scale_fnc = nullptr;
+    if (!this->always_on) {
+        selected = false;
+        stepper_motor->set_selected(false);
+        THEROBOT->get_e_scale_fnc = nullptr;
+    }
 }
 
 void Extruder::on_get_public_data(void *argument)
@@ -349,6 +352,24 @@ void Extruder::on_gcode_received(void *argument)
             gcode->stream->printf(";E max feed rate mm/sec:\nM203 E%1.4f P%d\n", stepper_motor->get_max_rate(), this->identifier);
             if(this->max_volumetric_rate > 0) {
                 gcode->stream->printf(";E max volumetric rate mm³/sec:\nM203 V%1.4f P%d\n", this->max_volumetric_rate, this->identifier);
+            }
+        } else if (gcode->m == 605) {
+            // M605 S2 causes current extruder to never be disabled.
+            // M605 S0 returns extruder to normal mode.
+            if(gcode->has_letter('S')) {
+                if(gcode->get_value('S') == 0) {
+                    if (this->always_on) {
+                        this->always_on = false;
+			deselect();
+                        gcode->stream->printf("Extruder enabled/disabled normally\n");
+                    }
+                } else if(gcode->get_value('S') == 2) {
+                    if (!this->selected) {
+                        this->always_on = true;
+			select();
+                        gcode->stream->printf("Extruder always enabled\n");
+                    }
+                }
             }
         }
 
