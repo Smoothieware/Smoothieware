@@ -757,7 +757,17 @@ void Robot::on_gcode_received(void *argument)
                 break;
 
             case 211: // M211 Sn turns soft endstops on/off
-                soft_endstop_enabled= gcode->get_uint('S') == 1;
+                if(gcode->has_letter('S')) {
+                    soft_endstop_enabled= gcode->get_uint('S') == 1;
+                }else{
+                    gcode->stream->printf("Soft endstops are %s", soft_endstop_enabled ? "Enabled" : "Disabled");
+                    for (int i = X_AXIS; i <= Z_AXIS; ++i) {
+                        if(!is_homed(i)) {
+                            gcode->stream->printf(", axis %c is NOT homed", 'X'+i);
+                        }
+                    }
+                    gcode->stream->printf("\n");
+                }
                 break;
 
             case 220: // M220 - speed override percentage
