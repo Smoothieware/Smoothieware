@@ -1157,6 +1157,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
 
                 //} else if(soft_endstop_truncate) {
                     // TODO VERY hard to do need to go back and change the target, and calculate intercept with the edge
+                    // and store all preceding vectors that have on eor more points ourtside of bounds so we can create a propper clip against the boundaries
 
                 } else {
                     // ignore it
