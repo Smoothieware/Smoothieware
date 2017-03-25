@@ -77,9 +77,7 @@ void JogScreen::clicked_menu_entry(uint16_t line)
             THEPANEL->enter_screen(djs); // self deleting
             dojog= false;
         } break;
-        case 7:
-            set_feed_rates();
-            dojog= false;
+        case 7: set_feed_rates(); dojog= false; break;
         case 8: send_command("G28"); dojog= false; break;
         case 9: send_command("G28.1"); dojog= false; break;
 

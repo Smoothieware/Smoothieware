@@ -210,7 +210,7 @@ void Drillingcycles::on_gcode_received(void* argument)
         // convert to WCS
         Robot::wcs_t wpos= THEROBOT->mcs2wcs(pos);
         // backup Z position as Initial-Z value
-        this->initial_z = std::get<X_AXIS>(wpos); // must use the work coordinate position
+        this->initial_z = std::get<Z_AXIS>(wpos); // must use the work coordinate position
         // set retract type
         this->retract_type = (code == 98) ? RETRACT_TO_Z : RETRACT_TO_R;
         // reset sticky values
