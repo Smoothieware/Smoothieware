@@ -762,10 +762,16 @@ void Robot::on_gcode_received(void *argument)
                 }else{
                     gcode->stream->printf("Soft endstops are %s", soft_endstop_enabled ? "Enabled" : "Disabled");
                     for (int i = X_AXIS; i <= Z_AXIS; ++i) {
-                        if(!is_homed(i)) {
-                            gcode->stream->printf(", axis %c is NOT homed", 'X'+i);
+                        if(isnan(soft_endstop_min[i])) {
+                            gcode->stream->printf(",%c min is disabled", 'X'+i);
                         }
-                    }
+                        if(isnan(soft_endstop_max[i])) {
+                            gcode->stream->printf(",%c max is disabled", 'X'+i);
+                        }
+                        if(!is_homed(i)) {
+                            gcode->stream->printf(",%c axis is not homed", 'X'+i);
+                        }
+                     }
                     gcode->stream->printf("\n");
                 }
                 break;
