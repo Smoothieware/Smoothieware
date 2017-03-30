@@ -27,5 +27,6 @@ class KillButton : public Module {
             uint8_t unkill_timer:6;
             volatile STATE state:4;
             bool unkill_enable:1;
+            bool toggle_enable:1;
         };
 };
