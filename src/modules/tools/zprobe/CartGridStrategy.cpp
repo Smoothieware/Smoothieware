@@ -468,7 +468,7 @@ bool CartGridStrategy::doProbe(Gcode *gc)
     gc->stream->printf("Rectangular Grid Probe...\n");
 
     if(only_by_two_corners){
-        if(gc->has_letter('X') && gc->has_letter('X') && gc->has_letter('A') && gc->has_letter('B')){
+        if(gc->has_letter('X') && gc->has_letter('Y') && gc->has_letter('A') && gc->has_letter('B')){
             this->x_start = gc->get_value('X'); // override default probe start point, will get saved
             this->y_start = gc->get_value('Y'); // override default probe start point, will get saved
             this->x_size = gc->get_value('A'); // override default probe width, will get saved
