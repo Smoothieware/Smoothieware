@@ -99,6 +99,8 @@ static char get_status_character()
     if (THEKERNEL->is_halted()) // Paused / Stopped
         return 'S';
 
+    // TODO: this does not fully work. If you jog too quickly on PanelDue, queue does not empty quick enough
+    // resulting in 'P' being returned. Causing PanuelDue to jump to playing mode.
     if (!THEKERNEL->conveyor->is_queue_empty()) // Printing
         return 'P';
 
@@ -166,10 +168,6 @@ void json_ls_command(string path, StreamOutput *stream)
     //     M20 S2 P/gcodes
     //     {"dir":"\/gcodes","files":["4-piece-1-2-3-4.gcode","Hinged_Box.gcode","*Calibration pieces"]}
 
-    if (path.compare("0:/gcodes") == 0)
-        // TODO: remove this hack. PanelDue send default path for RepRapFirmware
-        path = "/";
-
     path = absolute_from_relative(path);
 
     stream->printf("{\"dir\":\"%s\"", path.c_str());
@@ -217,7 +215,7 @@ void json_file_info(string file, StreamOutput *stream)
     stream->printf(",\"size\":%d", 12345);
     stream->printf(",\"height\":%f", 40.00);
     stream->printf(",\"layerHeight\":%f", 0.20);
-    stream->printf(",\"filament\":[%f]",123.4);
+    stream->printf(",\"filament\":[%f]", 123.4);
 
     stream->printf(",\"generatedBy\":\"%s\"", file.c_str());
     // TODO: remove me
@@ -290,7 +288,7 @@ void Reporter::on_gcode_received(void *argument)
 
         switch (s_value) {
         case 0:
-        case 1:
+        case 1: {
             gcode->stream->printf("Getting M408 S%d status ", s_value);
 
             // Beginning
@@ -453,34 +451,34 @@ void Reporter::on_gcode_received(void *argument)
 
             // JSon must have an EOL
             gcode->stream->printf("}\r\n");
-        }
-    } else if (gcode->has_m && gcode->m == 20 && gcode->has_letter('S')) {
-        int s_value = static_cast<int>(gcode->get_value('S'));
+        } break;
 
-        if (s_value != 2)
-            return;             // _Only_ handle M20 S2: JSON output
+        case 20: {
+            std::string dir = "/";
 
-        std::string dir = "/";
+            if (gcode->has_letter('P')) {
+                string possible_command = gcode->get_command();
 
-        if (gcode->has_letter('P')) {
+                size_t beginning = possible_command.find_first_of("P");
+
+                if (beginning != string::npos)
+                    dir = possible_command.substr(beginning + 1, possible_command.size() - beginning + 1);
+            }
+            json_ls_command(dir, gcode->stream);
+        }   break;
+
+        case 36: {
             string possible_command = gcode->get_command();
 
-            size_t beginning = possible_command.find_first_of("P");
+            size_t beginning = possible_command.find_first_of(" ");
+
+            std::string file = "";
 
             if (beginning != string::npos)
-                dir = possible_command.substr(beginning + 1, possible_command.size() - beginning + 1);
+                file = possible_command.substr(beginning + 1, possible_command.size() - beginning + 1);
+
+            json_file_info(file, gcode->stream);
+        } break;
         }
-        json_ls_command(dir, gcode->stream);
-    } else if (gcode->has_m && gcode->m == 36) {
-        string possible_command = gcode->get_command();
-
-        size_t beginning = possible_command.find_first_of(" ");
-
-        std::string file = "";
-
-        if (beginning != string::npos)
-            file = possible_command.substr(beginning + 1, possible_command.size() - beginning + 1);
-
-        json_file_info(file, gcode->stream);
     }
 }
