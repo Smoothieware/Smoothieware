@@ -11,6 +11,18 @@ import argparse
 import serial
 import threading
 import time
+import signal
+import sys
+ 
+errorflg= False
+intrflg= False
+
+def signal_term_handler(signal, frame):
+   global intrflg
+   print('got SIGTERM...')
+   intrflg= True
+ 
+signal.signal(signal.SIGTERM, signal_term_handler)
 
 # Define command line argument interface
 parser = argparse.ArgumentParser(description='Stream g-code file to Smoothie over telnet.')
@@ -36,7 +48,6 @@ s.flushInput()  # Flush startup text in serial input
 print("Streaming " + args.gcode_file.name + " to " + args.device)
 
 okcnt= 0
-errorflg= False
 
 def read_thread():
     """thread worker function"""
@@ -62,24 +73,36 @@ t.daemon = True
 t.start()
 
 linecnt= 0
-for line in f:
-    if errorflg :
-        break
-    # strip comments
-    if line.startswith(';') :
-        continue
-    l= line.strip()
-    s.write(l + '\n')
-    linecnt+=1
-    if verbose: print("SND " + str(linecnt) + ": " + line.strip() + " - " + str(okcnt))
+try:
+    for line in f:
+        if errorflg :
+            break
+        # strip comments
+        if line.startswith(';') :
+            continue
+        l= line.strip()
+        s.write(l + '\n')
+        linecnt+=1
+        if verbose: print("SND " + str(linecnt) + ": " + line.strip() + " - " + str(okcnt))
+except KeyboardInterrupt:
+    print("Interrupted...")
+    intrflg= True
 
+if intrflg :
+    print("Waiting for HALT...")
+    s.write('\x18')
+    while not errorflg :
+        time.sleep(1)
+    
 if errorflg :
     print("Target halted due to errors")
 
 else :
     print("Waiting for complete...")
-    while okcnt < linecnt:
+    while okcnt < linecnt :
         if verbose: print(str(linecnt) + " - " + str(okcnt) )
+        if errorflg :
+            break
         time.sleep(1)
 
     # Wait here until finished to close serial port and file.
