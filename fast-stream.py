@@ -2,7 +2,7 @@
 """\
 Stream g-code to Smoothie USB serial connection
 
-Based on GRBL stream.py
+Based on GRBL stream.py, but completely different
 """
 
 from __future__ import print_function
@@ -58,7 +58,7 @@ def read_thread():
         n= rep.count("ok")
         if n == 0 :
             print("Incoming: " + rep)
-            if "error" in rep or "!!" in rep :
+            if "error" in rep or "!!" in rep or "ALARM" in rep or "ERROR" in rep:
                 errorflg= True
                 break
         else :
@@ -84,15 +84,15 @@ try:
         s.write(l + '\n')
         linecnt+=1
         if verbose: print("SND " + str(linecnt) + ": " + line.strip() + " - " + str(okcnt))
+        
 except KeyboardInterrupt:
     print("Interrupted...")
     intrflg= True
 
 if intrflg :
-    print("Waiting for HALT...")
-    s.write('\x18')
-    while not errorflg :
-        time.sleep(1)
+    # We need to consume oks otherwise smoothie will deadlock on a full tx buffer
+    print("Sending Abort - this may take a while...")
+    s.write('\x18') # send halt
     
 if errorflg :
     print("Target halted due to errors")
@@ -102,6 +102,7 @@ else :
     while okcnt < linecnt :
         if verbose: print(str(linecnt) + " - " + str(okcnt) )
         if errorflg :
+            s.read(s.inWaiting()) # rad all remaining characters
             break
         time.sleep(1)
 
