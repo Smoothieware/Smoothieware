@@ -2,7 +2,7 @@
 """\
 Stream g-code to Smoothie USB serial connection
 
-Based on GRBL stream.py
+Based on GRBL stream.py, but completely different
 """
 
 from __future__ import print_function
@@ -11,6 +11,18 @@ import argparse
 import serial
 import threading
 import time
+import signal
+import sys
+ 
+errorflg= False
+intrflg= False
+
+def signal_term_handler(signal, frame):
+   global intrflg
+   print('got SIGTERM...')
+   intrflg= True
+ 
+signal.signal(signal.SIGTERM, signal_term_handler)
 
 # Define command line argument interface
 parser = argparse.ArgumentParser(description='Stream g-code file to Smoothie over telnet.')
@@ -36,7 +48,6 @@ s.flushInput()  # Flush startup text in serial input
 print("Streaming " + args.gcode_file.name + " to " + args.device)
 
 okcnt= 0
-errorflg= False
 
 def read_thread():
     """thread worker function"""
@@ -47,7 +58,7 @@ def read_thread():
         n= rep.count("ok")
         if n == 0 :
             print("Incoming: " + rep)
-            if "error" in rep or "!!" in rep :
+            if "error" in rep or "!!" in rep or "ALARM" in rep or "ERROR" in rep:
                 errorflg= True
                 break
         else :
@@ -62,24 +73,37 @@ t.daemon = True
 t.start()
 
 linecnt= 0
-for line in f:
-    if errorflg :
-        break
-    # strip comments
-    if line.startswith(';') :
-        continue
-    l= line.strip()
-    s.write(l + '\n')
-    linecnt+=1
-    if verbose: print("SND " + str(linecnt) + ": " + line.strip() + " - " + str(okcnt))
+try:
+    for line in f:
+        if errorflg :
+            break
+        # strip comments
+        if line.startswith(';') :
+            continue
+        l= line.strip()
+        s.write(l + '\n')
+        linecnt+=1
+        if verbose: print("SND " + str(linecnt) + ": " + line.strip() + " - " + str(okcnt))
+        
+except KeyboardInterrupt:
+    print("Interrupted...")
+    intrflg= True
 
+if intrflg :
+    # We need to consume oks otherwise smoothie will deadlock on a full tx buffer
+    print("Sending Abort - this may take a while...")
+    s.write('\x18') # send halt
+    
 if errorflg :
     print("Target halted due to errors")
 
 else :
     print("Waiting for complete...")
-    while okcnt < linecnt:
+    while okcnt < linecnt :
         if verbose: print(str(linecnt) + " - " + str(okcnt) )
+        if errorflg :
+            s.read(s.inWaiting()) # rad all remaining characters
+            break
         time.sleep(1)
 
     # Wait here until finished to close serial port and file.
