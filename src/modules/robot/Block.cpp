@@ -74,7 +74,7 @@ void Block::clear()
     total_move_ticks= 0;
     if(tick_info == nullptr) {
         // we create this once for this block
-        tick_info= (tickinfo_t *)malloc(sizeof(tickinfo_t) * n_actuators);
+        tick_info= new tickinfo_t[n_actuators]; //(tickinfo_t *)malloc(sizeof(tickinfo_t) * n_actuators);
         if(tick_info == nullptr) {
             // if we ran out of memory in AHB0 just stop here
             __debugbreak();
