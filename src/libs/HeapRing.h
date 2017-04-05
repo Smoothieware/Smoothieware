@@ -54,7 +54,7 @@ public:
      *
      * returns true on success, or false if queue is not empty
      */
-    bool provide(kind*, unsigned int length);
+    //bool provide(kind*, unsigned int length);
 
 protected:
     /*

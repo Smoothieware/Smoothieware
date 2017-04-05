@@ -4,6 +4,8 @@
 
 #include "cmsis.h"
 
+#include "platform_memory.h"
+
 /*
  * constructors
  */
@@ -19,7 +21,7 @@ template<class kind> HeapRing<kind>::HeapRing(unsigned int length)
 {
     head_i = tail_i = 0;
     isr_tail_i = tail_i;
-    ring = new kind[length];
+    ring = (kind*)AHB0.alloc(sizeof(kind) * length); // new kind[length];
     // TODO: handle allocation failure
     this->length = length;
 }
@@ -33,7 +35,7 @@ template<class kind> HeapRing<kind>::~HeapRing()
     head_i = tail_i = length = 0;
     isr_tail_i = tail_i;
     if (ring)
-        delete [] ring;
+        AHB0.dealloc(ring); // delete [] ring;
     ring = NULL;
 }
 
@@ -167,7 +169,7 @@ template<class kind> bool HeapRing<kind>::resize(unsigned int length)
                 __enable_irq();
 
                 if (ring)
-                    delete [] ring;
+                    AHB0.dealloc(ring); // delete [] ring;
                 ring = NULL;
 
                 return true;
@@ -179,7 +181,8 @@ template<class kind> bool HeapRing<kind>::resize(unsigned int length)
         }
 
         // Note: we don't use realloc so we can fall back to the existing ring if allocation fails
-        kind* newring = new kind[length];
+        void *v= AHB0.alloc(sizeof(kind) * length);
+        kind* newring = new(v) kind[length];
 
         if (newring != NULL)
         {
@@ -196,43 +199,43 @@ template<class kind> bool HeapRing<kind>::resize(unsigned int length)
                 __enable_irq();
 
                 if (oldring)
-                    delete [] oldring;
+                    AHB0.dealloc(oldring); // delete [] oldring;
 
                 return true;
             }
 
             __enable_irq();
 
-            delete [] newring;
+            AHB0.dealloc(newring); // delete [] newring;
         }
     }
 
     return false;
 }
 
-template<class kind> bool HeapRing<kind>::provide(kind* buffer, unsigned int length)
-{
-    __disable_irq();
+// template<class kind> bool HeapRing<kind>::provide(kind* buffer, unsigned int length)
+// {
+//     __disable_irq();
 
-    if (is_empty())
-    {
-        kind* oldring = ring;
+//     if (is_empty())
+//     {
+//         kind* oldring = ring;
 
-        if ((buffer != NULL) && (length > 0))
-        {
-            ring = buffer;
-            this->length = length;
-            head_i = tail_i = 0;
+//         if ((buffer != NULL) && (length > 0))
+//         {
+//             ring = buffer;
+//             this->length = length;
+//             head_i = tail_i = 0;
 
-            __enable_irq();
+//             __enable_irq();
 
-            if (oldring)
-                delete [] oldring;
-            return true;
-        }
-    }
+//             if (oldring)
+//                 delete [] oldring;
+//             return true;
+//         }
+//     }
 
-    __enable_irq();
+//     __enable_irq();
 
-    return false;
-}
+//     return false;
+// }
