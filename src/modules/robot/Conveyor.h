@@ -8,7 +8,7 @@
 #pragma once
 
 #include "libs/Module.h"
-#include "HeapRing.h"
+#include "BlockQueue.h"
 
 class Gcode;
 class Block;
@@ -43,7 +43,7 @@ private:
     void check_queue(bool force= false);
     void queue_head_block(void);
 
-    using  Queue_t= HeapRing<Block>;
+    using  Queue_t= BlockQueue;
     Queue_t queue;  // Queue of Blocks
     //volatile unsigned int gc_pending;
 
