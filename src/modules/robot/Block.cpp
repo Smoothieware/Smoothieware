@@ -16,6 +16,7 @@
 #include "Gcode.h"
 #include "libs/StreamOutputPool.h"
 #include "StepTicker.h"
+#include "platform_memory.h"
 
 #include "mri.h"
 #include <inttypes.h>
@@ -35,6 +36,7 @@ double Block::fp_scale= 0;
 
 Block::Block()
 {
+    tick_info= nullptr;
     clear();
 }
 
@@ -70,18 +72,20 @@ void Block::clear()
     s_value             = 0.0F;
 
     total_move_ticks= 0;
-    if(tick_info.size() != n_actuators) {
-        tick_info.resize(n_actuators);
+    if(tick_info == nullptr) {
+        // we create this once for this block in AHB0 to save memory
+        tick_info= (tickinfo_t *)AHB0.alloc(sizeof(tickinfo_t) * n_actuators);
     }
-    for(auto &i : tick_info) {
-        i.steps_per_tick= 0;
-        i.counter= 0;
-        i.acceleration_change= 0;
-        i.deceleration_change= 0;
-        i.plateau_rate= 0;
-        i.steps_to_move= 0;
-        i.step_count= 0;
-        i.next_accel_event= 0;
+
+    for(int i = 0; i < n_actuators; ++i) {
+        tick_info[i].steps_per_tick= 0;
+        tick_info[i].counter= 0;
+        tick_info[i].acceleration_change= 0;
+        tick_info[i].deceleration_change= 0;
+        tick_info[i].plateau_rate= 0;
+        tick_info[i].steps_to_move= 0;
+        tick_info[i].step_count= 0;
+        tick_info[i].next_accel_event= 0;
     }
 }
 

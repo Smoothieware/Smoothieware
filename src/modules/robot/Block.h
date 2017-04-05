@@ -66,8 +66,7 @@ class Block {
         };
 
         // need info for each active motor
-        //std::array<tickinfo_t, k_max_actuators> tick_info;
-        std::vector<tickinfo_t> tick_info;
+        tickinfo_t *tick_info;
 
         static uint8_t n_actuators;
 
