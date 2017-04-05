@@ -21,7 +21,8 @@ template<class kind> HeapRing<kind>::HeapRing(unsigned int length)
 {
     head_i = tail_i = 0;
     isr_tail_i = tail_i;
-    ring = (kind*)AHB0.alloc(sizeof(kind) * length); // new kind[length];
+    void *v= AHB0.alloc(sizeof(kind) * length);
+    ring = new(v) kind[length];
     // TODO: handle allocation failure
     this->length = length;
 }
