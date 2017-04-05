@@ -82,7 +82,7 @@ void Conveyor::on_module_loaded()
 // we allocate the queue here after config is completed so we do not run out of memory during config
 void Conveyor::start(uint8_t n)
 {
-    Block::n_actuators= n; // set the number of motors which determines how big the tick info vector is
+    Block::init(n); // set the number of motors which determines how big the tick info vector is
     queue.resize(queue_size);
     running = true;
 }

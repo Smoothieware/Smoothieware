@@ -26,6 +26,7 @@ using std::string;
 #define STEP_TICKER_FREQUENCY THEKERNEL->step_ticker->get_frequency()
 
 uint8_t Block::n_actuators= 0;
+double Block::fp_scale= 0;
 
 // A block represents a movement, it's length for each stepper motor, and the corresponding acceleration curves.
 // It's stacked on a queue, and that queue is then executed in order, to move the motors.
@@ -35,6 +36,12 @@ uint8_t Block::n_actuators= 0;
 Block::Block()
 {
     clear();
+}
+
+void Block::init(uint8_t n)
+{
+    n_actuators= n;
+    fp_scale= (double)STEPTICKER_FPSCALE / pow((double)STEP_TICKER_FREQUENCY, 2.0); // we scale up by fixed point offset first to avoid tiny values
 }
 
 void Block::clear()
@@ -201,8 +208,6 @@ void Block::calculate_trapezoid( float entryspeed, float exitspeed )
     // Theorically, if accel is done per tick, the speed curve should be perfect.
     this->total_move_ticks = total_move_ticks;
 
-    //puts "accelerate_until: #{this->accelerate_until}, decelerate_after: #{this->decelerate_after}, g: #{this->acceleration_per_tick}, total_move_ticks: #{this->total_move_ticks}"
-
     this->initial_rate = initial_rate;
     this->exit_speed = exitspeed;
 
@@ -293,11 +298,16 @@ float Block::max_exit_speed()
 // this is done during planning so does not delay tick generation and step ticker can simply grab the next block during the interrupt
 void Block::prepare(float acceleration_in_steps, float deceleration_in_steps)
 {
+
     float inv = 1.0F / this->steps_event_count;
+
     // Now figure out the acceleration PER TICK, this should ideally be held as a double as it's very critical to the block timing
     // steps/tick^2
-    double acceleration_per_tick = acceleration_in_steps / std::pow(STEP_TICKER_FREQUENCY, 2.0);
-    double deceleration_per_tick = deceleration_in_steps / std::pow(STEP_TICKER_FREQUENCY, 2.0);
+    // was....
+    // float acceleration_per_tick = acceleration_in_steps / STEP_TICKER_FREQUENCY_2; // that is 100,000² too big for a float
+    // float deceleration_per_tick = deceleration_in_steps / STEP_TICKER_FREQUENCY_2;
+    double acceleration_per_tick = acceleration_in_steps * fp_scale; // this is now scaled to fit a 2.30 fixed point number
+    double deceleration_per_tick = deceleration_in_steps * fp_scale;
 
     for (uint8_t m = 0; m < n_actuators; m++) {
         uint32_t steps = this->steps[m];
@@ -325,10 +335,10 @@ void Block::prepare(float acceleration_in_steps, float deceleration_in_steps)
             this->tick_info[m].next_accel_event = this->decelerate_after;
         }
 
-        // convert to fixed point after scaling
+        // already converted to fixed point just needs scaling by ratio
         //#define STEPTICKER_TOFP(x) ((int64_t)round((double)(x)*STEPTICKER_FPSCALE))
-        this->tick_info[m].acceleration_change= (int64_t)round((acceleration_change * aratio) * STEPTICKER_FPSCALE);
-        this->tick_info[m].deceleration_change= -(int64_t)round((deceleration_per_tick * aratio) * STEPTICKER_FPSCALE);
+        this->tick_info[m].acceleration_change= (int64_t)round(acceleration_change * aratio);
+        this->tick_info[m].deceleration_change= -(int64_t)round(deceleration_per_tick * aratio);
         this->tick_info[m].plateau_rate= (int64_t)round(((this->maximum_rate * aratio) / STEP_TICKER_FREQUENCY) * STEPTICKER_FPSCALE);
 
         #if 0

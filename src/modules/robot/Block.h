@@ -14,6 +14,9 @@
 class Block {
     public:
         Block();
+
+        static void init(uint8_t);
+
         void calculate_trapezoid( float entry_speed, float exit_speed );
 
         float reverse_pass(float exit_speed);
@@ -27,6 +30,8 @@ class Block {
     private:
         float max_allowable_speed( float acceleration, float target_velocity, float distance);
         void prepare(float acceleration_in_steps, float deceleration_in_steps);
+
+        static double fp_scale; // optimize to store this as it does not change
 
     public:
         std::array<uint32_t, k_max_actuators> steps; // Number of steps for each axis for this block
@@ -63,6 +68,7 @@ class Block {
         // need info for each active motor
         //std::array<tickinfo_t, k_max_actuators> tick_info;
         std::vector<tickinfo_t> tick_info;
+
         static uint8_t n_actuators;
 
         struct {
