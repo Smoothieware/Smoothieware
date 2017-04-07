@@ -50,7 +50,6 @@ private:
 
     struct {
         volatile bool running:1;
-        volatile bool halted:1;
         volatile bool allow_fetch:1;
         bool flush:1;
     };
