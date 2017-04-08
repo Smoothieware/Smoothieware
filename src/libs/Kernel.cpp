@@ -172,6 +172,7 @@ std::string Kernel::get_query_string()
     if(halted) {
         str.append("Alarm,");
     }else if(homing) {
+        running= true;
         str.append("Home,");
     }else if(feed_hold) {
         str.append("Hold,");
