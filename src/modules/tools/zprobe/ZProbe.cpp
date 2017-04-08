@@ -430,7 +430,7 @@ void ZProbe::probe_XYZ(Gcode *gcode, int axis)
 
     if(probeok == 0 && gcode->subcode == 2) {
         // issue error if probe was not triggered and subcode == 2
-        gcode->stream->printf("ALARM:Probe fail\n");
+        gcode->stream->printf("ALARM: Probe fail\n");
         THEKERNEL->call_event(ON_HALT, nullptr);
     }
 }
