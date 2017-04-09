@@ -598,8 +598,7 @@ void SimpleShell::mem_command( string parameters, StreamOutput *stream)
         AHB1.debug(stream);
     }
 
-    size_t n= sizeof(Block::tickinfo_t) * Block::n_actuators;
-    stream->printf("Block size: %u bytes\n", sizeof(Block) + n);
+    stream->printf("Block size: %u bytes, Tickinfo size: %u bytes\n", sizeof(Block), sizeof(Block::tickinfo_t) * Block::n_actuators);
 }
 
 static uint32_t getDeviceType()
@@ -825,13 +824,13 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
 
    } else if (what == "pos") {
         // convenience to call all the various M114 variants
-        char buf[128];
-        THEROBOT->print_position(0, buf, sizeof buf); stream->printf("last %s\n", buf);
-        THEROBOT->print_position(1, buf, sizeof buf); stream->printf("realtime %s\n", buf);
-        THEROBOT->print_position(2, buf, sizeof buf); stream->printf("%s\n", buf);
-        THEROBOT->print_position(3, buf, sizeof buf); stream->printf("%s\n", buf);
-        THEROBOT->print_position(4, buf, sizeof buf); stream->printf("%s\n", buf);
-        THEROBOT->print_position(5, buf, sizeof buf); stream->printf("%s\n", buf);
+        std::string buf;
+        THEROBOT->print_position(0, buf); stream->printf("last %s\n", buf.c_str()); buf.clear();
+        THEROBOT->print_position(1, buf); stream->printf("realtime %s\n", buf.c_str()); buf.clear();
+        THEROBOT->print_position(2, buf); stream->printf("%s\n", buf.c_str()); buf.clear();
+        THEROBOT->print_position(3, buf); stream->printf("%s\n", buf.c_str()); buf.clear();
+        THEROBOT->print_position(4, buf); stream->printf("%s\n", buf.c_str()); buf.clear();
+        THEROBOT->print_position(5, buf); stream->printf("%s\n", buf.c_str()); buf.clear();
 
     } else if (what == "wcs") {
         // print the wcs state

@@ -8,9 +8,8 @@
 #pragma once
 
 #include "libs/Module.h"
-#include "HeapRing.h"
+#include "BlockQueue.h"
 
-class Gcode;
 class Block;
 
 class Conveyor : public Module
@@ -39,13 +38,11 @@ public:
     friend class Planner; // for queue
 
 private:
-    // void all_moves_finished();
     void check_queue(bool force= false);
     void queue_head_block(void);
 
-    using  Queue_t= HeapRing<Block>;
+    using  Queue_t= BlockQueue;
     Queue_t queue;  // Queue of Blocks
-    //volatile unsigned int gc_pending;
 
     uint32_t queue_delay_time_ms;
     size_t queue_size;
@@ -53,7 +50,6 @@ private:
 
     struct {
         volatile bool running:1;
-        volatile bool halted:1;
         volatile bool allow_fetch:1;
         bool flush:1;
     };

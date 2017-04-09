@@ -58,6 +58,7 @@ class Endstops : public Module{
                 char axis:8; // one of XYZABC
                 uint8_t axis_index:3;
                 bool limit_enable:1;
+                bool triggered:1;
             };
         };
 

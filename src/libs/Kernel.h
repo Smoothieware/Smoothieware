@@ -67,7 +67,6 @@ class Kernel {
         Configurator*     configurator;
         SimpleShell*      simpleshell;
 
-        int debug;
         SlowTicker*       slow_ticker;
         StepTicker*       step_ticker;
         Adc*              adc;

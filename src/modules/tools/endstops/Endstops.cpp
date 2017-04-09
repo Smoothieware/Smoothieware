@@ -440,7 +440,11 @@ void Endstops::on_idle(void *argument)
             // check min and max endstops
             if(debounced_get(&i->pin)) {
                 // endstop triggered
-                THEKERNEL->streams->printf("Limit switch %c was hit - reset or M999 required\n", i->axis);
+                if(!THEKERNEL->is_grbl_mode()) {
+                    THEKERNEL->streams->printf("Limit switch %c was hit - reset or M999 required\n", i->axis);
+                }else{
+                    THEKERNEL->streams->printf("ALARM: Hard limit %c\n", i->axis);
+                }
                 this->status = LIMIT_TRIGGERED;
                 i->debounce= 0;
                 // disables heaters and motors, ignores incoming Gcode and flushes block queue
@@ -557,6 +561,7 @@ uint32_t Endstops::read_endstops(uint32_t dummy)
                         // we signal the motor to stop, which will preempt any moves on that axis
                         STEPPER[m]->stop_moving();
                     }
+                    e.pin_info->triggered= true;
                 }
 
             } else {
@@ -601,6 +606,7 @@ void Endstops::home(axis_bitmap_t a)
     // reset debounce counts for all endstops
     for(auto& e : endstops) {
        e->debounce= 0;
+       e->triggered= false;
     }
 
     if (is_scara) {
@@ -643,12 +649,32 @@ void Endstops::home(axis_bitmap_t a)
         }
     }
 
+    // check that the endstops were hit and it did not stop short for some reason
+    // if the endstop is not triggered then enter ALARM state
+    // with deltas we check all three axis were triggered
+    for (size_t i = X_AXIS; i <= Z_AXIS; ++i) {
+        if((axis_to_home[i] || this->is_delta || this->is_rdelta) && !homing_axis[i].pin_info->triggered) {
+            this->status = NOT_HOMING;
+            THEKERNEL->call_event(ON_HALT, nullptr);
+            return;
+        }
+    }
 
-    // TODO: should check that the endstops were hit and it did not stop short for some reason
-    // we did not complete movement the full distance if we hit the endstops
-    // TODO Maybe only reset axis involved in the homing cycle
-    // Only for non polar bots
+    // also check ABC
+    if(homing_axis.size() > 3){
+        for (size_t i = A_AXIS; i < homing_axis.size(); ++i) {
+            if(axis_to_home[i] && !homing_axis[i].pin_info->triggered) {
+                this->status = NOT_HOMING;
+                THEKERNEL->call_event(ON_HALT, nullptr);
+                return;
+            }
+        }
+    }
+
     if (!is_scara) {
+        // Only for non polar bots
+        // we did not complete movement the full distance if we hit the endstops
+        // TODO Maybe only reset axis involved in the homing cycle
         THEROBOT->reset_position_from_current_actuator_position();
     }
 
@@ -687,7 +713,6 @@ void Endstops::home(axis_bitmap_t a)
     // wait until finished
     THECONVEYOR->wait_for_idle();
 
-    // TODO: should check that the endstops were hit and it did not stop short for some reason
     // we did not complete movement the full distance if we hit the endstops
     // TODO Maybe only reset axis involved in the homing cycle
     THEROBOT->reset_position_from_current_actuator_position();
@@ -778,10 +803,12 @@ void Endstops::process_home_command(Gcode* gcode)
     // restore compensationTransform
     THEROBOT->compensationTransform= savect;
 
-    // check if on_halt (eg kill)
+    // check if on_halt (eg kill or fail)
     if(THEKERNEL->is_halted()) {
         if(!THEKERNEL->is_grbl_mode()) {
-            THEKERNEL->streams->printf("Homing cycle aborted by kill\n");
+            THEKERNEL->streams->printf("ERROR: Homing cycle failed\n");
+        }else{
+            THEKERNEL->streams->printf("ALARM: Homing fail\n");
         }
         // clear all the homed flags
         for (auto &p : homing_axis) p.homed= false;

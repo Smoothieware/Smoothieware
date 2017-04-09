@@ -160,10 +160,10 @@ bool Planner::append_block( ActuatorCoordinates &actuator_pos, uint8_t n_motors,
             #endif
 
             // Skip and use default max junction speed for 0 degree acute junction.
-            if (cos_theta < 0.95F) {
+            if (cos_theta <= 0.9999F) {
                 vmax_junction = std::min(previous_nominal_speed, block->nominal_speed);
                 // Skip and avoid divide by zero for straight junctions at 180 degrees. Limit to min() of nominal speeds.
-                if (cos_theta > -0.95F) {
+                if (cos_theta >= -0.9999F) {
                     // Compute maximum junction velocity based on maximum acceleration and junction deviation
                     float sin_theta_d2 = sqrtf(0.5F * (1.0F - cos_theta)); // Trig half angle identity. Always positive.
                     vmax_junction = std::min(vmax_junction, sqrtf(acceleration * junction_deviation * sin_theta_d2 / (1.0F - sin_theta_d2)));

@@ -5,11 +5,10 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "libs/nuts_bolts.h"
-#include "libs/RingBuffer.h"
-#include "../communication/utils/Gcode.h"
-#include "libs/Module.h"
-#include "libs/Kernel.h"
+#include "nuts_bolts.h"
+#include "Gcode.h"
+#include "Module.h"
+#include "Kernel.h"
 #include "Timer.h" // mbed.h lib
 #include "wait_api.h" // mbed.h lib
 #include "Block.h"
@@ -18,7 +17,7 @@
 #include "mri.h"
 #include "checksumm.h"
 #include "Config.h"
-#include "libs/StreamOutputPool.h"
+#include "StreamOutputPool.h"
 #include "ConfigValue.h"
 #include "StepTicker.h"
 #include "Robot.h"
@@ -63,7 +62,6 @@
 Conveyor::Conveyor()
 {
     running = false;
-    halted = false;
     allow_fetch = false;
     flush= false;
 }
@@ -82,7 +80,7 @@ void Conveyor::on_module_loaded()
 // we allocate the queue here after config is completed so we do not run out of memory during config
 void Conveyor::start(uint8_t n)
 {
-    Block::n_actuators= n; // set the number of motors which determines how big the tick info vector is
+    Block::init(n); // set the number of motors which determines how big the tick info vector is
     queue.resize(queue_size);
     running = true;
 }
@@ -90,10 +88,7 @@ void Conveyor::start(uint8_t n)
 void Conveyor::on_halt(void* argument)
 {
     if(argument == nullptr) {
-        halted = true;
         flush_queue();
-    } else {
-        halted = false;
     }
 }
 
@@ -160,12 +155,12 @@ void Conveyor::wait_for_idle(bool wait_for_motors)
 void Conveyor::queue_head_block()
 {
     // upstream caller will block on this until there is room in the queue
-    while (queue.is_full() && !halted) {
+    while (queue.is_full() && !THEKERNEL->is_halted()) {
         //check_queue();
         THEKERNEL->call_event(ON_IDLE, this); // will call check_queue();
     }
 
-    if(halted) {
+    if(THEKERNEL->is_halted()) {
         // we do not want to stick more stuff on the queue if we are in halt state
         // clear and release the block on the head
         queue.head_ref()->clear();
@@ -210,7 +205,7 @@ bool Conveyor::get_next_block(Block **block)
     // default the feerate to zero if there is no block available
     this->current_feedrate= 0;
 
-    if(halted || queue.isr_tail_i == queue.head_i) return false; // we do not have anything to give
+    if(THEKERNEL->is_halted() || queue.isr_tail_i == queue.head_i) return false; // we do not have anything to give
 
     // wait for queue to fill up, optimizes planning
     if(!allow_fetch) return false;
@@ -268,7 +263,3 @@ void Conveyor::dump_queue()
             break;
     }
 }
-
-// feels hacky, but apparently the way to do it
-#include "HeapRing.cpp"
-template class HeapRing<Block>;

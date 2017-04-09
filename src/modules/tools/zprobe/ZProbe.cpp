@@ -184,11 +184,7 @@ bool ZProbe::run_probe(float& mm, float feedrate, float max_dist, bool reverse)
     debounce= 0;
 
     // save current actuator position so we can report how far we moved
-    ActuatorCoordinates start_pos{
-        THEROBOT->actuators[X_AXIS]->get_current_position(),
-        THEROBOT->actuators[Y_AXIS]->get_current_position(),
-        THEROBOT->actuators[Z_AXIS]->get_current_position()
-    };
+    float z_start_pos= THEROBOT->actuators[Z_AXIS]->get_current_position();
 
     // move Z down
     bool dir= (!reverse_z != reverse); // xor
@@ -201,15 +197,10 @@ bool ZProbe::run_probe(float& mm, float feedrate, float max_dist, bool reverse)
 
     // now see how far we moved, get delta in z we moved
     // NOTE this works for deltas as well as all three actuators move the same amount in Z
-    mm= start_pos[2] - THEROBOT->actuators[2]->get_current_position();
+    mm= z_start_pos - THEROBOT->actuators[2]->get_current_position();
 
     // set the last probe position to the actuator units moved during this home
-    THEROBOT->set_last_probe_position(
-        std::make_tuple(
-            start_pos[0] - THEROBOT->actuators[0]->get_current_position(),
-            start_pos[1] - THEROBOT->actuators[1]->get_current_position(),
-            mm,
-            probe_detected?1:0));
+    THEROBOT->set_last_probe_position(std::make_tuple(0, 0, mm, probe_detected?1:0));
 
     probing= false;
 
@@ -224,8 +215,7 @@ bool ZProbe::run_probe(float& mm, float feedrate, float max_dist, bool reverse)
 // do probe then return to start position
 bool ZProbe::run_probe_return(float& mm, float feedrate, float max_dist, bool reverse)
 {
-    float save_pos[3];
-    THEROBOT->get_axis_position(save_pos);
+    float save_z_pos= THEROBOT->get_axis_position(Z_AXIS);
 
     bool ok= run_probe(mm, feedrate, max_dist, reverse);
 
@@ -239,7 +229,7 @@ bool ZProbe::run_probe_return(float& mm, float feedrate, float max_dist, bool re
     }
 
     // absolute move back to saved starting position
-    coordinated_move(save_pos[0], save_pos[1], save_pos[2], fr, false);
+    coordinated_move(NAN, NAN, save_z_pos, fr, false);
 
     return ok;
 }
@@ -440,7 +430,7 @@ void ZProbe::probe_XYZ(Gcode *gcode, int axis)
 
     if(probeok == 0 && gcode->subcode == 2) {
         // issue error if probe was not triggered and subcode == 2
-        gcode->stream->printf("ALARM:Probe fail\n");
+        gcode->stream->printf("ALARM: Probe fail\n");
         THEKERNEL->call_event(ON_HALT, nullptr);
     }
 }
@@ -450,31 +440,33 @@ void ZProbe::probe_XYZ(Gcode *gcode, int axis)
 // NOTE must use G53 to force move in machine coordinates and ignore any WCS offsets
 void ZProbe::coordinated_move(float x, float y, float z, float feedrate, bool relative)
 {
-    char buf[32];
     char cmd[64];
 
     if(relative) strcpy(cmd, "G91 G0 ");
     else strcpy(cmd, "G53 G0 "); // G53 forces movement in machine coordinate system
 
     if(!isnan(x)) {
-        int n = snprintf(buf, sizeof(buf), " X%1.3f", x);
-        strncat(cmd, buf, n);
+        size_t n= strlen(cmd);
+        snprintf(&cmd[n], sizeof(cmd)-n, " X%1.3f", x);
     }
     if(!isnan(y)) {
-        int n = snprintf(buf, sizeof(buf), " Y%1.3f", y);
-        strncat(cmd, buf, n);
+        size_t n= strlen(cmd);
+        snprintf(&cmd[n], sizeof(cmd)-n, " Y%1.3f", y);
     }
     if(!isnan(z)) {
-        int n = snprintf(buf, sizeof(buf), " Z%1.3f", z);
-        strncat(cmd, buf, n);
+        size_t n= strlen(cmd);
+        snprintf(&cmd[n], sizeof(cmd)-n, " Z%1.3f", z);
     }
 
-    // use specified feedrate (mm/sec)
-    int n = snprintf(buf, sizeof(buf), " F%1.1f", feedrate * 60); // feed rate is converted to mm/min
-    strncat(cmd, buf, n);
+    {
+        size_t n= strlen(cmd);
+        // use specified feedrate (mm/sec)
+        snprintf(&cmd[n], sizeof(cmd)-n, " F%1.1f", feedrate * 60); // feed rate is converted to mm/min
+    }
+
     if(relative) strcat(cmd, " G90");
 
-    //THEKERNEL->streams->printf("DEBUG: move: %s\n", cmd);
+    //THEKERNEL->streams->printf("DEBUG: move: %s: %u\n", cmd, strlen(cmd));
 
     // send as a command line as may have multiple G codes in it
     struct SerialMessage message;

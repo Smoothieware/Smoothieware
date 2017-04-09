@@ -320,7 +320,7 @@ bool CartGridStrategy::probe_grid(int n, int m, float _x_start, float _y_start, 
 
     float x_step = _x_size / n;
     float y_step = _y_size / m;
-    for (int c = 0; c < n; ++c) {
+    for (int c = 0; c < m; ++c) {
         float y = _y_start + y_step * c;
         for (int r = 0; r < n; ++r) {
             float x = _x_start + x_step * r;

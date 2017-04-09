@@ -8,7 +8,7 @@
 #include "libs/Module.h"
 #include "libs/Kernel.h"
 #include "libs/nuts_bolts.h"
-#include <math.h>
+#include <cmath>
 #include <string>
 #include "Block.h"
 #include "Planner.h"
@@ -16,16 +16,18 @@
 #include "Gcode.h"
 #include "libs/StreamOutputPool.h"
 #include "StepTicker.h"
+#include "platform_memory.h"
 
 #include "mri.h"
+#include <inttypes.h>
 
 using std::string;
 #include <vector>
 
 #define STEP_TICKER_FREQUENCY THEKERNEL->step_ticker->get_frequency()
-#define STEP_TICKER_FREQUENCY_2 (STEP_TICKER_FREQUENCY*STEP_TICKER_FREQUENCY)
 
 uint8_t Block::n_actuators= 0;
+double Block::fp_scale= 0;
 
 // A block represents a movement, it's length for each stepper motor, and the corresponding acceleration curves.
 // It's stacked on a queue, and that queue is then executed in order, to move the motors.
@@ -34,7 +36,14 @@ uint8_t Block::n_actuators= 0;
 
 Block::Block()
 {
+    tick_info= nullptr;
     clear();
+}
+
+void Block::init(uint8_t n)
+{
+    n_actuators= n;
+    fp_scale= (double)STEPTICKER_FPSCALE / pow((double)STEP_TICKER_FREQUENCY, 2.0); // we scale up by fixed point offset first to avoid tiny values
 }
 
 void Block::clear()
@@ -62,21 +71,25 @@ void Block::clear()
     locked              = false;
     s_value             = 0.0F;
 
-    acceleration_per_tick= 0;
-    deceleration_per_tick= 0;
     total_move_ticks= 0;
-    if(tick_info.size() != n_actuators) {
-        tick_info.resize(n_actuators);
+    if(tick_info == nullptr) {
+        // we create this once for this block
+        tick_info= new tickinfo_t[n_actuators]; //(tickinfo_t *)malloc(sizeof(tickinfo_t) * n_actuators);
+        if(tick_info == nullptr) {
+            // if we ran out of memory in AHB0 just stop here
+            __debugbreak();
+        }
     }
-    for(auto &i : tick_info) {
-        i.steps_per_tick= 0;
-        i.counter= 0;
-        i.acceleration_change= 0;
-        i.deceleration_change= 0;
-        i.plateau_rate= 0;
-        i.steps_to_move= 0;
-        i.step_count= 0;
-        i.next_accel_event= 0;
+
+    for(int i = 0; i < n_actuators; ++i) {
+        tick_info[i].steps_per_tick= 0;
+        tick_info[i].counter= 0;
+        tick_info[i].acceleration_change= 0;
+        tick_info[i].deceleration_change= 0;
+        tick_info[i].plateau_rate= 0;
+        tick_info[i].steps_to_move= 0;
+        tick_info[i].step_count= 0;
+        tick_info[i].next_accel_event= 0;
     }
 }
 
@@ -199,23 +212,16 @@ void Block::calculate_trapezoid( float entryspeed, float exitspeed )
     this->accelerate_until = acceleration_ticks;
     this->decelerate_after = total_move_ticks - deceleration_ticks;
 
-    // Now figure out the acceleration PER TICK, this should ideally be held as a float, even a double if possible as it's very critical to the block timing
-    // steps/tick^2
-
-    this->acceleration_per_tick = acceleration_in_steps / STEP_TICKER_FREQUENCY_2;
-    this->deceleration_per_tick = deceleration_in_steps / STEP_TICKER_FREQUENCY_2;
-
     // We now have everything we need for this block to call a Steppermotor->move method !!!!
     // Theorically, if accel is done per tick, the speed curve should be perfect.
     this->total_move_ticks = total_move_ticks;
-
-    //puts "accelerate_until: #{this->accelerate_until}, decelerate_after: #{this->decelerate_after}, acceleration_per_tick: #{this->acceleration_per_tick}, total_move_ticks: #{this->total_move_ticks}"
 
     this->initial_rate = initial_rate;
     this->exit_speed = exitspeed;
 
     // prepare the block for stepticker
-    this->prepare();
+    this->prepare(acceleration_in_steps, deceleration_in_steps);
+
     this->locked= false;
 }
 
@@ -298,38 +304,63 @@ float Block::max_exit_speed()
 
 // prepare block for the step ticker, called everytime the block changes
 // this is done during planning so does not delay tick generation and step ticker can simply grab the next block during the interrupt
-void Block::prepare()
+void Block::prepare(float acceleration_in_steps, float deceleration_in_steps)
 {
+
     float inv = 1.0F / this->steps_event_count;
+
+    // Now figure out the acceleration PER TICK, this should ideally be held as a double as it's very critical to the block timing
+    // steps/tick^2
+    // was....
+    // float acceleration_per_tick = acceleration_in_steps / STEP_TICKER_FREQUENCY_2; // that is 100,000² too big for a float
+    // float deceleration_per_tick = deceleration_in_steps / STEP_TICKER_FREQUENCY_2;
+    double acceleration_per_tick = acceleration_in_steps * fp_scale; // this is now scaled to fit a 2.30 fixed point number
+    double deceleration_per_tick = deceleration_in_steps * fp_scale;
+
     for (uint8_t m = 0; m < n_actuators; m++) {
         uint32_t steps = this->steps[m];
         this->tick_info[m].steps_to_move = steps;
         if(steps == 0) continue;
 
         float aratio = inv * steps;
-        this->tick_info[m].steps_per_tick = STEPTICKER_TOFP((this->initial_rate * aratio) / STEP_TICKER_FREQUENCY); // steps/sec / tick frequency to get steps per tick in 2.30 fixed point
-        this->tick_info[m].counter = 0; // 2.30 fixed point
+
+        this->tick_info[m].steps_per_tick = (int64_t)round((((double)this->initial_rate * aratio) / STEP_TICKER_FREQUENCY) * STEPTICKER_FPSCALE); // steps/sec / tick frequency to get steps per tick in 2.62 fixed point
+        this->tick_info[m].counter = 0; // 2.62 fixed point
         this->tick_info[m].step_count = 0;
         this->tick_info[m].next_accel_event = this->total_move_ticks + 1;
 
-        float acceleration_change = 0;
+        double acceleration_change = 0;
         if(this->accelerate_until != 0) { // If the next accel event is the end of accel
             this->tick_info[m].next_accel_event = this->accelerate_until;
-            acceleration_change = this->acceleration_per_tick;
+            acceleration_change = acceleration_per_tick;
 
         } else if(this->decelerate_after == 0 /*&& this->accelerate_until == 0*/) {
             // we start off decelerating
-            acceleration_change = -this->deceleration_per_tick;
+            acceleration_change = -deceleration_per_tick;
 
         } else if(this->decelerate_after != this->total_move_ticks /*&& this->accelerate_until == 0*/) {
             // If the next event is the start of decel ( don't set this if the next accel event is accel end )
             this->tick_info[m].next_accel_event = this->decelerate_after;
         }
 
-        // convert to fixed point after scaling
-        this->tick_info[m].acceleration_change= STEPTICKER_TOFP(acceleration_change * aratio);
-        this->tick_info[m].deceleration_change= -STEPTICKER_TOFP(this->deceleration_per_tick * aratio);
-        this->tick_info[m].plateau_rate= STEPTICKER_TOFP((this->maximum_rate * aratio) / STEP_TICKER_FREQUENCY);
+        // already converted to fixed point just needs scaling by ratio
+        //#define STEPTICKER_TOFP(x) ((int64_t)round((double)(x)*STEPTICKER_FPSCALE))
+        this->tick_info[m].acceleration_change= (int64_t)round(acceleration_change * aratio);
+        this->tick_info[m].deceleration_change= -(int64_t)round(deceleration_per_tick * aratio);
+        this->tick_info[m].plateau_rate= (int64_t)round(((this->maximum_rate * aratio) / STEP_TICKER_FREQUENCY) * STEPTICKER_FPSCALE);
+
+        #if 0
+        THEKERNEL->streams->printf("spt: %08lX %08lX, ac: %08lX %08lX, dc: %08lX %08lX, pr: %08lX %08lX\n",
+            (uint32_t)(this->tick_info[m].steps_per_tick>>32), // 2.62 fixed point
+            (uint32_t)(this->tick_info[m].steps_per_tick&0xFFFFFFFF), // 2.62 fixed point
+            (uint32_t)(this->tick_info[m].acceleration_change>>32), // 2.62 fixed point signed
+            (uint32_t)(this->tick_info[m].acceleration_change&0xFFFFFFFF), // 2.62 fixed point signed
+            (uint32_t)(this->tick_info[m].deceleration_change>>32), // 2.62 fixed point
+            (uint32_t)(this->tick_info[m].deceleration_change&0xFFFFFFFF), // 2.62 fixed point
+            (uint32_t)(this->tick_info[m].plateau_rate>>32), // 2.62 fixed point
+            (uint32_t)(this->tick_info[m].plateau_rate&0xFFFFFFFF) // 2.62 fixed point
+        );
+        #endif
     }
 }
 

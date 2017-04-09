@@ -172,6 +172,7 @@ std::string Kernel::get_query_string()
     if(halted) {
         str.append("Alarm,");
     }else if(homing) {
+        running= true;
         str.append("Home,");
     }else if(feed_hold) {
         str.append("Hold,");
@@ -240,9 +241,13 @@ void Kernel::call_event(_EVENT_ENUM id_event, void * argument){
         (m->*kernel_callback_functions[id_event])(argument);
     }
 
-    if(id_event == ON_HALT && this->halted && !was_idle) {
-        // we need to try to correct current positions if we were running
-        this->robot->reset_position_from_current_actuator_position();
+    if(id_event == ON_HALT) {
+        if(!this->halted || !was_idle) {
+            // if we were running and this is a HALT
+            // or if we are clearing the halt with $X or M999
+            // fix up the current positions in case they got out of sync due to backed up commands
+            this->robot->reset_position_from_current_actuator_position();
+        }
     }
 }
 

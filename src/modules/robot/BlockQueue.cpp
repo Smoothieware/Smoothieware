@@ -1,25 +1,27 @@
-#include "HeapRing.h"
+#include "BlockQueue.h"
+#include "Block.h"
 
 #include <cstdlib>
-
 #include "cmsis.h"
+#include "platform_memory.h"
 
 /*
  * constructors
  */
 
-template<class kind> HeapRing<kind>::HeapRing()
+BlockQueue::BlockQueue()
 {
     head_i = tail_i = length = 0;
     isr_tail_i = tail_i;
-    ring = NULL;
+    ring = nullptr;
 }
 
-template<class kind> HeapRing<kind>::HeapRing(unsigned int length)
+BlockQueue::BlockQueue(unsigned int length)
 {
     head_i = tail_i = 0;
     isr_tail_i = tail_i;
-    ring = new kind[length];
+    void *v= AHB0.alloc(sizeof(Block) * length);
+    ring = new(v) Block[length];
     // TODO: handle allocation failure
     this->length = length;
 }
@@ -28,20 +30,20 @@ template<class kind> HeapRing<kind>::HeapRing(unsigned int length)
  * destructor
  */
 
-template<class kind> HeapRing<kind>::~HeapRing()
+BlockQueue::~BlockQueue()
 {
     head_i = tail_i = length = 0;
     isr_tail_i = tail_i;
-    if (ring)
-        delete [] ring;
-    ring = NULL;
+    if(ring != nullptr)
+        AHB0.dealloc(ring); // delete [] ring;
+    ring = nullptr;
 }
 
 /*
  * index accessors (protected)
  */
 
-template<class kind> unsigned int HeapRing<kind>::next(unsigned int item) const
+unsigned int BlockQueue::next(unsigned int item) const
 {
     if (length == 0)
         return 0;
@@ -52,7 +54,7 @@ template<class kind> unsigned int HeapRing<kind>::next(unsigned int item) const
     return item;
 }
 
-template<class kind> unsigned int HeapRing<kind>::prev(unsigned int item) const
+unsigned int BlockQueue::prev(unsigned int item) const
 {
     if (length == 0)
         return 0;
@@ -67,30 +69,30 @@ template<class kind> unsigned int HeapRing<kind>::prev(unsigned int item) const
  * reference accessors
  */
 
-template<class kind> kind& HeapRing<kind>::head()
+Block& BlockQueue::head()
 {
     return ring[head_i];
 }
 
-template<class kind> kind& HeapRing<kind>::tail()
+Block& BlockQueue::tail()
 {
     return ring[tail_i];
 }
 
-template<class kind> kind& HeapRing<kind>::item(unsigned int i)
+Block& BlockQueue::item(unsigned int i)
 {
     return ring[i];
 }
 
-template<class kind> void HeapRing<kind>::push_front(kind& item)
+void BlockQueue::push_front(Block& item)
 {
     ring[head_i] = item;
     head_i = next(head_i);
 }
 
-template<class kind> kind& HeapRing<kind>::pop_back()
+Block& BlockQueue::pop_back()
 {
-    kind& r = ring[tail_i];
+    Block& r = ring[tail_i];
     tail_i = next(tail_i);
     return r;
 }
@@ -99,28 +101,28 @@ template<class kind> kind& HeapRing<kind>::pop_back()
  * pointer accessors
  */
 
-template<class kind> kind* HeapRing<kind>::head_ref()
+Block* BlockQueue::head_ref()
 {
     return &ring[head_i];
 }
 
-template<class kind> kind* HeapRing<kind>::tail_ref()
+Block* BlockQueue::tail_ref()
 {
     return &ring[tail_i];
 }
 
-template<class kind> kind* HeapRing<kind>::item_ref(unsigned int i)
+Block* BlockQueue::item_ref(unsigned int i)
 {
     return &ring[i];
 }
 
-template<class kind> void HeapRing<kind>::produce_head()
+void BlockQueue::produce_head()
 {
     while (is_full());
     head_i = next(head_i);
 }
 
-template<class kind> void HeapRing<kind>::consume_tail()
+void BlockQueue::consume_tail()
 {
     if (!is_empty())
         tail_i = next(tail_i);
@@ -130,7 +132,7 @@ template<class kind> void HeapRing<kind>::consume_tail()
  * queue status accessors
  */
 
-template<class kind> bool HeapRing<kind>::is_full() const
+bool BlockQueue::is_full() const
 {
     //__disable_irq();
     bool r = (next(head_i) == tail_i);
@@ -139,7 +141,7 @@ template<class kind> bool HeapRing<kind>::is_full() const
     return r;
 }
 
-template<class kind> bool HeapRing<kind>::is_empty() const
+bool BlockQueue::is_empty() const
 {
     //__disable_irq();
     bool r = (head_i == tail_i);
@@ -152,7 +154,7 @@ template<class kind> bool HeapRing<kind>::is_empty() const
  * resize
  */
 
-template<class kind> bool HeapRing<kind>::resize(unsigned int length)
+bool BlockQueue::resize(unsigned int length)
 {
     if (is_empty())
     {
@@ -166,9 +168,9 @@ template<class kind> bool HeapRing<kind>::resize(unsigned int length)
 
                 __enable_irq();
 
-                if (ring)
-                    delete [] ring;
-                ring = NULL;
+                if (ring != nullptr)
+                    AHB0.dealloc(ring); // delete [] ring;
+                ring = nullptr;
 
                 return true;
             }
@@ -179,11 +181,12 @@ template<class kind> bool HeapRing<kind>::resize(unsigned int length)
         }
 
         // Note: we don't use realloc so we can fall back to the existing ring if allocation fails
-        kind* newring = new kind[length];
+        void *v= AHB0.alloc(sizeof(Block) * length);
+        Block* newring = new(v) Block[length];
 
-        if (newring != NULL)
+        if (newring != nullptr)
         {
-            kind* oldring = ring;
+            Block* oldring = ring;
 
             __disable_irq();
 
@@ -195,44 +198,44 @@ template<class kind> bool HeapRing<kind>::resize(unsigned int length)
 
                 __enable_irq();
 
-                if (oldring)
-                    delete [] oldring;
+                if (oldring != nullptr)
+                    AHB0.dealloc(oldring); // delete [] oldring;
 
                 return true;
             }
 
             __enable_irq();
 
-            delete [] newring;
+            AHB0.dealloc(newring); // delete [] newring;
         }
     }
 
     return false;
 }
 
-template<class kind> bool HeapRing<kind>::provide(kind* buffer, unsigned int length)
-{
-    __disable_irq();
+// bool BlockQueue::provide(Block* buffer, unsigned int length)
+// {
+//     __disable_irq();
 
-    if (is_empty())
-    {
-        kind* oldring = ring;
+//     if (is_empty())
+//     {
+//         Block* oldring = ring;
 
-        if ((buffer != NULL) && (length > 0))
-        {
-            ring = buffer;
-            this->length = length;
-            head_i = tail_i = 0;
+//         if ((buffer != nullptr) && (length > 0))
+//         {
+//             ring = buffer;
+//             this->length = length;
+//             head_i = tail_i = 0;
 
-            __enable_irq();
+//             __enable_irq();
 
-            if (oldring)
-                delete [] oldring;
-            return true;
-        }
-    }
+//             if (oldring != nullptr)
+//                 delete [] oldring;
+//             return true;
+//         }
+//     }
 
-    __enable_irq();
+//     __enable_irq();
 
-    return false;
-}
+//     return false;
+// }
