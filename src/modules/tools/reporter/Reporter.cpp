@@ -101,7 +101,7 @@ static char get_status_character()
 
     // TODO: this does not fully work. If you jog too quickly on PanelDue, queue does not empty quick enough
     // resulting in 'P' being returned. Causing PanuelDue to jump to playing mode.
-    if (!THEKERNEL->conveyor->is_queue_empty()) // Printing
+    if (!THEKERNEL->conveyor->is_idle()) // Printing
         return 'P';
 
     if (is_suspended()) // Paused
