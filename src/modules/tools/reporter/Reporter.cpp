@@ -96,16 +96,17 @@ static char get_status_character()
     // I=idle, P=printing from SD card, S=stopped (i.e. needs a reset),
     // C=running config file, A=paused, D=pausing, R=resuming, B=busy (running a macro)
 
-    if (THEKERNEL->is_halted()) // Paused / Stopped
+    if (THEKERNEL->is_halted()) // Stopped
         return 'S';
 
-    // TODO: this does not fully work. If you jog too quickly on PanelDue, queue does not empty quick enough
-    // resulting in 'P' being returned. Causing PanuelDue to jump to playing mode.
-    if (!THEKERNEL->conveyor->is_idle()) // Printing
+    if (is_playing()) // Printing
         return 'P';
 
     if (is_suspended()) // Paused
         return 'A';
+
+    if (!THEKERNEL->conveyor->is_idle()) // Printing
+        return 'B';
 
     // Idle
     return 'I';
