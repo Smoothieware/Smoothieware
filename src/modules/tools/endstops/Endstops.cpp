@@ -928,10 +928,9 @@ void Endstops::handle_park(Gcode * gcode)
 {
     // TODO: spec says if XYZ specified move to them first then move to MCS of specifed axis
     THEROBOT->push_state();
-    THEROBOT->inch_mode = false;     // needs to be in mm
     THEROBOT->absolute_mode = true;
     char buf[32];
-    snprintf(buf, sizeof(buf), "G53 G0 X%f Y%f", saved_position[X_AXIS], saved_position[Y_AXIS]); // must use machine coordinates in case G92 or WCS is in effect
+    snprintf(buf, sizeof(buf), "G53 G0 X%f Y%f", THEROBOT->from_millimeters(saved_position[X_AXIS]), THEROBOT->from_millimeters(saved_position[Y_AXIS])); // must use machine coordinates in case G92 or WCS is in effect
     struct SerialMessage message;
     message.message = buf;
     message.stream = &(StreamOutput::NullStream);
