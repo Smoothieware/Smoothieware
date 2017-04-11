@@ -29,6 +29,7 @@
 // Temp sensor implementations:
 #include "Thermistor.h"
 #include "max31855.h"
+#include "max31865.h"
 #include "AD8495.h"
 #include "PT100_E3D.h"
 
@@ -103,6 +104,7 @@ void TemperatureControl::on_module_loaded()
         this->register_for_event(ON_MAIN_LOOP);
         this->register_for_event(ON_SET_PUBLIC_DATA);
         this->register_for_event(ON_HALT);
+        this->register_for_event(ON_IDLE);
     }
 }
 
@@ -115,6 +117,12 @@ void TemperatureControl::on_halt(void *arg)
         this->target_temperature = UNDEFINED;
     }
 }
+
+void TemperatureControl::on_idle(void *arg)
+{
+    sensor->on_idle();
+}
+
 
 void TemperatureControl::on_main_loop(void *argument)
 {
@@ -177,6 +185,8 @@ void TemperatureControl::load_config()
         sensor = new Thermistor();
     } else if(sensor_type.compare("max31855") == 0) {
         sensor = new Max31855();
+    } else if(sensor_type.compare("max31865") == 0) {
+        sensor = new Max31865();
     } else if(sensor_type.compare("ad8495") == 0) {
         sensor = new AD8495();
     } else if(sensor_type.compare("pt100_e3d") == 0) {
