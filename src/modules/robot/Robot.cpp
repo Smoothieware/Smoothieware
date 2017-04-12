@@ -1436,12 +1436,15 @@ bool Robot::append_arc(Gcode * gcode, const float target[], const float offset[]
     float sin_T = theta_per_segment;
 
     // TODO we need to handle the ABC axis here by segmenting them
-    float arc_target[3];
+    float arc_target[n_motors];
     float sin_Ti;
     float cos_Ti;
     float r_axisi;
     uint16_t i;
     int8_t count = 0;
+
+    // init array for all axis
+    memcpy(arc_target, machine_position, n_motors*sizeof(float));
 
     // Initialize the linear axis
     arc_target[this->plane_axis_2] = this->machine_position[this->plane_axis_2];
