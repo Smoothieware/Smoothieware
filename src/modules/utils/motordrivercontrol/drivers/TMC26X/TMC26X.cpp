@@ -908,7 +908,7 @@ void TMC26X::dumpStatus(StreamOutput *stream, bool readable)
             readStatus(TMC26X_READOUT_POSITION); // get the status bits
             stream->printf("#s,");
         }
-        stream->printf("d%d,", THEROBOT->actuators[0]->which_direction() ? 1 : -1);
+        stream->printf("d%d,", THEROBOT->actuators[0]->which_direction() ? -1 : 1);
         stream->printf("c%u,m%d,", getCurrent(), getMicrosteps());
         // stream->printf('S');
         // stream->printf(tmc26XStepper.getSpeed(), DEC);
