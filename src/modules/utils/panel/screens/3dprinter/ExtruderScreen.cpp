@@ -109,5 +109,12 @@ void ExtruderScreen::setupConfigSettings()
         0.0F  // Min
         );
 
+    mvs->addMenuItem("Press adv", // menu name
+        []() -> float { pad_extruder_t rd; if(PublicData::get_value( extruder_checksum, (void *)&rd )) return rd.pressure_advance; else return 0; }, // getter
+        [this](float pa) { send_gcode("M572", 'S', pa); }, // setter
+        0.01F, // increment
+        0.0F  // Min
+        );
+
     THEPANEL->enter_screen(mvs);
 }

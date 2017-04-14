@@ -52,6 +52,9 @@ class Extruder : public Tool {
         float retract_zlift_length;
         float retract_zlift_feedrate;
 
+        // for extruder pressure advance
+        float pressure_advance;             // advances extruder velocity by (pressure_advance * acceleration) while accelerating and decelerating
+
         // for saving and restoring extruder position
         std::tuple<float, float, int32_t> saved_position;
 

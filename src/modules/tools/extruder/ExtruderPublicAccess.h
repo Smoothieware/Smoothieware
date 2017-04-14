@@ -11,5 +11,6 @@ using pad_extruder_t = struct pad_extruder {
     float flow_rate;
     float accleration;
     float retract_length;
+    float pressure_advance;
     float current_position;
 };
