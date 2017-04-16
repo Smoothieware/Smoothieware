@@ -441,9 +441,9 @@ void Endstops::on_idle(void *argument)
             if(debounced_get(&i->pin)) {
                 // endstop triggered
                 if(!THEKERNEL->is_grbl_mode()) {
-                    THEKERNEL->streams->printf("Limit switch %c was hit - reset or M999 required\n", i->axis);
+                    THEKERNEL->streams->printf("Limit switch %c%c was hit - reset or M999 required\n", STEPPER[i->axis_index]->which_direction() ? '-' : '+', i->axis);
                 }else{
-                    THEKERNEL->streams->printf("ALARM: Hard limit %c\n", i->axis);
+                    THEKERNEL->streams->printf("ALARM: Hard limit %c%c\n", STEPPER[i->axis_index]->which_direction() ? '-' : '+', i->axis);
                 }
                 this->status = LIMIT_TRIGGERED;
                 i->debounce= 0;
@@ -467,7 +467,7 @@ void Endstops::back_off_home(axis_bitmap_t axis)
     // these are handled differently
     if(is_delta) {
         // Move off of the endstop using a regular relative move in Z only
-        params.push_back({'Z', homing_axis[Z_AXIS].retract * (homing_axis[Z_AXIS].home_direction ? 1 : -1)});
+        params.push_back({'Z', THEROBOT->from_millimeters(homing_axis[Z_AXIS].retract * (homing_axis[Z_AXIS].home_direction ? 1 : -1))});
         slow_rate= homing_axis[Z_AXIS].slow_rate;
 
     } else {
@@ -478,7 +478,7 @@ void Endstops::back_off_home(axis_bitmap_t axis)
             // if not triggered no need to move off
             if(e.pin_info != nullptr && e.pin_info->limit_enable && debounced_get(&e.pin_info->pin)) {
                 char ax= e.axis;
-                params.push_back({ax, e.retract * (e.home_direction ? 1 : -1)});
+                params.push_back({ax, THEROBOT->from_millimeters(e.retract * (e.home_direction ? 1 : -1))});
                 // select slowest of them all
                 slow_rate= isnan(slow_rate) ? e.slow_rate : std::min(slow_rate, e.slow_rate);
             }
@@ -489,12 +489,11 @@ void Endstops::back_off_home(axis_bitmap_t axis)
         // Move off of the endstop using a regular relative move
         params.insert(params.begin(), {'G', 0});
         // use X slow rate to move, Z should have a max speed set anyway
-        params.push_back({'F', slow_rate * 60.0F});
+        params.push_back({'F', THEROBOT->from_millimeters(slow_rate * 60.0F)});
         char gcode_buf[64];
         append_parameters(gcode_buf, params, sizeof(gcode_buf));
         Gcode gc(gcode_buf, &(StreamOutput::NullStream));
         THEROBOT->push_state();
-        THEROBOT->inch_mode = false;     // needs to be in mm
         THEROBOT->absolute_mode = false; // needs to be relative mode
         THEROBOT->on_gcode_received(&gc); // send to robot directly
         // Wait for above to finish
@@ -514,14 +513,12 @@ void Endstops::move_to_origin(axis_bitmap_t axis)
     // float pos[3]; THEROBOT->get_axis_position(pos); if(pos[0] == 0 && pos[1] == 0) return;
 
     this->status = MOVE_TO_ORIGIN;
-    // Move to center using a regular move, use slower of X and Y fast rate
-    //float rate = std::min(this->fast_rates[0], this->fast_rates[1]) * 60.0F;
+    // Move to center using a regular move, use slower of X and Y fast rate in mm/sec
+    float rate = std::min(homing_axis[X_AXIS].fast_rate, homing_axis[Y_AXIS].fast_rate) * 60.0F;
     char buf[32];
     THEROBOT->push_state();
-    THEROBOT->inch_mode = false;     // needs to be in mm
     THEROBOT->absolute_mode = true;
-    //snprintf(buf, sizeof(buf), "G53 G0 X0 Y0 F%1.4f", rate); // must use machine coordinates in case G92 or WCS is in effect
-    snprintf(buf, sizeof(buf), "G53 G0 X0 Y0"); // must use machine coordinates in case G92 or WCS is in effect
+    snprintf(buf, sizeof(buf), "G53 G0 X0 Y0 F%1.4f", THEROBOT->from_millimeters(rate)); // must use machine coordinates in case G92 or WCS is in effect
     struct SerialMessage message;
     message.message = buf;
     message.stream = &(StreamOutput::NullStream);
@@ -928,10 +925,9 @@ void Endstops::handle_park(Gcode * gcode)
 {
     // TODO: spec says if XYZ specified move to them first then move to MCS of specifed axis
     THEROBOT->push_state();
-    THEROBOT->inch_mode = false;     // needs to be in mm
     THEROBOT->absolute_mode = true;
     char buf[32];
-    snprintf(buf, sizeof(buf), "G53 G0 X%f Y%f", saved_position[X_AXIS], saved_position[Y_AXIS]); // must use machine coordinates in case G92 or WCS is in effect
+    snprintf(buf, sizeof(buf), "G53 G0 X%f Y%f", THEROBOT->from_millimeters(saved_position[X_AXIS]), THEROBOT->from_millimeters(saved_position[Y_AXIS])); // must use machine coordinates in case G92 or WCS is in effect
     struct SerialMessage message;
     message.message = buf;
     message.stream = &(StreamOutput::NullStream);
