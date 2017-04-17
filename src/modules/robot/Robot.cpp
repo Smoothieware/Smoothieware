@@ -1152,7 +1152,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
             unit_vec[i] = deltas[i] / distance;
 
             // Do not move faster than the configured cartesian limits for XYZ
-            if ( max_speeds[i] > 0 ) {
+            if ( i <= Z_AXIS && max_speeds[i] > 0 ) {
                 float axis_speed = fabsf(unit_vec[i] * rate_mm_s);
 
                 if (axis_speed > max_speeds[i])

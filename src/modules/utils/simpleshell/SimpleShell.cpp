@@ -981,7 +981,6 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
             struct SerialMessage message{&StreamOutput::NullStream, cmd};
             THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
             if(THEKERNEL->is_halted()) break;
-            THECONVEYOR->wait_for_idle();
             toggle= !toggle;
         }
         stream->printf("done\n");
@@ -1013,7 +1012,6 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
             stream->printf("%s\n", cmd);
             message.message= cmd;
             THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
-            THECONVEYOR->wait_for_idle();
         }
 
         // leave it where it started
@@ -1024,7 +1022,7 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
             THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
         }
 
-       THEROBOT->pop_state();
+        THEROBOT->pop_state();
         stream->printf("done\n");
 
     }else if (what == "square") {
@@ -1067,8 +1065,7 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
                 THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
             }
             if(THEKERNEL->is_halted()) break;
-            THECONVEYOR->wait_for_idle();
-        }
+         }
         stream->printf("done\n");
 
     }else if (what == "raw") {
