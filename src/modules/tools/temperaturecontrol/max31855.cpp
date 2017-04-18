@@ -66,12 +66,6 @@ float Max31855::get_temperature()
 
 	float temp = read_temp();
 
-	// Discard occasional errors...
-	if(!isinf(temp))
-	{
-		readings.push_back(temp);
-	}
-
 	if(readings.size()==0) return infinityf();
 
 	float sum = 0;
