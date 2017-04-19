@@ -1278,8 +1278,10 @@ bool Robot::append_line(Gcode *gcode, const float target[], float rate_mm_s, flo
     // Find out the distance for this move in XYZ in MCS
     float millimeters_of_travel = sqrtf(powf( target[X_AXIS] - machine_position[X_AXIS], 2 ) +  powf( target[Y_AXIS] - machine_position[Y_AXIS], 2 ) +  powf( target[Z_AXIS] - machine_position[Z_AXIS], 2 ));
 
-    if(millimeters_of_travel < 0.00001F) {
-        // we have no movement in XYZ, probably E only extrude or retract
+    // discard segments so small they cause no movement
+    if (((gcode->has_letter('X')) && (millimeters_of_travel < (1/(actuators[0]->get_steps_per_mm())))) &&
+        ((gcode->has_letter('Y')) && (millimeters_of_travel < (1/(actuators[1]->get_steps_per_mm())))) &&
+        ((gcode->has_letter('Z')) && (millimeters_of_travel < (1/(actuators[2]->get_steps_per_mm()))))) {
         return this->append_milestone(target, rate_mm_s);
     }
 
@@ -1387,18 +1389,17 @@ bool Robot::append_arc(Gcode * gcode, const float target[], const float offset[]
     // Find the distance for this gcode
     float millimeters_of_travel = hypotf(angular_travel * radius, fabsf(linear_travel));
 
-    // We don't care about non-XYZ moves ( for example the extruder produces some of those )
-    if( millimeters_of_travel < 0.00001F ) {
+    // discard segments so small they cause no movement
+    if (((gcode->has_letter('X')) && (millimeters_of_travel < (1/(actuators[0]->get_steps_per_mm())))) && 
+        ((gcode->has_letter('Y')) && (millimeters_of_travel < (1/(actuators[1]->get_steps_per_mm())))) &&
+        ((gcode->has_letter('Z')) && (millimeters_of_travel < (1/(actuators[2]->get_steps_per_mm()))))) {
         return false;
     }
 
     // limit segments by maximum arc error
     float arc_segment = this->mm_per_arc_segment;
     if ((this->mm_max_arc_error > 0) && (2 * radius > this->mm_max_arc_error)) {
-        float min_err_segment = 2 * sqrtf((this->mm_max_arc_error * (2 * radius - this->mm_max_arc_error)));
-        if (this->mm_per_arc_segment < min_err_segment) {
-            arc_segment = min_err_segment;
-        }
+        arc_segment = 2 * sqrtf((this->mm_max_arc_error * (2 * radius - this->mm_max_arc_error)));
     }
     // Figure out how many segments for this gcode
     // TODO for deltas we need to make sure we are at least as many segments as requested, also if mm_per_line_segment is set we need to use the
