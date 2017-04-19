@@ -77,6 +77,7 @@ TemperatureControl::TemperatureControl(uint16_t name, int index)
     sensor= nullptr;
     readonly= false;
     tick= 0;
+    single= false;
 }
 
 TemperatureControl::~TemperatureControl()
@@ -322,13 +323,15 @@ void TemperatureControl::on_gcode_received(void *argument)
             // this only gets handled if it is not controlled by the tool manager or is active in the toolmanager
             this->active = true;
 
-            // this is safe as old configs as well as single extruder configs the toolmanager will not be running so will return false
-            // this will also ignore anything that the tool manager is not controlling and return false, otherwise it returns the active tool
-            void *returned_data;
-            bool ok = PublicData::get_value( tool_manager_checksum, is_active_tool_checksum, this->name_checksum, &returned_data );
-            if (ok) {
-                uint16_t active_tool_name =  *static_cast<uint16_t *>(returned_data);
-                this->active = (active_tool_name == this->name_checksum);
+            if(!single) {
+                // this is safe as old configs as well as single extruder configs the toolmanager will not be running so will return false
+                // this will also ignore anything that the tool manager is not controlling and return false, otherwise it returns the active tool
+                void *returned_data;
+                bool ok = PublicData::get_value( tool_manager_checksum, is_active_tool_checksum, this->name_checksum, &returned_data );
+                if (ok) {
+                    uint16_t active_tool_name =  *static_cast<uint16_t *>(returned_data);
+                    this->active = (active_tool_name == this->name_checksum);
+                }
             }
 
             if(this->active) {
