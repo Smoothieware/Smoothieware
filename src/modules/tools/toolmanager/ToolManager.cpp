@@ -21,6 +21,7 @@ using namespace std;
 #include "checksumm.h"
 #include "PublicData.h"
 #include "Gcode.h"
+#include "modules/tools/extruder/Extruder.h"
 
 #include "libs/SerialMessage.h"
 #include "libs/StreamOutput.h"
@@ -29,7 +30,7 @@ using namespace std;
 ToolManager::ToolManager()
 {
     active_tool = 0;
-    current_tool_name = CHECKSUM("hotend");
+    current_temp_control_name = CHECKSUM("hotend");
 }
 
 void ToolManager::on_module_loaded()
@@ -58,7 +59,7 @@ void ToolManager::on_gcode_received(void *argument)
                 THEKERNEL->conveyor->wait_for_idle();
                 this->tools[active_tool]->deselect();
                 this->active_tool = new_tool;
-                this->current_tool_name = this->tools[active_tool]->get_name();
+                this->current_temp_control_name = this->tools[active_tool]->get_temperature_control_name();
                 this->tools[active_tool]->select();
 
                 //send new_tool_offsets to robot
@@ -75,22 +76,8 @@ void ToolManager::on_get_public_data(void* argument)
 
     if(!pdr->starts_with(tool_manager_checksum)) return;
 
-    if(pdr->second_element_is(is_active_tool_checksum)) {
-
-        // check that we control the given tool
-        bool managed = false;
-        for(auto t : tools) {
-            uint16_t n = t->get_name();
-            if(pdr->third_element_is(n)) {
-                managed = true;
-                break;
-            }
-        }
-
-        // we are not managing this tool so do not answer
-        if(!managed) return;
-
-        pdr->set_data_ptr(&this->current_tool_name);
+    if(pdr->second_element_is(get_active_temp_control_name_checksum)) {
+        pdr->set_data_ptr(&this->current_temp_control_name);
         pdr->set_taken();
 
     }else if(pdr->second_element_is(get_active_tool_checksum)) {
@@ -112,11 +99,11 @@ void ToolManager::on_set_public_data(void* argument)
 }
 
 // Add a tool to the tool list
-void ToolManager::add_tool(Tool* tool_to_add)
+void ToolManager::add_tool(Extruder* tool_to_add)
 {
     if(this->tools.size() == 0) {
         tool_to_add->select();
-        this->current_tool_name = tool_to_add->get_name();
+        this->current_temp_control_name = tool_to_add->get_temperature_control_name();
         //send new_tool_offsets to robot
         const float *new_tool_offset = tool_to_add->get_offset();
         THEROBOT->setToolOffset(new_tool_offset);

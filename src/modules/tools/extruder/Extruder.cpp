@@ -24,6 +24,7 @@
 #include "PublicDataRequest.h"
 #include "StreamOutputPool.h"
 #include "ExtruderPublicAccess.h"
+#include "utils.h"
 
 #include <mri.h>
 
@@ -51,6 +52,7 @@
 #define x_offset_checksum                    CHECKSUM("x_offset")
 #define y_offset_checksum                    CHECKSUM("y_offset")
 #define z_offset_checksum                    CHECKSUM("z_offset")
+#define temperature_control_checksum         CHECKSUM("temperature_control")
 
 #define retract_length_checksum              CHECKSUM("retract_length")
 #define retract_feedrate_checksum            CHECKSUM("retract_feedrate")
@@ -124,6 +126,13 @@ void Extruder::config_load()
     if(filament_diameter > 0.01F) {
         this->volumetric_multiplier = 1.0F / (powf(this->filament_diameter / 2, 2) * PI);
     }
+
+    // Get associated temperature_control name, defaults to extruder name
+    string s = THEKERNEL->config->value(extruder_checksum, this->identifier, temperature_control_checksum)->by_default("" )->as_string();
+    if (s.empty())
+        this->temperature_control_name = this->identifier;
+    else
+        this->temperature_control_name = get_checksum(s);
 
     // Stepper motor object for the extruder
     stepper_motor = new StepperMotor(step_pin, dir_pin, en_pin);
