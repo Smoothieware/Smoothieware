@@ -23,6 +23,7 @@
 #define spi_channel_checksum       CHECKSUM("spi_channel")
 #define spi_cs_pin_checksum        CHECKSUM("spi_cs_pin")
 #define spi_frequency_checksum     CHECKSUM("spi_frequency")
+#define menu_offset_checksum        CHECKSUM("menu_offset")
 
 ReprapDiscountGLCD::ReprapDiscountGLCD() {
     // configure the pins to use
@@ -33,7 +34,7 @@ ReprapDiscountGLCD::ReprapDiscountGLCD() {
     this->back_pin.from_string(THEKERNEL->config->value( panel_checksum, back_button_pin_checksum)->by_default("nc")->as_string())->as_input();
     this->buzz_pin.from_string(THEKERNEL->config->value( panel_checksum, buzz_pin_checksum)->by_default("nc")->as_string())->as_output();
     this->spi_cs_pin.from_string(THEKERNEL->config->value( panel_checksum, spi_cs_pin_checksum)->by_default("nc")->as_string())->as_output();
-
+    this->menu_offset = THEKERNEL->config->value( panel_checksum, menu_offset_checksum )->by_default(0)->as_number(); 
     // select which SPI channel to use
     int spi_channel = THEKERNEL->config->value(panel_checksum, spi_channel_checksum)->by_default(0)->as_number();
     this->glcd= new RrdGlcd(spi_channel, this->spi_cs_pin);
@@ -56,11 +57,29 @@ uint8_t ReprapDiscountGLCD::readButtons() {
 }
 
 int ReprapDiscountGLCD::readEncoderDelta() {
-    static const int8_t enc_states[] = {0,-1,1,0,1,0,0,-1,-1,0,0,1,0,1,-1,0};
+    static const int8_t enc_statesX4[] = { 0,-1, 1, 0, 1, 0, 0,-1,-1, 0, 0, 1, 0, 1,-1, 0}; //X4
+    static const int8_t enc_statesX2[] = { 0, 0, 0, 1, 0, 0,-1, 0, 0,-1, 0, 0, 1, 0, 0, 0}; //X2 -> use when menuoffset != 0
     static uint8_t old_AB = 0;
-    old_AB <<= 2;                   //remember previous state
-    old_AB |= ( this->encoder_a_pin.get() + ( this->encoder_b_pin.get() * 2 ) );  //add current state
-    return  enc_states[(old_AB&0x0f)];
+    static uint8_t old_A = 0;
+    int returnValue = 0;
+    int current_A = this->encoder_a_pin.get();
+    int current_B = this->encoder_b_pin.get();
+    if(this->encoder_a_pin.connected()) {
+        //X4 mode
+       if(menu_offset == 0){
+            old_AB <<= 2;                               //remember previous state
+            old_AB |= ( current_A + ( current_B * 2 ) );//add current state
+            returnValue = enc_statesX4[(old_AB&0x0f)];
+       }
+       //X2 mode: Only if A changes
+       else if(old_A != current_A){
+            old_A = current_A;
+            old_AB <<= 2;                               //remember previous state
+            old_AB |= ( current_A + ( current_B * 2 ) );//add current state
+            returnValue = enc_statesX2[(old_AB&0x0f)];
+       }
+    }
+    return  returnValue;
 }
 
 // cycle the buzzer pin at a certain frequency (hz) for a certain duration (ms)

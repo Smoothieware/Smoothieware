@@ -158,7 +158,6 @@ class Panel : public Module {
             volatile bool do_encoder:1;
 
             char mode:2;
-            char menu_offset:3;
             int encoder_click_resolution:3;
         };
 };
