@@ -349,7 +349,7 @@ bool CartGridStrategy::handleGcode(Gcode *gcode)
             float _x_start = this->x_start, _y_start = this->y_start;
 
             if(only_by_two_corners){
-                if(gcode->has_letter('X') && gcode->has_letter('X') && gcode->has_letter('A') && gcode->has_letter('B')){
+                if(gcode->has_letter('X') && gcode->has_letter('Y') && gcode->has_letter('A') && gcode->has_letter('B')){
                     _x_start = gcode->get_value('X'); // override default probe start point
                     _y_start = gcode->get_value('Y'); // override default probe start point
                     _x_size = gcode->get_value('A'); // override default probe width
