@@ -53,6 +53,8 @@
 #define  kossel_checksum                     CHECKSUM("kossel")
 #define  morgan_checksum                     CHECKSUM("morgan")
 
+const string sd_root = "/sd";
+
 static bool less_than_padtemp(const pad_temperature& leftSide, const pad_temperature& rightSide)
 {
     // TODO: Deal correctly with heated chamber. Once PanelDue does as well.
@@ -169,7 +171,13 @@ void json_ls_command(string path, StreamOutput *stream)
     //     M20 S2 P/gcodes
     //     {"dir":"\/gcodes","files":["4-piece-1-2-3-4.gcode","Hinged_Box.gcode","*Calibration pieces"]}
 
-    path = absolute_from_relative(path);
+    // Removing this, as it makes use of the "current working directory" value in the KERNEL."
+    // Seems risky as it cannot be considered to relate to the reported only. I.e., it might be changed
+    // through other communications with the KERNEL.
+    //    path = absolute_from_relative(path);
+
+
+    std::string full_path = sd_root + path;
 
     stream->printf("{\"dir\":\"%s\"", path.c_str());
     stream->printf(",\"files\":");
@@ -178,7 +186,7 @@ void json_ls_command(string path, StreamOutput *stream)
 
     DIR *d;
     struct dirent *p;
-    d = opendir(path.c_str());
+    d = opendir(full_path.c_str());
 
     if (d != NULL) {
         while ((p = readdir(d)) != NULL) {
@@ -210,7 +218,10 @@ void json_file_info(string file, StreamOutput *stream)
     // This feature is used by the web interface and by PanelDue, so that if a connection is made when a
     // file is already being printed, the name and other information about that file can be shown.
 
-    file = absolute_from_relative(file);
+    // See comment in json_ls_command
+    // file = absolute_from_relative(file);
+
+    std::string full_path_to_file = sd_root + file;
 
     stream->printf("{\"err\":%d", 0);
     stream->printf(",\"size\":%d", 12345);
@@ -218,7 +229,7 @@ void json_file_info(string file, StreamOutput *stream)
     stream->printf(",\"layerHeight\":%f", 0.20);
     stream->printf(",\"filament\":[%f]", 123.4);
 
-    stream->printf(",\"generatedBy\":\"%s\"", file.c_str());
+    stream->printf(",\"generatedBy\":\"%s\"", full_path_to_file.c_str());
     // TODO: remove me
     // hijack for debuging file path output
     // stream->printf(",\"generatedBy\":\"%s\"", "<Not implemented>");
@@ -455,7 +466,7 @@ void Reporter::on_gcode_received(void *argument)
         } break;
 
         case 20: {
-            std::string dir = "/";
+            std::string dir;
 
             if (gcode->has_letter('P')) {
                 string possible_command = gcode->get_command();
@@ -463,22 +474,23 @@ void Reporter::on_gcode_received(void *argument)
                 size_t beginning = possible_command.find_first_of("P");
 
                 if (beginning != string::npos)
-                    dir = possible_command.substr(beginning + 1, possible_command.size() - beginning + 1);
+                    dir = possible_command.substr(beginning + 1);
             }
+
+            if (dir == "")
+                dir = "/";
+                
             json_ls_command(dir, gcode->stream);
         }   break;
 
         case 36: {
             string possible_command = gcode->get_command();
 
-            size_t beginning = possible_command.find_first_of(" ");
-
-            std::string file = "";
+            size_t beginning = possible_command.find_first_of("P");
 
             if (beginning != string::npos)
-                file = possible_command.substr(beginning + 1, possible_command.size() - beginning + 1);
+                json_file_info(possible_command.substr(beginning + 1), gcode->stream);
 
-            json_file_info(file, gcode->stream);
         } break;
         }
     }
