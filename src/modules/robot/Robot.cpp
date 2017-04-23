@@ -324,7 +324,7 @@ void Robot::get_current_machine_position(float *pos) const
     arm_solution->actuator_to_cartesian(current_position, pos);
 }
 
-void Robot::print_position(uint8_t subcode, std::string& res) const
+void Robot::print_position(uint8_t subcode, std::string& res, bool ignore_extruders) const
 {
     // M114.1 is a new way to do this (similar to how GRBL does it).
     // it returns the realtime position based on the current step position of the actuators.
@@ -378,7 +378,7 @@ void Robot::print_position(uint8_t subcode, std::string& res) const
     // deal with the ABC axis
     for (int i = A_AXIS; i < n_motors; ++i) {
         n= 0;
-        if(actuators[i]->is_extruder()) continue; // don't show an extruder as that will be E
+        if(ignore_extruders && actuators[i]->is_extruder()) continue; // don't show an extruder as that will be E
         if(subcode == 4) { // M114.4 print last milestone
             n= snprintf(buf, sizeof(buf), " %c:%1.4f", 'A'+i-A_AXIS, machine_position[i]);
 
@@ -630,7 +630,7 @@ void Robot::on_gcode_received(void *argument)
 
             case 114:{
                 std::string buf;
-                print_position(gcode->subcode, buf);
+                print_position(gcode->subcode, buf, true); // ignore extruders as they will print E themselves
                 gcode->txt_after_ok.append(buf);
                 return;
             }
