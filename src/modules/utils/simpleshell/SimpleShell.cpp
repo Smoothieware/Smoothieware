@@ -816,7 +816,7 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
         }
 
    } else if (what == "pos") {
-        // convenience to call all the various M114 variants
+        // convenience to call all the various M114 variants, shows ABC axis where relevant
         std::string buf;
         THEROBOT->print_position(0, buf); stream->printf("last %s\n", buf.c_str()); buf.clear();
         THEROBOT->print_position(1, buf); stream->printf("realtime %s\n", buf.c_str()); buf.clear();
