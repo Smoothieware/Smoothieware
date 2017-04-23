@@ -17,6 +17,8 @@
 #include "libs/StreamOutputPool.h"
 #include "StepTicker.h"
 #include "platform_memory.h"
+#include "Robot.h"
+#include "StepperMotor.h"
 
 #include "mri.h"
 #include <inttypes.h>
@@ -318,11 +320,28 @@ void Block::prepare(float acceleration_in_steps, float deceleration_in_steps)
     double deceleration_per_tick = deceleration_in_steps * fp_scale;
 
     for (uint8_t m = 0; m < n_actuators; m++) {
-        uint32_t steps = this->steps[m];
+        int32_t steps = this->steps[m];
+
+        if(	(THEROBOT->actuators[m]->get_pressure_advance() != 0.0f) &&
+        	(this->primary_axis == true)	// Ignore extruder only moves
+        ) {
+        	if(this->accelerate_until != 0) {
+        		// If we are accelerating
+        		steps = floorf((1 + THEROBOT->actuators[m]->get_pressure_advance()) * steps );
+			}
+			else if(this->decelerate_after == 0) {
+			 	// If we are decelerating
+				steps = floorf((1 - THEROBOT->actuators[m]->get_pressure_advance()) * steps );
+			}
+ 			this->direction_bits[m] = (steps < 0) ? 1 : 0;
+ 			steps = labs(steps);
+       }
+
         this->tick_info[m].steps_to_move = steps;
         if(steps == 0) continue;
 
         float aratio = inv * steps;
+        bool pressure_advance_reverse_direction = false;
 
         this->tick_info[m].steps_per_tick = (int64_t)round((((double)this->initial_rate * aratio) / STEP_TICKER_FREQUENCY) * STEPTICKER_FPSCALE); // steps/sec / tick frequency to get steps per tick in 2.62 fixed point
         this->tick_info[m].counter = 0; // 2.62 fixed point
@@ -334,9 +353,34 @@ void Block::prepare(float acceleration_in_steps, float deceleration_in_steps)
             this->tick_info[m].next_accel_event = this->accelerate_until;
             acceleration_change = acceleration_per_tick;
 
+			// Increase velocity if pressure advance is enabled
+			if(THEROBOT->actuators[m]->get_pressure_advance() != 0.0f){
+				//  advance_speed = k * acceleration_change
+				//this->tick_info[m].steps_per_tick += (int64_t)round((((double)acceleration_in_steps * aratio * THEROBOT->actuators[m]->get_pressure_advance()) / STEP_TICKER_FREQUENCY) * STEPTICKER_FPSCALE); // steps/sec / tick frequency to get steps per tick in 2.62 fixed point
+			}
+
         } else if(this->decelerate_after == 0 /*&& this->accelerate_until == 0*/) {
             // we start off decelerating
             acceleration_change = -deceleration_per_tick;
+
+				/*
+			// Decrease velocity if pressure advance is enabled
+			if(THEROBOT->actuators[m]->get_pressure_advance() != 0.0f){
+				//  advance_speed = k * acceleration_change
+
+
+				this->tick_info[m].steps_per_tick = (int64_t)round((((double)0 * deceleration_in_steps * aratio * THEROBOT->actuators[m]->get_pressure_advance()) / STEP_TICKER_FREQUENCY) * STEPTICKER_FPSCALE); // steps/sec / tick frequency to get steps per tick in 2.62 fixed point
+				acceleration_change = (int64_t)0;
+
+				// Reverse motor if required
+				if(this->tick_info[m].steps_per_tick < 0){
+					pressure_advance_reverse_direction = true;
+					this->tick_info[m].steps_per_tick = -this->tick_info[m].steps_per_tick;
+					//this->direction_bits[m] = !direction_bits[m];
+				}
+
+			}
+			*/
 
         } else if(this->decelerate_after != this->total_move_ticks /*&& this->accelerate_until == 0*/) {
             // If the next event is the start of decel ( don't set this if the next accel event is accel end )
