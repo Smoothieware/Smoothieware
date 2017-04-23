@@ -25,12 +25,10 @@ void TemperatureControlPool::load_tools()
     vector<uint16_t> modules;
     THEKERNEL->config->get_module_list( &modules, temperature_control_checksum );
     int cnt = 0;
-    TemperatureControl *controller;
-
     for( auto cs : modules ) {
         // If module is enabled
         if( THEKERNEL->config->value(temperature_control_checksum, cs, enable_checksum )->as_bool() ) {
-            controller = new TemperatureControl(cs, cnt++);
+            TemperatureControl *controller = new TemperatureControl(cs, cnt++);
             THEKERNEL->add_module(controller);
         }
     }
@@ -39,10 +37,5 @@ void TemperatureControlPool::load_tools()
     if(cnt > 0) {
         PID_Autotuner *pidtuner = new PID_Autotuner();
         THEKERNEL->add_module( pidtuner );
-
-    } else if(cnt == 1) {
-        // only a single temperature control, make sure it is always active
-        controller->set_single();
     }
-
 }
