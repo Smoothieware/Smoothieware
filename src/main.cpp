@@ -29,6 +29,7 @@
 #include "modules/utils/killbutton/KillButton.h"
 #include "modules/utils/PlayLed/PlayLed.h"
 #include "modules/utils/panel/Panel.h"
+#include "modules/utils/safety/SafetyPool.h"
 #include "libs/Network/uip/Network.h"
 #include "Config.h"
 #include "checksumm.h"
@@ -183,6 +184,11 @@ void init() {
     #endif
     #ifndef NO_TOOLS_DRILLINGCYCLES
     kernel->add_module( new(AHB0) Drillingcycles() );
+    #endif
+    #ifndef NO_UTILS_SAFETY
+    // Must be loaded after TemperatureControlPool
+    SafetyPool safetyPool;
+    safetyPool.load_prevention_controllers();
     #endif
     #ifndef NO_TOOLS_FILAMENTDETECTOR
     kernel->add_module( new(AHB0) FilamentDetector() );
