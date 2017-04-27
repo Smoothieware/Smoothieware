@@ -321,19 +321,28 @@ void Block::prepare(float acceleration_in_steps, float deceleration_in_steps)
 
     for (uint8_t m = 0; m < n_actuators; m++) {
         int32_t steps = this->steps[m];
+        double advance_velocity_offset = 0;
+        int8_t pressure_advance_direction = 1;
 
         if(	(THEROBOT->actuators[m]->get_pressure_advance() != 0.0f) &&
-        	(this->primary_axis == true)	// Ignore extruder only moves
+        	(this->primary_axis == true) &&	// Ignore extruder only moves
+        	(steps < 100)	// Fudge to ensure that retracts and unretracts are ignored
         ) {
         	if(this->accelerate_until != 0) {
         		// If we are accelerating
-        		steps = floorf((1 + THEROBOT->actuators[m]->get_pressure_advance()) * steps );
+        		advance_velocity_offset = acceleration_in_steps * (inv * steps) * THEROBOT->actuators[m]->get_pressure_advance();
+
+        		steps = steps + (advance_velocity_offset * (this->accelerate_until / STEP_TICKER_FREQUENCY));
 			}
 			else if(this->decelerate_after == 0) {
 			 	// If we are decelerating
-				steps = floorf((1 - THEROBOT->actuators[m]->get_pressure_advance()) * steps );
+				advance_velocity_offset = -deceleration_in_steps * (inv * steps) * THEROBOT->actuators[m]->get_pressure_advance();
+
+				steps = steps + (advance_velocity_offset * ((this->total_move_ticks - this->decelerate_after) / STEP_TICKER_FREQUENCY));
 			}
+
  			this->direction_bits[m] = (steps < 0) ? 1 : 0;
+ 			pressure_advance_direction = (steps < 0) ? -1 : 1;
  			steps = labs(steps);
        }
 
@@ -341,7 +350,6 @@ void Block::prepare(float acceleration_in_steps, float deceleration_in_steps)
         if(steps == 0) continue;
 
         float aratio = inv * steps;
-        bool pressure_advance_reverse_direction = false;
 
         this->tick_info[m].steps_per_tick = (int64_t)round((((double)this->initial_rate * aratio) / STEP_TICKER_FREQUENCY) * STEPTICKER_FPSCALE); // steps/sec / tick frequency to get steps per tick in 2.62 fixed point
         this->tick_info[m].counter = 0; // 2.62 fixed point
@@ -353,34 +361,9 @@ void Block::prepare(float acceleration_in_steps, float deceleration_in_steps)
             this->tick_info[m].next_accel_event = this->accelerate_until;
             acceleration_change = acceleration_per_tick;
 
-			// Increase velocity if pressure advance is enabled
-			if(THEROBOT->actuators[m]->get_pressure_advance() != 0.0f){
-				//  advance_speed = k * acceleration_change
-				//this->tick_info[m].steps_per_tick += (int64_t)round((((double)acceleration_in_steps * aratio * THEROBOT->actuators[m]->get_pressure_advance()) / STEP_TICKER_FREQUENCY) * STEPTICKER_FPSCALE); // steps/sec / tick frequency to get steps per tick in 2.62 fixed point
-			}
-
         } else if(this->decelerate_after == 0 /*&& this->accelerate_until == 0*/) {
             // we start off decelerating
-            acceleration_change = -deceleration_per_tick;
-
-				/*
-			// Decrease velocity if pressure advance is enabled
-			if(THEROBOT->actuators[m]->get_pressure_advance() != 0.0f){
-				//  advance_speed = k * acceleration_change
-
-
-				this->tick_info[m].steps_per_tick = (int64_t)round((((double)0 * deceleration_in_steps * aratio * THEROBOT->actuators[m]->get_pressure_advance()) / STEP_TICKER_FREQUENCY) * STEPTICKER_FPSCALE); // steps/sec / tick frequency to get steps per tick in 2.62 fixed point
-				acceleration_change = (int64_t)0;
-
-				// Reverse motor if required
-				if(this->tick_info[m].steps_per_tick < 0){
-					pressure_advance_reverse_direction = true;
-					this->tick_info[m].steps_per_tick = -this->tick_info[m].steps_per_tick;
-					//this->direction_bits[m] = !direction_bits[m];
-				}
-
-			}
-			*/
+            acceleration_change = -deceleration_per_tick * pressure_advance_direction;
 
         } else if(this->decelerate_after != this->total_move_ticks /*&& this->accelerate_until == 0*/) {
             // If the next event is the start of decel ( don't set this if the next accel event is accel end )
@@ -390,7 +373,7 @@ void Block::prepare(float acceleration_in_steps, float deceleration_in_steps)
         // already converted to fixed point just needs scaling by ratio
         //#define STEPTICKER_TOFP(x) ((int64_t)round((double)(x)*STEPTICKER_FPSCALE))
         this->tick_info[m].acceleration_change= (int64_t)round(acceleration_change * aratio);
-        this->tick_info[m].deceleration_change= -(int64_t)round(deceleration_per_tick * aratio);
+        this->tick_info[m].deceleration_change= -(int64_t)round(deceleration_per_tick * aratio * pressure_advance_direction);
         this->tick_info[m].plateau_rate= (int64_t)round(((this->maximum_rate * aratio) / STEP_TICKER_FREQUENCY) * STEPTICKER_FPSCALE);
 
         #if 0
