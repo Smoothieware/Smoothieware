@@ -27,19 +27,6 @@
 
 #include <mri.h>
 
-// OLD config names for backwards compatibility, NOTE new configs will not be added here
-#define extruder_module_enable_checksum      CHECKSUM("extruder_module_enable")
-#define extruder_steps_per_mm_checksum       CHECKSUM("extruder_steps_per_mm")
-#define extruder_filament_diameter_checksum  CHECKSUM("extruder_filament_diameter")
-#define extruder_acceleration_checksum       CHECKSUM("extruder_acceleration")
-#define extruder_step_pin_checksum           CHECKSUM("extruder_step_pin")
-#define extruder_dir_pin_checksum            CHECKSUM("extruder_dir_pin")
-#define extruder_en_pin_checksum             CHECKSUM("extruder_en_pin")
-#define extruder_max_speed_checksum          CHECKSUM("extruder_max_speed")
-#define extruder_default_feed_rate_checksum  CHECKSUM("extruder_default_feed_rate")
-
-// NEW config names
-
 #define default_feed_rate_checksum           CHECKSUM("default_feed_rate")
 #define steps_per_mm_checksum                CHECKSUM("steps_per_mm")
 #define filament_diameter_checksum           CHECKSUM("filament_diameter")
