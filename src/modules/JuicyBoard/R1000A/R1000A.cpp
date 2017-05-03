@@ -34,7 +34,6 @@
 R1000A::R1000A(){
     // Default Constructor
     this->ModResetPin = new Pin();                      // define new
-    //this->ModResetPin->from_string("1.0");
     this->ModResetPin->from_string("2.10");
     this->ModResetPin->as_open_drain();
     this->ModResetPin->set(true);                       // set to high
@@ -165,6 +164,28 @@ void R1000A::on_console_line_received(void* argument){
                 THEKERNEL->streams->printf("A:0x%02X Acked...\r\n",i);
             }
         }
+        else if (cmd == "readi2creg"){
+            // Reads an register from i2c bus
+            // example: readi2creg 2 0x40 3
+            //        : reads 3 bytes from I2C register 0x40 of slot number 2
+            int slotnum =  (int)strtol(shift_parameter(possible_command).c_str(), NULL, 10);
+            char regaddr = (char)strtol(shift_parameter(possible_command).c_str(),NULL,0);
+            int size =  (int)strtol(shift_parameter(possible_command).c_str(), NULL, 10);
+            int i;
+
+            char i2cbuf[size];
+
+            if (THEKERNEL->i2c->I2C_ReadREG(slotnum,regaddr,i2cbuf,size) == 0){
+                THEKERNEL->streams->printf("I2C Slot:%d REG:0x%02X returned ",slotnum,regaddr);
+                for (i=0;i<size;i++){
+                    THEKERNEL->streams->printf("- 0x%02X ",i2cbuf[i]);
+                }
+                THEKERNEL->streams->printf("\r\n");
+            }
+            else{
+                THEKERNEL->streams->printf("I2C ERROR!\r\n");
+            }
+        }
         else if (cmd == "wrhex2bl"){
             // write hex file to module (has to be in bootloader mode)
             int slotnum =  (int)strtol(shift_parameter(possible_command).c_str(), NULL, 10);
@@ -188,6 +209,78 @@ void R1000A::on_console_line_received(void* argument){
             }
             else{
                 THEKERNEL->streams->printf("I2C Error\r\n");
+            }
+        }
+        else if (cmd == "readrtd"){
+            // Reads an register from i2c bus
+            // example: readi2creg 2 0x40 3
+            //        : reads 3 bytes from I2C register 0x40 of slot number 2
+            int slotnum =  (int)strtol(shift_parameter(possible_command).c_str(), NULL, 10);
+
+            char i2cbuf[4];
+            union tempdata {
+                float f;
+                char c[4];
+            };
+
+            union tempdata chtemp;
+
+            if (THEKERNEL->i2c->I2C_ReadREG(slotnum,0x32,i2cbuf,4) == 0){
+                chtemp.c[3] = i2cbuf[0];
+                chtemp.c[2] = i2cbuf[1];
+                chtemp.c[1] = i2cbuf[2];
+                chtemp.c[0] = i2cbuf[3];
+                THEKERNEL->streams->printf("CH1: %.3f (0x%02X%02X%02X%02X) /", chtemp.f, chtemp.c[0], chtemp.c[1], chtemp.c[2], chtemp.c[3]);
+            }
+            else{
+                THEKERNEL->streams->printf("I2C ERROR!\r\n");
+            }
+
+            if (THEKERNEL->i2c->I2C_ReadREG(slotnum,0x33,i2cbuf,4) == 0){
+                chtemp.c[3] = i2cbuf[0];
+                chtemp.c[2] = i2cbuf[1];
+                chtemp.c[1] = i2cbuf[2];
+                chtemp.c[0] = i2cbuf[3];
+                THEKERNEL->streams->printf("CH2: %.3f (0x%02X%02X%02X%02X)\r\n", chtemp.f, chtemp.c[0], chtemp.c[1], chtemp.c[2], chtemp.c[3]);
+            }
+            else{
+                THEKERNEL->streams->printf("I2C ERROR!\r\n");
+            }
+
+            if (THEKERNEL->i2c->I2C_ReadREG(slotnum,0x34,i2cbuf,4) == 0){
+                chtemp.c[3] = i2cbuf[0];
+                chtemp.c[2] = i2cbuf[1];
+                chtemp.c[1] = i2cbuf[2];
+                chtemp.c[0] = i2cbuf[3];
+                THEKERNEL->streams->printf("CH1: %.3f (0x%02X%02X%02X%02X) /", chtemp.f, chtemp.c[0], chtemp.c[1], chtemp.c[2], chtemp.c[3]);
+            }
+            else{
+                THEKERNEL->streams->printf("I2C ERROR!\r\n");
+            }
+
+            if (THEKERNEL->i2c->I2C_ReadREG(slotnum,0x35,i2cbuf,4) == 0){
+                chtemp.c[3] = i2cbuf[0];
+                chtemp.c[2] = i2cbuf[1];
+                chtemp.c[1] = i2cbuf[2];
+                chtemp.c[0] = i2cbuf[3];
+                THEKERNEL->streams->printf("CH2: %.3f (0x%02X%02X%02X%02X)\r\n", chtemp.f, chtemp.c[0], chtemp.c[1], chtemp.c[2], chtemp.c[3]);
+            }
+            else{
+                THEKERNEL->streams->printf("I2C ERROR!\r\n");
+            }
+
+            // read RTD values from registers
+            if (THEKERNEL->i2c->I2C_ReadREG(slotnum,0x36,i2cbuf,2) == 0){
+                THEKERNEL->streams->printf("CH1R: (0x%02X%02X) /", i2cbuf[0], i2cbuf[1]);
+            }
+            else{
+                THEKERNEL->streams->printf("I2C ERROR!\r\n");
+            }
+            if (THEKERNEL->i2c->I2C_ReadREG(slotnum,0x37,i2cbuf,2) == 0){
+                THEKERNEL->streams->printf("CH2R: (0x%02X%02X)\r\n", i2cbuf[0], i2cbuf[1]);
+            }
+            else{
+                THEKERNEL->streams->printf("I2C ERROR!\r\n");
             }
         }
     }
