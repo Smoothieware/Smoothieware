@@ -469,11 +469,13 @@ void ZProbe::coordinated_move(float x, float y, float z, float feedrate, bool re
     //THEKERNEL->streams->printf("DEBUG: move: %s: %u\n", cmd, strlen(cmd));
 
     // send as a command line as may have multiple G codes in it
+    THEROBOT->push_state();
     struct SerialMessage message;
     message.message = cmd;
     message.stream = &(StreamOutput::NullStream);
     THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
     THEKERNEL->conveyor->wait_for_idle();
+    THEROBOT->pop_state();
 }
 
 // issue home command
