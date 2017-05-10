@@ -451,7 +451,7 @@ float CartGridStrategy::findBed()
     // move to an initial position fast so as to not take all day, we move down max_z - initial_height, which is set in config, default 10mm
     float deltaz = initial_height;
     zprobe->coordinated_move(NAN, NAN, deltaz, zprobe->getFastFeedrate()); //move Z only to initial_height
-    zprobe->coordinated_move(x_start, y_start, NAN, zprobe->getFastFeedrate()); // move at initial_height to x_start, y_start
+    zprobe->coordinated_move(x_start - X_PROBE_OFFSET_FROM_EXTRUDER, y_start - Y_PROBE_OFFSET_FROM_EXTRUDER, NAN, zprobe->getFastFeedrate()); // move at initial_height to x_start, y_start
 
     // find bed at 0,0 run at slow rate so as to not hit bed hard
     float mm;
