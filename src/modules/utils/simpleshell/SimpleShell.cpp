@@ -39,6 +39,7 @@
 #include "Thermistor.h"
 #include "md5.h"
 #include "utils.h"
+#include "AutoPushPop.h"
 
 #include "system_LPC17xx.h"
 #include "LPC17xx.h"
@@ -957,6 +958,7 @@ void SimpleShell::md5sum_command( string parameters, StreamOutput *stream )
 // runs several types of test on the mechanisms
 void SimpleShell::test_command( string parameters, StreamOutput *stream)
 {
+    AutoPushPop app; // this will save the state and restore it on exit
     string what = shift_parameter( parameters );
 
     if (what == "jog") {
