@@ -130,6 +130,9 @@ try_again:
                 currentline = nextline;
             }
 
+            // if we send an ok we set this so we do not send multiple ones
+            ok_sent= false;
+
             while(possible_command.size() > 0) {
                 // assumes G or M are always the first on the line
                 size_t nextcmd = possible_command.find_first_of("GM", 2);
@@ -206,6 +209,19 @@ try_again:
                         // remember last modal group 1 code
                         if(gcode->g < 4) {
                             modal_group_1= gcode->g;
+
+                            // optimize for G0-3, call robot directly (no other module will get them)
+                            // send ok immediately so host can send next buffer while we are processing/planning the current one
+                            if(!ok_sent) {
+                                // send for first one on line
+                                new_message.stream->printf("ok\r\n");
+                                ok_sent= true;
+                            }
+
+                            THEROBOT->on_gcode_received(gcode);
+
+                            delete gcode;
+                            continue;
                         }
                     }
 
@@ -363,7 +379,7 @@ try_again:
                         new_message.stream->printf("Entering Alarm/Halt state\n");
                         THEKERNEL->call_event(ON_HALT, nullptr);
 
-                    }else{
+                    }else if(!ok_sent) {
 
                         if(gcode->add_nl)
                             new_message.stream->printf("\r\n");

@@ -30,6 +30,7 @@ private:
     StreamOutput* upload_stream{nullptr};
     uint8_t modal_group_1;
     struct {
-        bool uploading: 1;
+        bool uploading:1;
+        bool ok_sent:1;
     };
 };
