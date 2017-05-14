@@ -61,6 +61,8 @@
 
 #include "mbed.h"
 
+#include "set_output_pin.h"
+
 #define second_usb_serial_enable_checksum  CHECKSUM("second_usb_serial_enable")
 #define disable_msd_checksum  CHECKSUM("msd_disable")
 #define dfu_enable_checksum  CHECKSUM("dfu_enable")
@@ -123,6 +125,10 @@ void init() {
         kernel->streams->printf("MSD is disabled\r\n");
     }
 #endif
+
+    // Set default pin values.
+    
+    set_output_pin::set_output_pins();
 
     // Create and add main modules
     kernel->add_module( new(AHB0) Player() );
