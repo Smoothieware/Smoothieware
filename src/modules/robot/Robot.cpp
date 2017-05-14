@@ -926,7 +926,7 @@ void Robot::process_move(Gcode *gcode, enum MOTION_MODE_T motion_mode)
         }
 
     }else{
-        // already in machine coordinates, we do not add tool offset for that
+        // already in machine coordinates, we do not add wcs or tool offset for that
         for(int i= X_AXIS; i <= Z_AXIS; ++i) {
             if(!isnan(param[i])) target[i] = param[i];
         }
