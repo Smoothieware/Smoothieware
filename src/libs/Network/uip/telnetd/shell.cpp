@@ -226,7 +226,8 @@ void Shell::start()
 {   // add it to the kernels output stream
     DEBUG_PRINTF("Shell: Adding stream to kernel streams\n");
     THEKERNEL->streams->append_stream(pstream);
-    telnet->output("Smoothie command shell\r\n> ");
+    telnet->output("Smoothie command shell\r\n");
+    telnet->output_prompt(SHELL_PROMPT);
 }
 
 int Shell::queue_size()
