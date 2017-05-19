@@ -400,15 +400,18 @@ uint32_t Switch::pinpoll_tick(uint32_t dummy)
             // if switch is a toggle switch
             if( this->input_pin_behavior == toggle_checksum ) {
                 this->flip();
-                // else default is momentary
             } else {
-                this->flip();
+                // else default is momentary
+                this->switch_state = this->input_pin_state;
+                this->switch_changed = true;
             }
-            // else if button released
+
         } else {
-            // if switch is momentary
+            // else if button released
             if( this->input_pin_behavior == momentary_checksum ) {
-                this->flip();
+                // if switch is momentary
+                this->switch_state = this->input_pin_state;
+                this->switch_changed = true;
             }
         }
     }
