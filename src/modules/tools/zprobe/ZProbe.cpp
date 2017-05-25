@@ -440,7 +440,7 @@ void ZProbe::probe_XYZ(Gcode *gcode, int axis)
 // NOTE must use G53 to force move in machine coordinates and ignore any WCS offsets
 void ZProbe::coordinated_move(float x, float y, float z, float feedrate, bool relative)
 {
-    char cmd[64];
+    char *cmd= new char[128]; // use heap here to reduce stack usage
 
     if(relative) strcpy(cmd, "G91 G0 ");
     else strcpy(cmd, "G53 G0 "); // G53 forces movement in machine coordinate system
@@ -472,10 +472,13 @@ void ZProbe::coordinated_move(float x, float y, float z, float feedrate, bool re
     THEROBOT->push_state();
     struct SerialMessage message;
     message.message = cmd;
+    delete [] cmd;
+
     message.stream = &(StreamOutput::NullStream);
     THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
     THEKERNEL->conveyor->wait_for_idle();
     THEROBOT->pop_state();
+
 }
 
 // issue home command
