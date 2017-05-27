@@ -467,7 +467,7 @@ void ZProbe::coordinated_move(float x, float y, float z, float feedrate, bool re
 
     if(relative) strcat(cmd, " G90");
 
-    THEKERNEL->streams->printf("DEBUG: move: %s: %u\n", cmd, strlen(cmd));
+    //THEKERNEL->streams->printf("DEBUG: move: %s: %u\n", cmd, strlen(cmd));
 
     // send as a command line as may have multiple G codes in it
     THEROBOT->push_state();
