@@ -276,4 +276,5 @@
 			<resource resourceType="PROJECT" workspacePath="/Juicyware"/>
 		</configuration>
 	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 </cproject>

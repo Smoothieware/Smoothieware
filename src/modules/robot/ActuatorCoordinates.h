@@ -13,8 +13,8 @@
     #ifdef CNC
     #define MAX_ROBOT_ACTUATORS 3
     #else
-    // includes 2 extruders
-    #define MAX_ROBOT_ACTUATORS 5
+    // includes 3 extruders, increased for JuicyBoard
+    #define MAX_ROBOT_ACTUATORS 6
     #endif
 #endif
 

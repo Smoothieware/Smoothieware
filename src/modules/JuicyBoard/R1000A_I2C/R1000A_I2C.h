@@ -8,6 +8,8 @@
 #ifndef SRC_MODULES_JUICYBOARD_R1000A_I2C_R1000A_I2C_H_
 #define SRC_MODULES_JUICYBOARD_R1000A_I2C_R1000A_I2C_H_
 
+#define I2C_FREQ            200000      // I2C frequency
+
 #define R1000_I2C_BASE      0x10        // I2C address base for R1000A module
 #define R1000_I2C_BLBASE    0x20        // I2C address base for R1000A module
 #define PWRMON_BASE         0x40        // I2C address of on board power monitor
@@ -40,20 +42,23 @@ class R1000A_I2C {
         int I2C_ReadREG(int, char, char*, int);         // burst read (using slotnum)
         int I2C_WriteREG(int, char, char*, int);        // burst write (using slotnum)
         int I2C_Read(int, char*, int);                  // burst read (using slotnum) current register
+        float I2C_ReadREGfloat(int, char);              // reads a floating number (4 bytes) from the given slot/register
 
-//        int I2C_BLReadREG(int, char, char*, int);       // burst read (using slotnum) current register (bootloader mode only)
-//        int I2C_BLWriteREG(int, char, char*, int);      // burst write (using slotnum) current register (bootloader mode only)
-//        int I2C_BLRead(int, char*, int);                // burst read (using slotnum) current register (bootloader mode only)
         int I2C_CheckAddr(char);                        // checks if I2C address acknowledges
         int I2C_CheckAck(int);                          // checks if slot acknowledges
         int I2C_CheckBLMode(int);                       // checks if the slot is in bootloader mode
-//        int I2C_CheckBLAck(int);                        // checks if slot (in bootloader mode) acknowledges
+
+        // enable/disable/status for module I2C functions
+        // This is used to enable and module I2C functions other than module bootloader I2C
+        void enablemodI2C(void);
+        void disablemodI2C(void);
+        int ismodI2Cenabled(void);
 
     private:
         // Member variables
         mbed::I2C* i2c;                                 // i2c comm class
         char getSlotI2CAdd(int);                        // returns I2C address from slot number
-//        char getBLSlotI2CAdd(int);                      // returns I2C address from slot number, used for addressing modules in bootloader mode only
+        bool modI2Cenabled;                             // a flag to show if normal module I2C operation is enabled
 };
 
 #endif /* SRC_MODULES_JUICYBOARD_R1000A_I2C_R1000A_I2C_H_ */

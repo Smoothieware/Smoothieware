@@ -32,6 +32,8 @@
 #include "Thermistor.h"
 #include "max31855.h"
 #include "AD8495.h"
+// adding R1008 for JuicyBoard
+#include "modules/JuicyBoard/R1008/R1008.h"
 
 #include "MRI_Hooks.h"
 
@@ -166,6 +168,9 @@ void TemperatureControl::load_config()
         sensor = new Max31855();
     } else if(sensor_type.compare("ad8495") == 0) {
         sensor = new AD8495();
+    } else if(sensor_type.compare("r1008") == 0){
+        // add support for R1008, JuicyBoard platform
+        sensor = new R1008();
     } else {
         sensor = new TempSensor(); // A dummy implementation
     }
@@ -546,14 +551,15 @@ void TemperatureControl::on_second_tick(void *argument)
                     THEKERNEL->call_event(ON_HALT, nullptr);
                 }
                 break;
-            case TARGET_TEMPERATURE_REACHED: { // If we are in state TARGET_TEMPERATURE_REACHED, check for thermal runaway
+//            case TARGET_TEMPERATURE_REACHED: { // If we are in state TARGET_TEMPERATURE_REACHED, check for thermal runaway
+            case TARGET_TEMPERATURE_REACHED:  // JuicyWare, removed bracket inside case statement
                 float delta= this->get_temperature() - this->target_temperature;
                 // If the temperature is outside the acceptable range
                 if(this->runaway_range != 0 && fabsf(delta) > this->runaway_range){
                     THEKERNEL->streams->printf("ERROR : Temperature runaway on %s (delta temp %f), HALT asserted, TURN POWER OFF IMMEDIATELY - reset or M999 required\n", designator.c_str(), delta);
                     THEKERNEL->call_event(ON_HALT, nullptr);
                 }
-            }
+//            }             //JuicyWare, removed bracket inside case statement
                 break;
         }
     }

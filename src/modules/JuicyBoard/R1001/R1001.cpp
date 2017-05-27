@@ -103,7 +103,8 @@ void R1001::load_config(){
     int i;                  // for loop variable
     int currentval;
 
-    wait_ms(10);            // needed for modules to power up properly before loading config, extra 10ms over reset pulse width
+    wait_ms(2);            // needed for modules to power up properly before loading config, extra 10ms over reset pulse width
+    THEKERNEL->streams->printf("Loading R1001 configs ...\r\n");
     // update stepper motor driver currents from config file
     for (i=1;i<16;i++) {
         // scan config for every motor

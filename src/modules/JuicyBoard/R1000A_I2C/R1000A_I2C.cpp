@@ -12,7 +12,8 @@
 R1000A_I2C::R1000A_I2C(){
     // Default Constructor
     this->i2c = new mbed::I2C(P0_27, P0_28);    // define master i2c comm class
-    this->i2c->frequency(200000);               // set I2C bus freq in Hz
+    this->i2c->frequency(I2C_FREQ);             // set I2C bus freq in Hz
+    disablemodI2C();                            // disable module I2C operation on startup, as all modules should be in bootloader mode
 }
 
 R1000A_I2C::~R1000A_I2C(){
@@ -43,32 +44,6 @@ int R1000A_I2C::I2C_ReadREG(int slotnum, char REGAddr, char * data, int length){
     this->i2c->stop();
     return 0;
 }
-
-//FIXME delete
-//int R1000A_I2C::I2C_BLReadREG(int slotnum, char REGAddr, char * data, int length){
-//    // perform burst register read
-//    int i;                                      // for loop variable
-//    char I2CAddr = getBLSlotI2CAdd(slotnum);      // get slot I2C address
-//    // set the register to access
-//    this->i2c->start();
-//    if (this->i2c->write(I2CAddr) != 1){        // check for slave ack
-//        // slave I2C is not acknowledging, exit function
-//        this->i2c->stop();
-//        return -1;
-//    }
-//    this->i2c->write(REGAddr);                  // register address
-//    this->i2c->stop();
-//
-//    // read part
-//    this->i2c->start();
-//    this->i2c->write(I2CAddr | 0x01);           // slave I2C address, with read command
-//    for (i=0; i<length; i++){                   // loop over every byte
-//        data[i] = this->i2c->read(1);
-//    }
-//    this->i2c->read(0);                         // extra dummy read for mbed I2C to stop properly
-//    this->i2c->stop();
-//    return 0;
-//}
 
 int R1000A_I2C::I2C_Read(int slotnum, char * data, int length){
     // perform burst register read
@@ -107,26 +82,6 @@ int R1000A_I2C::I2C_WriteREG(int slotnum, char REGAddr, char * data, int length)
     this->i2c->stop();
     return 0;
 }
-
-//FIXME delete
-//int R1000A_I2C::I2C_BLWriteREG(int slotnum, char REGAddr, char * data, int length){
-//    // perform burst register read
-//    int i;                                      // for loop variable
-//    char I2CAddr = getBLSlotI2CAdd(slotnum);     // get slot I2C address
-//    // set the register to access
-//    this->i2c->start();
-//    if (this->i2c->write(I2CAddr) != 1){        // check for slave ack
-//        // slave I2C is not acknowledging, exit function
-//        this->i2c->stop();
-//        return -1;
-//    }
-//    this->i2c->write(REGAddr);                  // register address
-//    for (i=0; i<length; i++){
-//        this->i2c->write(data[i]);              // write data one by one
-//    }
-//    this->i2c->stop();
-//    return 0;
-//}
 
 int R1000A_I2C::I2C_CheckAddr(char I2CAddr){
     // check if I2C address acknowledges
@@ -204,10 +159,46 @@ char R1000A_I2C::getSlotI2CAdd(int slotnum){
     }
 }
 
-//FIXME delete
-//char R1000A_I2C::getBLSlotI2CAdd(int slotnum){
-//    // returns I2C address of the specific slot
-//    // when in bootloader mode
-//    return ((R1000_I2C_BLBASE + slotnum - 1) << 1);
-//}
+void R1000A_I2C::enablemodI2C(void){
+    modI2Cenabled = true;
+}
 
+void R1000A_I2C::disablemodI2C(void){
+    modI2Cenabled = false;
+}
+
+int R1000A_I2C::ismodI2Cenabled(void){
+
+    if (modI2Cenabled){
+        return 1;
+    }
+    else{
+        return 0;
+    }
+}
+
+float R1000A_I2C::I2C_ReadREGfloat (int slotnum, char REGAddr){
+    // This function reads 4 bytes from the give slot/register
+    // processes the data and returns a 'float' value
+
+    // first create a union to translate between values
+    union tempdata {
+        float f;
+        char c[4];
+    };
+
+    char i2cbuf[4];
+    union tempdata chtemp;
+
+    if (I2C_ReadREG(slotnum,REGAddr,i2cbuf,4) == 0){
+        chtemp.c[3] = i2cbuf[0];
+        chtemp.c[2] = i2cbuf[1];
+        chtemp.c[1] = i2cbuf[2];
+        chtemp.c[0] = i2cbuf[3];
+        return chtemp.f;
+    }
+    else{
+        // I2C error, still need to return a value
+        return 0;
+    }
+}

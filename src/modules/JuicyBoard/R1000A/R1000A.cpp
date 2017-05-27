@@ -41,9 +41,17 @@ R1000A::R1000A(){
 
 void R1000A::on_module_loaded(){
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED); // register on console line received
-    this->ScanI2CBus();                                 // perform initial I2C bus scan
+    THEKERNEL->i2c->disablemodI2C();
     this->ResetMods();                                  // reset all modules on I2C bus
+    this->ScanI2CBus();                                 // perform initial I2C bus scan
+    this->ReportI2CID();                                // report modules
+    this->ActivateModules();                            // activate populated modules
+    wait_ms(10);                                        // wait after activating modules
+    this->ScanI2CBus();                                 // re-scan to get ID of activated modules
+    this->ReportI2CID();                                // report modules
     this->InitPowerMon();                               // initialize power monitor
+
+    THEKERNEL->i2c->enablemodI2C();                     // enable module functional I2C, such as R1008 temp sensor readings
 }
 
 
@@ -70,11 +78,9 @@ void R1000A::on_console_line_received(void* argument){
             ResetMods();
         }
         else if (cmd == "getpmoncfg"){
-            // reset all modules
             getPowerMonCfg();
         }
         else if (cmd == "readpmon"){
-            // reset all modules
             readPowerMon();
         }
         else if (cmd == "eeread"){
@@ -147,6 +153,7 @@ void R1000A::on_console_line_received(void* argument){
                 THEKERNEL->streams->printf("\r\n");
         }
         else if (cmd == "scani2c"){
+            THEKERNEL->i2c->disablemodI2C();
             // This scans the whole range of I2C addresses for acknowledges
             unsigned char i;
             for ( i=1; i<0x80; i++){
@@ -155,19 +162,22 @@ void R1000A::on_console_line_received(void* argument){
                     THEKERNEL->streams->printf("A:0x%02X Acked...\r\n",i);
                 }
             }
+            THEKERNEL->i2c->enablemodI2C();
         }
         else if (cmd == "checki2c"){
             // This scans the whole range of I2C addresses for acknowledges
             unsigned char i = (unsigned char)strtol(shift_parameter(possible_command).c_str(),NULL,0);
-
+            THEKERNEL->i2c->disablemodI2C();
             if (THEKERNEL->i2c->I2C_CheckAddr(i) == 0){
                 THEKERNEL->streams->printf("A:0x%02X Acked...\r\n",i);
             }
+            THEKERNEL->i2c->enablemodI2C();
         }
         else if (cmd == "readi2creg"){
             // Reads an register from i2c bus
             // example: readi2creg 2 0x40 3
             //        : reads 3 bytes from I2C register 0x40 of slot number 2
+            THEKERNEL->i2c->disablemodI2C();
             int slotnum =  (int)strtol(shift_parameter(possible_command).c_str(), NULL, 10);
             char regaddr = (char)strtol(shift_parameter(possible_command).c_str(),NULL,0);
             int size =  (int)strtol(shift_parameter(possible_command).c_str(), NULL, 10);
@@ -185,20 +195,26 @@ void R1000A::on_console_line_received(void* argument){
             else{
                 THEKERNEL->streams->printf("I2C ERROR!\r\n");
             }
+            THEKERNEL->i2c->enablemodI2C();
         }
         else if (cmd == "wrhex2bl"){
             // write hex file to module (has to be in bootloader mode)
             int slotnum =  (int)strtol(shift_parameter(possible_command).c_str(), NULL, 10);
+            THEKERNEL->i2c->disablemodI2C();
             string hexfname = shift_parameter(possible_command);
             wrhex2bl(hexfname.c_str(), slotnum);
+            THEKERNEL->i2c->enablemodI2C();
         }
         else if (cmd == "dumphex"){
             // analyzes and dumps hex from module in bootloader mode to console
+            THEKERNEL->i2c->disablemodI2C();
             int slotnum =  (int)strtol(shift_parameter(possible_command).c_str(), NULL, 10);
             dumphex(slotnum);
+            THEKERNEL->i2c->enablemodI2C();
         }
         else if (cmd == "chkfwsig"){
             // checks firmware signature on mounted module
+            THEKERNEL->i2c->disablemodI2C();
             int slotnum =  (int)strtol(shift_parameter(possible_command).c_str(), NULL, 10);
             int tmp = checkfwsig(slotnum);
             if (tmp == 0){
@@ -210,6 +226,7 @@ void R1000A::on_console_line_received(void* argument){
             else{
                 THEKERNEL->streams->printf("I2C Error\r\n");
             }
+            THEKERNEL->i2c->enablemodI2C();
         }
         else if (cmd == "readrtd"){
             // Reads an register from i2c bus
@@ -225,16 +242,10 @@ void R1000A::on_console_line_received(void* argument){
 
             union tempdata chtemp;
 
-            if (THEKERNEL->i2c->I2C_ReadREG(slotnum,0x32,i2cbuf,4) == 0){
-                chtemp.c[3] = i2cbuf[0];
-                chtemp.c[2] = i2cbuf[1];
-                chtemp.c[1] = i2cbuf[2];
-                chtemp.c[0] = i2cbuf[3];
-                THEKERNEL->streams->printf("CH1: %.3f (0x%02X%02X%02X%02X) /", chtemp.f, chtemp.c[0], chtemp.c[1], chtemp.c[2], chtemp.c[3]);
-            }
-            else{
-                THEKERNEL->streams->printf("I2C ERROR!\r\n");
-            }
+            THEKERNEL->i2c->disablemodI2C();
+
+            chtemp.f = THEKERNEL->i2c->I2C_ReadREGfloat(slotnum, 0x32);
+            THEKERNEL->streams->printf("CH1: %.3f (0x%02X%02X%02X%02X) /", chtemp.f, chtemp.c[0], chtemp.c[1], chtemp.c[2], chtemp.c[3]);
 
             if (THEKERNEL->i2c->I2C_ReadREG(slotnum,0x33,i2cbuf,4) == 0){
                 chtemp.c[3] = i2cbuf[0];
@@ -282,6 +293,41 @@ void R1000A::on_console_line_received(void* argument){
             else{
                 THEKERNEL->streams->printf("I2C ERROR!\r\n");
             }
+            THEKERNEL->i2c->enablemodI2C();
+        }
+        else if (cmd == "activate"){
+            // Reads an register from i2c bus
+            // example: readi2creg 2 0x40 3
+            //        : reads 3 bytes from I2C register 0x40 of slot number 2
+            THEKERNEL->i2c->disablemodI2C();
+            int slotnum =  (int)strtol(shift_parameter(possible_command).c_str(), NULL, 10);
+
+            char i2cbuf[1];
+
+            if (THEKERNEL->i2c->I2C_ReadREG(slotnum,TGT_CMD_START_APPFW,i2cbuf,1) == 0){
+                if (i2cbuf[0] == 0xFF){
+                    THEKERNEL->streams->printf("Slot #%d Activated...", slotnum);
+                }
+                else{
+                    THEKERNEL->streams->printf("ERROR Activating #%d!!", slotnum);
+                }
+                THEKERNEL->streams->printf("\r\n");
+            }
+            else{
+                THEKERNEL->streams->printf("I2C ERROR!\r\n");
+            }
+            THEKERNEL->i2c->enablemodI2C();
+        }
+        else if (cmd == "readidriver"){
+            // Reads an register from i2c bus
+            // example: readi2creg 2 0x40 3
+            //        : reads 3 bytes from I2C register 0x40 of slot number 2
+            THEKERNEL->i2c->disablemodI2C();
+            int slotnum =  (int)strtol(shift_parameter(possible_command).c_str(), NULL, 10);
+
+            THEKERNEL->streams->printf("Driver current: %.3f\r\n", THEKERNEL->i2c->I2C_ReadREGfloat(slotnum,0x25));
+
+            THEKERNEL->i2c->enablemodI2C();
         }
     }
 }
@@ -297,7 +343,13 @@ void R1000A::ScanI2CBus(){
     char i2cbuf[3];     // create a 2 byte buffer for I2C
     int i;              // for loop variable
     
+    THEKERNEL->streams->printf("Scanning I2C bus ...\r\n");
     for (i=1; i<=15; i++){
+        // Activate module in application mode
+//        if (THEKERNEL->i2c->I2C_ReadREG(i,0x0c,i2cbuf,1) == 0){
+//            wait_ms(3);
+//        }
+
         // check for slave ack
         if (THEKERNEL->i2c->I2C_ReadREG(i, 0x01, i2cbuf, 1) == 0){
             // continue reading from slave
@@ -306,14 +358,13 @@ void R1000A::ScanI2CBus(){
             SlotDevID[i] = (int)i2cbuf[0];
             THEKERNEL->i2c->I2C_ReadREG(i, 0x03, i2cbuf, 2);      // get firmware version
             SlotDevFW[i] = (int)i2cbuf[0];
-
         }
         else{
             SlotPlatID[i] = -1;
             SlotDevID[i] = -1;
             SlotDevFW[i] = -1;
         }
-    } 
+    }
 }
 
 void R1000A::ReportI2CID(){
@@ -373,6 +424,8 @@ void R1000A::InitPowerMon(void){
     // initialize register 00 to 0x7527
 
     char i2cbuf[2];
+
+    THEKERNEL->streams->printf("Initializing power monitor ...\r\n");
 
     // readback power monitor config buffer
     if (THEKERNEL->i2c->I2C_ReadREG(PWRMON_SLOT, 0x00, i2cbuf, 2) == 0){
@@ -855,4 +908,32 @@ int R1000A::checkfwsig(int slotnum){
         return -1;
     }
 
+}
+
+void R1000A::ActivateModules(void){
+    // This scans for modules in bootloader mode and activates them
+    int i;          // for loop variable
+    char i2cbuf[3];     // create a 2 byte buffer for I2C
+
+    THEKERNEL->i2c->disablemodI2C();
+    for (i=1; i<=15; i++){
+        // check for slave ack
+        if (SlotPlatID[i] == TGT_RSP_UNSUPPORTED_CMD){
+            // module is in bootloader mode
+            if (THEKERNEL->i2c->I2C_ReadREG(i,TGT_CMD_START_APPFW,i2cbuf,1) == 0){
+                if (i2cbuf[0] == 0xFF){
+                    THEKERNEL->streams->printf("Slot #%d Activated...", i);
+                    wait_ms(2);         // delay for module to boot up
+                }
+                else{
+                    THEKERNEL->streams->printf("ERROR Activating #%d!!", 1);
+                }
+                THEKERNEL->streams->printf("\r\n");
+            }
+            else{
+                THEKERNEL->streams->printf("I2C ERROR!\r\n");
+            }
+        }
+    }
+    THEKERNEL->i2c->enablemodI2C();
 }
