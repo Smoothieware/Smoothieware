@@ -732,16 +732,16 @@ void Endstops::process_home_command(Gcode* gcode)
     THEROBOT->compensationTransform= nullptr;
 
     // deltas always home Z axis only, which moves all three actuators
-    bool home_in_z = this->is_delta || this->is_rdelta;
+    bool home_in_z_only = this->is_delta || this->is_rdelta;
 
     // figure out which axis to home
     axis_bitmap_t haxis;
     haxis.reset();
 
-    if(!home_in_z) { // ie not a delta
-        bool axis_speced = (gcode->has_letter('X') || gcode->has_letter('Y') || gcode->has_letter('Z') ||
-                            gcode->has_letter('A') || gcode->has_letter('B') || gcode->has_letter('C'));
+    bool axis_speced = (gcode->has_letter('X') || gcode->has_letter('Y') || gcode->has_letter('Z') ||
+                        gcode->has_letter('A') || gcode->has_letter('B') || gcode->has_letter('C'));
 
+    if(!home_in_z_only) { // ie not a delta
         for (auto &p : homing_axis) {
             // only enable homing if the endstop is defined,
             if(p.pin_info == nullptr) continue;
@@ -758,10 +758,26 @@ void Endstops::process_home_command(Gcode* gcode)
         }
 
     } else {
-        // Only Z axis homes (even though all actuators move this is handled by arm solution)
-        haxis.set(Z_AXIS);
-        // we also set the kinematics to a known good position, this is necessary for a rotary delta, but doesn't hurt for linear delta
-        THEROBOT->reset_axis_position(0, 0, 0);
+        bool home_z= !axis_speced || gcode->has_letter('X') || gcode->has_letter('Y') || gcode->has_letter('Z');
+
+        // if we specified an axis we check ABC
+        for (size_t i = A_AXIS; i < homing_axis.size(); ++i) {
+            auto &p= homing_axis[i];
+            if(p.pin_info == nullptr) continue;
+            if(!axis_speced || gcode->has_letter(p.axis)) haxis.set(p.axis_index);
+        }
+
+        if(home_z){
+            // Only Z axis homes (even though all actuators move this is handled by arm solution)
+            haxis.set(Z_AXIS);
+            // we also set the kinematics to a known good position, this is necessary for a rotary delta, but doesn't hurt for linear delta
+            THEROBOT->reset_axis_position(0, 0, 0);
+        }
+    }
+
+    if(haxis.none()) {
+        THEKERNEL->streams->printf("WARNING: Nothing to home\n");
+        return;
     }
 
     // do the actual homing
@@ -812,7 +828,7 @@ void Endstops::process_home_command(Gcode* gcode)
         return;
     }
 
-    if(home_in_z || is_scara) { // deltas and scaras only
+    if(home_in_z_only || is_scara) { // deltas and scaras only
         // Here's where we would have been if the endstops were perfectly trimmed
         // NOTE on a rotary delta home_offset is actuator position in degrees when homed and
         // home_offset is the theta offset for each actuator, so M206 is used to set theta offset for each actuator in degrees
@@ -853,8 +869,20 @@ void Endstops::process_home_command(Gcode* gcode)
             }
         }
 
-        // for deltas we say all axis are homed even though it was only Z
-        for (auto &p : homing_axis) p.homed= true;
+        // for deltas we say all 3 axis are homed even though it was only Z
+        homing_axis[X_AXIS].homed= true;
+        homing_axis[Y_AXIS].homed= true;
+        homing_axis[Z_AXIS].homed= true;
+
+        // if we also homed ABC then we need to reset them
+        for (size_t i = A_AXIS; i < homing_axis.size(); ++i) {
+            auto &p= homing_axis[i];
+            if (haxis[p.axis_index]) { // if we requested this axis to home
+                THEROBOT->reset_axis_position(p.homing_position + p.home_offset, p.axis_index);
+                // set flag indicating axis was homed, it stays set once set until H/W reset or unhomed
+                p.homed= true;
+            }
+        }
 
     } else {
         // Zero the ax(i/e)s position, add in the home offset
