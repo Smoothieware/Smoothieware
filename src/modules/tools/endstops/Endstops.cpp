@@ -471,7 +471,7 @@ void Endstops::back_off_home(axis_bitmap_t axis)
         slow_rate= homing_axis[Z_AXIS].slow_rate;
 
     } else {
-        // cartesians, concatenate all the moves we need to do into one gcode
+        // cartesians concatenate all the moves we need to do into one gcode
         for( auto& e : homing_axis) {
             if(!axis[e.axis_index]) continue; // only for axes we asked to move
 
@@ -907,7 +907,7 @@ void Endstops::process_home_command(Gcode* gcode)
         // if limit switches are enabled we must back off endstop after setting home
         back_off_home(haxis);
 
-    } else if(this->move_to_origin_after_home || homing_axis[X_AXIS].pin_info->limit_enable) {
+    } else if(haxis[Z_AXIS] && (this->move_to_origin_after_home || homing_axis[X_AXIS].pin_info->limit_enable)) {
         // deltas are not left at 0,0 because of the trim settings, so move to 0,0 if requested, but we need to back off endstops first
         // also need to back off endstops if limits are enabled
         back_off_home(haxis);
