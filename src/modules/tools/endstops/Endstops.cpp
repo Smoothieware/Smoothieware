@@ -648,12 +648,14 @@ void Endstops::home(axis_bitmap_t a)
 
     // check that the endstops were hit and it did not stop short for some reason
     // if the endstop is not triggered then enter ALARM state
-    // with deltas we check all three axis were triggered
-    for (size_t i = X_AXIS; i <= Z_AXIS; ++i) {
-        if((axis_to_home[i] || this->is_delta || this->is_rdelta) && !homing_axis[i].pin_info->triggered) {
-            this->status = NOT_HOMING;
-            THEKERNEL->call_event(ON_HALT, nullptr);
-            return;
+    // with deltas we check all three axis were triggered, but at least one of XYZ must be set to home
+    if(axis_to_home[X_AXIS] || axis_to_home[Y_AXIS] || axis_to_home[Z_AXIS]) {
+        for (size_t i = X_AXIS; i <= Z_AXIS; ++i) {
+            if((axis_to_home[i] || this->is_delta || this->is_rdelta) && !homing_axis[i].pin_info->triggered) {
+                this->status = NOT_HOMING;
+                THEKERNEL->call_event(ON_HALT, nullptr);
+                return;
+            }
         }
     }
 
