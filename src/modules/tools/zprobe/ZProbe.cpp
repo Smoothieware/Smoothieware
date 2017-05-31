@@ -41,6 +41,7 @@
 #define return_feedrate_checksum CHECKSUM("return_feedrate")
 #define probe_height_checksum    CHECKSUM("probe_height")
 #define gamma_max_checksum       CHECKSUM("gamma_max")
+#define max_z_checksum           CHECKSUM("max_z")
 #define reverse_z_direction_checksum CHECKSUM("reverse_z")
 
 // from endstop section
@@ -138,7 +139,11 @@ void ZProbe::config_load()
     this->fast_feedrate = THEKERNEL->config->value(zprobe_checksum, fast_feedrate_checksum)->by_default(100)->as_number(); // feedrate in mm/sec
     this->return_feedrate = THEKERNEL->config->value(zprobe_checksum, return_feedrate_checksum)->by_default(0)->as_number(); // feedrate in mm/sec
     this->reverse_z     = THEKERNEL->config->value(zprobe_checksum, reverse_z_direction_checksum)->by_default(false)->as_bool(); // Z probe moves in reverse direction
-    this->max_z         = THEKERNEL->config->value(gamma_max_checksum)->by_default(500)->as_number(); // maximum zprobe distance
+    this->max_z         = THEKERNEL->config->value(zprobe_checksum, max_z_checksum)->by_default(NAN)->as_number(); // maximum zprobe distance
+    if(isnan(this->max_z)){
+        this->max_z = THEKERNEL->config->value(gamma_max_checksum)->by_default(200)->as_number(); // maximum zprobe distance
+    }
+
 }
 
 uint32_t ZProbe::read_probe(uint32_t dummy)
