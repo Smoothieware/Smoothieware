@@ -109,7 +109,7 @@ Kernel::Kernel(){
 
     this->enable_feed_hold= this->config->value( feed_hold_enable_checksum )->by_default(this->grbl_mode)->as_bool();
 
-    // we exepct ok per line now not per G code, setting this to false will return to the old (incorrect) way of ok per G code
+    // we expect ok per line now not per G code, setting this to false will return to the old (incorrect) way of ok per G code
     this->ok_per_line= this->config->value( ok_per_line_checksum )->by_default(true)->as_bool();
 
     this->add_module( this->serial );
