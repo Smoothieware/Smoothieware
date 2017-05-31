@@ -42,6 +42,7 @@
 #define microseconds_per_step_pulse_checksum        CHECKSUM("microseconds_per_step_pulse")
 #define disable_leds_checksum                       CHECKSUM("leds_disable")
 #define grbl_mode_checksum                          CHECKSUM("grbl_mode")
+#define feed_hold_enable_checksum                   CHECKSUM("enable_feed_hold")
 #define ok_per_line_checksum                        CHECKSUM("ok_per_line")
 
 Kernel* Kernel::instance;
@@ -50,6 +51,7 @@ Kernel* Kernel::instance;
 Kernel::Kernel(){
     halted= false;
     feed_hold= false;
+    enable_feed_hold= false;
 
     instance= this; // setup the Singleton instance of the kernel
 
@@ -104,6 +106,8 @@ Kernel::Kernel(){
     #else
     this->grbl_mode= this->config->value( grbl_mode_checksum )->by_default(false)->as_bool();
     #endif
+
+    this->enable_feed_hold= this->config->value( feed_hold_enable_checksum )->by_default(this->grbl_mode)->as_bool();
 
     // we exepct ok per line now not per G code, setting this to false will return to the old (incorrect) way of ok per G code
     this->ok_per_line= this->config->value( ok_per_line_checksum )->by_default(true)->as_bool();

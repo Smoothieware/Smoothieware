@@ -198,7 +198,7 @@ bool USBSerial::USBEvent_EPOut(uint8_t bEP, uint8_t bEPStatus)
             continue;
         }
 
-        if(THEKERNEL->is_grbl_mode()) {
+        if(THEKERNEL->is_grbl_mode() || THEKERNEL->is_feed_hold_enabled()) {
             if(c[i] == '!') { // safe pause
                 THEKERNEL->set_feed_hold(true);
                 continue;
