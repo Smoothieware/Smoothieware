@@ -55,6 +55,9 @@ class TemperatureControl : public Module {
         int o;
         float last_reading;
         float readings_per_second;
+        int resample_window;
+        int resample_counter;
+        float resample_accumulator;
         Pwm  heater_pin;
 
         std::string designator;

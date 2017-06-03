@@ -39,6 +39,7 @@
 #define sensor_checksum                    CHECKSUM("sensor")
 
 #define readings_per_second_checksum       CHECKSUM("readings_per_second")
+#define resample_checksum                  CHECKSUM("resampe")
 #define max_pwm_checksum                   CHECKSUM("max_pwm")
 #define pwm_frequency_checksum             CHECKSUM("pwm_frequency")
 #define bang_bang_checksum                 CHECKSUM("bang_bang")
@@ -135,6 +136,7 @@ void TemperatureControl::load_config()
     this->set_and_wait_m_code = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, set_and_wait_m_code_checksum)->by_default(109)->as_number();
     this->get_m_code          = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, get_m_code_checksum)->by_default(105)->as_number();
     this->readings_per_second = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, readings_per_second_checksum)->by_default(20)->as_number();
+    this->resample_window = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, resample_checksum)->by_default(1)->as_number();
 
     this->designator          = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, designator_checksum)->by_default(string("T"))->as_string();
 
@@ -208,7 +210,7 @@ void TemperatureControl::load_config()
 
     // reading tick
     THEKERNEL->slow_ticker->attach( this->readings_per_second, this, &TemperatureControl::thermistor_read_tick );
-    this->PIDdt = 1.0 / this->readings_per_second;
+    this->PIDdt = 1.0 / this->readings_per_second * this->resample_window;
 
     // PID
     setPIDp( THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, p_factor_checksum)->by_default(10 )->as_number() );
@@ -223,6 +225,8 @@ void TemperatureControl::load_config()
     this->iTerm = 0.0;
     this->lastInput = -1.0;
     this->last_reading = 0.0;
+    this->resample_counter = 0;
+    this->resample_accumulator = 0.0;
 }
 
 void TemperatureControl::on_gcode_received(void *argument)
@@ -468,17 +472,31 @@ float TemperatureControl::get_temperature()
 uint32_t TemperatureControl::thermistor_read_tick(uint32_t dummy)
 {
     float temperature = sensor->get_temperature();
-    if(!this->readonly && target_temperature > 2) {
-        if (isinf(temperature) || temperature < min_temp || temperature > max_temp) {
-            this->temp_violated = true;
-            target_temperature = UNDEFINED;
-            heater_pin.set((this->o = 0));
-        } else {
-            pid_process(temperature);
-        }
+    // propagate infinity to result
+    if(isinf(temperature) || isinf(resample_accumulator)){
+      resample_accumulator = infinityf();
+    } else {
+      resample_accumulator += temperature;
     }
-
-    last_reading = temperature;
+    if( ++resample_counter >= resample_window ) {
+      if(isinf(resample_accumulator)){
+        temperature = infinityf();
+      } else {
+        temperature = resample_accumulator / resample_window;
+      }
+      if(!this->readonly && target_temperature > 2) {
+          if (isinf(temperature) || temperature < min_temp || temperature > max_temp) {
+              this->temp_violated = true;
+              target_temperature = UNDEFINED;
+              heater_pin.set((this->o = 0));
+          } else {
+              pid_process(temperature);
+          }
+      }
+      resample_accumulator = 0.0;
+      resample_counter = 0;
+      last_reading = temperature;
+    }
     return 0;
 }
 
