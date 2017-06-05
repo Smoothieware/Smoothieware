@@ -236,7 +236,7 @@ panel.a0_pin                                 2.6               # st7565 needs an
 panel.buzz_pin                               0.25              # pin for buzzer on EXP2
 panel.red_led_pin                            2.8               # pin for red led on viki2 on EXP1
 panel.blue_led_pin                           4.29              # pin for blue led on viki2 on EXP1
-panel.external_sd                            true              # set to true if there is an extrernal sdcard on the panel
+panel.external_sd                            false             # set to true to use external sd WARNING not supported.
 panel.external_sd.spi_channel                0                 # set spi channel the sdcard is on
 panel.external_sd.spi_cs_pin                 1.23              # set spi chip select for the sdcard
 panel.external_sd.sdcd_pin                   1.31!^            # sd detect signal (set to nc if no sdcard detect)
