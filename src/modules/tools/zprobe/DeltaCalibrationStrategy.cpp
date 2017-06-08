@@ -17,6 +17,7 @@
 #include <cmath>
 #include <tuple>
 #include <algorithm>
+#include <cmath>
 
 #define radius_checksum         CHECKSUM("radius")
 #define initial_height_checksum CHECKSUM("initial_height")
