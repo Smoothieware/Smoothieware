@@ -11,7 +11,7 @@
 using namespace std;
 #include <vector>
 
-class Tool;
+class Extruder;
 
 class ToolManager : public Module
 {
@@ -22,14 +22,14 @@ public:
     void on_gcode_received(void *);
     void on_get_public_data(void *argument);
     void on_set_public_data(void *argument);
-    void add_tool(Tool *tool_to_add);
+    void add_tool(Extruder *tool_to_add);
     int get_active_tool() const { return active_tool; }
 
 private:
-    vector<Tool *> tools;
+    vector<Extruder *> tools;
 
     int active_tool;
-    uint16_t current_tool_name;
+    uint16_t current_temp_control_name;
 };
 
 

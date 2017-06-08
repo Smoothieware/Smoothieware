@@ -28,6 +28,7 @@ class Extruder : public Tool {
         void select();
         void deselect();
         float get_e_scale(void) const { return volumetric_multiplier * extruder_multiplier; }
+        uint16_t get_temperature_control_name(void) const { return temperature_control_name; }
 
     private:
         void config_load();
@@ -63,4 +64,6 @@ class Extruder : public Tool {
             bool saved_selected:1;
             bool g92e0_detected:1;
         };
+
+        uint16_t temperature_control_name;
 };
