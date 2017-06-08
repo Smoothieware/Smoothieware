@@ -84,7 +84,11 @@ echo "SCRIPT_PATH=\${SCRIPT_PATH%/*}">>$BUILDSHELL_CMD
 echo "cd \$SCRIPT_PATH">>$BUILDSHELL_CMD
 echo "SCRIPT_PATH=\$PWD">>$BUILDSHELL_CMD
 echo "export PATH=\$SCRIPT_PATH/gcc-arm-none-eabi/bin:\$PATH">>$BUILDSHELL_CMD
-echo "exec bash">>$BUILDSHELL_CMD
+echo "if (( \$# )); then">>$BUILDSHELL_CMD
+echo "  \$@ # so it supports ./BuildShell make, e.g. for calling from an Eclipse builder">>$BUILDSHELL_CMD
+echo "else">>$BUILDSHELL_CMD
+echo "  exec bash">>$BUILDSHELL_CMD
+echo "fi">>$BUILDSHELL_CMD
 chmod +x $BUILDSHELL_CMD
 
 echo Cleaning up intermediate files...
