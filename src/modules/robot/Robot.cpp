@@ -133,7 +133,8 @@ CHECKSUM(X "_step_pin"),        \
     CHECKSUM(X "_slot_num"),        \
     CHECKSUM(X "_steps_per_mm"),    \
     CHECKSUM(X "_max_rate"),        \
-    CHECKSUM(X "_acceleration")     \
+    CHECKSUM(X "_acceleration"),     \
+    CHECKSUM(X "_inverted")     \
 }
 
 void Robot::load_config()
@@ -191,7 +192,7 @@ void Robot::load_config()
 
     // Make our Primary XYZ StepperMotors
     //uint16_t const checksums[][6] = {
-    uint16_t const checksums[][4] = {
+    uint16_t const checksums[][5] = {
         ACTUATOR_CHECKSUMS("alpha"), // X
         ACTUATOR_CHECKSUMS("beta"),  // Y
         ACTUATOR_CHECKSUMS("gamma"), // Z
@@ -202,6 +203,7 @@ void Robot::load_config()
 
     // make each motor
     int motor_slot_num;
+    bool motor_inverted;
     for (size_t a = X_AXIS; a <= Z_AXIS; a++) {
         Pin pins[3]; //step, dir, enable
 
@@ -212,10 +214,12 @@ void Robot::load_config()
 
         // Juicyware stepper motor pin identification
         motor_slot_num = THEKERNEL->config->value(checksums[a][0])->by_default(0)->as_int();    // get slot number from config file, example: "alpha_slot_num 6"
+        motor_inverted = THEKERNEL->config->value(checksums[a][4])->by_default(false)->as_bool();    // if direction is inverted, example: "alpha_inverted true"
         MotorPins CurrentMotorPins = getMotorPins(motor_slot_num);
 
         pins[0].from_string(CurrentMotorPins.step_pin)->as_output();
         pins[1].from_string(CurrentMotorPins.dir_pin)->as_output();
+        pins[1].set_inverting(motor_inverted);
         pins[2].from_string(CurrentMotorPins.en_pin)->as_output();
         // End Juicyware motor pin identification
 

@@ -103,7 +103,7 @@ void R1001::load_config(){
     int i;                  // for loop variable
     int currentval;
 
-    wait_ms(2);            // needed for modules to power up properly before loading config, extra 10ms over reset pulse width
+    wait_ms(20);            // needed for modules to power up properly before loading config, extra 10ms over reset pulse width
     THEKERNEL->streams->printf("Loading R1001 configs ...\r\n");
     // update stepper motor driver currents from config file
     for (i=1;i<16;i++) {
@@ -269,7 +269,7 @@ void R1001::setMotorCurrent(int slotnum, int idrv){
     else
     {
         // output an error message
-        THEKERNEL->streams->printf("Slot %d did not ack!\r\n", slotnum);
+        THEKERNEL->streams->printf("setMotorCurrent: Slot %d did not ack!\r\n", slotnum);
     }
 }
 
@@ -287,7 +287,7 @@ void R1001::setSTP(int slotnum, int stepres){
     else
     {
         // output an error message
-        THEKERNEL->streams->printf("Slot %d did not ack!\r\n", slotnum);
+        THEKERNEL->streams->printf("setSTP: Slot %d did not ack!\r\n", slotnum);
     }
 }
 
@@ -317,7 +317,7 @@ void R1001::setDriverSleep(int slotnum, int sleep){
     else
     {
         // output an error message
-        THEKERNEL->streams->printf("Slot %d did not ack!\r\n", slotnum);
+        THEKERNEL->streams->printf("setDriverSleep: Slot %d did not ack!\r\n", slotnum);
     }
 }
 
@@ -353,7 +353,7 @@ void R1001::setDecay(int slotnum, int decay){
     i2cbuf[0] = MCTL;
     if (!(THEKERNEL->i2c->I2C_WriteREG(slotnum, REG_MCTL, i2cbuf,1) == 0)) {
         // output an error message
-        THEKERNEL->streams->printf("Slot %d did not ack!\r\n", slotnum);
+        THEKERNEL->streams->printf("setDecay: Slot %d did not ack!\r\n", slotnum);
     }
 }
 
