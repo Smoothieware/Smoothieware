@@ -92,31 +92,31 @@ extruder.hotend0.x_offset                    0                # x offset from or
 extruder.hotend0.y_offset                    0                # y offset from origin in mm
 extruder.hotend0.z_offset                    0                # z offset from origin in mm
 
-#extruder.hotend1.enable                      true             # enable extruder 1
-#extruder.hotend1.slot_num                    4
-#stepmotor_4_stepres                          16
-#stepmotor_4_current                          1000
-#stepmotor_4_decay_mode                       fast
-#extruder.hotend1.steps_per_mm                83.17            # Steps per mm for extruder stepper
-#extruder.hotend1.default_feed_rate           600              # Default rate ( mm/minute ) for moves where only the extruder moves
-#extruder.hotend1.acceleration                500              # Acceleration for the stepper motor, as of 0.6, arbitrary ratio
-#extruder.hotend1.max_speed                   50               # mm/s
-#extruder.hotend1.x_offset                    0                # x offset from origin in mm
-#extruder.hotend1.y_offset                    0                # y offset from origin in mm
-#extruder.hotend1.z_offset                    0                # z offset from origin in mm
+extruder.hotend1.enable                      true             # enable extruder 1
+extruder.hotend1.slot_num                    4
+stepmotor_4_stepres                          16
+stepmotor_4_current                          1000
+stepmotor_4_decay_mode                       fast
+extruder.hotend1.steps_per_mm                83.17            # Steps per mm for extruder stepper
+extruder.hotend1.default_feed_rate           600              # Default rate ( mm/minute ) for moves where only the extruder moves
+extruder.hotend1.acceleration                500              # Acceleration for the stepper motor, as of 0.6, arbitrary ratio
+extruder.hotend1.max_speed                   50               # mm/s
+extruder.hotend1.x_offset                    0                # x offset from origin in mm
+extruder.hotend1.y_offset                    0                # y offset from origin in mm
+extruder.hotend1.z_offset                    0                # z offset from origin in mm
 
-#extruder.hotend2.enable                      true             # enable extruder 1
-#extruder.hotend2.slot_num                    9
-#stepmotor_9_stepres                          16
-#stepmotor_9_current                          1000
-#stepmotor_9_decay_mode                       fast
-#extruder.hotend2.steps_per_mm                83.17            # Steps per mm for extruder stepper
-#extruder.hotend2.default_feed_rate           600              # Default rate ( mm/minute ) for moves where only the extruder moves
-#extruder.hotend2.acceleration                500              # Acceleration for the stepper motor, as of 0.6, arbitrary ratio
-#extruder.hotend2.max_speed                   50               # mm/s
-#extruder.hotend2.x_offset                    0                # x offset from origin in mm
-#extruder.hotend2.y_offset                    0                # y offset from origin in mm
-#extruder.hotend2.z_offset                    0                # z offset from origin in mm
+extruder.hotend2.enable                      true             # enable extruder 1
+extruder.hotend2.slot_num                    9
+stepmotor_9_stepres                          16
+stepmotor_9_current                          1000
+stepmotor_9_decay_mode                       fast
+extruder.hotend2.steps_per_mm                83.17            # Steps per mm for extruder stepper
+extruder.hotend2.default_feed_rate           600              # Default rate ( mm/minute ) for moves where only the extruder moves
+extruder.hotend2.acceleration                500              # Acceleration for the stepper motor, as of 0.6, arbitrary ratio
+extruder.hotend2.max_speed                   50               # mm/s
+extruder.hotend2.x_offset                    0                # x offset from origin in mm
+extruder.hotend2.y_offset                    0                # y offset from origin in mm
+extruder.hotend2.z_offset                    0                # z offset from origin in mm
 
 # Laser module configuration
 laser_module_enable                          false            # Whether to activate the laser module at all. All configuration is
@@ -238,7 +238,7 @@ gamma_trim                                   0                 # software trim f
 #endstop_debounce_count                       100              # uncomment if you get noise on your endstops
 
 # optional Z probe
-zprobe.enable                                false           # set to true to enable a zprobe
+zprobe.enable                                true           # set to true to enable a zprobe
 #zprobe.probe_pin                             2.4!^          # pin probe is attached to if NC remove the !
 zprobe.probe_pin                             2.4^          # pin probe is attached to if NC remove the !
 zprobe.slow_feedrate                         30               # mm/sec probe feed rate
@@ -250,7 +250,7 @@ zprobe.probe_height                          20               # how much above b
 
 
 #leveling strategy
-leveling-strategy.delta-grid.enable         false
+leveling-strategy.delta-grid.enable         true
 leveling-strategy.delta-grid.radius         100
 #leveling-strategy.delta-grid.size           7
 leveling-strategy.delta-grid.size           10
@@ -263,7 +263,7 @@ leveling-strategy.delta-grid.probe_offsets  0,0,0
 #leveling-strategy.delta-grid.probe_offsets   23.82,-13.75,25.35            # probe offsetrs x,y,z
 #leveling-strategy.delta-grid.probe_offsets   -23.82,13.75,25.35            # probe offsetrs x,y,z
 
-leveling-strategy.delta-calibration.enable   false            # basic delta calibration
+leveling-strategy.delta-calibration.enable   true            # basic delta calibration
 leveling-strategy.delta-calibration.radius   90             # the probe radius
 #the initial height above the bed we stop the intial move down after home to find the bed
 #this should be a height that is enough that the probe will not hit the bed and is an offset from gamma_max (can be set to 0 if gamma_max takes into account the probe offset)
