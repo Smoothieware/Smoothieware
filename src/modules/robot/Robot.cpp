@@ -1225,8 +1225,16 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
         }
     }
 
+    // if we are in feed hold wait here until it is released, this means that even segemnted lines will pause
+    while(THEKERNEL->get_feed_hold()) {
+        THEKERNEL->call_event(ON_IDLE, this);
+        // if we also got a HALT then break out of this
+        if(THEKERNEL->is_halted()) return false;
+    }
+
     // Append the block to the planner
     // NOTE that distance here should be either the distance travelled by the XYZ axis, or the E mm travel if a solo E move
+    // NOTE this call will bock until there is room in the block queue, on_idle will continue to be called
     if(THEKERNEL->planner->append_block( actuator_pos, n_motors, rate_mm_s, distance, auxilliary_move ? nullptr : unit_vec, acceleration, s_value, is_g123)) {
         // this is the new compensated machine position
         memcpy(this->compensated_machine_position, transformed_target, n_motors*sizeof(float));
@@ -1340,6 +1348,7 @@ bool Robot::append_line(Gcode *gcode, const float target[], float rate_mm_s, flo
                 segment_end[i] += segment_delta[i];
 
             // Append the end of this segment to the queue
+            // this can block waiting for free block queue or if in feed hold
             bool b= this->append_milestone(segment_end, rate_mm_s);
             moved= moved || b;
         }
