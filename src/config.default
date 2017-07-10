@@ -8,3 +8,211 @@
 #
 
 
+##################################
+##################################
+##################################
+
+version                                      v3.0.0
+
+##################################
+##################################
+##################################
+
+# DEFAULT SPEEDS (mm/min)
+
+default_feed_rate                            1000
+default_seek_rate                            1000
+
+##################################
+##################################
+##################################
+
+# ACCELERATIONS (mm/sec²)
+
+acceleration                                 200.0
+z_acceleration                               200.0
+delta_acceleration                           200.0
+epsilon_acceleration                         200.0
+zeta_acceleration                            200.0
+
+##################################
+##################################
+##################################
+
+# SPEED LIMITS (mm/min)
+
+x_axis_max_speed                             120000  
+alpha_max_rate                               120000
+
+y_axis_max_speed                             120000  
+beta_max_rate                                120000
+
+z_axis_max_speed                             120000  
+gamma_max_rate                               120000
+
+a_axis_max_speed                             120000  
+delta_max_rate                               120000
+
+b_axis_max_speed                             120000  
+epsilon_max_rate                             120000
+
+c_axis_max_speed                             120000  
+zeta_max_rate                                120000
+
+##################################
+##################################
+##################################
+
+# DRIVER PINOUTS
+
+alpha_step_pin                               2.0
+alpha_dir_pin                                0.5
+alpha_en_pin                                 0.4
+
+beta_step_pin                                2.1
+beta_dir_pin                                 0.11
+beta_en_pin                                  0.10
+
+gamma_step_pin                               2.2
+gamma_dir_pin                                0.20
+gamma_en_pin                                 0.19
+
+delta_step_pin                               2.3
+delta_dir_pin                                0.22
+delta_en_pin                                 0.21
+
+epsilon_step_pin                             2.4
+epsilon_dir_pin                              2.13
+epsilon_en_pin                               4.29
+
+zeta_step_pin                                2.5
+zeta_dir_pin                                 0.24
+zeta_en_pin                                  0.23
+
+##################################
+##################################
+##################################
+
+# MOTOR CURRENT
+
+alpha_current                                1.0
+beta_current                                 1.0
+gamma_current                                1.0
+delta_current                                1.0
+epsilon_current                              1.0
+zeta_current                                 1.0
+
+##################################
+##################################
+##################################
+
+# STEPS PER MILLIMETER
+
+alpha_steps_per_mm                           1600.0
+beta_steps_per_mm                            1600.0
+gamma_steps_per_mm                           1600.0
+delta_steps_per_mm                           1600.0
+epsilon_steps_per_mm                         1600.0
+zeta_steps_per_mm                            1600.0
+
+##################################
+##################################
+##################################
+
+# X endstop
+endstop.minx.enable                          true
+endstop.minx.limit_enable                    true
+endstop.minx.pin                             1.24!^
+endstop.minx.homing_direction                home_to_min
+endstop.minx.homing_position                 0
+endstop.minx.axis                            X
+endstop.minx.max_travel                      500
+endstop.minx.fast_rate                       200              # mm/sec
+endstop.minx.slow_rate                       100              # mm/sec
+endstop.minx.retract                         3
+
+# Y endstop
+endstop.miny.enable                          true
+endstop.miny.limit_enable                    true
+endstop.miny.pin                             1.25!^
+endstop.miny.homing_direction                home_to_min
+endstop.miny.homing_position                 0
+endstop.miny.axis                            Y
+endstop.miny.max_travel                      500
+endstop.miny.fast_rate                       200
+endstop.miny.slow_rate                       100
+endstop.miny.retract                         3
+
+# Z endstop
+endstop.minz.enable                          true
+endstop.minz.limit_enable                    true
+endstop.minz.pin                             1.26!^
+endstop.minz.homing_direction                home_to_min
+endstop.minz.homing_position                 0
+endstop.minz.axis                            Z
+endstop.minz.max_travel                      200
+endstop.minz.fast_rate                       60
+endstop.minz.slow_rate                       30
+endstop.minz.retract                         3
+
+# A endstop
+endstop.mina.enable                          true
+endstop.mina.limit_enable                    true
+endstop.mina.pin                             1.27!^
+endstop.mina.homing_direction                home_to_min
+endstop.mina.homing_position                 0
+endstop.mina.axis                            A
+endstop.mina.max_travel                      100
+endstop.mina.fast_rate                       13
+endstop.mina.slow_rate                       10
+endstop.mina.retract                         3
+
+# B endstop
+endstop.minb.enable                          true
+endstop.minb.limit_enable                    true
+endstop.minb.pin                             1.28!^
+endstop.minb.homing_direction                home_to_min
+endstop.minb.homing_position                 0
+endstop.minb.axis                            B
+endstop.minb.max_travel                      100
+endstop.minb.fast_rate                       13
+endstop.minb.slow_rate                       10
+endstop.minb.retract                         3
+
+# C endstop
+endstop.minc.enable                          true
+endstop.minc.limit_enable                    true
+endstop.minc.pin                             1.29!^
+endstop.minc.homing_direction                home_to_min
+endstop.minc.homing_position                 0
+endstop.minc.axis                            C
+endstop.minc.max_travel                      100
+endstop.minc.fast_rate                       13
+endstop.minc.slow_rate                       10
+endstop.minc.retract                         3
+
+##################################
+##################################
+##################################
+
+# MISC CONFIGURATION
+
+microseconds_per_step_pulse                  1
+base_stepping_frequency                      100000
+
+#planner_queue_size                           32
+junction_deviation                           0.01
+
+uart0.baud_rate                              115200
+second_usb_serial_enable                     false
+
+kill_button_enable                           false
+kill_button_pin                              2.12
+
+msd_disable                                  false           
+home_z_first                                 false
+currentcontrol_module_enable                 true
+
+##################################
+##################################
+##################################
