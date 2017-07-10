@@ -124,7 +124,7 @@
 
 static const uint8_t OXFF = 0xFF;
 
-#define SD_COMMAND_TIMEOUT 5000
+#define SD_COMMAND_TIMEOUT 100
 
 SDCard::SDCard(PinName mosi, PinName miso, PinName sclk, PinName cs) :
   _spi(mosi, miso, sclk), _cs(cs) {
