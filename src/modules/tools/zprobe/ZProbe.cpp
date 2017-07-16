@@ -193,7 +193,7 @@ bool ZProbe::run_probe(float& mm, float feedrate, float max_dist, bool reverse)
     // save current actuator position so we can report how far we moved
     float z_start_pos= THEROBOT->actuators[Z_AXIS]->get_current_position();
 
-    if(dwell_before_probing > 0) safe_delay_ms(dwell_before_probing*1000);
+    if(dwell_before_probing > .0001F) safe_delay_ms(dwell_before_probing*1000);
     
     // move Z down
     bool dir= (!reverse_z != reverse); // xor
