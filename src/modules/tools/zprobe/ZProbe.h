@@ -55,6 +55,7 @@ private:
     float return_feedrate;
     float probe_height;
     float max_z;
+    float dwell_before_probing;
 
     Pin pin;
     std::vector<LevelingStrategy*> strategies;
