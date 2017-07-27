@@ -43,6 +43,7 @@
 #define gamma_max_checksum       CHECKSUM("gamma_max")
 #define max_z_checksum           CHECKSUM("max_z")
 #define reverse_z_direction_checksum CHECKSUM("reverse_z")
+#define dwell_before_probing_checksum CHECKSUM("dwell_before_probing")
 
 // from endstop section
 #define delta_homing_checksum    CHECKSUM("delta_homing")
@@ -143,6 +144,7 @@ void ZProbe::config_load()
     if(isnan(this->max_z)){
         this->max_z = THEKERNEL->config->value(gamma_max_checksum)->by_default(200)->as_number(); // maximum zprobe distance
     }
+    this->dwell_before_probing = THEKERNEL->config->value(zprobe_checksum, dwell_before_probing_checksum)->by_default(0)->as_number(); // dwell time in seconds before probing
 
 }
 
@@ -191,6 +193,8 @@ bool ZProbe::run_probe(float& mm, float feedrate, float max_dist, bool reverse)
     // save current actuator position so we can report how far we moved
     float z_start_pos= THEROBOT->actuators[Z_AXIS]->get_current_position();
 
+    if(dwell_before_probing > .0001F) safe_delay_ms(dwell_before_probing*1000);
+    
     // move Z down
     bool dir= (!reverse_z != reverse); // xor
     float delta[3]= {0,0,0};
@@ -378,12 +382,13 @@ void ZProbe::on_gcode_received(void *argument)
                     invert_override= (gcode->get_value('I') != 0);
                     pin.set_inverting(pin.is_inverting() != invert_override); // XOR so inverted pin is not inverted and vice versa
                 }
+                if (gcode->has_letter('D')) this->dwell_before_probing = gcode->get_value('D');
                 break;
 
             case 500: // save settings
             case 503: // print settings
-                gcode->stream->printf(";Probe feedrates Slow/fast(K)/Return (mm/sec) max_z (mm) height (mm):\nM670 S%1.2f K%1.2f R%1.2f Z%1.2f H%1.2f\n",
-                    this->slow_feedrate, this->fast_feedrate, this->return_feedrate, this->max_z, this->probe_height);
+                gcode->stream->printf(";Probe feedrates Slow/fast(K)/Return (mm/sec) max_z (mm) height (mm) dwell (s):\nM670 S%1.2f K%1.2f R%1.2f Z%1.2f H%1.2f D%1.2f\n",
+                    this->slow_feedrate, this->fast_feedrate, this->return_feedrate, this->max_z, this->probe_height, this->dwell_before_probing);
 
                 // fall through is intended so leveling strategies can handle m-codes too
 
