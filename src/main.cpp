@@ -29,6 +29,7 @@
 #include "modules/utils/killbutton/KillButton.h"
 #include "modules/utils/PlayLed/PlayLed.h"
 #include "modules/utils/panel/Panel.h"
+#include "modules/utils/readpin/ReadPinPool.h"
 #include "libs/Network/uip/Network.h"
 #include "Config.h"
 #include "checksumm.h"
@@ -190,6 +191,11 @@ void init() {
     #ifndef NO_UTILS_MOTORDRIVERCONTROL
     kernel->add_module( new MotorDriverControl(0) );
     #endif
+
+    auto rpp = new ReadPinPool();
+    rpp->load_tools();
+    delete rpp;
+
     // Create and initialize USB stuff
     u.init();
 
