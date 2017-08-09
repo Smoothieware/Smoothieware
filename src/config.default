@@ -199,11 +199,13 @@ endstop.minc.retract                         20
 # FAN CONTROL
 
 switch.fan.enable                            true
-switch.fan.input_on_command                  M106
-switch.fan.input_off_command                 M107
+switch.fan.input_on_command                  M40
+switch.fan.input_off_command                 M41
 switch.fan.output_pin                        3.25
-switch.fan.output_type                       pwm      # set PWM w/ S parameter
+switch.fan.output_type                       hwpwm    # set value w/ S parameter
 switch.fan.max_pwm                           255
+switch.fan.startup_state                     255
+switch.fan.ignore_on_halt                    true
 
 ##################################
 ##################################
@@ -212,11 +214,13 @@ switch.fan.max_pwm                           255
 # LED CONTROL
 
 switch.led.enable                            true
-switch.led.input_on_command                  M108
-switch.led.input_off_command                 M109
+switch.led.input_on_command                  M42
+switch.led.input_off_command                 M43
 switch.led.output_pin                        3.26
-switch.led.output_type                       pwm
+switch.led.output_type                       hwpwm
 switch.led.max_pwm                           255
+switch.led.startup_state                     0
+switch.led.ignore_on_halt                    true
 
 ##################################
 ##################################
@@ -224,33 +228,65 @@ switch.led.max_pwm                           255
 
 # PIPETTE SWITCHES
 
-switch.pleftA.enable                            true
-switch.pleftA.input_on_command                  M110
-switch.pleftA.input_off_command                 M111
-switch.pleftA.output_pin                        2.6
-switch.pleftA.output_type                       pwm
-switch.pleftA.max_pwm                           255
+switch.bPipetteA.enable                            true
+switch.bPipetteA.input_on_command                  M44
+switch.bPipetteA.input_off_command                 M45
+switch.bPipetteA.subcode                           1
+switch.bPipetteA.output_pin                        2.6
+switch.bPipetteA.output_type                       digital
+switch.bPipetteA.ignore_on_halt                    true
+switch.bPipetteA.startup_state                     false
 
-switch.pleftB.enable                            true
-switch.pleftB.input_on_command                  M112
-switch.pleftB.input_off_command                 M113
-switch.pleftB.output_pin                        2.7
-switch.pleftB.output_type                       pwm
-switch.pleftB.max_pwm                           255
+switch.bPipetteB.enable                            true
+switch.bPipetteB.input_on_command                  M44
+switch.bPipetteB.input_off_command                 M45
+switch.bPipetteB.subcode                           2
+switch.bPipetteB.output_pin                        2.7
+switch.bPipetteB.output_type                       digital
+switch.bPipetteB.ignore_on_halt                    true
+switch.bPipetteB.startup_state                     false
 
-switch.prightA.enable                            true
-switch.prightA.input_on_command                  M113
-switch.prightA.input_off_command                 M114
-switch.prightA.output_pin                        2.8
-switch.prightA.output_type                       pwm
-switch.prightA.max_pwm                           255
+switch.cPipetteA.enable                            true
+switch.cPipetteA.input_on_command                  M44
+switch.cPipetteA.input_off_command                 M45
+switch.cPipetteA.subcode                           3
+switch.cPipetteA.output_pin                        2.8
+switch.cPipetteA.output_type                       digital
+switch.cPipetteA.ignore_on_halt                    true
+switch.cPipetteA.startup_state                     false
 
-switch.prightB.enable                            true
-switch.prightB.input_on_command                  M115
-switch.prightB.input_off_command                 M116
-switch.prightB.output_pin                        1.23
-switch.prightB.output_type                       pwm
-switch.prightB.max_pwm                           255
+switch.cPipetteB.enable                            true
+switch.cPipetteB.input_on_command                  M44
+switch.cPipetteB.input_off_command                 M45
+switch.cPipetteB.subcode                           4
+switch.cPipetteB.output_pin                        1.23
+switch.cPipetteB.output_type                       digital
+switch.cPipetteB.ignore_on_halt                    true
+switch.cPipetteB.startup_state                     false
+
+##################################
+##################################
+##################################
+
+# PIPETTE MICROSTEPPING
+
+switch.bMicrostepping.enable                            true
+switch.bMicrostepping.input_on_command                  M46
+switch.bMicrostepping.input_off_command                 M47
+switch.bMicrostepping.subcode                           1
+switch.bMicrostepping.output_pin                        0.25
+switch.bMicrostepping.output_type                       digital
+switch.bMicrostepping.fail_safe_set_to                  1
+switch.bMicrostepping.startup_state                     true
+
+switch.cMicrostepping.enable                            true
+switch.cMicrostepping.input_on_command                  M46
+switch.cMicrostepping.input_off_command                 M47
+switch.bMicrostepping.subcode                           2
+switch.cMicrostepping.output_pin                        0.26
+switch.cMicrostepping.output_type                       digital
+switch.cMicrostepping.fail_safe_set_to                  1
+switch.bMicrostepping.startup_state                     true
 
 ##################################
 ##################################
