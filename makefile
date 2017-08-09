@@ -32,4 +32,8 @@ debug:
 console:
 	@ $(MAKE) -C src console
 
+opentrons:
+	make all AXIS=6 PAXIS=4 CNC=1 DISABLEMSD=1
+	./build/osx64/lpc21isp -wipe ./LPC1768/main.hex /dev/tty.usbserial-AM01YQJP 230400 12000
+
 .PHONY: all $(DIRS) $(DIRSCLEAN) debug-store flash upload debug console dfu
