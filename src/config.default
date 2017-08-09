@@ -190,6 +190,19 @@ endstop.minc.retract                         20
 ##################################
 ##################################
 
+# TIP PROBE
+
+zprobe.probe_pin                             0.16!^
+zprobe.slow_feedrate                         5
+zprobe.fast_feedrate                         150
+zprobe.return_feedrate                       150
+zprobe.z_max                                 200
+#zprobe.debounce_ms                          1
+
+##################################
+##################################
+##################################
+
 # OUTPUTS
 
 # FAN CONTROL
