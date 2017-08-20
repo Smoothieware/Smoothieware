@@ -1218,7 +1218,9 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
             float ma =  actuators[actuator]->get_acceleration(); // in mm/sec²
             if(!isnan(ma)) {  // if axis does not have acceleration set then it uses the default_acceleration
                 float ca = fabsf((d/distance) * acceleration);
-                if (ca > ma) {
+                // For moves with XYZ component, use minimum of default_acceleration and actuator acceleration
+                // For E only moves (retract), use the actuator acceleration
+                if (ca > ma || auxilliary_move) {
                     acceleration *= ( ma / ca );
                 }
             }
