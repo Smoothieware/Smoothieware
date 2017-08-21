@@ -5,10 +5,10 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SPINDLE_MODULE_H
-#define SPINDLE_MODULE_H
+#ifndef PWM_SPINDLE_MODULE_H
+#define PWM_SPINDLE_MODULE_H
 
-#include "libs/Module.h"
+#include "SpindleControl.h"
 #include <stdint.h>
 
 namespace mbed {
@@ -17,21 +17,22 @@ namespace mbed {
 }
 
 // This module implements closed loop PID control for spindle RPM.
-class Spindle: public Module {
+class PWMSpindleControl: public SpindleControl {
     public:
-        Spindle();
-        virtual ~Spindle() {};
+        PWMSpindleControl();
+        virtual ~PWMSpindleControl() {};
         void on_module_loaded();
-
-
+    
     private:
+        
         void on_pin_rise();
-        void on_gcode_received(void *argument);
         uint32_t on_update_speed(uint32_t dummy);
-
-        mbed::PwmOut *spindle_pin; // PWM output for spindle speed control
+        
+        mbed::PwmOut *pwm_pin; // PWM output for spindle speed control
         mbed::InterruptIn *feedback_pin; // Interrupt pin for measuring speed
         bool output_inverted;
+       
+        bool vfd_spindle; // true if we have a VFD driven spindle
 
         // Current values, updated at runtime
         bool spindle_on;
@@ -54,6 +55,15 @@ class Spindle: public Module {
         uint32_t last_edge; // Timestamp of last edge
         volatile uint32_t last_time; // Time delay between last two edges
         volatile uint32_t irq_count;
+        
+        void turn_on(void);
+        void turn_off(void);
+        void set_speed(int);
+        void report_speed(void);
+        void set_p_term(float);
+        void set_i_term(float);
+        void set_d_term(float);
+        void report_settings(void);
 };
 
 #endif

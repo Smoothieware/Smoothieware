@@ -89,7 +89,6 @@ void Switch::on_module_loaded()
 void Switch::on_config_reload(void *argument)
 {
     this->input_pin.from_string( THEKERNEL->config->value(switch_checksum, this->name_checksum, input_pin_checksum )->by_default("nc")->as_string())->as_input();
-    this->input_pin_behavior = THEKERNEL->config->value(switch_checksum, this->name_checksum, input_pin_behavior_checksum )->by_default(momentary_checksum)->as_number();
     this->subcode = THEKERNEL->config->value(switch_checksum, this->name_checksum, command_subcode_checksum )->by_default(0)->as_number();
     std::string input_on_command = THEKERNEL->config->value(switch_checksum, this->name_checksum, input_on_command_checksum )->by_default("")->as_string();
     std::string input_off_command = THEKERNEL->config->value(switch_checksum, this->name_checksum, input_off_command_checksum )->by_default("")->as_string();
@@ -99,6 +98,9 @@ void Switch::on_config_reload(void *argument)
     string type = THEKERNEL->config->value(switch_checksum, this->name_checksum, output_type_checksum )->by_default("pwm")->as_string();
     this->failsafe= THEKERNEL->config->value(switch_checksum, this->name_checksum, failsafe_checksum )->by_default(0)->as_number();
     this->ignore_on_halt= THEKERNEL->config->value(switch_checksum, this->name_checksum, ignore_onhalt_checksum )->by_default(false)->as_bool();
+
+    std::string ipb = THEKERNEL->config->value(switch_checksum, this->name_checksum, input_pin_behavior_checksum )->by_default("momentary")->as_string();
+    this->input_pin_behavior = (ipb == "momentary") ? momentary_checksum : toggle_checksum;
 
     if(type == "pwm"){
         this->output_type= SIGMADELTA;
@@ -334,8 +336,12 @@ void Switch::on_set_public_data(void *argument)
     if(pdr->third_element_is(state_checksum)) {
         bool t = *static_cast<bool *>(pdr->get_data_ptr());
         this->switch_state = t;
-        pdr->set_taken();
         this->switch_changed= true;
+        pdr->set_taken();
+
+        // if there is no gcode to be sent then we can do this now (in on_idle)
+        // Allows temperature switch to turn on a fan even if main loop is blocked with heat and wait
+        if(this->output_on_command.empty() && this->output_off_command.empty()) on_main_loop(nullptr);
 
     } else if(pdr->third_element_is(value_checksum)) {
         float t = *static_cast<float *>(pdr->get_data_ptr());
@@ -394,15 +400,18 @@ uint32_t Switch::pinpoll_tick(uint32_t dummy)
             // if switch is a toggle switch
             if( this->input_pin_behavior == toggle_checksum ) {
                 this->flip();
-                // else default is momentary
             } else {
-                this->flip();
+                // else default is momentary
+                this->switch_state = this->input_pin_state;
+                this->switch_changed = true;
             }
-            // else if button released
+
         } else {
-            // if switch is momentary
+            // else if button released
             if( this->input_pin_behavior == momentary_checksum ) {
-                this->flip();
+                // if switch is momentary
+                this->switch_state = this->input_pin_state;
+                this->switch_changed = true;
             }
         }
     }

@@ -98,14 +98,13 @@ bool SCARAcal::set_trim(float x, float y, float z, StreamOutput *stream)
 
 bool SCARAcal::get_home_offset(float& x, float& y, float& z)
 {
-    void *returned_data;
-    bool ok = PublicData::get_value( endstops_checksum, home_offset_checksum, &returned_data );
+    float returned_data[3];
+    bool ok = PublicData::get_value( endstops_checksum, home_offset_checksum, returned_data );
 
     if (ok) {
-        float *home_offset = static_cast<float *>(returned_data);
-        x= home_offset[0];
-        y= home_offset[1];
-        z= home_offset[2];
+        x= returned_data[0];
+        y= returned_data[1];
+        z= returned_data[2];
         return true;
     }
     return false;
@@ -234,8 +233,17 @@ void SCARAcal::on_gcode_received(void *argument)
             break;
 
             case 361: {
-                float target[2] = {90.0F, 130.0F},
+                float target[2],
                       cartesian[3];
+
+                if(gcode->subcode == 1){ // 180 degree condition
+                    target[0] = 180.0F;
+                    target[1] = 225.0F;
+                } else {
+                    target[0] = 90.0F;
+                    target[1] = 130.0F;
+                }
+                gcode->stream->printf("Target: T %f P %f\n", target[0], target[1]);
 
                 if(gcode->has_letter('P')) {
                     // Program the current position as target
@@ -246,6 +254,44 @@ void SCARAcal::on_gcode_received(void *argument)
 
                     STEPPER[0]->change_steps_per_mm(actuators[0] / target[0] * STEPPER[0]->get_steps_per_mm()); // Find angle difference
                     STEPPER[1]->change_steps_per_mm(STEPPER[0]->get_steps_per_mm());  // and change steps_per_mm to ensure correct steps per *angle*
+                } else {
+                    this->home();                                                   // home - This time leave trims as adjusted.
+                    THEROBOT->get_axis_position(cartesian);    // get actual position from robot
+                    SCARA_ang_move(target[0], target[1], cartesian[2] + this->z_move, slow_rate * 3.0F); // move to target
+                }
+            }
+            break;
+
+            case 362: {
+                float target[2] = {0.0F, 90.0F},
+                      cartesian[3],
+                      S_trim[3];
+
+                this->get_trim(S_trim[0], S_trim[1], S_trim[2]);    // get current trim to conserve other calbration values
+
+                set_trim(S_trim[0], 0, S_trim[2], gcode->stream);               // reset trim for calibration move
+                this->home();                                                   // home
+                THEROBOT->get_axis_position(cartesian);    // get actual position from robot
+                SCARA_ang_move(target[0], target[1], cartesian[2] + this->z_move, slow_rate * 3.0F); // move to target
+
+            }
+            break;
+
+            case 363: {
+                float target[2] = {180.0F, 270.0F},
+                      cartesian[3];
+
+                gcode->stream->printf("Target: T %f P %f\n", target[0], target[1]);
+
+                if(gcode->has_letter('P')) {
+                    // Program the current position as target
+                    ActuatorCoordinates actuators;
+
+                    THEROBOT->get_axis_position(cartesian);                                // get actual position from robot
+                    THEROBOT->arm_solution->cartesian_to_actuator( cartesian, actuators ); // translate to get actuator position
+
+                    STEPPER[1]->change_steps_per_mm(actuators[1] / target[1] * STEPPER[1]->get_steps_per_mm()); // Find angle difference
+                    //STEPPER[1]->change_steps_per_mm(STEPPER[0]->get_steps_per_mm());  // and change steps_per_mm to ensure correct steps per *angle*
                 } else {
                     this->home();                                                   // home - This time leave trims as adjusted.
                     THEROBOT->get_axis_position(cartesian);    // get actual position from robot

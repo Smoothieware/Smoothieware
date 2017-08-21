@@ -149,6 +149,7 @@ void StepTicker::step_tick (void)
     if(THEKERNEL->is_halted()) {
         running= false;
         current_tick = 0;
+        current_block= nullptr;
         return;
     }
 

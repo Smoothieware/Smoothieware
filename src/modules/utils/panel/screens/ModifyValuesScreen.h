@@ -46,6 +46,7 @@ private:
     struct {
         bool delete_on_exit:1;
         bool instant:1;
+        bool exit_screen_in_main_loop:1;
     };
 
 };

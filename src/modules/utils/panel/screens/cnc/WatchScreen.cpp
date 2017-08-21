@@ -110,16 +110,8 @@ void WatchScreen::on_refresh()
 void WatchScreen::get_wpos()
 {
     // get real time positions
-    // current actuator position in mm
-    ActuatorCoordinates current_position{
-        THEROBOT->actuators[X_AXIS]->get_current_position(),
-        THEROBOT->actuators[Y_AXIS]->get_current_position(),
-        THEROBOT->actuators[Z_AXIS]->get_current_position()
-    };
-
-    // get machine position from the actuator position using FK
     float mpos[3];
-    THEROBOT->arm_solution->actuator_to_cartesian(current_position, mpos);
+    THEROBOT->get_current_machine_position(mpos);
     Robot::wcs_t wpos= THEROBOT->mcs2wcs(mpos);
     this->wpos[0]= THEROBOT->from_millimeters(std::get<X_AXIS>(wpos));
     this->wpos[1]= THEROBOT->from_millimeters(std::get<Y_AXIS>(wpos));
@@ -198,11 +190,11 @@ void WatchScreen::display_menu_line(uint16_t line)
                 #ifndef NO_TOOLS_LASER
                 Laser *plaser= nullptr;
                 if(PublicData::get_value(laser_checksum, (void *)&plaser) && plaser != nullptr) {
-                    THEPANEL->lcd->printf("Laser S%1.4f/%1.4f", THEROBOT->get_s_value(), plaser->get_current_power());
+                    THEPANEL->lcd->printf("Laser S%1.4f/%1.2f%%", THEROBOT->get_s_value(), plaser->get_current_power());
                 }
                 #endif
-                break;
             }
+            break;
         case 7: THEPANEL->lcd->printf("%19s", this->get_status()); break;
     }
 }
@@ -215,8 +207,8 @@ const char *WatchScreen::get_status()
     if (THEKERNEL->is_halted())
         return "ALARM";
 
-    if (THEPANEL->is_suspended() || THEKERNEL->get_feed_hold())
-        return "Feed Hold";
+    if (THEPANEL->is_suspended() /*|| THEKERNEL->get_feed_hold()*/)
+        return "Suspended";
 
     if (THEPANEL->is_playing())
         return THEPANEL->get_playing_file();

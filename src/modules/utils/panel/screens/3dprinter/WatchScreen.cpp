@@ -5,23 +5,24 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "libs/Kernel.h"
+#include "Kernel.h"
 #include "LcdBase.h"
 #include "Panel.h"
 #include "PanelScreen.h"
 #include "MainMenuScreen.h"
 #include "WatchScreen.h"
-#include "libs/nuts_bolts.h"
-#include "libs/utils.h"
-#include "modules/tools/temperaturecontrol/TemperatureControlPublicAccess.h"
+#include "nuts_bolts.h"
+#include "utils.h"
+#include "TemperatureControlPublicAccess.h"
 #include "Robot.h"
-#include "modules/robot/Conveyor.h"
-#include "modules/utils/player/PlayerPublicAccess.h"
+#include "Conveyor.h"
+#include "PlayerPublicAccess.h"
 #include "NetworkPublicAccess.h"
 #include "PublicData.h"
 #include "SwitchPublicAccess.h"
 #include "checksumm.h"
 #include "TemperatureControlPool.h"
+#include "ExtruderPublicAccess.h"
 
 
 #include <math.h>
@@ -44,6 +45,8 @@ static const uint8_t icons[] = { // 16x80 - he1, he2, he3, bed, fan
 	0x85, 0x03, 0x85, 0xc3, 0x00, 0xe0, 0x3e, 0xf9, 0xbf, 0xfd, 0x9f, 0x7c, 0x07, 0x00, 0xc3,
 	0xa1, 0xc0, 0xa1, 0xc5, 0x93, 0xd9, 0x47, 0xc2, 0x37, 0x9c
 };
+
+#define extruder_checksum CHECKSUM("extruder")
 
 WatchScreen::WatchScreen()
 {
@@ -249,8 +252,19 @@ void WatchScreen::display_menu_line(uint16_t line)
             }
             break;
         }
-        case 1: THEPANEL->lcd->printf("X%4d Y%4d Z%7.2f", (int)round(this->pos[0]), (int)round(this->pos[1]), this->pos[2]); break;
-        case 2: THEPANEL->lcd->printf("%3d%% %2lu:%02lu %3u%% sd", this->current_speed, this->elapsed_time / 60, this->elapsed_time % 60, this->sd_pcnt_played); break;
+        case 1: {
+            pad_extruder_t rd;
+            if ( THEPANEL->is_extruder_display_enabled() && THEPANEL->is_playing() && PublicData::get_value(extruder_checksum, (void *)&rd)) {
+                float extruder_pos = rd.current_position;
+                THEPANEL->lcd->printf("E %1.2f", extruder_pos);
+                THEPANEL->lcd->setCursor(12, line);
+                THEPANEL->lcd->printf("Z%7.2f", this->pos[2]);
+            } else {
+                THEPANEL->lcd->printf("X%4d Y%4d Z%7.2f", (int)round(this->pos[0]), (int)round(this->pos[1]), this->pos[2]);
+            }
+            break;
+        }
+        case 2: THEPANEL->lcd->printf("%3d%%  %02lu:%02lu:%02lu  %3u%%", this->current_speed, this->elapsed_time / 3600, (this->elapsed_time % 3600) / 60, this->elapsed_time % 60, this->sd_pcnt_played); break;
         case 3: THEPANEL->lcd->printf("%19s", this->get_status()); break;
     }
 }

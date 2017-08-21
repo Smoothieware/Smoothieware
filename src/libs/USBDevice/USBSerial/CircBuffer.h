@@ -52,6 +52,14 @@ public:
 		__enable_irq();
     }
 
+    // pop last entered character
+    void pop() {
+        if(!isEmpty()) {
+            write--;
+            write %= size;
+        }
+    }
+
     uint16_t available() {
 		__disable_irq();
 		uint16_t i= (write >= read) ? write - read : (size - read) + write;

@@ -195,6 +195,10 @@ void TMC26X::init(uint16_t cs)
     //set to a conservative start value
     setConstantOffTimeChopper(7, 54, 13, 12, 1);
 #else
+    //void TMC26X::setSpreadCycleChopper( constant_off_time,  blank_time,  hysteresis_start,  hysteresis_end,  hysteresis_decrement);
+
+    // openbuilds high torque nema23 3amps (2.8)
+    setSpreadCycleChopper(5, 36, 6, 0, 0);
     // for 1.5amp kysan @ 12v
     setSpreadCycleChopper(5, 54, 5, 0, 0);
     // for 4amp Nema24 @ 12v
@@ -876,7 +880,7 @@ void TMC26X::dumpStatus(StreamOutput *stream, bool readable)
         }
 
         int value = getReadoutValue();
-        stream->printf("Microstep postion phase A: %d\n", value);
+        stream->printf("Microstep position phase A: %d\n", value);
 
         value = getCurrentStallGuardReading();
         stream->printf("Stall Guard value: %d\n", value);
@@ -904,7 +908,7 @@ void TMC26X::dumpStatus(StreamOutput *stream, bool readable)
             readStatus(TMC26X_READOUT_POSITION); // get the status bits
             stream->printf("#s,");
         }
-        stream->printf("d%d,", THEROBOT->actuators[0]->which_direction() ? 1 : -1);
+        stream->printf("d%d,", THEROBOT->actuators[0]->which_direction() ? -1 : 1);
         stream->printf("c%u,m%d,", getCurrent(), getMicrosteps());
         // stream->printf('S');
         // stream->printf(tmc26XStepper.getSpeed(), DEC);

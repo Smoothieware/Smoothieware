@@ -15,6 +15,9 @@ class StepperMotor  : public Module {
         StepperMotor(Pin& step, Pin& dir, Pin& en);
         ~StepperMotor();
 
+        void set_motor_id(uint8_t id) { motor_id= id; }
+        uint8_t get_motor_id() const { return motor_id; }
+
         // called from step ticker ISR
         inline bool step() { step_pin.set(1); current_position_steps += (direction?-1:1); return moving; }
         // called from unstep ISR
@@ -22,9 +25,9 @@ class StepperMotor  : public Module {
         // called from step ticker ISR
         inline void set_direction(bool f) { dir_pin.set(f); direction= f; }
 
-        inline void enable(bool state) { en_pin.set(!state); };
-        inline bool is_enabled() const { return !en_pin.get(); };
-        inline bool is_moving() const { return moving; };
+        void enable(bool state) { en_pin.set(!state); };
+        bool is_enabled() const { return !en_pin.get(); };
+        bool is_moving() const { return moving; };
         void start_moving() { moving= true; }
         void stop_moving() { moving= false; }
 
@@ -48,6 +51,8 @@ class StepperMotor  : public Module {
         float get_acceleration() const { return acceleration; }
         bool is_selected() const { return selected; }
         void set_selected(bool b) { selected= b; }
+        bool is_extruder() const { return extruder; }
+        void set_extruder(bool b) { extruder= b; }
 
         int32_t steps_to_target(float);
 
@@ -55,8 +60,6 @@ class StepperMotor  : public Module {
     private:
         void on_halt(void *argument);
         void on_enable(void *argument);
-
-        int index;
 
         Pin step_pin;
         Pin dir_pin;
@@ -72,9 +75,11 @@ class StepperMotor  : public Module {
         float   last_milestone_mm;
 
         volatile struct {
+            uint8_t motor_id:8;
             volatile bool direction:1;
             volatile bool moving:1;
             bool selected:1;
+            bool extruder:1;
         };
 };
 

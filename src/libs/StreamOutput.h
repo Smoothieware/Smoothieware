@@ -34,6 +34,7 @@ class StreamOutput {
 
 class NullStreamOutput : public StreamOutput {
     public:
+        int printf(const char *format, ...) { return 0; }
         int puts(const char* str) { return strlen(str); }
 };
 

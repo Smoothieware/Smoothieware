@@ -27,19 +27,6 @@
 
 #include <mri.h>
 
-// OLD config names for backwards compatibility, NOTE new configs will not be added here
-#define extruder_module_enable_checksum      CHECKSUM("extruder_module_enable")
-#define extruder_steps_per_mm_checksum       CHECKSUM("extruder_steps_per_mm")
-#define extruder_filament_diameter_checksum  CHECKSUM("extruder_filament_diameter")
-#define extruder_acceleration_checksum       CHECKSUM("extruder_acceleration")
-#define extruder_step_pin_checksum           CHECKSUM("extruder_step_pin")
-#define extruder_dir_pin_checksum            CHECKSUM("extruder_dir_pin")
-#define extruder_en_pin_checksum             CHECKSUM("extruder_en_pin")
-#define extruder_max_speed_checksum          CHECKSUM("extruder_max_speed")
-#define extruder_default_feed_rate_checksum  CHECKSUM("extruder_default_feed_rate")
-
-// NEW config names
-
 #define default_feed_rate_checksum           CHECKSUM("default_feed_rate")
 #define steps_per_mm_checksum                CHECKSUM("steps_per_mm")
 #define filament_diameter_checksum           CHECKSUM("filament_diameter")
@@ -133,6 +120,7 @@ void Extruder::config_load()
     stepper_motor->set_acceleration(acceleration);
     stepper_motor->change_steps_per_mm(steps_per_millimeter);
     stepper_motor->set_selected(false); // not selected by default
+    stepper_motor->set_extruder(true);  // indicates it is an extruder
 }
 
 void Extruder::select()
@@ -245,15 +233,15 @@ void Extruder::on_gcode_received(void *argument)
             char buf[16];
             if(gcode->subcode == 0) {
                 float pos = THEROBOT->get_axis_position(motor_id);
-                int n = snprintf(buf, sizeof(buf), " E:%1.3f ", pos);
+                int n = snprintf(buf, sizeof(buf), " E:%1.4f ", pos);
                 gcode->txt_after_ok.append(buf, n);
 
             } else if(gcode->subcode == 1) { // realtime position
-                int n = snprintf(buf, sizeof(buf), " E:%1.3f ", stepper_motor->get_current_position() / get_e_scale());
+                int n = snprintf(buf, sizeof(buf), " E:%1.4f ", stepper_motor->get_current_position() / get_e_scale());
                 gcode->txt_after_ok.append(buf, n);
 
             } else if(gcode->subcode == 3) { // realtime actuator position
-                int n = snprintf(buf, sizeof(buf), " E:%1.3f ", stepper_motor->get_current_position());
+                int n = snprintf(buf, sizeof(buf), " E:%1.4f ", stepper_motor->get_current_position());
                 gcode->txt_after_ok.append(buf, n);
             }
 

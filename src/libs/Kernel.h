@@ -53,6 +53,7 @@ class Kernel {
 
         void set_feed_hold(bool f) { feed_hold= f; }
         bool get_feed_hold() const { return feed_hold; }
+        bool is_feed_hold_enabled() const { return enable_feed_hold; }
 
         std::string get_query_string();
 
@@ -67,7 +68,6 @@ class Kernel {
         Configurator*     configurator;
         SimpleShell*      simpleshell;
 
-        int debug;
         SlowTicker*       slow_ticker;
         StepTicker*       step_ticker;
         Adc*              adc;
@@ -83,6 +83,8 @@ class Kernel {
             bool grbl_mode:1;
             bool feed_hold:1;
             bool ok_per_line:1;
+            bool enable_feed_hold:1;
+            bool new_status_format:1;
         };
 
 };

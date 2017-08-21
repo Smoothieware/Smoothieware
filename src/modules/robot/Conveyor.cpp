@@ -5,11 +5,10 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "libs/nuts_bolts.h"
-#include "libs/RingBuffer.h"
-#include "../communication/utils/Gcode.h"
-#include "libs/Module.h"
-#include "libs/Kernel.h"
+#include "nuts_bolts.h"
+#include "Gcode.h"
+#include "Module.h"
+#include "Kernel.h"
 #include "Timer.h" // mbed.h lib
 #include "wait_api.h" // mbed.h lib
 #include "Block.h"
@@ -18,7 +17,7 @@
 #include "mri.h"
 #include "checksumm.h"
 #include "Config.h"
-#include "libs/StreamOutputPool.h"
+#include "StreamOutputPool.h"
 #include "ConfigValue.h"
 #include "StepTicker.h"
 #include "Robot.h"
@@ -63,7 +62,6 @@
 Conveyor::Conveyor()
 {
     running = false;
-    halted = false;
     allow_fetch = false;
     flush= false;
 }
@@ -82,7 +80,7 @@ void Conveyor::on_module_loaded()
 // we allocate the queue here after config is completed so we do not run out of memory during config
 void Conveyor::start(uint8_t n)
 {
-    Block::n_actuators= n; // set the number of motors which determines how big the tick info vector is
+    Block::init(n); // set the number of motors which determines how big the tick info vector is
     queue.resize(queue_size);
     running = true;
 }
@@ -90,10 +88,7 @@ void Conveyor::start(uint8_t n)
 void Conveyor::on_halt(void* argument)
 {
     if(argument == nullptr) {
-        halted = true;
         flush_queue();
-    } else {
-        halted = false;
     }
 }
 
@@ -133,7 +128,7 @@ bool Conveyor::is_idle() const
 }
 
 // Wait for the queue to be empty and for all the jobs to finish in step ticker
-void Conveyor::wait_for_idle()
+void Conveyor::wait_for_idle(bool wait_for_motors)
 {
     // wait for the job queue to empty, this means cycling everything on the block queue into the job queue
     // forcing them to be jobs
@@ -143,10 +138,13 @@ void Conveyor::wait_for_idle()
         THEKERNEL->call_event(ON_IDLE, this);
     }
 
-    // now we wait for all motors to stop moving
-    while(!is_idle()) {
-        THEKERNEL->call_event(ON_IDLE, this);
+    if(wait_for_motors) {
+        // now we wait for all motors to stop moving
+        while(!is_idle()) {
+            THEKERNEL->call_event(ON_IDLE, this);
+        }
     }
+
     running = true;
     // returning now means that everything has totally finished
 }
@@ -157,12 +155,12 @@ void Conveyor::wait_for_idle()
 void Conveyor::queue_head_block()
 {
     // upstream caller will block on this until there is room in the queue
-    while (queue.is_full() && !halted) {
+    while (queue.is_full() && !THEKERNEL->is_halted()) {
         //check_queue();
         THEKERNEL->call_event(ON_IDLE, this); // will call check_queue();
     }
 
-    if(halted) {
+    if(THEKERNEL->is_halted()) {
         // we do not want to stick more stuff on the queue if we are in halt state
         // clear and release the block on the head
         queue.head_ref()->clear();
@@ -189,7 +187,7 @@ void Conveyor::check_queue(bool force)
     // we do this to allow an idle system to pre load the queue a bit so the first few blocks run smoothly.
     if(force || queue.is_full() || (us_ticker_read() - last_time_check) >= (queue_delay_time_ms * 1000)) {
         last_time_check = us_ticker_read(); // reset timeout
-        allow_fetch = true;
+        if(!flush) allow_fetch = true;
         return;
     }
 }
@@ -207,7 +205,7 @@ bool Conveyor::get_next_block(Block **block)
     // default the feerate to zero if there is no block available
     this->current_feedrate= 0;
 
-    if(queue.isr_tail_i == queue.head_i) return false; // we do not have anything to give
+    if(THEKERNEL->is_halted() || queue.isr_tail_i == queue.head_i) return false; // we do not have anything to give
 
     // wait for queue to fill up, optimizes planning
     if(!allow_fetch) return false;
@@ -248,8 +246,9 @@ void Conveyor::flush_queue()
 
     // TODO force deceleration of last block
 
-    // now wait until the job queue has finished and all motors are idle too
-    wait_for_idle();
+    // now wait until the block queue has been flushed
+    wait_for_idle(false);
+
     flush= false;
 }
 
@@ -264,7 +263,3 @@ void Conveyor::dump_queue()
             break;
     }
 }
-
-// feels hacky, but apparently the way to do it
-#include "HeapRing.cpp"
-template class HeapRing<Block>;

@@ -23,6 +23,7 @@ class ConfigCache {
         void clear();
 
         void add(ConfigValue* v);
+        void pop();
 
         // lookup and return the entru that matches the check sums,return NULL if not found
         ConfigValue *lookup(const uint16_t *check_sums) const;

@@ -45,6 +45,7 @@
 #define lcd_checksum               CHECKSUM("lcd")
 #define rrd_glcd_checksum          CHECKSUM("reprap_discount_glcd")
 #define st7565_glcd_checksum       CHECKSUM("st7565_glcd")
+#define ssd1306_oled_checksum      CHECKSUM("ssd1306_oled")
 #define viki2_checksum             CHECKSUM("viki2")
 #define mini_viki2_checksum        CHECKSUM("mini_viki2")
 #define universal_adapter_checksum CHECKSUM("universal_adapter")
@@ -61,10 +62,11 @@
 #define spi_channel_checksum       CHECKSUM("spi_channel")
 #define spi_cs_pin_checksum        CHECKSUM("spi_cs_pin")
 
-#define hotend_temp_checksum CHECKSUM("hotend_temperature")
-#define bed_temp_checksum    CHECKSUM("bed_temperature")
+#define hotend_temp_checksum       CHECKSUM("hotend_temperature")
+#define bed_temp_checksum          CHECKSUM("bed_temperature")
 #define panel_display_message_checksum CHECKSUM("display_message")
-#define laser_checksum CHECKSUM("laser")
+#define laser_checksum             CHECKSUM("laser")
+#define display_extruder_checksum  CHECKSUM("display_extruder")
 
 Panel* Panel::instance= nullptr;
 
@@ -89,6 +91,8 @@ Panel::Panel()
     this->sd= nullptr;
     this->extmounter= nullptr;
     this->external_sd_enable= false;
+    this->in_idle= false;
+    this->display_extruder= false;
     strcpy(this->playing_file, "Playing file");
 }
 
@@ -120,6 +124,8 @@ void Panel::on_module_loaded()
         this->lcd = new ST7565(1); // variant 1
     } else if (lcd_cksm == mini_viki2_checksum) {
         this->lcd = new ST7565(2); // variant 2
+    } else if (lcd_cksm == ssd1306_oled_checksum) {
+        this->lcd = new ST7565(3); // variant 3
     } else if (lcd_cksm == universal_adapter_checksum) {
         this->lcd = new UniversalAdapter();
     } else {
@@ -188,6 +194,9 @@ void Panel::on_module_loaded()
         // read encoder pins
         THEKERNEL->slow_ticker->attach( 1000, this, &Panel::encoder_check );
     }
+
+    // configure display options.
+    this->display_extruder = THEKERNEL->config->value( panel_checksum, display_extruder_checksum )->by_default(false)->as_bool();
 
     // Register for events
     this->register_for_event(ON_IDLE);
@@ -324,9 +333,17 @@ static const uint8_t ohw_logo_antipixel_bits[] = {
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
 };
 
+void Panel::on_idle(void *argument)
+{
+    // avoid recursion if any screens end up calling ON_IDLE
+    if(in_idle) return;
+    in_idle= true;
+    idle_processing();
+    in_idle= false;
+}
 // On idle things, we don't want to do shit in interrupts
 // don't queue gcodes in this
-void Panel::on_idle(void *argument)
+void Panel::idle_processing()
 {
     if (this->start_up) {
         this->lcd->init();
@@ -632,6 +649,12 @@ bool Panel::is_suspended() const
     }
     return false;
 }
+
+bool Panel::is_extruder_display_enabled(void)
+{
+    return this->display_extruder;
+}
+
 
 void  Panel::set_playing_file(string f)
 {
