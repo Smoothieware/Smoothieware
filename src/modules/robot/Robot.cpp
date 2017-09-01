@@ -13,6 +13,7 @@
 #include "Conveyor.h"
 #include "Pin.h"
 #include "StepperMotor.h"
+#include "StepperMotorSlave.h"
 #include "Gcode.h"
 #include "PublicDataRequest.h"
 #include "PublicData.h"
@@ -221,8 +222,9 @@ void Robot::load_config()
 
     // make each motor
     for (size_t a = 0; a < MAX_ROBOT_ACTUATORS; a++) {
-        Pin pins[6]; //step, dir, enable
-        for (size_t i = 0; i < 6; i++) {
+        Pin pins[3]; //step, dir, enable
+
+        for (size_t i = 0; i < 3; i++) {
             pins[i].from_string(THEKERNEL->config->value(checksums[a][i])->by_default("nc")->as_string())->as_output();
         }
 
@@ -234,8 +236,23 @@ void Robot::load_config()
             }
             break; // if any pin is not defined then the axis is not defined (and axis need to be defined in contiguous order)
         }
+		
+		StepperMotor *sm ;
+		if(THEKERNEL->config->value(checksums[a][3])->by_default("nc")->as_string() != "nc"
+			&& THEKERNEL->config->value(checksums[a][4])->by_default("nc")->as_string() != "nc"
+		    && THEKERNEL->config->value(checksums[a][5])->by_default("nc")->as_string() != "nc")
+		{
+			Pin slavePins[3]; //step_slave, dir_slave, enable_slave
+			for (size_t i = 0; i < 3; i++) {
+				slavePins[i].from_string(THEKERNEL->config->value(checksums[a][i+3])->by_default("nc")->as_string())->as_output();
+			}
+			sm = new StepperMotorSlave(pins[0], pins[1], pins[2], slavePins[0], slavePins[1], slavePins[2] );// provide here pins and optional slave pins
+		}
+		else
+		{
+			sm = new StepperMotor(pins[0], pins[1], pins[2]);
+		}
 
-	StepperMotor *sm = new StepperMotor(pins[0], pins[1], pins[2], pins[3], pins[4], pins[5] );// provide here pins and optional slave pins
         // register this motor (NB This must be 0,1,2) of the actuators array
         uint8_t n= register_motor(sm);
         if(n != a) {

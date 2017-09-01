@@ -12,30 +12,26 @@
 
 class StepperMotor  : public Module {
     public:
-        StepperMotor(Pin &step, Pin &dir, Pin &en, Pin &slaveStep, Pin &slaveDir, Pin &slaveEn) ;
+	    StepperMotor(Pin &step, Pin &dir, Pin &en);
         ~StepperMotor();
 
         void set_motor_id(uint8_t id) { motor_id= id; }
         uint8_t get_motor_id() const { return motor_id; }
 
         // called from step ticker ISR
-        inline bool step() { step_pin.set(1);step_slave_pin.set(1); current_position_steps += (direction?-1:1); return moving; }
+        inline bool step() { step_pin.set(1); current_position_steps += (direction?-1:1); return moving; }
         // called from unstep ISR
-        inline void unstep() { step_pin.set(0); step_slave_pin.set(0);}
+        inline void unstep() { step_pin.set(0);}
         // called from step ticker ISR
-        inline void set_direction(bool f) { dir_pin.set(f);
-		                                    dir_slave_pin.set(f);
-		                                    direction= f; }
+        inline void set_direction(bool f) { dir_pin.set(f); direction= f; }
 
-        void enable(bool state) { en_pin.set(!state);
-								  en_slave_pin.set(!state);
-								};
+        void enable(bool state) { en_pin.set(!state);};
         bool is_enabled() const { return !en_pin.get(); };
         bool is_moving() const { return moving; };
         void start_moving() { moving= true; }
         void stop_moving() { moving= false; }
 
-        void manual_step(bool dir);
+        virtual void manual_step(bool dir);
 
         bool which_direction() const { return direction; }
 
@@ -61,16 +57,13 @@ class StepperMotor  : public Module {
         int32_t steps_to_target(float);
 
 
-    private:
+    protected:
         void on_halt(void *argument);
         void on_enable(void *argument);
 
         Pin step_pin;
         Pin dir_pin;
         Pin en_pin;
-		Pin step_slave_pin;
-        Pin dir_slave_pin;
-        Pin en_slave_pin;
 
         float steps_per_second;
         float steps_per_mm;

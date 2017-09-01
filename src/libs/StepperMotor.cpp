@@ -13,7 +13,7 @@
 #include <math.h>
 #include "mbed.h"
 
-StepperMotor::StepperMotor(Pin &step, Pin &dir, Pin &en, Pin &slaveStep, Pin &slaveDir, Pin &slaveEn) : step_pin(step), dir_pin(dir), en_pin(en), step_slave_pin(slaveStep), dir_slave_pin(slaveDir), en_slave_pin(slaveEn)
+StepperMotor::StepperMotor(Pin &step, Pin &dir, Pin &en) : step_pin(step), dir_pin(dir), en_pin(en)
 {
     if(en.connected()) {
         set_high_on_debug(en.port_number, en.pin);
@@ -109,16 +109,13 @@ void StepperMotor::manual_step(bool dir)
     if(this->direction != dir) {
         this->direction= dir;
         this->dir_pin.set(dir);
-        this->dir_slave_pin.set(dir);
         wait_us(1);
     }
 
     // pulse step pin
     this->step_pin.set(1);
-	this->step_slave_pin.set(1);
     wait_us(3);
     this->step_pin.set(0);
-	this->step_slave_pin.set(0);
 
 
     // keep track of actuators actual position in steps
