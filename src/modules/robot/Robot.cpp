@@ -76,6 +76,10 @@
 #define  dir_pin_checksum                    CHEKCSUM("dir_pin")
 #define  en_pin_checksum                     CHECKSUM("en_pin")
 
+#define  step_slave_pin_checksum             CHECKSUM("step_slave_pin")
+#define  dir_slave_pin_checksum              CHEKCSUM("dir_slave_pin")
+#define  en_slave_pin_checksum               CHECKSUM("en_slave_pin")
+
 #define  steps_per_mm_checksum               CHECKSUM("steps_per_mm")
 #define  max_rate_checksum                   CHECKSUM("max_rate")
 #define  acceleration_checksum               CHECKSUM("acceleration")
@@ -127,6 +131,9 @@ void Robot::on_module_loaded()
     CHECKSUM(X "_step_pin"),        \
     CHECKSUM(X "_dir_pin"),         \
     CHECKSUM(X "_en_pin"),          \
+	CHECKSUM(X "_step_slave_pin"),  \
+    CHECKSUM(X "_dir_slave_pin"),   \
+    CHECKSUM(X "_en_slave_pin"),    \
     CHECKSUM(X "_steps_per_mm"),    \
     CHECKSUM(X "_max_rate"),        \
     CHECKSUM(X "_acceleration")     \
@@ -194,7 +201,7 @@ void Robot::load_config()
     this->s_value             = THEKERNEL->config->value(laser_module_default_power_checksum)->by_default(0.8F)->as_number();
 
      // Make our Primary XYZ StepperMotors, and potentially A B C
-    uint16_t const checksums[][6] = {
+    uint16_t const checksums[][9] = {
         ACTUATOR_CHECKSUMS("alpha"), // X
         ACTUATOR_CHECKSUMS("beta"),  // Y
         ACTUATOR_CHECKSUMS("gamma"), // Z
@@ -214,8 +221,8 @@ void Robot::load_config()
 
     // make each motor
     for (size_t a = 0; a < MAX_ROBOT_ACTUATORS; a++) {
-        Pin pins[3]; //step, dir, enable
-        for (size_t i = 0; i < 3; i++) {
+        Pin pins[6]; //step, dir, enable
+        for (size_t i = 0; i < 6; i++) {
             pins[i].from_string(THEKERNEL->config->value(checksums[a][i])->by_default("nc")->as_string())->as_output();
         }
 
@@ -228,7 +235,7 @@ void Robot::load_config()
             break; // if any pin is not defined then the axis is not defined (and axis need to be defined in contiguous order)
         }
 
-        StepperMotor *sm = new StepperMotor(pins[0], pins[1], pins[2]);
+	StepperMotor *sm = new StepperMotor(pins[0], pins[1], pins[2], pins[3], pins[4], pins[5] );// provide here pins and optional slave pins
         // register this motor (NB This must be 0,1,2) of the actuators array
         uint8_t n= register_motor(sm);
         if(n != a) {
@@ -237,9 +244,9 @@ void Robot::load_config()
             return;
         }
 
-        actuators[a]->change_steps_per_mm(THEKERNEL->config->value(checksums[a][3])->by_default(a == 2 ? 2560.0F : 80.0F)->as_number());
-        actuators[a]->set_max_rate(THEKERNEL->config->value(checksums[a][4])->by_default(30000.0F)->as_number()/60.0F); // it is in mm/min and converted to mm/sec
-        actuators[a]->set_acceleration(THEKERNEL->config->value(checksums[a][5])->by_default(NAN)->as_number()); // mm/secs²
+        actuators[a]->change_steps_per_mm(THEKERNEL->config->value(checksums[a][6])->by_default(a == 2 ? 2560.0F : 80.0F)->as_number());
+        actuators[a]->set_max_rate(THEKERNEL->config->value(checksums[a][7])->by_default(30000.0F)->as_number()/60.0F); // it is in mm/min and converted to mm/sec
+        actuators[a]->set_acceleration(THEKERNEL->config->value(checksums[a][8])->by_default(NAN)->as_number()); // mm/secs²
     }
 
     check_max_actuator_speeds(); // check the configs are sane
