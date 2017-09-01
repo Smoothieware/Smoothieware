@@ -19,13 +19,13 @@ class StepperMotor  : public Module {
         uint8_t get_motor_id() const { return motor_id; }
 
         // called from step ticker ISR
-        inline bool step() { step_pin.set(1); current_position_steps += (direction?-1:1); return moving; }
+        virtual inline bool step() { step_pin.set(1); current_position_steps += (direction?-1:1); return moving; }
         // called from unstep ISR
-        inline void unstep() { step_pin.set(0);}
+        virtual inline void unstep() { step_pin.set(0);}
         // called from step ticker ISR
-        inline void set_direction(bool f) { dir_pin.set(f); direction= f; }
+        virtual inline void set_direction(bool f) { dir_pin.set(f); direction= f; }
 
-        void enable(bool state) { en_pin.set(!state);};
+        virtual void enable(bool state) { en_pin.set(!state);};
         bool is_enabled() const { return !en_pin.get(); };
         bool is_moving() const { return moving; };
         void start_moving() { moving= true; }

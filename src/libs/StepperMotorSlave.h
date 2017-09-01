@@ -14,19 +14,19 @@ class StepperMotorSlave  : public StepperMotor{
         StepperMotorSlave(Pin &step, Pin &dir, Pin &en, Pin &slaveStep, Pin &slaveDir, Pin &slaveEn) ;
         ~StepperMotorSlave();
 
-        inline bool step() { step_pin.set(1);step_slave_pin.set(1); current_position_steps += (direction?-1:1); return moving; }//override
+        virtual inline bool step() { step_pin.set(1);step_slave_pin.set(1); current_position_steps += (direction?-1:1); return moving; }//override
         // called from unstep ISR
-        inline void unstep() { step_pin.set(0); step_slave_pin.set(0);}//override
+        virtual inline void unstep() { step_pin.set(0); step_slave_pin.set(0);}//override
         // called from step ticker ISR
-        inline void set_direction(bool f) { dir_pin.set(f);//function override
+        virtual inline void set_direction(bool f) { dir_pin.set(f);//function override
 		                                    dir_slave_pin.set(f);
 		                                    direction= f; }
 
-        void enable(bool state) { en_pin.set(!state);//function override
+        virtual void enable(bool state) { en_pin.set(!state);//function override
 								  en_slave_pin.set(!state);
 								};
 								
-		void manual_step(bool dir);//override of base function
+		virtual void manual_step(bool dir);//override of base function
     private:
   
 		Pin step_slave_pin;
