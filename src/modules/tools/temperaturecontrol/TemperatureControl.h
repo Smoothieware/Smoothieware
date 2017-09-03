@@ -79,6 +79,7 @@ class TemperatureControl : public Module {
             uint16_t set_m_code:10;
             uint16_t set_and_wait_m_code:10;
             uint16_t get_m_code:10;
+            uint16_t set_temp_m_code:10;
             RUNAWAY_TYPE runaway_state:2;
             // Temperature runaway config options
             uint8_t runaway_range:6; // max 63
@@ -93,6 +94,7 @@ class TemperatureControl : public Module {
             bool readonly:1;
             bool windup:1;
             bool sensor_settings:1;
+            bool emulated_sensor:1;
         };
 };
 

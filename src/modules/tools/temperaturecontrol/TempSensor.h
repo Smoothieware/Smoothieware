@@ -23,6 +23,7 @@ public:
     virtual float get_temperature() { return -1.0F; }
 
     typedef std::map<char, float> sensor_options_t;
+    virtual bool set_temperature (float p_temperature) {return false;}
     virtual bool set_optional(const sensor_options_t& options) { return false; }
     virtual bool get_optional(sensor_options_t& options) { return false; }
     virtual void get_raw() {}

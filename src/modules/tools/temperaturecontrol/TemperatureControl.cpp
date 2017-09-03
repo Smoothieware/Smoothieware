@@ -31,6 +31,7 @@
 #include "max31855.h"
 #include "AD8495.h"
 #include "PT100_E3D.h"
+#include "ExternalSensor.h"
 
 #include "MRI_Hooks.h"
 
@@ -50,6 +51,7 @@
 #define get_m_code_checksum                CHECKSUM("get_m_code")
 #define set_m_code_checksum                CHECKSUM("set_m_code")
 #define set_and_wait_m_code_checksum       CHECKSUM("set_and_wait_m_code")
+#define set_temp_m_code_checksum           CHECKSUM("set_temp_m_code")
 
 #define designator_checksum                CHECKSUM("designator")
 
@@ -77,6 +79,7 @@ TemperatureControl::TemperatureControl(uint16_t name, int index)
     sensor= nullptr;
     readonly= false;
     tick= 0;
+    emulated_sensor= false;
 }
 
 TemperatureControl::~TemperatureControl()
@@ -135,6 +138,7 @@ void TemperatureControl::load_config()
     this->set_and_wait_m_code = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, set_and_wait_m_code_checksum)->by_default(109)->as_number();
     this->get_m_code          = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, get_m_code_checksum)->by_default(105)->as_number();
     this->readings_per_second = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, readings_per_second_checksum)->by_default(20)->as_number();
+    this->set_temp_m_code     = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, set_temp_m_code_checksum)->by_default(933)->as_number();
 
     this->designator          = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, designator_checksum)->by_default(string("T"))->as_string();
 
@@ -181,6 +185,9 @@ void TemperatureControl::load_config()
         sensor = new AD8495();
     } else if(sensor_type.compare("pt100_e3d") == 0) {
         sensor = new PT100_E3D();
+    } else if(sensor_type.compare("ExternalSensor") == 0) {
+        sensor = new ExternalSensor();
+        this->emulated_sensor = true;
     } else {
         sensor = new TempSensor(); // A dummy implementation
     }
@@ -266,6 +273,14 @@ void TemperatureControl::on_gcode_received(void *argument)
             }
 
             return;
+        }
+
+        //handle the set ot the temperature for external remote sensor
+        if (gcode->m == this->set_temp_m_code && this->emulated_sensor == true) {
+          if (gcode->has_letter('S')){
+            sensor->set_temperature(gcode->get_value('S'));
+          }
+          return;
         }
 
         // readonly sensors don't handle the rest
