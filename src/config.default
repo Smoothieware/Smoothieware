@@ -123,8 +123,8 @@ endstop.minx.homing_direction                home_to_max
 endstop.minx.homing_position                 0
 endstop.minx.axis                            X
 endstop.minx.max_travel                      500
-endstop.minx.fast_rate                       200              # mm/sec
-endstop.minx.slow_rate                       50              # mm/sec
+endstop.minx.fast_rate                       50              # mm/sec
+endstop.minx.slow_rate                       20              # mm/sec
 endstop.minx.retract                         3
 
 # Y endstop
@@ -135,8 +135,8 @@ endstop.miny.homing_direction                home_to_max
 endstop.miny.homing_position                 0
 endstop.miny.axis                            Y
 endstop.miny.max_travel                      500
-endstop.miny.fast_rate                       200
-endstop.miny.slow_rate                       50
+endstop.miny.fast_rate                       50
+endstop.miny.slow_rate                       20
 endstop.miny.retract                         3
 
 # Z endstop
@@ -147,8 +147,8 @@ endstop.minz.homing_direction                home_to_max
 endstop.minz.homing_position                 0
 endstop.minz.axis                            Z
 endstop.minz.max_travel                      200
-endstop.minz.fast_rate                       40
-endstop.minz.slow_rate                       20
+endstop.minz.fast_rate                       30
+endstop.minz.slow_rate                       10
 endstop.minz.retract                         3
 
 # A endstop
@@ -159,8 +159,8 @@ endstop.mina.homing_direction                home_to_max
 endstop.mina.homing_position                 0
 endstop.mina.axis                            A
 endstop.mina.max_travel                      200
-endstop.mina.fast_rate                       40
-endstop.mina.slow_rate                       20
+endstop.mina.fast_rate                       30
+endstop.mina.slow_rate                       10
 endstop.mina.retract                         3
 
 # B endstop
