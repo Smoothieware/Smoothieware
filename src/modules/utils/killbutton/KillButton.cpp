@@ -18,6 +18,7 @@ using namespace std;
 #define unkill_checksum              CHECKSUM("unkill_enable")
 #define pause_button_pin_checksum    CHECKSUM("pause_button_pin")
 #define kill_button_pin_checksum     CHECKSUM("kill_button_pin")
+#define poll_frequency_checksum      CHECKSUM("kill_button_poll_frequency")
 
 KillButton::KillButton()
 {
@@ -50,7 +51,9 @@ void KillButton::on_module_loaded()
     }
 
     this->register_for_event(ON_IDLE);
-    THEKERNEL->slow_ticker->attach( 5, this, &KillButton::button_tick );
+
+    this->poll_frequency = THEKERNEL->config->value( poll_frequency_checksum )->by_default(5)->as_number();
+    THEKERNEL->slow_ticker->attach( this->poll_frequency, this, &KillButton::button_tick );
 }
 
 void KillButton::on_idle(void *argument)
@@ -100,7 +103,7 @@ uint32_t KillButton::button_tick(uint32_t dummy)
                 state= UNKILL_TIMING_BUTTON_DOWN;
                 break;
             case UNKILL_TIMING_BUTTON_DOWN:
-                if(++unkill_timer > 5*2) state= UNKILL_FIRE;
+                if(++unkill_timer > this->poll_frequency*2) state= UNKILL_FIRE;
                 else if(this->kill_button.get()) unkill_timer= 0;
                 if(!killed) state= IDLE;
                 break;

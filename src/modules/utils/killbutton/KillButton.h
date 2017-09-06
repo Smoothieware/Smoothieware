@@ -29,4 +29,6 @@ class KillButton : public Module {
             bool unkill_enable:1;
             bool toggle_enable:1;
         };
+        
+        uint32_t poll_frequency;
 };
