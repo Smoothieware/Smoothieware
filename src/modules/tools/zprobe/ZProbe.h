@@ -37,6 +37,7 @@ public:
     bool doProbeAt(float &mm, float x, float y);
 
     void coordinated_move(float x, float y, float z, float feedrate, bool relative=false);
+    void coordinated_move(float x, float y, float z, float a, float feedrate, bool relative=false);
     void home();
 
     bool getProbeStatus() { return this->pin.get(); }
