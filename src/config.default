@@ -115,7 +115,7 @@ zeta_steps_per_mm                            767.38
 
 # ENDSTOPS and HOMING
 
-homing_order                                 ZAXY
+# homing_order                                 ZAXY
 
 # X endstop
 endstop.minx.axis                            X
@@ -300,8 +300,8 @@ switch.cMicrostepping.startup_state                     true
 microseconds_per_step_pulse                  1
 base_stepping_frequency                      100000
 
-#planner_queue_size                           32
-junction_deviation                           0.01
+#planner_queue_size                          32
+junction_deviation                           0.001
 
 uart0.baud_rate                              14400
 second_usb_serial_enable                     false
