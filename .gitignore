@@ -3,7 +3,6 @@
 *.bin
 *.disasm
 *.elf
-*.hex
 *.map
 mri.log
 gdb.txt
