@@ -147,8 +147,8 @@ endstop.minz.enable                          true
 endstop.minz.limit_enable                    true
 endstop.minz.pin                             1.26^
 endstop.minz.homing_direction                home_to_max
-endstop.minz.homing_position                 230
-endstop.minz.max_travel                      235
+endstop.minz.homing_position                 343
+endstop.minz.max_travel                      250
 endstop.minz.fast_rate                       30
 endstop.minz.slow_rate                       10
 endstop.minz.retract                         1
@@ -159,8 +159,8 @@ endstop.mina.enable                          true
 endstop.mina.limit_enable                    true
 endstop.mina.pin                             1.27^
 endstop.mina.homing_direction                home_to_max
-endstop.mina.homing_position                 230
-endstop.mina.max_travel                      235
+endstop.mina.homing_position                 343
+endstop.mina.max_travel                      250
 endstop.mina.fast_rate                       30
 endstop.mina.slow_rate                       10
 endstop.mina.retract                         1
