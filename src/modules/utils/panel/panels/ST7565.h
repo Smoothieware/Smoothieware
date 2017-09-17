@@ -79,6 +79,7 @@ private:
         bool reversed:1;
         bool is_viki2:1;
         bool is_mini_viki2:1;
+        bool is_ssd1306:1;
         bool use_pause:1;
         bool use_back:1;
     };

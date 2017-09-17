@@ -97,8 +97,6 @@ unless defined? NONETWORK
 end
 
 # list of modules to exclude, include directory it is in
-EXCLUDE_MODULES= %w(tools/touchprobe) unless defined? EXCLUDE_MODULES
-
 # e.g for a CNC machine
 #EXCLUDE_MODULES = %w(tools/touchprobe tools/laser tools/temperaturecontrol tools/extruder)
 
@@ -112,6 +110,16 @@ if ENV['NONETWORK'] || NONETWORK
   puts "Excluding Network code"
 else
   nonetwork= false
+end
+
+# see if CNC build
+if ENV['CNC'] || CNC
+  cnc= true
+  excludes << 'panel\/screens\/3dprinter'
+  puts "CNC build"
+else
+  excludes << 'panel\/screens\/cnc'
+  cnc= false
 end
 
 if TESTING
@@ -193,6 +201,7 @@ defines += MRI_DEFINES
 defines << "-DDEFAULT_SERIAL_BAUD_RATE=#{DEFAULT_SERIAL_BAUD_RATE}"
 defines << '-DDEBUG' if OPTIMIZATION == 0
 defines << '-DNONETWORK' if nonetwork
+defines << '-DCNC' if cnc
 
 DEFINES= defines.join(' ')
 
@@ -286,7 +295,7 @@ file "#{PROG}.bin" => ["#{PROG}.elf"] do
 end
 
 file "#{PROG}.elf" => OBJ do |t|
-  puts "Linking #{t.source}"
+  puts "Linking"
   sh "#{LD} #{LDFLAGS} #{OBJ} #{LIBS}  -o #{OBJDIR}/#{t.name}"
 end
 

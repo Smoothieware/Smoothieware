@@ -27,11 +27,10 @@ void RotaryDeltaCalibration::on_module_loaded()
     register_for_event(ON_GCODE_RECEIVED);
 }
 
-float *RotaryDeltaCalibration::get_homing_offset()
+bool RotaryDeltaCalibration::get_homing_offset(float *theta_offset)
 {
-    float *theta_offset; // points to theta offset in Endstop module
-    bool ok = PublicData::get_value( endstops_checksum, home_offset_checksum, &theta_offset );
-    return ok ? theta_offset : nullptr;
+    bool ok = PublicData::get_value( endstops_checksum, home_offset_checksum, theta_offset );
+    return ok;
 }
 
 void RotaryDeltaCalibration::on_gcode_received(void *argument)
@@ -41,16 +40,18 @@ void RotaryDeltaCalibration::on_gcode_received(void *argument)
     if( gcode->has_m) {
         switch( gcode->m ) {
             case 206: {
-                float *theta_offset= get_homing_offset(); // points to theta offset in Endstop module
-                if (theta_offset == nullptr) {
+                float theta_offset[3];
+                if(!get_homing_offset(theta_offset)) {
                     gcode->stream->printf("error:no endstop module found\n");
                     return;
                 }
 
-                // set theta offset, set directly in the Endstop module (bad practice really)
+                // set theta offset
                 if (gcode->has_letter('A')) theta_offset[0] = gcode->get_value('A');
                 if (gcode->has_letter('B')) theta_offset[1] = gcode->get_value('B');
                 if (gcode->has_letter('C')) theta_offset[2] = gcode->get_value('C');
+
+                PublicData::set_value( endstops_checksum, home_offset_checksum, theta_offset );
 
                 gcode->stream->printf("Theta offset set: A %8.5f B %8.5f C %8.5f\n", theta_offset[0], theta_offset[1], theta_offset[2]);
 
@@ -64,23 +65,23 @@ void RotaryDeltaCalibration::on_gcode_received(void *argument)
 
                 ActuatorCoordinates current_angle;
                 // get the current angle for each actuator, NOTE we only deal with  ABC so if there are more than 3 actuators this will probably go wonky
-                for (size_t i = 0; i < THEKERNEL->robot->actuators.size(); i++) {
-                    current_angle[i]= THEKERNEL->robot->actuators[i]->get_current_position();
+                for (size_t i = 0; i < 3; i++) {
+                    current_angle[i]= THEROBOT->actuators[i]->get_current_position();
                 }
 
                 if (gcode->has_letter('L') && gcode->get_value('L') != 0) {
                     // specifying L1 it will take the last probe position (set by G30 or G38.x ) and set the home offset based on that
                     // this allows the use of G30 to find the angle tool
                     uint8_t ok;
-                    std::tie(current_angle[0], current_angle[1], current_angle[2], ok) = THEKERNEL->robot->get_last_probe_position();
+                    std::tie(current_angle[0], current_angle[1], current_angle[2], ok) = THEROBOT->get_last_probe_position();
                     if(ok == 0) {
                         gcode->stream->printf("error:Nothing set as probe failed or not run\n");
                         return;
                     }
                 }
 
-                float *theta_offset= get_homing_offset(); // points to theta offset in Endstop module
-                if (theta_offset == nullptr) {
+                float theta_offset[3];
+                if(!get_homing_offset(theta_offset)) {
                     gcode->stream->printf("error:no endstop module found\n");
                     return;
                 }
@@ -107,10 +108,12 @@ void RotaryDeltaCalibration::on_gcode_received(void *argument)
                     cnt++;
                 }
 
+                PublicData::set_value( endstops_checksum, home_offset_checksum, theta_offset );
+
                 // reset the actuator positions (and machine position accordingly)
                 // But only if all three actuators have been specified at the same time
                 if(cnt == 3 || (gcode->has_letter('R') && gcode->get_value('R') != 0)) {
-                    THEKERNEL->robot->reset_actuator_position(current_angle);
+                    THEROBOT->reset_actuator_position(current_angle);
                     gcode->stream->printf("NOTE: actuator position reset\n");
                 }else{
                     gcode->stream->printf("NOTE: actuator position NOT reset\n");

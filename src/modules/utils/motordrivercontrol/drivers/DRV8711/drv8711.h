@@ -8,9 +8,9 @@ class StreamOutput;
 class DRV8711DRV
 {
 public:
-  DRV8711DRV(std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi);
+  DRV8711DRV(std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi, char designator);
 
-  void init(uint16_t gain = 20) ;
+  void init(uint16_t cs) ;
 
   void set_enable(bool enable) ;
   int set_microsteps(int number_of_steps);
@@ -142,7 +142,7 @@ private:
   float resistor{0.05};
   std::bitset<8> error_reported;
   uint8_t gain{20};
-
+  char designator;
 
   // float _amps;
   // uint8_t _microstepreg;

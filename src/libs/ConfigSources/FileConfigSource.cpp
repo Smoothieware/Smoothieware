@@ -75,9 +75,13 @@ void FileConfigSource::transfer_values_to_cache( ConfigCache *cache, const char 
             // process the config line and store the value in cache
             ConfigValue* cv = process_line_from_ascii_config(line, cache);
 
+            if(cv == nullptr) continue;
+
             // if this line is an include directive then attempt to read the included file
             if(cv->check_sums[0] == include_checksum) {
                 string inc_file_name = cv->value.c_str();
+                cache->pop(); // we do not need to keep this around or leave it on the list
+
                 if(!file_exists(inc_file_name)) {
                     // if the file is not found at the location entered then look around for it a bit
                     if(inc_file_name[0] != '/') inc_file_name = "/" + inc_file_name;
@@ -108,7 +112,10 @@ void FileConfigSource::transfer_values_to_cache( ConfigCache *cache, const char 
                     printf("Unable to find included config file: %s\n", inc_file_name.c_str());
                 }
             }
-        }else break;
+
+        }else {
+            break;
+        }
     }
     fclose(lp);
 }

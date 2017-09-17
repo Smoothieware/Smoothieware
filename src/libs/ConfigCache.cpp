@@ -26,6 +26,13 @@ void ConfigCache::add(ConfigValue *v)
     store.push_back(v);
 }
 
+void ConfigCache::pop()
+{
+    auto cv= store.back();
+    store.pop_back();
+    delete cv;
+}
+
 // If we find an existing value, replace it, otherwise, push it at the back of the list
 void ConfigCache::replace_or_push_back(ConfigValue *new_value)
 {
@@ -34,6 +41,7 @@ void ConfigCache::replace_or_push_back(ConfigValue *new_value)
         // If this configvalue matches the checksum
         if(memcmp(new_value->check_sums, cv->check_sums, sizeof(cv->check_sums)) == 0) {
             // Replace with the provided value
+            delete cv; // free up old one
             cv =  new_value;
             printf("WARNING: duplicate config line replaced\n");
             return;

@@ -5,9 +5,7 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
-
-#ifndef simpleshell_h
-#define simpleshell_h
+#pragma once
 
 #include "Module.h"
 
@@ -28,6 +26,7 @@ public:
     void on_second_tick(void *);
     static bool parse_command(const char *cmd, string args, StreamOutput *stream);
     static void print_mem(StreamOutput *stream) { mem_command("", stream); }
+    static void version_command(string parameters, StreamOutput *stream );
 
 private:
     static void ls_command(string parameters, StreamOutput *stream );
@@ -37,12 +36,12 @@ private:
     static void cat_command(string parameters, StreamOutput *stream );
     static void rm_command(string parameters, StreamOutput *stream );
     static void mv_command(string parameters, StreamOutput *stream );
+    static void mkdir_command(string parameters, StreamOutput *stream );
     static void upload_command(string parameters, StreamOutput *stream );
     static void break_command(string parameters, StreamOutput *stream );
     static void reset_command(string parameters, StreamOutput *stream );
     static void dfu_command(string parameters, StreamOutput *stream );
     static void help_command(string parameters, StreamOutput *stream );
-    static void version_command(string parameters, StreamOutput *stream );
     static void get_command(string parameters, StreamOutput *stream );
     static void set_temp_command(string parameters, StreamOutput *stream );
     static void calc_thermistor_command( string parameters, StreamOutput *stream);
@@ -60,6 +59,7 @@ private:
 
     static void remount_command( string parameters, StreamOutput *stream);
 
+    static void test_command( string parameters, StreamOutput *stream);
 
     typedef void (*PFUNC)(string parameters, StreamOutput *stream);
     typedef struct {
@@ -70,6 +70,3 @@ private:
     static const ptentry_t commands_table[];
     static int reset_delay_secs;
 };
-
-
-#endif

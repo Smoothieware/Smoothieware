@@ -16,12 +16,11 @@
 #include "SlowTicker.h"
 #include "StepperMotor.h"
 #include "StreamOutputPool.h"
+#include "nuts_bolts.h"
+
 #include <math.h> /* fmod */
 
-// axis index
-#define X_AXIS 0
-#define Y_AXIS 1
-#define Z_AXIS 2
+
 
 // retract modes
 #define RETRACT_TO_Z 0
@@ -204,12 +203,14 @@ void Drillingcycles::on_gcode_received(void* argument)
     // cycle start
     if (code == 98 || code == 99) {
         // wait for any moves left and current position is update
-        THEKERNEL->conveyor->wait_for_empty_queue();
+        THEKERNEL->conveyor->wait_for_idle();
         // get actual position from robot
         float pos[3];
-        THEKERNEL->robot->get_axis_position(pos);
+        THEROBOT->get_axis_position(pos);
+        // convert to WCS
+        Robot::wcs_t wpos= THEROBOT->mcs2wcs(pos);
         // backup Z position as Initial-Z value
-        this->initial_z = pos[Z_AXIS];
+        this->initial_z = std::get<Z_AXIS>(wpos); // must use the work coordinate position
         // set retract type
         this->retract_type = (code == 98) ? RETRACT_TO_Z : RETRACT_TO_R;
         // reset sticky values
@@ -231,7 +232,7 @@ void Drillingcycles::on_gcode_received(void* argument)
     // in cycle
     else if (this->cycle_started) {
         // relative mode not supported for now...
-        if (THEKERNEL->robot->absolute_mode == false) {
+        if (THEROBOT->absolute_mode == false) {
             gcode->stream->printf("Drillingcycles: relative mode not supported.\r\n");
             gcode->stream->printf("Drillingcycles: skip hole...\r\n");
             // exit

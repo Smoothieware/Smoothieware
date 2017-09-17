@@ -15,10 +15,6 @@ enum _EVENT_ENUM {
     ON_MAIN_LOOP,
     ON_CONSOLE_LINE_RECEIVED,
     ON_GCODE_RECEIVED,
-    ON_GCODE_EXECUTE,
-    ON_SPEED_CHANGE,
-    ON_BLOCK_BEGIN,
-    ON_BLOCK_END,
     ON_IDLE,
     ON_SECOND_TICK,
     ON_GET_PUBLIC_DATA,
@@ -48,10 +44,6 @@ public:
     virtual void on_main_loop(void *) {};
     virtual void on_console_line_received(void *) {};
     virtual void on_gcode_received(void *) {};
-    virtual void on_gcode_execute(void *) {};
-    virtual void on_speed_change(void *) {};
-    virtual void on_block_begin(void *) {};
-    virtual void on_block_end(void *) {};
     virtual void on_idle(void *) {};
     virtual void on_second_tick(void *) {};
     virtual void on_get_public_data(void *) {};

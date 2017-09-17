@@ -60,7 +60,9 @@ class MCP4451 : public DigipotBase {
         }
 
         char current_to_wiper( float current ){
-            return char(ceilf(float((this->factor*current))));
+            int c= ceilf(this->factor*current);
+            if(c > 255) c= 255;
+            return c;
         }
 
         mbed::I2C* i2c;

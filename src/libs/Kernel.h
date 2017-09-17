@@ -9,6 +9,8 @@
 #define KERNEL_H
 
 #define THEKERNEL Kernel::instance
+#define THECONVEYOR THEKERNEL->conveyor
+#define THEROBOT THEKERNEL->robot
 
 #include "Module.h"
 #include <array>
@@ -24,7 +26,6 @@ class SerialConsole;
 class StreamOutputPool;
 class GcodeDispatch;
 class Robot;
-class Stepper;
 class Planner;
 class StepTicker;
 class Adc;
@@ -52,6 +53,7 @@ class Kernel {
 
         void set_feed_hold(bool f) { feed_hold= f; }
         bool get_feed_hold() const { return feed_hold; }
+        bool is_feed_hold_enabled() const { return enable_feed_hold; }
 
         std::string get_query_string();
 
@@ -60,20 +62,17 @@ class Kernel {
         StreamOutputPool* streams;
         GcodeDispatch*    gcode_dispatch;
         Robot*            robot;
-        Stepper*          stepper;
         Planner*          planner;
         Config*           config;
         Conveyor*         conveyor;
         Configurator*     configurator;
         SimpleShell*      simpleshell;
 
-        int debug;
         SlowTicker*       slow_ticker;
         StepTicker*       step_ticker;
         Adc*              adc;
         std::string       current_path;
         uint32_t          base_stepping_frequency;
-        uint32_t          acceleration_ticks_per_second;
 
     private:
         // When a module asks to be called for a specific event ( a hook ), this is where that request is remembered
@@ -84,6 +83,8 @@ class Kernel {
             bool grbl_mode:1;
             bool feed_hold:1;
             bool ok_per_line:1;
+            bool enable_feed_hold:1;
+            bool new_status_format:1;
         };
 
 };

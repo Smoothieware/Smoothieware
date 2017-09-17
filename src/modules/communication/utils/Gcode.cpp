@@ -23,7 +23,6 @@ Gcode::Gcode(const string &command, StreamOutput *stream, bool strip)
     this->add_nl= false;
     this->is_error= false;
     this->stream= stream;
-    this->millimeters_of_travel = 0.0F;
     prepare_cached_values(strip);
     this->stripped= strip;
 }
@@ -39,7 +38,6 @@ Gcode::~Gcode()
 Gcode::Gcode(const Gcode &to_copy)
 {
     this->command               = strdup(to_copy.command); // TODO we can reference count this so we share copies, may save more ram than the extra count we need to store
-    this->millimeters_of_travel = to_copy.millimeters_of_travel;
     this->has_m                 = to_copy.has_m;
     this->has_g                 = to_copy.has_g;
     this->m                     = to_copy.m;
@@ -55,7 +53,6 @@ Gcode &Gcode::operator= (const Gcode &to_copy)
 {
     if( this != &to_copy ) {
         this->command               = strdup(to_copy.command); // TODO we can reference count this so we share copies, may save more ram than the extra count we need to store
-        this->millimeters_of_travel = to_copy.millimeters_of_travel;
         this->has_m                 = to_copy.has_m;
         this->has_g                 = to_copy.has_g;
         this->m                     = to_copy.m;

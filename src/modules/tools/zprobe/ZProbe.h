@@ -26,19 +26,15 @@ class ZProbe: public Module
 {
 
 public:
-    ZProbe() : running(false), invert_override(false) {};
+    ZProbe() : invert_override(false) {};
     virtual ~ZProbe() {};
 
     void on_module_loaded();
     void on_gcode_received(void *argument);
-    void acceleration_tick(void);
 
-    bool wait_for_probe(int& steps);
-    bool run_probe(int& steps, float feedrate, float max_dist= -1, bool reverse= false);
-    bool run_probe(int& steps, bool fast= false) { return run_probe(steps, fast ? this->fast_feedrate : this->slow_feedrate); }
-    bool return_probe(int steps, bool reverse= false);
-    bool doProbeAt(int &steps, float x, float y);
-    float probeDistance(float x, float y);
+    bool run_probe(float& mm, float feedrate, float max_dist= -1, bool reverse= false);
+    bool run_probe_return(float& mm, float feedrate, float max_dist= -1, bool reverse= false);
+    bool doProbeAt(float &mm, float x, float y);
 
     void coordinated_move(float x, float y, float z, float feedrate, bool relative=false);
     void home();
@@ -48,26 +44,24 @@ public:
     float getFastFeedrate() const { return fast_feedrate; }
     float getProbeHeight() const { return probe_height; }
     float getMaxZ() const { return max_z; }
-    float zsteps_to_mm(float steps);
 
 private:
-    void on_config_reload(void *argument);
-    void accelerate(int c);
+    void config_load();
     void probe_XYZ(Gcode *gc, int axis);
     uint32_t read_probe(uint32_t dummy);
-    volatile float current_feedrate;
+
     float slow_feedrate;
     float fast_feedrate;
     float return_feedrate;
     float probe_height;
     float max_z;
+    float dwell_before_probing;
 
     Pin pin;
     std::vector<LevelingStrategy*> strategies;
-    uint8_t debounce_count;
+    uint16_t debounce_ms, debounce;
 
     volatile struct {
-        volatile bool running:1;
         bool is_delta:1;
         bool is_rdelta:1;
         bool probing:1;

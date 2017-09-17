@@ -34,6 +34,13 @@
 #include "libs/StreamOutputPool.h"
 #include "Robot.h"
 #include "StepperMotor.h"
+#include "ConfigValue.h"
+#include "Config.h"
+#include "checksumm.h"
+#include "StepTicker.h"
+
+#define motor_driver_control_checksum  CHECKSUM("motor_driver_control")
+#define sense_resistor_checksum        CHECKSUM("sense_resistor")
 
 //! return value for TMC26X.getOverTemperature() if there is a overtemperature situation in the TMC chip
 /*!
@@ -150,7 +157,7 @@
 /*
  * Constructor
  */
-TMC26X::TMC26X(std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi) : spi(spi)
+TMC26X::TMC26X(std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi, char d) : spi(spi), designator(d)
 {
     //we are not started yet
     started = false;
@@ -159,18 +166,15 @@ TMC26X::TMC26X(std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi) : spi(sp
     error_reported.reset();
 }
 
-void TMC26X::setResistor(unsigned int resistor)
-{
-    //store the current sense resistor value for later use
-    this->resistor = resistor;
-}
-
 /*
  * configure the stepper driver
  * just must be called.
  */
-void TMC26X::init()
+void TMC26X::init(uint16_t cs)
 {
+    // read chip specific config entries
+    this->resistor= THEKERNEL->config->value(motor_driver_control_checksum, cs, sense_resistor_checksum)->by_default(50)->as_number(); // in milliohms
+
     //setting the default register values
     driver_control_register_value = DRIVER_CONTROL_REGISTER;
     chopper_config_register = CHOPPER_CONFIG_REGISTER;
@@ -191,6 +195,10 @@ void TMC26X::init()
     //set to a conservative start value
     setConstantOffTimeChopper(7, 54, 13, 12, 1);
 #else
+    //void TMC26X::setSpreadCycleChopper( constant_off_time,  blank_time,  hysteresis_start,  hysteresis_end,  hysteresis_decrement);
+
+    // openbuilds high torque nema23 3amps (2.8)
+    setSpreadCycleChopper(5, 36, 6, 0, 0);
     // for 1.5amp kysan @ 12v
     setSpreadCycleChopper(5, 54, 5, 0, 0);
     // for 4amp Nema24 @ 12v
@@ -847,11 +855,6 @@ int TMC26X::getReadoutValue(void)
     return (int)(driver_status_result >> 10);
 }
 
-int TMC26X::getResistor()
-{
-    return this->resistor;
-}
-
 bool TMC26X::isCurrentScalingHalfed()
 {
     if (this->driver_configuration_register_value & VSENSE) {
@@ -864,7 +867,7 @@ bool TMC26X::isCurrentScalingHalfed()
 void TMC26X::dumpStatus(StreamOutput *stream, bool readable)
 {
     if (readable) {
-        stream->printf("Chip type TMC26X\n");
+        stream->printf("designator %c, Chip type TMC26X\n", designator);
 
         check_error_status_bits(stream);
 
@@ -877,7 +880,7 @@ void TMC26X::dumpStatus(StreamOutput *stream, bool readable)
         }
 
         int value = getReadoutValue();
-        stream->printf("Microstep postion phase A: %d\n", value);
+        stream->printf("Microstep position phase A: %d\n", value);
 
         value = getCurrentStallGuardReading();
         stream->printf("Stall Guard value: %d\n", value);
@@ -897,15 +900,15 @@ void TMC26X::dumpStatus(StreamOutput *stream, bool readable)
 
     } else {
         // TODO hardcoded for X need to select ABC as needed
-        bool moving = THEKERNEL->robot->actuators[0]->is_moving();
+        bool moving = THEROBOT->actuators[0]->is_moving();
         // dump out in the format that the processing script needs
         if (moving) {
-            stream->printf("#sg%d,p%lu,k%u,r,", getCurrentStallGuardReading(), THEKERNEL->robot->actuators[0]->get_stepped(), getCoolstepCurrent());
+            stream->printf("#sg%d,p%lu,k%u,r,", getCurrentStallGuardReading(), THEROBOT->actuators[0]->get_current_step(), getCoolstepCurrent());
         } else {
             readStatus(TMC26X_READOUT_POSITION); // get the status bits
             stream->printf("#s,");
         }
-        stream->printf("d%d,", THEKERNEL->robot->actuators[0]->which_direction() ? 1 : -1);
+        stream->printf("d%d,", THEROBOT->actuators[0]->which_direction() ? -1 : 1);
         stream->printf("c%u,m%d,", getCurrent(), getMicrosteps());
         // stream->printf('S');
         // stream->printf(tmc26XStepper.getSpeed(), DEC);
@@ -967,14 +970,14 @@ bool TMC26X::check_error_status_bits(StreamOutput *stream)
     readStatus(TMC26X_READOUT_POSITION); // get the status bits
 
     if (this->getOverTemperature()&TMC26X_OVERTEMPERATURE_PREWARING) {
-        if(!error_reported.test(0)) stream->printf("WARNING: Overtemperature Prewarning!\n");
+        if(!error_reported.test(0)) stream->printf("%c - WARNING: Overtemperature Prewarning!\n", designator);
         error_reported.set(0);
     }else{
         error_reported.reset(0);
     }
 
     if (this->getOverTemperature()&TMC26X_OVERTEMPERATURE_SHUTDOWN) {
-        if(!error_reported.test(1)) stream->printf("ERROR: Overtemperature Shutdown!\n");
+        if(!error_reported.test(1)) stream->printf("%c - ERROR: Overtemperature Shutdown!\n", designator);
         error=true;
         error_reported.set(1);
     }else{
@@ -982,7 +985,7 @@ bool TMC26X::check_error_status_bits(StreamOutput *stream)
     }
 
     if (this->isShortToGroundA()) {
-        if(!error_reported.test(2)) stream->printf("ERROR: SHORT to ground on channel A!\n");
+        if(!error_reported.test(2)) stream->printf("%c - ERROR: SHORT to ground on channel A!\n", designator);
         error=true;
         error_reported.set(2);
     }else{
@@ -990,7 +993,7 @@ bool TMC26X::check_error_status_bits(StreamOutput *stream)
     }
 
     if (this->isShortToGroundB()) {
-        if(!error_reported.test(3)) stream->printf("ERROR: SHORT to ground on channel B!\n");
+        if(!error_reported.test(3)) stream->printf("%c - ERROR: SHORT to ground on channel B!\n", designator);
         error=true;
         error_reported.set(3);
     }else{
@@ -999,7 +1002,7 @@ bool TMC26X::check_error_status_bits(StreamOutput *stream)
 
     // these seem to be triggered when moving so ignore them for now
     if (this->isOpenLoadA()) {
-        if(!error_reported.test(4)) stream->printf("ERROR: Channel A seems to be unconnected!\n");
+        if(!error_reported.test(4)) stream->printf("%c - ERROR: Channel A seems to be unconnected!\n", designator);
         error=true;
         error_reported.set(4);
     }else{
@@ -1007,7 +1010,7 @@ bool TMC26X::check_error_status_bits(StreamOutput *stream)
     }
 
     if (this->isOpenLoadB()) {
-        if(!error_reported.test(5)) stream->printf("ERROR: Channel B seems to be unconnected!\n");
+        if(!error_reported.test(5)) stream->printf("%c - ERROR: Channel B seems to be unconnected!\n", designator);
         error=true;
         error_reported.set(5);
     }else{
@@ -1026,7 +1029,7 @@ bool TMC26X::checkAlarm()
 }
 
 // sets a raw register to the value specified, for advanced settings
-// register 0 writes them, 255 displays what registers are mapped to what
+// register 255 writes them, 0 displays what registers are mapped to what
 // FIXME status registers not reading back correctly, check docs
 bool TMC26X::setRawRegister(StreamOutput *stream, uint32_t reg, uint32_t val)
 {
