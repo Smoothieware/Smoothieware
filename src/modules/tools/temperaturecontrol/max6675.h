@@ -21,12 +21,13 @@ public:
     ~Max6675();
     void UpdateConfig(uint16_t module_checksum, uint16_t name_checksum);
     float get_temperature();
+    void on_idle();
 
 private:
-    float read_temp();
+    struct { bool read_flag:1; } ; //when true, the next call to on_idle will read a new temperature value
     Pin spi_cs_pin;
     mbed::SPI *spi;
-    RingBuffer<float,16> readings;
+    RingBuffer<float,4> readings;
 };
 
 #endif

@@ -22,6 +22,7 @@
 Max6675::Max6675() :
     spi(nullptr)
 {
+    this->read_flag=true;
 }
 
 Max6675::~Max6675()
@@ -48,7 +49,7 @@ void Max6675::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
     } else {
         // Channel 1
         mosi=P0_9; miso=P0_8; sclk=P0_7;
-    } 
+    }
 
     delete spi;
     spi = new mbed::SPI(mosi, miso, sclk);
@@ -59,29 +60,26 @@ void Max6675::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
 
 float Max6675::get_temperature()
 {
-	// Return an average of the last readings
-    if (readings.size() >= readings.capacity()) {
-        readings.delete_tail();
-    }
+    // allow read from hardware via SPI on next call to on_idle()
+    this->read_flag=true;
 
-    float temp = read_temp();
-
-    // Discard occasional errors...
-    if(!isinf(temp)) {
-        readings.push_back(temp);
-    }
-
+    // Return an average of the last readings
     if(readings.size()==0) return infinityf();
 
     float sum = 0;
-    for (int i=0; i<readings.size(); i++)
+    for (int i=0; i<readings.size(); i++) {
         sum += *readings.get_ref(i);
-       
+    }
+
     return sum / readings.size();
 }
 
-float Max6675::read_temp()
+// ask the temperature sensor hardware for a value, store it in a buffer
+void Max6675::on_idle()
 {
+    // this rate limits SPI access
+    if(!this->read_flag) return;
+
     this->spi_cs_pin.set(false);
     wait_us(1); // Must wait for first bit valid
 
@@ -89,17 +87,28 @@ float Max6675::read_temp()
     uint16_t data = spi->write(0);
 
     this->spi_cs_pin.set(true);
-    
+
     float temperature;
 
     //Process temp
     if (data & 0x4) {
-        // uh oh, no thermocouple attached!
+        // Error flag.
         temperature = infinityf();
     } else {
         data >>= 3;
         temperature = data*0.25;
     }
 
-    return temperature;
+    if (readings.size() >= readings.capacity()) {
+        readings.delete_tail();
+    }
+
+    // Discard occasional errors...
+    if(!isinf(temperature))
+    {
+        readings.push_back(temperature);
+    }
+
+    // don't read again until get_temperature() is called
+    this->read_flag=false;
 }
