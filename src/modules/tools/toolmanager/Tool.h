@@ -5,8 +5,7 @@
       you should have received a copy of the gnu general public license along with smoothie. if not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef TOOL_H
-#define TOOL_H
+#pragma once
 
 #include "Module.h"
 
@@ -18,16 +17,13 @@ public:
     Tool(){};
     virtual ~Tool() {};
 
-    virtual void enable(){ enabled= true; }
-    virtual void disable(){ enabled= false; }
+    virtual void select()= 0;
+    virtual void deselect()= 0;
     virtual const float *get_offset() const { return offset; }
     virtual uint16_t get_name() const { return identifier; }
 
 protected:
-    bool enabled;
     float offset[3];
     uint16_t identifier;
 };
 
-
-#endif

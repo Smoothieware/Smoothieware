@@ -57,7 +57,7 @@ public:
      * You can select a different stepping with setMicrosteps() to aa different value.
      * \sa start(), setMicrosteps()
      */
-    TMC26X(std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi);
+    TMC26X(std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi, char designator);
 
     /*!
      * \brief configures the TMC26X stepper driver. Before you called this function the stepper driver is in nonfunctional mode.
@@ -69,7 +69,7 @@ public:
      * Most member functions are non functional if the driver has not been started.
      * Therefore it is best to call this in your Arduino setup() function.
      */
-    void init();
+    void init(uint16_t cs);
 
     /*!
      * \brief Set the number of microsteps in 2^i values (rounded) up to 256
@@ -397,13 +397,6 @@ public:
     void readStatus(int8_t read_value);
 
     /*!
-     * \brief Returns the current sense resistor value in milliohm.
-     * The default value of ,15 Ohm will return 150.
-     */
-    int getResistor();
-    void setResistor(unsigned int resistor);
-
-    /*!
      * \brief Prints out all the information that can be found in the last status read out - it does not force a status readout.
      * The result is printed via Serial
      */
@@ -452,5 +445,7 @@ private:
     };
 
     uint8_t cool_step_lower_threshold; // we need to remember the threshold to enable and disable the CoolStep feature
+    char designator;
+
 };
 

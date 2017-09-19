@@ -8,14 +8,11 @@
 #ifndef PANEL_H
 #define PANEL_H
 
+#include "Module.h"
 #include "Button.h"
 #include "Pin.h"
-#include "mbed.h"
 #include <string>
-using std::string;
-
-#define MENU_MODE                  0
-#define CONTROL_MODE               1
+#include <functional>
 
 #define THEPANEL Panel::instance
 
@@ -53,6 +50,7 @@ class Panel : public Module {
         int get_encoder_resolution() const { return encoder_click_resolution; }
 
         // Menu
+        void enter_nop_mode();
         void enter_menu_mode(bool force= false);
         void setup_menu(uint16_t rows, uint16_t lines);
         void setup_menu(uint16_t rows);
@@ -74,24 +72,34 @@ class Panel : public Module {
         // file playing from sd
         bool is_playing() const;
         bool is_suspended() const;
-        void set_playing_file(string f);
+        void set_playing_file(std::string f);
         const char* get_playing_file() { return playing_file; }
 
-        string getMessage() { return message; }
+        std::string getMessage() { return message; }
         bool hasMessage() { return message.size() > 0; }
 
         uint16_t get_screen_lines() const { return screen_lines; }
+
+        float get_jogging_speed(int i) { return jogging_speed_mm_min[i]; }
+        void set_jogging_speed(int i, float v) { jogging_speed_mm_min[i]= v; }
+        bool has_laser() const { return laser_enabled; }
+
+        bool is_extruder_display_enabled(void);
 
         // public as it is directly accessed by screens... not good
         // TODO pass lcd into ctor of each sub screen
         LcdBase* lcd;
         PanelScreen* custom_screen;
 
+        using encoder_cb_t= std::function<void(int ticks)>;
+        bool enter_direct_encoder_mode(encoder_cb_t fnc);
+
         // as panelscreen accesses private fields in Panel
         friend class PanelScreen;
 
     private:
 
+        void idle_processing();
         // external SD card
         bool mount_external_sd(bool on);
         Pin sdcd_pin;
@@ -126,23 +134,29 @@ class Panel : public Module {
         float default_hotend_temperature;
         float default_bed_temperature;
 
-        string message;
+        std::string message;
+        encoder_cb_t encoder_cb_fnc;
 
-        uint16_t screen_lines;
-        uint16_t menu_current_line;
         char playing_file[20];
-        uint8_t extsd_spi_channel;
 
         volatile struct {
+            uint16_t screen_lines:16;
+            uint16_t menu_current_line:16;
+            uint8_t extsd_spi_channel:8;
+
             bool start_up:1;
             bool menu_changed:1;
             bool control_value_changed:1;
             bool external_sd_enable:1;
+            bool laser_enabled:1;
+            bool in_idle:1;
+            bool display_extruder:1;
             volatile bool counter_changed:1;
             volatile bool click_changed:1;
             volatile bool refresh_flag:1;
             volatile bool do_buttons:1;
             volatile bool do_encoder:1;
+
             char mode:2;
             char menu_offset:3;
             int encoder_click_resolution:3;

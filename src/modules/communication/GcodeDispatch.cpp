@@ -26,7 +26,6 @@
 #include "utils.h"
 #include "LPC17xx.h"
 
-#define return_error_on_unhandled_gcode_checksum    CHECKSUM("return_error_on_unhandled_gcode")
 #define panel_display_message_checksum CHECKSUM("display_message")
 #define panel_checksum             CHECKSUM("panel")
 
@@ -81,7 +80,7 @@ try_again:
         return;
     }
 
-    if ( first_char == 'G' || first_char == 'M' || first_char == 'T' || first_char == 'N' ) {
+    if ( first_char == 'G' || first_char == 'M' || first_char == 'T' || first_char == 'S' || first_char == 'N' ) {
 
         //Get linenumber
         if ( first_char == 'N' ) {
@@ -151,9 +150,13 @@ try_again:
                     if(THEKERNEL->is_halted()) {
                         // we ignore all commands until M999, unless it is in the exceptions list (like M105 get temp)
                         if(gcode->has_m && gcode->m == 999) {
-                            THEKERNEL->call_event(ON_HALT, (void *)1); // clears on_halt
-
-                            // fall through and pass onto other modules
+                            if(THEKERNEL->is_halted()) {
+                                THEKERNEL->call_event(ON_HALT, (void *)1); // clears on_halt
+                                new_message.stream->printf("WARNING: After HALT you should HOME as position is currently unknown\n");
+                            }
+                            new_message.stream->printf("ok\n");
+                            delete gcode;
+                            continue;
 
                         }else if(!is_allowed_mcode(gcode->m)) {
                             // ignore everything, return error string to host
@@ -196,7 +199,7 @@ try_again:
                                 }
                             }
                             // makes it handle the parameters as a machine position
-                            THEKERNEL->robot->next_command_is_MCS= true;
+                            THEROBOT->next_command_is_MCS= true;
 
                         }
 
@@ -283,7 +286,7 @@ try_again:
                             }
 
                             case 500: // M500 save volatile settings to config-override
-                                THEKERNEL->conveyor->wait_for_empty_queue(); //just to be safe as it can take a while to run
+                                THEKERNEL->conveyor->wait_for_idle(); //just to be safe as it can take a while to run
                                 //remove(THEKERNEL->config_override_filename()); // seems to cause a hang every now and then
                                 __disable_irq();
                                 {
@@ -300,6 +303,19 @@ try_again:
                                 __enable_irq();
                                 new_message.stream->printf("Settings Stored to %s\r\nok\r\n", THEKERNEL->config_override_filename());
                                 continue;
+
+                            case 501: // load config override
+                            case 504: // save to specific config override file
+                                {
+                                    string arg= get_arguments(single_command + possible_command); // rest of line is filename
+                                    if(arg.empty()) arg= "/sd/config-override";
+                                    else arg= "/sd/config-override." + arg;
+                                    //new_message.stream->printf("args: <%s>\n", arg.c_str());
+                                    SimpleShell::parse_command((gcode->m == 501) ? "load_command" : "save_command", arg, new_message.stream);
+                                }
+                                delete gcode;
+                                new_message.stream->printf("ok\r\n");
+                                return;
 
                             case 502: // M502 deletes config-override so everything defaults to what is in config
                                 remove(THEKERNEL->config_override_filename());
@@ -319,6 +335,7 @@ try_again:
                                 gcode->add_nl= true;
                                 break; // fall through to process by modules
                             }
+
                         }
                     }
 
@@ -341,6 +358,10 @@ try_again:
                         }else{
                             new_message.stream->printf("unknown\r\n");
                         }
+
+                        // we cannot continue safely after an error so we enter HALT state
+                        new_message.stream->printf("Entering Alarm/Halt state\n");
+                        THEKERNEL->call_event(ON_HALT, nullptr);
 
                     }else{
 

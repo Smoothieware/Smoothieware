@@ -49,7 +49,7 @@ class Pin {
 
         Pin* pull_none(void);
 
-        inline bool get(){
+        inline bool get() const{
             if (!this->valid) return false;
             return this->inverting ^ (( this->port->FIOPIN >> this->pin ) & 1);
         }

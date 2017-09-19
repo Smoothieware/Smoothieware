@@ -8,15 +8,15 @@ class Config;
 class MorganSCARASolution : public BaseSolution {
     public:
         MorganSCARASolution(Config*);
-        void cartesian_to_actuator(const float[], ActuatorCoordinates &) override;
-        void actuator_to_cartesian(const ActuatorCoordinates &, float[] ) override;
+        void cartesian_to_actuator(const float[], ActuatorCoordinates &) const override;
+        void actuator_to_cartesian(const ActuatorCoordinates &, float[] ) const override;
 
         bool set_optional(const arm_options_t& options) override;
-        bool get_optional(arm_options_t& options, bool force_all) override;
+        bool get_optional(arm_options_t& options, bool force_all) const override;
 
     private:
         void init();
-        float to_degrees(float radians);
+        float to_degrees(float radians) const;
 
         float arm1_length;
         float arm2_length;
