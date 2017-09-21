@@ -6,6 +6,7 @@
 #include "Module.h"
 
 class Sftpd;
+class Ftpd;
 class CommandQueue;
 
 class Network : public Module
@@ -23,6 +24,7 @@ public:
 
     // accessed from C
     Sftpd *sftpd;
+    Ftpd *ftpd;
     struct {
         bool webserver_enabled:1;
         bool telnet_enabled:1;
