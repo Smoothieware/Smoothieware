@@ -29,23 +29,24 @@ private:
     enum TASK { LIST, RETR, STOR };
     struct control_conn_state {
         struct psock p;     // Protosocket
-        char ib[128];       // Input buffer
         char *args;         // Pointer to location inside ib where command arguments begin, NULL if no args
-        char pwd[128];      // Working directory
-        bool binary;        // Binary/ASCII mode flag
-        bool passive;       // Active/Passive mode flag
         char *rename_from;  // Filename stored by RNFR command while awaiting RNTO
         char *filename;     // Used to store filename parsed from args
-        TASK task;          // Which type of command should the data thread expect
-        bool done;          // Flag for when the data connection is done
-        bool error;         // Flag for if the data connection encountered an error
+        char ib[128];       // Input buffer
+        char pwd[128];      // Working directory
+        bool binary:1;      // Binary/ASCII mode flag
+        bool passive:1;     // Active/Passive mode flag
+        bool done:1;        // Flag for when the data connection is done
+        bool error:1;       // Flag for if the data connection encountered an error
+        TASK task:2;        // Which type of command should the data thread expect
+        
     };
     struct data_conn_state {
-        char ob[256];                       // Output buffer
-        int  oblen;                         // number of bytes in ob to send 
         struct control_conn_state *control; // The associated control connection
         FILE *fd;                           // File handle
         DIR  *dir;                          // Directory handle
+        short  oblen;                       // number of bytes in ob to send 
+        char ob[256];                       // Output buffer  
     };
     
     struct control_conn_state *lastc;       
