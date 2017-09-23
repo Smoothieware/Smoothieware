@@ -19,6 +19,9 @@ extern "C" {
 #define DEBUG_PRINTF(...)
 
 
+
+
+
 ////// Public Interface
 
 Ftpd::Ftpd() {  // Constructor
@@ -111,39 +114,39 @@ int Ftpd::handle_control_connection(struct control_conn_state *s) {
         
         // Authentication
         if (strncmp(s->ib, "USER", 4) == 0) {
-            PSOCK_SEND_STR(&s->p, "331 OK.\r\n");
+            PSOCK_SEND_STR(&s->p, "331 OK\r\n");
         } else if (strncmp(s->ib, "PASS", 4) == 0) {
             // TODO: implement password auth
-            PSOCK_SEND_STR(&s->p, "230 OK.\r\n");
-            //PSOCK_SEND_STR(&s->p, "530 Incorrect password.\r\n");
+            PSOCK_SEND_STR(&s->p, "230 OK\r\n");
+            //PSOCK_SEND_STR(&s->p, "530 Error.\r\n");
             
         // Connection / Misc
         } else if (strncmp(s->ib, "SYST", 4) == 0) { 
             PSOCK_SEND_STR(&s->p, "215 UNIX Type: L8\r\n");
         } else if (strncmp(s->ib, "NOOP", 4) == 0) {
-            PSOCK_SEND_STR(&s->p, "200 OK.\r\n");
+            PSOCK_SEND_STR(&s->p, "200 OK\r\n");
         } else if (strncmp(s->ib, "QUIT", 4) == 0) {
-            PSOCK_SEND_STR(&s->p, "221 Goodbye.\r\n");
+            PSOCK_SEND_STR(&s->p, "221 Bye\r\n");
             break;
         } else if (strncmp(s->ib, "TYPE", 4) == 0) {
             if (s->args) {
                 s->binary = (s->args[0] == 'I');
                 if (s->binary) {
-                    PSOCK_SEND_STR(&s->p, "200 Binary Mode.\r\n");
+                    PSOCK_SEND_STR(&s->p, "200 OK\r\n");
                 } else {
-                    PSOCK_SEND_STR(&s->p, "200 ASCII Mode.\r\n");
+                    PSOCK_SEND_STR(&s->p, "200 OK\r\n");
                 }
             } else {
                 PSOCK_SEND_STR(&s->p, "500 Error\r\n");
             }
         } else if (strncmp(s->ib, "PORT", 4) == 0) {
             // Active mode: connect to client on supplied port to send data
-            PSOCK_SEND_STR(&s->p, "520 Not implemented\r\n");
+            PSOCK_SEND_STR(&s->p, "520 Error\r\n");
         } else if (strncmp(s->ib, "PASV", 4) == 0) {
             // Passive mode: listen for data connection from client on FTP_PASSIVE_DATA_PORT
             s->passive = true;
             lastc = s;
-            PSOCK_SEND_STR(&s->p, "227 Entering Passive Mode (");
+            PSOCK_SEND_STR(&s->p, "227 Passive (");
             
             // IP address    
             make_ip_str(tmp);
@@ -187,7 +190,7 @@ int Ftpd::handle_control_connection(struct control_conn_state *s) {
                     }
                     *(cursor) = '\0'; // terminate the string here
                 }
-                PSOCK_SEND_STR(&s->p, "200 OK.\r\n");
+                PSOCK_SEND_STR(&s->p, "200 OK\r\n");
             }
             
 
@@ -265,7 +268,7 @@ int Ftpd::handle_control_connection(struct control_conn_state *s) {
             s->filename = parse_path(s->pwd, s->args);
                 
             lastc = s;
-            PSOCK_SEND_STR(&s->p, "150 Opening data connection\r\n");
+            PSOCK_SEND_STR(&s->p, "150 OK...\r\n");
             DEBUG_PRINTF("FTP: [control] 150 waiting for data thread to finish\n");
             PSOCK_WAIT_UNTIL(&s->p, s->done);
             
@@ -274,7 +277,7 @@ int Ftpd::handle_control_connection(struct control_conn_state *s) {
                 PSOCK_SEND_STR(&s->p, "451 Error\r\n");
             } else {
                 DEBUG_PRINTF("FTP: [control] 226 data thread completed successfully\n");
-                PSOCK_SEND_STR(&s->p, "226 Transfer complete.\r\n");
+                PSOCK_SEND_STR(&s->p, "226 Done\r\n");
             }
             
             free(s->filename);
@@ -282,7 +285,7 @@ int Ftpd::handle_control_connection(struct control_conn_state *s) {
             
                 
         } else {
-            PSOCK_SEND_STR(&s->p, "500 Unrecognised command\r\n");
+            PSOCK_SEND_STR(&s->p, "500 Unknown cmd\r\n");
         }
     } 
   
