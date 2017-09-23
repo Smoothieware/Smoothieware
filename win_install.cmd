@@ -27,6 +27,10 @@ set GCC4ARM_MD5=09c19b3248863074f5498a88f31bee16
 set GCC4ARM_MD5_FILENAME=%ROOTDIR%gcc-arm-none-eabi.md5
 set GCC4ARM_DIR=%ROOTDIR%gcc-arm-none-eabi
 set GCC4ARM_BINDIR=%GCC4ARM_DIR%\bin
+set DFUUTIL_FILENAME=build\win32\dfu-util.exe
+set DFUUTIL_URL=http://dfu-util.sourceforge.net/releases/dfu-util-0.8-binaries/win32-mingw32/dfu-util-static.exe
+set DFUUTIL_MD5=7f3b67a8ffd9a7e8b58a4ad7708a0e85
+set DFUUTIL_MD5_FILENAME=%ROOTDIR%dfu-util.md5
 set OUR_MAKE=%ROOTDIR%build\win32\make.exe
 set BUILDENV_CMD=%GCC4ARM_BINDIR%\buildenv.cmd
 set BUILDSHELL_CMD=%ROOTDIR%BuildShell.cmd
@@ -60,6 +64,17 @@ call :RunAndLog cd %GCC4ARM_DIR%
 call :RunAndLog ..\build\win32\bsdtar xf %GCC4ARM_TAR%
 if errorlevel 1 goto ExitOnError
 call :RunAndLog cd ..
+
+echo Downloading dfu-util...
+echo %DATE% %TIME%  Executing build\win32\curl -kL0 %DFUUTIL_URL%>>%LOGFILE%
+build\win32\curl -kL0 %DFUUTIL_URL% >%ROOTDIR%%DFUUTIL_FILENAME%
+if errorlevel 1 goto ExitOnError
+
+echo Validating md5 signature of dfu-util...
+echo %DFUUTIL_MD5% *%DFUUTIL_FILENAME%>%DFUUTIL_MD5_FILENAME%
+call :RunAndLog build\win32\md5sum --check %DFUUTIL_MD5_FILENAME%
+if errorlevel 1 goto ExitOnError
+del "%DFUUTIL_MD5_FILENAME%"
 
 echo Creating helper scripts...
 echo @echo off>%BUILDENV_CMD%
