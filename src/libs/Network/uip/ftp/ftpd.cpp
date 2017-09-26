@@ -87,6 +87,7 @@ void Ftpd::control_appcall(void) {
         s->done    = false;
         s->error   = false;
         s->rename_from = NULL;
+        s->task    = IDLE;
         
         uip_conn->appstate = s;
         PSOCK_INIT(&s->p, s->ib, sizeof(s->ib));
@@ -200,7 +201,7 @@ int Ftpd::handle_control_connection(struct control_conn_state *s) {
             PSOCK_SEND_STR(&s->p, "250 OK\r\n"); 
             
 
-            
+          
         // File / Directory Management
         } else if (strncmp(s->ib, "DELE", 4) == 0) { // DELEte a file
             s->filename = parse_path(s->pwd, s->args);
@@ -258,14 +259,16 @@ int Ftpd::handle_control_connection(struct control_conn_state *s) {
             
         
         // Upload / Download / Directory Listing
-        } else if (strncmp(s->ib, "LIST", 4)==0 || strncmp(s->ib, "RETR", 4)==0 || strncmp(s->ib, "STOR", 4)==0) {
-            DEBUG_PRINTF("FTP: [control] got LIST/RETR/STOR command\n");
+        } else if (strncmp(s->ib, "LIST", 4)==0 || strncmp(s->ib, "RETR", 4)==0 || strncmp(s->ib, "STOR", 4)==0 || strncmp(s->ib, "APPE", 4)==0) {
+            DEBUG_PRINTF("FTP: [control] got LIST/RETR/STOR/APPE command\n");
             if        (strncmp(s->ib, "LIST", 4)==0) {
                 s->task = LIST;
             } else if (strncmp(s->ib, "RETR", 4)==0) {
                 s->task = RETR;
             } else if (strncmp(s->ib, "STOR", 4)==0) {
                 s->task = STOR;
+            } else if (strncmp(s->ib, "APPE", 4)==0) {
+                s->task = APPE;
             } else {
                 PSOCK_SEND_STR(&s->p, "500 Internal Server Error");
                 continue;
@@ -277,7 +280,7 @@ int Ftpd::handle_control_connection(struct control_conn_state *s) {
             PSOCK_SEND_STR(&s->p, "150 OK...\r\n");
             DEBUG_PRINTF("FTP: [control] 150 waiting for data thread to finish\n");
             PSOCK_WAIT_UNTIL(&s->p, s->done);
-            
+            s->task = IDLE;
             if (s->error) {
                 DEBUG_PRINTF("FTP: [control] 451 data thread completed with error \n");
                 PSOCK_SEND_STR(&s->p, "451 Error\r\n");
@@ -318,11 +321,13 @@ void Ftpd::data_appcall(void) {
         
         s->control->error = false;
         
-        if (s->control->task == LIST) {
+        if (s->control->task == IDLE) {
+            //uip_close(); // not expecting a connection at this time
+        } else if (s->control->task == LIST) {
             list_connected(s);
         } else if (s->control->task == RETR) {
             retr_connected(s);
-        } else if (s->control->task == STOR) {
+        } else if (s->control->task == STOR || s->control->task == APPE) {
             stor_connected(s);
         }
     }
@@ -339,7 +344,7 @@ void Ftpd::data_appcall(void) {
     }
     
     if(uip_newdata()) {
-        if (s->control->task == STOR) {
+        if (s->control->task == STOR || s->control->task == APPE) {
             stor_newdata(s);
         }
     }
@@ -405,16 +410,7 @@ void Ftpd::list_acked(struct data_conn_state *s) {
 
 void Ftpd::retr_connected(struct data_conn_state *s) {
     DEBUG_PRINTF("FTP: [data] RETR connected\n");
-    if (s->control->binary) {
-        s->fd = fopen(s->control->filename, "rb");
-    } else {
-        s->fd = fopen(s->control->filename, "r");
-    }
-    if (s->fd == NULL) {
-        s->control->error = true;
-        uip_close();
-        return;
-    }
+    if (!open_data_file(s, 'r')) { return; }
     retr_acked(s);
 }
 void Ftpd::retr_acked(struct data_conn_state *s) {
@@ -428,27 +424,34 @@ void Ftpd::retr_acked(struct data_conn_state *s) {
 
 
 void Ftpd::stor_connected(struct data_conn_state *s) {
-    DEBUG_PRINTF("FTP: [data] STOR connected\n");
-    if (s->control->binary) {
-        s->fd = fopen(s->control->filename, "wb");
+    if (s->control->task == APPE) {
+        DEBUG_PRINTF("FTP: [data] APPE connected\n");
     } else {
-        s->fd = fopen(s->control->filename, "w");
+        DEBUG_PRINTF("FTP: [data] STOR connected\n");
+        open_data_file(s, 'w');
     }
+}
+void Ftpd::stor_newdata(struct data_conn_state *s) {
+    DEBUG_PRINTF("FTP: [data] STOR/APPE newdata\n");
+    // HACK ALERT... to work around the fwrite/filesystem bug where writing large amounts of data 
+    // corrupts the file we workaround by closing the file, then reopening for append until we are done 
+    if (s->fd == NULL) {
+        if (!open_data_file(s, 'a')) { return; }
+    }
+    fwrite(uip_appdata, 1, uip_datalen(), s->fd);
+    fclose(s->fd);
+    s->fd = NULL;
+}
+
+bool Ftpd::open_data_file(struct data_conn_state *s, char mode) {
+    char modestr[3] = {mode, '\0', '\0'};
+    if (s->control->binary) { modestr[1] = 'b'; } 
+    s->fd = fopen(s->control->filename, modestr);
     if (s->fd == NULL) {
         DEBUG_PRINTF("FTP: [data] fopen failed\n");
         s->control->error = true;
         uip_close();
-    } 
-}
-void Ftpd::stor_newdata(struct data_conn_state *s) {
-    DEBUG_PRINTF("FTP: [data] STOR newdata\n");
-    fwrite(uip_appdata, 1, uip_datalen(), s->fd);
-    // HACK ALERT... to work around the fwrite/filesystem bug where writing large amounts of data 
-    // corrupts the file we workaround by closing the file, then reopening for append until we are done
-    fclose(s->fd);
-    if (s->control->binary) {
-        s->fd = fopen(s->control->filename, "ab");
-    } else {
-        s->fd = fopen(s->control->filename, "a");
+        return false;
     }
+    return true;
 }

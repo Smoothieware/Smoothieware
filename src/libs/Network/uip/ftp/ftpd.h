@@ -26,7 +26,7 @@ public:
     
     
 private:
-    enum TASK { LIST, RETR, STOR };
+    enum TASK { IDLE, LIST, RETR, STOR, APPE };
     struct control_conn_state {
         struct psock p;     // Protosocket
         char *args;         // Pointer to location inside ib where command arguments begin, NULL if no args
@@ -38,7 +38,7 @@ private:
         bool passive:1;     // Active/Passive mode flag
         bool done:1;        // Flag for when the data connection is done
         bool error:1;       // Flag for if the data connection encountered an error
-        TASK task:2;        // Which type of command should the data thread expect
+        TASK task:4;        // Which type of command should the data thread expect
         
     };
     struct data_conn_state {
@@ -62,6 +62,7 @@ private:
     void retr_acked(struct data_conn_state *);
     void stor_connected(struct data_conn_state *);
     void stor_newdata(struct data_conn_state *);
+    bool open_data_file(struct data_conn_state *, char);
 };
 
 #endif /* __Ftpd_H__ */
