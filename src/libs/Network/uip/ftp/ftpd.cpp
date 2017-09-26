@@ -66,6 +66,11 @@ char *Ftpd::parse_path(char *pwd, char* input) {
     }
     return result;
 }
+void Ftpd::make_ip_str(char *out) {
+    uip_ipaddr_t hostaddr;
+    uip_gethostaddr(&hostaddr);
+    sprintf(out, "%u,%u,%u,%u,", uip_ipaddr1(hostaddr), uip_ipaddr2(hostaddr), uip_ipaddr3(hostaddr), uip_ipaddr4(hostaddr));    
+}
 
 
 ////// Control Channel
@@ -163,6 +168,21 @@ int Ftpd::handle_control_connection(struct control_conn_state *s) {
             PSOCK_SEND_STR(&s->p, "257 \"");
             PSOCK_SEND_STR(&s->p, s->pwd);
             PSOCK_SEND_STR(&s->p, "\"\r\n"); 
+            
+        } else if (strncmp(s->ib,"CDUP",4)==0 || strcmp(s->ib,"CWD ..")==0) {
+            if (strlen(s->pwd) == 1) {
+                // at the root, can't CDUP any more
+                PSOCK_SEND_STR(&s->p, "550 Failed\r\n");
+            } else {
+                cursor = strrchr(s->pwd, '/');
+                if (cursor != NULL) {
+                    if (cursor == s->pwd) {
+                        cursor++; // don't delete first slash if we try to CDUP to the root 
+                    }
+                    *(cursor) = '\0'; // terminate the string here
+                }
+                PSOCK_SEND_STR(&s->p, "200 OK\r\n");
+            }
         } else if (strncmp(s->ib, "CWD", 3) == 0) {
             // TODO: check it actually exists first, and 550 if not
             if (s->args[0] == '/') {
@@ -178,20 +198,6 @@ int Ftpd::handle_control_connection(struct control_conn_state *s) {
                 s->pwd[sizeof(s->pwd)-1] = '\0';
             }
             PSOCK_SEND_STR(&s->p, "250 OK\r\n"); 
-        } else if (strncmp(s->ib, "CDUP", 4) == 0) {
-            if (strlen(s->pwd) == 1) {
-                // at the root, can't CDUP any more
-                PSOCK_SEND_STR(&s->p, "550 Failed\r\n");
-            } else {
-                cursor = strrchr(s->pwd, '/');
-                if (cursor != NULL) {
-                    if (cursor == s->pwd) {
-                        cursor++; // don't delete first slash if we try to CDUP to the root 
-                    }
-                    *(cursor) = '\0'; // terminate the string here
-                }
-                PSOCK_SEND_STR(&s->p, "200 OK\r\n");
-            }
             
 
             

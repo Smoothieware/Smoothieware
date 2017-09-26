@@ -52,9 +52,9 @@ private:
     struct control_conn_state *lastc;       
     
     char *parse_path(char *, char *);
+    void make_ip_str(char *);
     void control_appcall(void);
     int  handle_control_connection(struct control_conn_state *);
-    void make_ip_str(char *);
     void data_appcall(void);
     void list_connected(struct data_conn_state *);
     void list_acked(struct data_conn_state *);
