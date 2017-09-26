@@ -299,14 +299,6 @@ int Ftpd::handle_control_connection(struct control_conn_state *s) {
     PSOCK_END(&s->p);
 }
 
-void Ftpd::make_ip_str(char *o) {
-    uip_ipaddr_t hostaddr;
-    uip_gethostaddr(&hostaddr);
-    sprintf(o, "%u,%u,%u,%u,", uip_ipaddr1(hostaddr), uip_ipaddr2(hostaddr), uip_ipaddr3(hostaddr), uip_ipaddr4(hostaddr));    
-}
-
-
-
 
 
 
