@@ -125,7 +125,7 @@ endstop.minx.pin                             1.24^
 endstop.minx.homing_direction                home_to_max
 endstop.minx.homing_position                 395
 endstop.minx.max_travel                      400
-endstop.minx.fast_rate                       50
+endstop.minx.fast_rate                       100
 endstop.minx.slow_rate                       20
 endstop.minx.retract                         1
 
@@ -136,8 +136,8 @@ endstop.miny.limit_enable                    true
 endstop.miny.pin                             1.25^
 endstop.miny.homing_direction                home_to_max
 endstop.miny.homing_position                 345
-endstop.miny.max_travel                      400
-endstop.miny.fast_rate                       50
+endstop.miny.max_travel                      350
+endstop.miny.fast_rate                       100
 endstop.miny.slow_rate                       20
 endstop.miny.retract                         1
 
@@ -147,9 +147,9 @@ endstop.minz.enable                          true
 endstop.minz.limit_enable                    true
 endstop.minz.pin                             1.26^
 endstop.minz.homing_direction                home_to_max
-endstop.minz.homing_position                 343
-endstop.minz.max_travel                      250
-endstop.minz.fast_rate                       30
+endstop.minz.homing_position                 228
+endstop.minz.max_travel                      230
+endstop.minz.fast_rate                       50
 endstop.minz.slow_rate                       10
 endstop.minz.retract                         1
 
@@ -159,9 +159,9 @@ endstop.mina.enable                          true
 endstop.mina.limit_enable                    true
 endstop.mina.pin                             1.27^
 endstop.mina.homing_direction                home_to_max
-endstop.mina.homing_position                 343
-endstop.mina.max_travel                      250
-endstop.mina.fast_rate                       30
+endstop.mina.homing_position                 228
+endstop.mina.max_travel                      230
+endstop.mina.fast_rate                       50
 endstop.mina.slow_rate                       10
 endstop.mina.retract                         1
 
@@ -280,7 +280,7 @@ switch.bMicrostepping.input_on_command                  M52
 switch.bMicrostepping.input_off_command                 M53
 switch.bMicrostepping.output_pin                        0.25
 switch.bMicrostepping.output_type                       digital
-switch.bMicrostepping.fail_safe_set_to                  1
+switch.bMicrostepping.failsafe_set_to                   1
 switch.bMicrostepping.startup_state                     true
 
 switch.cMicrostepping.enable                            true
@@ -288,7 +288,7 @@ switch.cMicrostepping.input_on_command                  M54
 switch.cMicrostepping.input_off_command                 M55
 switch.cMicrostepping.output_pin                        0.26
 switch.cMicrostepping.output_type                       digital
-switch.cMicrostepping.fail_safe_set_to                  1
+switch.cMicrostepping.failsafe_set_to                   1
 switch.cMicrostepping.startup_state                     true
 
 ##################################
