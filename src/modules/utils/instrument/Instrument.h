@@ -14,38 +14,44 @@
 class Instrument : public Module{
     public:
 
-        Instrument(){
-            // I2C com
-            this->i2c = new mbed::I2C(p28, p27);
-            this->i2c->frequency(20000);
-        }
+        Instrument(){}
 
         ~Instrument(){
             delete this->i2c;
         }
 
         void on_module_loaded(){
-            this->register_for_event(ON_GCODE_RECEIVED);
+            this->i2c = new mbed::I2C(P0_27, P0_28);
+            this->i2c->frequency(1000);
         }
 
         void on_gcode_received(void *argument) {
             Gcode *gcode = static_cast<Gcode*>(argument);
             if (gcode->has_m) {
                 if (gcode->m == 911) {
-                    char addr = 0x00;
+                    uint8_t addr;
                     if (gcode->has_letter('L')) {
-                        addr = 0x01;
+                        // request ID from left pipette
+                        addr = 'L';
                     }
                     else if (gcode->has_letter('R')) {
-                        addr = 0x02;
+                        // request ID from right pipette
+                        addr = 'R';
                     }
                     else {
-                        gcode->stream->printf("M911 must include letter L or R.\n");
                         return;
                     }
-                    char data[2];
-                    this->i2c->read(addr, data, 2);
-                    gcode->stream->printf("Just did I2C{%d, %d}.\n", data[0], data[1]);
+
+                    // FIXME (Andy): for reasons unkown, the Arduino's
+                    // I2C address must be double for it to work
+                    addr *= 2;
+
+                    char data[5];
+                    this->i2c->read(addr, data, 5);
+
+                    gcode->stream->printf(
+                        "InstrumentData: %d, %d, %d, %d, %d\r\n",
+                        data[0], data[1], data[2], data[3], data[4]);
                 }
             }
         }
