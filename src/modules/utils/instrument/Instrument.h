@@ -14,43 +14,44 @@
 class Instrument : public Module{
     public:
 
-        Instrument(){}
+        Instrument(){
+        }
 
         ~Instrument(){
             delete this->i2c;
         }
 
         void on_module_loaded(){
+            // I2C com
             this->i2c = new mbed::I2C(P0_27, P0_28);
-            this->i2c->frequency(1000);
+            this->i2c->frequency(10000);
+            this->register_for_event(ON_GCODE_RECEIVED);
         }
 
         void on_gcode_received(void *argument) {
             Gcode *gcode = static_cast<Gcode*>(argument);
             if (gcode->has_m) {
                 if (gcode->m == 911) {
-                    uint8_t addr;
+                    char addr;
                     if (gcode->has_letter('L')) {
-                        // request ID from left pipette
                         addr = 'L';
                     }
                     else if (gcode->has_letter('R')) {
-                        // request ID from right pipette
                         addr = 'R';
                     }
                     else {
                         return;
                     }
 
-                    // FIXME (Andy): for reasons unkown, the Arduino's
-                    // I2C address must be double for it to work
+                    // FIXME (andy): for some unknown reason, I need to double
+                    // the value of the address here, so the slave device recieves
+                    // the request. This shouldn't be possible but it makes it work...
                     addr *= 2;
 
                     char data[5];
                     this->i2c->read(addr, data, 5);
-
                     gcode->stream->printf(
-                        "InstrumentData: %d, %d, %d, %d, %d\r\n",
+                        "Instrument: %d, %d, %d, %d, %d\r\n",
                         data[0], data[1], data[2], data[3], data[4]);
                 }
             }
