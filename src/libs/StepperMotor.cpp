@@ -9,9 +9,15 @@
 #include "Kernel.h"
 #include "MRI_Hooks.h"
 #include "StepTicker.h"
+#include "checksumm.h"
+#include "Config.h"
+#include "ConfigValue.h"
 
 #include <math.h>
 #include "mbed.h"
+
+#define stepper_driver_enable_delay_checksum    CHECKSUM("stepper_driver_enable_delay")
+
 
 StepperMotor::StepperMotor(Pin &step, Pin &dir, Pin &en) : step_pin(step), dir_pin(dir), en_pin(en)
 {
@@ -29,6 +35,7 @@ StepperMotor::StepperMotor(Pin &step, Pin &dir, Pin &en) : step_pin(step), dir_p
     acceleration= NAN;
     selected= true;
     extruder= false;
+    enable_delay= THEKERNEL->config->value(stepper_driver_enable_delay_checksum)->by_default("0.0")->as_number();
 
     enable(false);
     unstep(); // initialize step pin
@@ -59,10 +66,21 @@ void StepperMotor::on_enable(void *argument)
     uint32_t bm= (uint32_t)argument;
     if(bm == 0x01) {
         enable(true);
-
     }else if(bm == 0 || ((bm&0x01) == 0 && ((bm&(0x02<<motor_id)) != 0)) ) {
         enable(false);
     }
+}
+
+void StepperMotor::enable(bool state)
+{
+    bool state_rising_edge = (state == true) && (state != is_enabled());
+    en_pin.set(!state);
+    if (enable_delay){
+      if(state_rising_edge){
+        wait(enable_delay);
+      }
+    }
+
 }
 
 void StepperMotor::change_steps_per_mm(float new_steps)
