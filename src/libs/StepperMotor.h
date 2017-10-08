@@ -25,7 +25,7 @@ class StepperMotor  : public Module {
         // called from step ticker ISR
         inline void set_direction(bool f) { dir_pin.set(f); direction= f; }
 
-        void enable(bool state) { en_pin.set(!state); };
+        void enable(bool);
         bool is_enabled() const { return !en_pin.get(); };
         bool is_moving() const { return moving; };
         void start_moving() { moving= true; }
@@ -70,6 +70,8 @@ class StepperMotor  : public Module {
         float max_rate; // this is not really rate it is in mm/sec, misnamed used in Robot and Extruder
         float acceleration;
 
+        double enable_delay;
+
         volatile int32_t current_position_steps;
         int32_t last_milestone_steps;
         float   last_milestone_mm;
@@ -82,4 +84,3 @@ class StepperMotor  : public Module {
             bool extruder:1;
         };
 };
-
