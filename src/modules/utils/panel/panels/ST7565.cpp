@@ -18,9 +18,11 @@
 
 //definitions for lcd
 #define LCDWIDTH 128
+#define LCDWIDTH_SH1106 132
 #define LCDHEIGHT 64
 #define LCDPAGES  (LCDHEIGHT+7)/8
 #define FB_SIZE LCDWIDTH*LCDPAGES
+#define FB_SIZE_SH1106 LCDWIDTH_SH1106*LCDPAGES
 #define FONT_SIZE_X 6
 #define FONT_SIZE_Y 8
 
@@ -51,6 +53,7 @@ ST7565::ST7565(uint8_t variant)
     is_viki2 = false;
     is_mini_viki2 = false;
     is_ssd1306= false;
+    is_sh1106= false;
 
     // set the variant
     switch(variant) {
@@ -69,6 +72,12 @@ ST7565::ST7565(uint8_t variant)
             is_ssd1306= true;
             this->reversed = false;
             this->contrast = 9;
+            break;
+        case 4: // SH1106 OLED
+            // set default for sub variants
+            is_sh1106= true;
+            this->reversed = false;
+            this->contrast = 15;
             break;
        default:
             // set default for sub variants
@@ -150,7 +159,7 @@ ST7565::ST7565(uint8_t variant)
     // reverse display
     this->reversed = THEKERNEL->config->value(panel_checksum, reverse_checksum)->by_default(this->reversed)->as_bool();
 
-    framebuffer = (uint8_t *)AHB0.alloc(FB_SIZE); // grab some memory from USB_RAM
+    framebuffer = (uint8_t *)AHB0.alloc((is_sh1106)?FB_SIZE_SH1106:FB_SIZE); // grab some memory from USB_RAM
     if(framebuffer == NULL) {
         THEKERNEL->streams->printf("Not enough memory available for frame buffer");
     }
@@ -189,7 +198,8 @@ void ST7565::send_data(const unsigned char *buf, size_t size)
 //clearing screen
 void ST7565::clear()
 {
-    memset(framebuffer, 0, FB_SIZE);
+    int size  = (is_sh1106)?FB_SIZE_SH1106:FB_SIZE;
+    memset(framebuffer, 0, size);
     this->tx = 0;
     this->ty = 0;
 }
@@ -198,7 +208,7 @@ void ST7565::send_pic(const unsigned char *data)
 {
     for (int i = 0; i < LCDPAGES; i++) {
         set_xy(0, i);
-        send_data(data + i * LCDWIDTH, LCDWIDTH);
+        send_data(data + i * LCDWIDTH, (is_sh1106)?LCDWIDTH_SH1106:LCDWIDTH);
     }
 }
 
@@ -298,7 +308,7 @@ void ST7565::init()
     }else{
         const unsigned char init_seq[] = {
             0x40,    //Display start line 0
-            (unsigned char)(reversed ? 0xa0 : 0xa1), // ADC
+            (unsigned char)((reversed^is_sh1106) ? 0xa0 : 0xa1), // ADC
             (unsigned char)(reversed ? 0xc8 : 0xc0), // COM select
             0xa6,    //Display normal
             0xa2,    //Set Bias 1/9 (Duty 1/65)
@@ -332,6 +342,7 @@ void ST7565::setContrast(uint8_t c)
 int ST7565::drawChar(int x, int y, unsigned char c, int color)
 {
     int retVal = -1;
+    int shift = (is_sh1106)? 2 : 0; // 2 pixels as border on wide OLED
     if(c == '\n') {
         this->ty += 8;
         retVal = -tx;
@@ -341,15 +352,15 @@ int ST7565::drawChar(int x, int y, unsigned char c, int color)
     } else {
         for (uint8_t i = 0; i < 5; i++ ) {
             if(color == 0) {
-                framebuffer[x + (y / 8 * 128) ] = ~(glcd_font[(c * 5) + i] << y % 8);
+                framebuffer[x + shift + (y / 8 * 128) ] = ~(glcd_font[(c * 5) + i] << y % 8);
                 if(y + 8 < 63) {
-                    framebuffer[x + ((y + 8) / 8 * 128) ] = ~(glcd_font[(c * 5) + i] >> (8 - (y % 8)));
+                    framebuffer[x + shift + ((y + 8) / 8 * 128) ] = ~(glcd_font[(c * 5) + i] >> (8 - (y % 8)));
                 }
             }
             if(color == 1) {
-                framebuffer[x + ((y) / 8 * 128) ] = glcd_font[(c * 5) + i] << (y % 8);
+                framebuffer[x + shift + ((y) / 8 * 128) ] = glcd_font[(c * 5) + i] << (y % 8);
                 if(y + 8 < 63) {
-                    framebuffer[x + ((y + 8) / 8 * 128) ] = glcd_font[(c * 5) + i] >> (8 - (y % 8));
+                    framebuffer[x + shift + ((y + 8) / 8 * 128) ] = glcd_font[(c * 5) + i] >> (8 - (y % 8));
                 }
             }
             x++;
@@ -457,8 +468,9 @@ void ST7565::renderGlyph(int x, int y, const uint8_t *g, int w, int h)
 void ST7565::pixel(int x, int y, int colour)
 {
     int page = y / 8;
+    int shift = (is_sh1106)? 2 : 0; // 2 pixels as border on wide OLED
     unsigned char mask = 1 << (y % 8);
-    unsigned char *byte = &framebuffer[page * LCDWIDTH + x];
+    unsigned char *byte = &framebuffer[page * LCDWIDTH + x + shift];
     if ( colour == 0 )
         *byte &= ~mask; // clear pixel
     else
