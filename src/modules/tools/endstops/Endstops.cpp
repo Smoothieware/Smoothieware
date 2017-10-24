@@ -1085,6 +1085,36 @@ void Endstops::on_gcode_received(void *argument)
                 gcode->stream->printf(" will take effect next home\n");
                 break;
 
+            case 211: { //Enable or disable endstop(s)               
+                    if(gcode->has_letter('S')) //Alter endstop behavior
+                    {
+                        bool enable = gcode->get_value('S')>0;
+    
+                        for(auto& h : homing_axis) {                            
+                            if(gcode->has_letter(h.axis))
+                            {
+                                if(h.home_direction == !gcode->get_value(h.axis)) //Are we configuring a min or max endstop?
+                                {
+                                    string name;
+                                    name.append(1, h.axis).append(h.home_direction ? "_min" : "_max");
+                                    h.pin_info->limit_enable = enable;
+                                    gcode->stream->printf("%s: %s ", name.c_str(), (h.pin_info->limit_enable?"enabled":"disabled"));                                
+                                }
+                            }
+                        }
+                    }
+                    else //Print current status
+                    {
+                        for(auto& h : homing_axis) {
+                            string name;
+                            name.append(1, h.axis).append(h.home_direction ? "_min" : "_max");                            
+                            gcode->stream->printf("%s: %s ", name.c_str(), (h.pin_info->limit_enable?"enabled":"disabled"));
+                        }               
+                    }
+                    gcode->add_nl = true;
+                }
+                break;
+
             case 306: // set homing offset based on current position
                 if(is_rdelta) return; // RotaryDeltaCalibration module will handle this
 
