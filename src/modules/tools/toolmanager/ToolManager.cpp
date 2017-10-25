@@ -44,7 +44,7 @@ void ToolManager::on_gcode_received(void *argument)
 {
     Gcode *gcode = static_cast<Gcode*>(argument);
 
-    if( gcode->has_letter('T') ) {
+    if( !gcode->has_m && !gcode->has_g && gcode->has_letter('T') ) { //Only switch tools on a T# command, not when altering a second tool state (M104 T1 S200, for example)
         int new_tool = gcode->get_value('T');
         if(new_tool >= (int)this->tools.size() || new_tool < 0) {
             // invalid tool

@@ -145,7 +145,7 @@ void TemperatureControl::load_config()
 
     this->designator          = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, designator_checksum)->by_default(string("T"))->as_string();
 
-    // Runaway parameters
+      // Runaway parameters
     uint32_t n= THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, runaway_range_checksum)->by_default(20)->as_number();
     if(n > 63) n= 63;
     this->runaway_range= n;
@@ -326,16 +326,27 @@ void TemperatureControl::on_gcode_received(void *argument)
             }
 
         } else if( ( gcode->m == this->set_m_code || gcode->m == this->set_and_wait_m_code ) && gcode->has_letter('S')) {
-            // this only gets handled if it is not controlled by the tool manager or is active in the toolmanager
-            this->active = true;
+            // this only gets handled if it is not controlled by the tool manager or is active in the toolmanager           
 
             // this is safe as old configs as well as single extruder configs the toolmanager will not be running so will return false
             // this will also ignore anything that the tool manager is not controlling and return false, otherwise it returns the active tool
-            void *returned_data;
-            bool ok = PublicData::get_value( tool_manager_checksum, is_active_tool_checksum, this->name_checksum, &returned_data );
-            if (ok) {
-                uint16_t active_tool_name =  *static_cast<uint16_t *>(returned_data);
-                this->active = (active_tool_name == this->name_checksum);
+            
+            if(!gcode->has_letter('T')) {
+                
+                this->active = true;
+
+                void *returned_data;
+                bool ok = PublicData::get_value( tool_manager_checksum, is_active_tool_checksum, this->name_checksum, &returned_data );
+                if (ok) {
+                    uint16_t active_tool_name =  *static_cast<uint16_t *>(returned_data);
+                    this->active = (active_tool_name == this->name_checksum);                
+                }
+            }
+            else if(gcode->has_letter('T') && this->designator[0]=='T'){
+                if(this->designator.length()>1)
+                    this->active = ((int)(this->designator[1]-'0') == gcode->get_int('T'));
+                else
+                    this->active = gcode->get_int('T') == 0;
             }
 
             if(this->active) {
@@ -358,7 +369,7 @@ void TemperatureControl::on_gcode_received(void *argument)
                         }
 
                         this->waiting = true; // on_second_tick will announce temps
-                        while ( get_temperature() < target_temperature ) {
+                        while ( get_temperature() < target_temperature ) {                            
                             THEKERNEL->call_event(ON_IDLE, this);
                             // check if ON_HALT was called (usually by kill button)
                             if(THEKERNEL->is_halted() || this->target_temperature == UNDEFINED) {
@@ -545,7 +556,7 @@ void TemperatureControl::on_second_tick(void *argument)
 
     // If waiting for a temperature to be reach, display it to keep host programs up to date on the progress
     if (waiting)
-        THEKERNEL->streams->printf("%s:%3.1f /%3.1f @%d\n", designator.c_str(), get_temperature(), ((target_temperature <= 0) ? 0.0 : target_temperature), o);
+    THEKERNEL->streams->printf("%s:%3.1f /%3.1f @%d\n", designator.c_str(), get_temperature(), ((target_temperature <= 0) ? 0.0 : target_temperature), o);
 
     // Check whether or not there is a temperature runaway issue, if so stop everything and report it
     if(THEKERNEL->is_halted()) return;
@@ -579,14 +590,14 @@ void TemperatureControl::on_second_tick(void *argument)
                     tick= 0;
 
                 }else{
-                    uint16_t t= (runaway_state == HEATING_UP) ? this->runaway_heating_timeout : this->runaway_cooling_timeout;
+                    uint16_t t= (runaway_state == HEATING_UP) ? this->runaway_heating_timeout : this->runaway_cooling_timeout;                   
                     // we are still heating up see if we have hit the max time allowed
                     if(t > 0 && ++this->runaway_timer > t){
                         THEKERNEL->streams->printf("ERROR: Temperature took too long to be reached on %s, HALT asserted, TURN POWER OFF IMMEDIATELY - reset or M999 required\n", designator.c_str());
                         THEKERNEL->call_event(ON_HALT, nullptr);
                         this->runaway_state = NOT_HEATING;
                         this->runaway_timer = 0;
-                    }
+                    }                    
                 }
                 break;
 
