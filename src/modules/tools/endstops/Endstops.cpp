@@ -1098,23 +1098,24 @@ void Endstops::on_gcode_received(void *argument)
                 gcode->stream->printf(" will take effect next home\n");
                 break;
 
-            case 211: { //Enable or disable endstop(s) hard limit
-                if(gcode->has_letter('S')) { //Alter endstop behavior    
-                        for(auto& e : endstops) {
-                            if(gcode->has_letter(e->axis)) {
-                                if(e->is_max_stop == gcode->get_value(e->axis)) {  //Are we configuring a min or max endstop?
-                                    string name;
-                                    name.append(1, e->axis).append(e->is_max_stop ? "_max" : "_min");
-                                    gcode->stream->printf("%s: %s ", name.c_str(), (e->limit_enable?"enabled":"disabled"));
-                                    THECONVEYOR->wait_for_idle();
-                                    e->limit_enable = gcode->get_value('S')>0;
-                                    if(!limits_enabled && e->limit_enable) {
-                                        register_for_event(ON_IDLE);
-                                        limits_enabled = true;
+            case 211: //Enable or disable endstop(s) hard limit
+                if(gcode->subcode == 1) { //M211.1 for hardware endstop manipulation
+                    if(gcode->has_letter('S')) { //Alter endstop behavior
+                            for(auto& e : endstops) {
+                                if(gcode->has_letter(e->axis)) {
+                                    if(e->is_max_stop == (gcode->get_value(e->axis)>0)) {  //Are we configuring a min or max endstop?
+                                        string name;
+                                        name.append(1, e->axis).append(e->is_max_stop ? "_max" : "_min");
+                                        THECONVEYOR->wait_for_idle(); //Wait for movement to complete before altering endstops
+                                        e->limit_enable = (gcode->get_value('S')>0);
+                                        gcode->stream->printf("%s: %s ", name.c_str(), (e->limit_enable?"enabled":"disabled"));
+                                        if(!limits_enabled && e->limit_enable) {
+                                            register_for_event(ON_IDLE);
+                                            limits_enabled = true;
+                                        }
                                     }
                                 }
                             }
-                        }
                     }
                     else { //Print current status
                         for(auto& e : endstops) {
@@ -1122,9 +1123,9 @@ void Endstops::on_gcode_received(void *argument)
                             name.append(1, e->axis).append(e->is_max_stop ? "_max" : "_min");
                             gcode->stream->printf("%s: %s ", name.c_str(), (e->limit_enable?"enabled":"disabled"));
                         }
-                    }
+                    }                    
                     gcode->add_nl = true;
-                }
+                }                
                 break;
 
             case 306: // set homing offset based on current position
