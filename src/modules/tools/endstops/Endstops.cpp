@@ -154,7 +154,6 @@ bool Endstops::load_old_config()
         ENDSTOP_CHECKSUMS("gamma")    // Z
     };
 
-    bool limit_enabled= false;
     for (int i = X_AXIS; i <= Z_AXIS; ++i) { // X_AXIS to Z_AXIS
         homing_info_t hinfo;
 
@@ -207,7 +206,7 @@ bool Endstops::load_old_config()
 
             // limits enabled
             info->limit_enable= THEKERNEL->config->value(checksums[i][LIMIT])->by_default(false)->as_bool();
-            limit_enabled |= info->limit_enable;
+            limits_enabled |= info->limit_enable;
         }
 
         homing_axis.push_back(hinfo);
@@ -218,7 +217,7 @@ bool Endstops::load_old_config()
 
     get_global_configs();
 
-    if(limit_enabled) {
+    if(limits_enabled) {
         register_for_event(ON_IDLE);
     }
 
@@ -241,8 +240,6 @@ bool Endstops::load_old_config()
 // Get config using new syntax supports ABC
 bool Endstops::load_config()
 {
-    bool limit_enabled= false;
-
     std::array<homing_info_t, k_max_actuators> temp_axis_array; // needs to be at least XYZ, but allow for ABC
     {
         homing_info_t t;
@@ -294,7 +291,7 @@ bool Endstops::load_config()
 
         // are limits enabled
         pin_info->limit_enable= THEKERNEL->config->value(endstop_checksum, cs, limit_checksum)->by_default(false)->as_bool();
-        limit_enabled |= pin_info->limit_enable;
+        limits_enabled |= pin_info->limit_enable;
 
         pin_info->is_max_stop = THEKERNEL->config->value(endstop_checksum, cs, limit_position_checksum)->by_default("min")->as_string() == "max";
 
@@ -366,7 +363,7 @@ bool Endstops::load_config()
     // sets some endstop global configs applicable to all endstops
     get_global_configs();
 
-    if(limit_enabled) {
+    if(limits_enabled) {
         register_for_event(ON_IDLE);
     }
 
@@ -1103,25 +1100,28 @@ void Endstops::on_gcode_received(void *argument)
 
             case 211: { //Enable or disable endstop(s) hard limit
                 if(gcode->has_letter('S')) { //Alter endstop behavior    
-                        for(auto& e : endstops) {                            
+                        for(auto& e : endstops) {
                             if(gcode->has_letter(e->axis)) {
-                                THECONVEYOR->wait_for_idle();
                                 if(e->is_max_stop == gcode->get_value(e->axis)) {  //Are we configuring a min or max endstop?
                                     string name;
                                     name.append(1, e->axis).append(e->is_max_stop ? "_max" : "_min");
+                                    gcode->stream->printf("%s: %s ", name.c_str(), (e->limit_enable?"enabled":"disabled"));
+                                    THECONVEYOR->wait_for_idle();
                                     e->limit_enable = gcode->get_value('S')>0;
-                                    gcode->stream->printf("%s: %s ", name.c_str(), (e->limit_enable?"enabled":"disabled"));                                
+                                    if(!limits_enabled && e->limit_enable) {
+                                        register_for_event(ON_IDLE);
+                                        limits_enabled = true;
+                                    }
                                 }
                             }
                         }
                     }
-                    else //Print current status
-                    {
+                    else { //Print current status
                         for(auto& e : endstops) {
                             string name;
-                            name.append(1, e->axis).append(e->is_max_stop ? "_max" : "_min");                            
+                            name.append(1, e->axis).append(e->is_max_stop ? "_max" : "_min");
                             gcode->stream->printf("%s: %s ", name.c_str(), (e->limit_enable?"enabled":"disabled"));
-                        }               
+                        }
                     }
                     gcode->add_nl = true;
                 }
