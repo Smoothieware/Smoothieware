@@ -59,6 +59,7 @@ class Endstops : public Module{
                 uint8_t axis_index:3;
                 bool limit_enable:1;
                 bool triggered:1;
+                bool is_max_stop:1;
             };
         };
 
@@ -95,5 +96,6 @@ class Endstops : public Module{
             bool is_scara:1;
             bool home_z_first:1;
             bool move_to_origin_after_home:1;
+            bool limits_enabled:1;
         };
 };

@@ -74,6 +74,16 @@ enum DEFNS {MIN_PIN, MAX_PIN, MAX_TRAVEL, FAST_RATE, SLOW_RATE, RETRACT, DIRECTI
 // endstop.xmin.pin 1.29
 // endstop.xmin.axis X
 // endstop.xmin.homing_direction home_to_min
+// endstop.xmin.limit_enable true
+// endstop.xmin.limit_position min
+//
+// endstop.xmax.enable true
+// endstop.xmax.pin 1.27
+// endstop.xmax.axis X
+// endstop.xmax.limit_enable true
+// endstop.xmax.limit_position max
+
+
 
 #define endstop_checksum                   CHECKSUM("endstop")
 #define enable_checksum                    CHECKSUM("enable")
@@ -86,6 +96,7 @@ enum DEFNS {MIN_PIN, MAX_PIN, MAX_TRAVEL, FAST_RATE, SLOW_RATE, RETRACT, DIRECTI
 #define max_travel_checksum                CHECKSUM("max_travel")
 #define retract_checksum                   CHECKSUM("retract")
 #define limit_checksum                     CHECKSUM("limit_enable")
+#define limit_position_checksum            CHECKSUM("limit_position")
 
 #define STEPPER THEROBOT->actuators
 #define STEPS_PER_MM(a) (STEPPER[a]->get_steps_per_mm())
@@ -105,6 +116,7 @@ enum STATES {
 
 Endstops::Endstops()
 {
+    this->limits_enabled = false;
     this->status = NOT_HOMING;
 }
 
@@ -185,6 +197,8 @@ bool Endstops::load_old_config()
 
             // add index to the homing struct if this is the one used for homing
             if((hinfo.home_direction && j == MIN_PIN) || (!hinfo.home_direction && j == MAX_PIN)) hinfo.pin_info= info;
+
+            info->is_max_stop = j == MAX_PIN;
 
             // init struct
             info->debounce= 0;
@@ -281,6 +295,8 @@ bool Endstops::load_config()
         // are limits enabled
         pin_info->limit_enable= THEKERNEL->config->value(endstop_checksum, cs, limit_checksum)->by_default(false)->as_bool();
         limit_enabled |= pin_info->limit_enable;
+
+        pin_info->is_max_stop = THEKERNEL->config->value(endstop_checksum, cs, limit_position_checksum)->by_default("min")->as_string() == "max";
 
         // enter into endstop array
         endstops.push_back(pin_info);
@@ -1085,30 +1101,26 @@ void Endstops::on_gcode_received(void *argument)
                 gcode->stream->printf(" will take effect next home\n");
                 break;
 
-            case 211: { //Enable or disable endstop(s)               
-                    if(gcode->has_letter('S')) //Alter endstop behavior
-                    {
-                        bool enable = gcode->get_value('S')>0;
-    
-                        for(auto& h : homing_axis) {                            
-                            if(gcode->has_letter(h.axis))
-                            {
-                                if(h.home_direction == !gcode->get_value(h.axis)) //Are we configuring a min or max endstop?
-                                {
+            case 211: { //Enable or disable endstop(s) hard limit
+                if(gcode->has_letter('S')) { //Alter endstop behavior    
+                        for(auto& e : endstops) {                            
+                            if(gcode->has_letter(e->axis)) {
+                                THECONVEYOR->wait_for_idle();
+                                if(e->is_max_stop == gcode->get_value(e->axis)) {  //Are we configuring a min or max endstop?
                                     string name;
-                                    name.append(1, h.axis).append(h.home_direction ? "_min" : "_max");
-                                    h.pin_info->limit_enable = enable;
-                                    gcode->stream->printf("%s: %s ", name.c_str(), (h.pin_info->limit_enable?"enabled":"disabled"));                                
+                                    name.append(1, e->axis).append(e->is_max_stop ? "_max" : "_min");
+                                    e->limit_enable = gcode->get_value('S')>0;
+                                    gcode->stream->printf("%s: %s ", name.c_str(), (e->limit_enable?"enabled":"disabled"));                                
                                 }
                             }
                         }
                     }
                     else //Print current status
                     {
-                        for(auto& h : homing_axis) {
+                        for(auto& e : endstops) {
                             string name;
-                            name.append(1, h.axis).append(h.home_direction ? "_min" : "_max");                            
-                            gcode->stream->printf("%s: %s ", name.c_str(), (h.pin_info->limit_enable?"enabled":"disabled"));
+                            name.append(1, e->axis).append(e->is_max_stop ? "_max" : "_min");                            
+                            gcode->stream->printf("%s: %s ", name.c_str(), (e->limit_enable?"enabled":"disabled"));
                         }               
                     }
                     gcode->add_nl = true;
