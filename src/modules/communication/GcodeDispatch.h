@@ -31,5 +31,6 @@ private:
     uint8_t modal_group_1;
     struct {
         bool uploading: 1;
+        bool modal_t: 1;
     };
 };

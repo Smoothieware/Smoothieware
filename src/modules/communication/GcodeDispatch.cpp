@@ -28,6 +28,7 @@
 
 #define panel_display_message_checksum CHECKSUM("display_message")
 #define panel_checksum             CHECKSUM("panel")
+#define modal_t_checksum           CHECKSUM("modal_t")
 
 // goes in Flash, list of Mxxx codes that are allowed when in Halted state
 static const int allowed_mcodes[]= {2,5,9,30,105,114,119,80,81,911,503,106,107}; // get temp, get pos, get endstops etc
@@ -49,6 +50,7 @@ GcodeDispatch::GcodeDispatch()
 void GcodeDispatch::on_module_loaded()
 {
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
+    this->modal_t = THEKERNEL->config->value(modal_t_checksum)->by_default(true)->as_bool();
 }
 
 // When a command is received, if it is a Gcode, dispatch it as an object via an event
@@ -146,6 +148,7 @@ try_again:
                 if(!uploading || upload_stream != new_message.stream) {
                     // Prepare gcode for dispatch
                     Gcode *gcode = new Gcode(single_command, new_message.stream);
+                    gcode->is_modal_t = modal_t;
 
                     if(THEKERNEL->is_halted()) {
                         // we ignore all commands until M999, unless it is in the exceptions list (like M105 get temp)
@@ -190,6 +193,7 @@ try_again:
                                 delete gcode;
                                 // extract next G0/G1 from the rest of the line, ignore if it is not one of these
                                 gcode = new Gcode(possible_command, new_message.stream);
+                                gcode->is_modal_t = modal_t;
                                 possible_command= "";
                                 if(!gcode->has_g || gcode->g > 1) {
                                     // not G0 or G1 so ignore it as it is invalid

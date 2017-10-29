@@ -47,6 +47,7 @@ Gcode::Gcode(const Gcode &to_copy)
     this->is_error              = to_copy.is_error;
     this->stream                = to_copy.stream;
     this->txt_after_ok.assign( to_copy.txt_after_ok );
+    this->is_modal_t            = to_copy.is_modal_t;
 }
 
 Gcode &Gcode::operator= (const Gcode &to_copy)
@@ -62,6 +63,7 @@ Gcode &Gcode::operator= (const Gcode &to_copy)
         this->is_error              = to_copy.is_error;
         this->stream                = to_copy.stream;
         this->txt_after_ok.assign( to_copy.txt_after_ok );
+        this->is_modal_t            = to_copy.is_modal_t;
     }
     return *this;
 }
@@ -135,7 +137,7 @@ int Gcode::get_num_args() const
     int count = 0;
     for(size_t i = stripped?0:1; i < strlen(command); i++) {
         if( this->command[i] >= 'A' && this->command[i] <= 'Z' ) {
-            //if(this->command[i] == 'T') continue;
+            if(is_modal_t && this->command[i] == 'T') continue;
             count++;
         }
     }
@@ -148,7 +150,7 @@ std::map<char,float> Gcode::get_args() const
     for(size_t i = stripped?0:1; i < strlen(command); i++) {
         char c= this->command[i];
         if( c >= 'A' && c <= 'Z' ) {
-            //if(c == 'T') continue;
+            if(is_modal_t && c == 'T') continue;
             m[c]= get_value(c);
         }
     }
@@ -161,7 +163,7 @@ std::map<char,int> Gcode::get_args_int() const
     for(size_t i = stripped?0:1; i < strlen(command); i++) {
         char c= this->command[i];
         if( c >= 'A' && c <= 'Z' ) {
-            //if(c == 'T') continue;
+            if(is_modal_t && c == 'T') continue;
             m[c]= get_int(c);
         }
     }
