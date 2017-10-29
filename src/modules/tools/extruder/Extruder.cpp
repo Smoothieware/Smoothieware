@@ -46,6 +46,8 @@
 #define retract_zlift_length_checksum        CHECKSUM("retract_zlift_length")
 #define retract_zlift_feedrate_checksum      CHECKSUM("retract_zlift_feedrate")
 
+#define pressure_advance_checksum            CHECKSUM("pressure_advance")
+
 #define PI 3.14159265358979F
 
 
@@ -64,6 +66,7 @@ Extruder::Extruder( uint16_t config_identifier)
     this->extruder_multiplier = 1.0F;
     this->stepper_motor = nullptr;
     this->max_volumetric_rate = 0;
+    this->pressure_advance = 0;
     this->g92e0_detected = false;
     memset(this->offset, 0, sizeof(this->offset));
 }
@@ -107,6 +110,7 @@ void Extruder::config_load()
     this->retract_recover_feedrate = THEKERNEL->config->value(extruder_checksum, this->identifier, retract_recover_feedrate_checksum)->by_default(8)->as_number();
     this->retract_zlift_length     = THEKERNEL->config->value(extruder_checksum, this->identifier, retract_zlift_length_checksum)->by_default(0)->as_number();
     this->retract_zlift_feedrate   = THEKERNEL->config->value(extruder_checksum, this->identifier, retract_zlift_feedrate_checksum)->by_default(100 * 60)->as_number() / 60.0F; // mm/min
+    this->pressure_advance         = THEKERNEL->config->value(extruder_checksum, this->identifier, pressure_advance_checksum )->by_default(0)->as_number();
 
     if(filament_diameter > 0.01F) {
         this->volumetric_multiplier = 1.0F / (powf(this->filament_diameter / 2, 2) * PI);
@@ -119,6 +123,7 @@ void Extruder::config_load()
     stepper_motor->set_max_rate(THEKERNEL->config->value(extruder_checksum, this->identifier, max_speed_checksum)->by_default(1000)->as_number());
     stepper_motor->set_acceleration(acceleration);
     stepper_motor->change_steps_per_mm(steps_per_millimeter);
+    stepper_motor->set_pressure_advance(pressure_advance);
     stepper_motor->set_selected(false); // not selected by default
     stepper_motor->set_extruder(true);  // indicates it is an extruder
 }
@@ -153,6 +158,7 @@ void Extruder::on_get_public_data(void *argument)
     e->flow_rate = this->extruder_multiplier;
     e->accleration = stepper_motor->get_acceleration();
     e->retract_length = this->retract_length;
+    e->pressure_advance = this->pressure_advance;
     e->current_position = stepper_motor->get_current_position();
     pdr->set_taken();
 }
@@ -325,6 +331,15 @@ void Extruder::on_gcode_received(void *argument)
 
             } else {
                 gcode->stream->printf("Flow rate at %6.2f %%\n", this->extruder_multiplier * 100.0F);
+            }
+
+        } else if (gcode->m == 572 && ( (this->selected && !gcode->has_letter('P')) || (gcode->has_letter('P') && gcode->get_value('P') == this->identifier)) ) {
+            // M572 - set or report extruder pressure advance
+            if(gcode->has_letter('S')) {
+                pressure_advance = gcode->get_value('S');
+                stepper_motor->set_pressure_advance(pressure_advance);
+            } else {
+                gcode->stream->printf("Pressure advance at %f %%\n", this->pressure_advance);
             }
 
         } else if (gcode->m == 500 || gcode->m == 503) { // M500 saves some volatile settings to config override file, M503 just prints the settings

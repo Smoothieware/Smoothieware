@@ -17,6 +17,8 @@
 #include "libs/StreamOutputPool.h"
 #include "StepTicker.h"
 #include "platform_memory.h"
+#include "Robot.h"
+#include "StepperMotor.h"
 
 #include "mri.h"
 #include <inttypes.h>
@@ -318,7 +320,32 @@ void Block::prepare(float acceleration_in_steps, float deceleration_in_steps)
     double deceleration_per_tick = deceleration_in_steps * fp_scale;
 
     for (uint8_t m = 0; m < n_actuators; m++) {
-        uint32_t steps = this->steps[m];
+        int32_t steps = this->steps[m];
+        double advance_velocity_offset = 0;
+        int8_t pressure_advance_direction = 1;
+
+        if(	(THEROBOT->actuators[m]->get_pressure_advance() != 0.0f) &&
+        	(this->primary_axis == true) &&	// Ignore extruder only moves
+        	(steps < 100)	// Fudge to ensure that retracts and unretracts are ignored
+        ) {
+        	if(this->accelerate_until != 0) {
+        		// If we are accelerating
+        		advance_velocity_offset = acceleration_in_steps * (inv * steps) * THEROBOT->actuators[m]->get_pressure_advance();
+
+        		steps = steps + (advance_velocity_offset * (this->accelerate_until / STEP_TICKER_FREQUENCY));
+			}
+			else if(this->decelerate_after == 0) {
+			 	// If we are decelerating
+				advance_velocity_offset = -deceleration_in_steps * (inv * steps) * THEROBOT->actuators[m]->get_pressure_advance();
+
+				steps = steps + (advance_velocity_offset * ((this->total_move_ticks - this->decelerate_after) / STEP_TICKER_FREQUENCY));
+			}
+
+ 			this->direction_bits[m] = (steps < 0) ? 1 : 0;
+ 			pressure_advance_direction = (steps < 0) ? -1 : 1;
+ 			steps = labs(steps);
+       }
+
         this->tick_info[m].steps_to_move = steps;
         if(steps == 0) continue;
 
@@ -336,7 +363,7 @@ void Block::prepare(float acceleration_in_steps, float deceleration_in_steps)
 
         } else if(this->decelerate_after == 0 /*&& this->accelerate_until == 0*/) {
             // we start off decelerating
-            acceleration_change = -deceleration_per_tick;
+            acceleration_change = -deceleration_per_tick * pressure_advance_direction;
 
         } else if(this->decelerate_after != this->total_move_ticks /*&& this->accelerate_until == 0*/) {
             // If the next event is the start of decel ( don't set this if the next accel event is accel end )
@@ -346,7 +373,7 @@ void Block::prepare(float acceleration_in_steps, float deceleration_in_steps)
         // already converted to fixed point just needs scaling by ratio
         //#define STEPTICKER_TOFP(x) ((int64_t)round((double)(x)*STEPTICKER_FPSCALE))
         this->tick_info[m].acceleration_change= (int64_t)round(acceleration_change * aratio);
-        this->tick_info[m].deceleration_change= -(int64_t)round(deceleration_per_tick * aratio);
+        this->tick_info[m].deceleration_change= -(int64_t)round(deceleration_per_tick * aratio * pressure_advance_direction);
         this->tick_info[m].plateau_rate= (int64_t)round(((this->maximum_rate * aratio) / STEP_TICKER_FREQUENCY) * STEPTICKER_FPSCALE);
 
         #if 0
