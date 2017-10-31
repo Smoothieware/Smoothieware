@@ -137,7 +137,7 @@ int Gcode::get_num_args() const
     int count = 0;
     for(size_t i = stripped?0:1; i < strlen(command); i++) {
         if( this->command[i] >= 'A' && this->command[i] <= 'Z' ) {
-            if(is_modal_t && this->command[i] == 'T') continue;
+            if(this->is_modal_t && this->command[i] == 'T') continue;
             count++;
         }
     }
@@ -150,7 +150,7 @@ std::map<char,float> Gcode::get_args() const
     for(size_t i = stripped?0:1; i < strlen(command); i++) {
         char c= this->command[i];
         if( c >= 'A' && c <= 'Z' ) {
-            if(is_modal_t && c == 'T') continue;
+            if(this->is_modal_t && c == 'T') continue;
             m[c]= get_value(c);
         }
     }
@@ -163,7 +163,7 @@ std::map<char,int> Gcode::get_args_int() const
     for(size_t i = stripped?0:1; i < strlen(command); i++) {
         char c= this->command[i];
         if( c >= 'A' && c <= 'Z' ) {
-            if(is_modal_t && c == 'T') continue;
+            if(this->is_modal_t && c == 'T') continue;
             m[c]= get_int(c);
         }
     }
