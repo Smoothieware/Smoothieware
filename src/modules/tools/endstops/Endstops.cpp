@@ -1101,27 +1101,29 @@ void Endstops::on_gcode_received(void *argument)
             case 211: //Enable or disable endstop(s) hard limit
                 if(gcode->subcode == 1) { //M211.1 for hardware endstop manipulation
                     if(gcode->has_letter('S')) { //Alter endstop behavior
-                            for(auto& e : endstops) {
-                                if(gcode->has_letter(e->axis)) {
-                                    if(e->is_max_stop == (gcode->get_value(e->axis)>0)) {  //Are we configuring a min or max endstop?
-                                        string name;
-                                        name.append(1, e->axis).append(e->is_max_stop ? "_max" : "_min");
-                                        THECONVEYOR->wait_for_idle(); //Wait for movement to complete before altering endstops
-                                        e->limit_enable = (gcode->get_value('S')>0);
-                                        gcode->stream->printf("%s: %s ", name.c_str(), (e->limit_enable?"enabled":"disabled"));
-                                        if(!limits_enabled && e->limit_enable) {
-                                            register_for_event(ON_IDLE);
-                                            limits_enabled = true;
-                                        }
+                        bool enable_limit = gcode->get_uint('S')>0;
+                        for(auto& e : endstops) {
+                            if(gcode->has_letter(e->axis)) {
+                                bool is_max_axis_endstop = gcode->get_uint(e->axis)>0; //M211.1 S1 X1 would enable x-max endstop limit, M211.1 S1 X0 would enable x-min endstop
+                                if(e->is_max_stop == is_max_axis_endstop) {
+                                    string name;
+                                    name.append(1, e->axis).append(e->is_max_stop ? "_max" : "_min");
+                                    THECONVEYOR->wait_for_idle(); //Wait for movement to complete before altering endstops
+                                    e->limit_enable = enable_limit;
+                                    gcode->stream->printf("%s: %s ", name.c_str(), (e->limit_enable ? "enabled":"disabled"));
+                                    if(!limits_enabled && enable_limit) {
+                                        register_for_event(ON_IDLE);
+                                        limits_enabled = true;
                                     }
                                 }
                             }
+                        }
                     }
                     else { //Print current status
                         for(auto& e : endstops) {
                             string name;
                             name.append(1, e->axis).append(e->is_max_stop ? "_max" : "_min");
-                            gcode->stream->printf("%s: %s ", name.c_str(), (e->limit_enable?"enabled":"disabled"));
+                            gcode->stream->printf("%s: %s ", name.c_str(), (e->limit_enable ? "enabled":"disabled"));
                         }
                     }                    
                     gcode->add_nl = true;
