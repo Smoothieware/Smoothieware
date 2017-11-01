@@ -318,7 +318,7 @@ base_stepping_frequency                      100000
 #planner_queue_size                          32
 junction_deviation                           0.001
 
-uart0.baud_rate                              14400
+uart0.baud_rate                              115200
 second_usb_serial_enable                     false
 
 kill_button_enable                           true
