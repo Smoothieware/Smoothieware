@@ -326,13 +326,13 @@ void TemperatureControl::on_gcode_received(void *argument)
             }
 
         } else if( ( gcode->m == this->set_m_code || gcode->m == this->set_and_wait_m_code ) && gcode->has_letter('S')) {
-            // this only gets handled if it is not controlled by the tool manager or is active in the toolmanager           
+            // this only gets handled if it is not controlled by the tool manager or is active in the toolmanager
 
-            // this is safe as old configs as well as single extruder configs the toolmanager will not be running so will return false
-            // this will also ignore anything that the tool manager is not controlling and return false, otherwise it returns the active tool
-            
             if(!gcode->has_letter('T') || gcode->is_modal_t) { //Default temperature handling, just test if we are the active tool head
                 
+                // this is safe as old configs as well as single extruder configs the toolmanager will not be running so will return false
+                // this will also ignore anything that the tool manager is not controlling and return false, otherwise it returns the active tool
+           
                 this->active = true;
 
                 void *returned_data;
