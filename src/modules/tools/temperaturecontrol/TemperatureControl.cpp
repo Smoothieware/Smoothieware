@@ -331,7 +331,7 @@ void TemperatureControl::on_gcode_received(void *argument)
             // this is safe as old configs as well as single extruder configs the toolmanager will not be running so will return false
             // this will also ignore anything that the tool manager is not controlling and return false, otherwise it returns the active tool
             
-            if(!gcode->has_letter('T')) {
+            if(!gcode->has_letter('T') || gcode->is_modal_t) { //Default temperature handling, just test if we are the active tool head
                 
                 this->active = true;
 
@@ -342,11 +342,11 @@ void TemperatureControl::on_gcode_received(void *argument)
                     this->active = (active_tool_name == this->name_checksum);                
                 }
             }
-            else if(gcode->has_letter('T') && this->designator[0]=='T'){
-                if(this->designator.length()>1)
+            else if(gcode->has_letter('T') && this->designator[0]=='T'){ //Non-modal T method handling, if T was specified test if we match that designator, even if we aren't the active tool
+                if(this->designator.length()==2 && gcode->get_uint('T')<10) //Support M104 T[0-9] S210 type of call
                     this->active = ((int)(this->designator[1]-'0') == gcode->get_int('T'));
                 else
-                    this->active = gcode->get_int('T') == 0;
+                    this->active = gcode->get_uint('T') == 0; //Used when the tool 0 temperature control identifier is just 'T', rather than 'T0'
             }
 
             if(this->active) {
@@ -369,7 +369,7 @@ void TemperatureControl::on_gcode_received(void *argument)
                         }
 
                         this->waiting = true; // on_second_tick will announce temps
-                        while ( get_temperature() < target_temperature ) {                            
+                        while ( get_temperature() < target_temperature ) {
                             THEKERNEL->call_event(ON_IDLE, this);
                             // check if ON_HALT was called (usually by kill button)
                             if(THEKERNEL->is_halted() || this->target_temperature == UNDEFINED) {
@@ -556,7 +556,7 @@ void TemperatureControl::on_second_tick(void *argument)
 
     // If waiting for a temperature to be reach, display it to keep host programs up to date on the progress
     if (waiting)
-    THEKERNEL->streams->printf("%s:%3.1f /%3.1f @%d\n", designator.c_str(), get_temperature(), ((target_temperature <= 0) ? 0.0 : target_temperature), o);
+        THEKERNEL->streams->printf("%s:%3.1f /%3.1f @%d\n", designator.c_str(), get_temperature(), ((target_temperature <= 0) ? 0.0 : target_temperature), o);
 
     // Check whether or not there is a temperature runaway issue, if so stop everything and report it
     if(THEKERNEL->is_halted()) return;
@@ -597,7 +597,7 @@ void TemperatureControl::on_second_tick(void *argument)
                         THEKERNEL->call_event(ON_HALT, nullptr);
                         this->runaway_state = NOT_HEATING;
                         this->runaway_timer = 0;
-                    }                    
+                    }
                 }
                 break;
 
