@@ -107,8 +107,8 @@ alpha_steps_per_mm                           80.0
 beta_steps_per_mm                            80.0
 gamma_steps_per_mm                           400.0
 delta_steps_per_mm                           400.0
-epsilon_steps_per_mm                         767.38
-zeta_steps_per_mm                            767.38
+epsilon_steps_per_mm                         768
+zeta_steps_per_mm                            768
 
 ##################################
 ##################################
