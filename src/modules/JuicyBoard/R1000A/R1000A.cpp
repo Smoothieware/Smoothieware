@@ -87,8 +87,8 @@ void R1000A::on_console_line_received(void* argument){
             // This function reads data from EEPROM, byte by byte
 
             // evaluate the length of data to be read, integer
-            int readlen = atoi(shift_parameter(possible_command).c_str());
             int eeadr = (int)strtol(shift_parameter(possible_command).c_str(),NULL,0);
+            int readlen = atoi(shift_parameter(possible_command).c_str());
 
             THEKERNEL->streams->printf("Reading %d bytes from addr 0x%x\r\n", readlen, eeadr);
             // do some checks on the input arguments
@@ -110,8 +110,9 @@ void R1000A::on_console_line_received(void* argument){
             // This function reads data from EEPROM, byte by byte
 
             // evaluate the length of data to be read, integer
-            int readlen = atoi(shift_parameter(possible_command).c_str());
             int eeadr = (int)strtol(shift_parameter(possible_command).c_str(),NULL,0);
+            int readlen = atoi(shift_parameter(possible_command).c_str());
+
 
             THEKERNEL->streams->printf("Reading %d bytes from addr 0x%x\r\n", readlen, eeadr);
             // do some checks on the input arguments
@@ -641,7 +642,10 @@ void R1000A::wrhex2bl(const char * filename, int slotnum){
     // check slot number is within proper range
     if ((slotnum > 0) && (slotnum < 16)){
         // check if the selected slot is in bootloader mode (acks and BLSTAT = 0x03)
-        if ((THEKERNEL->i2c->I2C_CheckAck(slotnum) == 0) & (THEKERNEL->i2c->I2C_CheckBLMode(slotnum) == 0)){
+        int chkack = THEKERNEL->i2c->I2C_CheckAck(slotnum);
+        int chkbl = THEKERNEL->i2c->I2C_CheckBLMode(slotnum);
+        //if ((THEKERNEL->i2c->I2C_CheckAck(slotnum) == 0) & (THEKERNEL->i2c->I2C_CheckBLMode(slotnum) == 0)){
+        if ((chkack == 0) & (chkbl == 0)){
             fp = fopen(filename, "r");
             if (fp == NULL){
                 THEKERNEL->streams->printf("Couldn't open file %s..\r\n", filename);
@@ -794,6 +798,8 @@ void R1000A::wrhex2bl(const char * filename, int slotnum){
         else{
             // module is not mounted or isn't in bootloader mode
             THEKERNEL->streams->printf("Module in slot #%d isn't in bootloader mode or maybe not mounted\r\n",slotnum);
+            THEKERNEL->streams->printf("CheckAck    : %d\r\n", chkack);
+            THEKERNEL->streams->printf("CheckBLMode : %d\r\n", chkbl);
         }
     }
     else{
@@ -813,7 +819,10 @@ void R1000A::dumphex(int slotnum){
 //        if (THEKERNEL->i2c->I2C_ReadREG(slotnum, TGT_CMD_CHECK_BLSTAT, i2cbuf, 1) == 0){
 //            THEKERNEL->streams->printf("BLSTAT: 0x%02X\r\n",i2cbuf[0]);
 //        }
-        if ((THEKERNEL->i2c->I2C_CheckAck(slotnum) == 0) & (THEKERNEL->i2c->I2C_CheckBLMode(slotnum) == 0)){
+        int chkack = THEKERNEL->i2c->I2C_CheckAck(slotnum);
+        int chkbl = THEKERNEL->i2c->I2C_CheckBLMode(slotnum);
+        //if ((THEKERNEL->i2c->I2C_CheckAck(slotnum) == 0) & (THEKERNEL->i2c->I2C_CheckBLMode(slotnum) == 0)){
+        if ((chkack == 0) & (chkbl == 0)){
             // cycle from the start address, 16 bytes at a time
             int i;
             for (i=MOD_FADDR_START;i<=MOD_FADDR_END;i+=16){
@@ -881,6 +890,8 @@ void R1000A::dumphex(int slotnum){
         else{
             // module is not mounted or isn't in bootloader mode
             THEKERNEL->streams->printf("Module in slot #%d isn't in bootloader mode or maybe not mounted\r\n",slotnum);
+            THEKERNEL->streams->printf("CheckAck    : %d\r\n", chkack);
+            THEKERNEL->streams->printf("CheckBLMode : %d\r\n", chkbl);
         }
     }
     else{

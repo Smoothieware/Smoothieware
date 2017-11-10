@@ -32,9 +32,9 @@ static usbdesc_language lang = {
 	{ SL_USENGLISH, },
 };
 
-static usbstring_const_init(manufacturer, "Uberclock");
+static usbstring_const_init(manufacturer, "plugg.ee Labs");
 
-static usbstring_const_init(product, "Smoothieboard");
+static usbstring_const_init(product, "JuicyBoard");
 
 static usbstring_init(serial, "01234567abcdefgh01234567abcdefgh");
 
