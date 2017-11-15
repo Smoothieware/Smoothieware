@@ -61,7 +61,7 @@ zeta_max_rate                                1200
 # DRIVER PINOUTS
 
 alpha_step_pin                               2.0
-alpha_dir_pin                                0.5
+alpha_dir_pin                                0.5!
 alpha_en_pin                                 0.4
 
 beta_step_pin                                2.1
