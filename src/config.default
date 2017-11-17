@@ -116,8 +116,6 @@ zeta_steps_per_mm                            768
 
 # ENDSTOPS and HOMING
 
-homing_order                                 ZAXY
-
 # X endstop
 endstop.minx.axis                            X
 endstop.minx.enable                          true
