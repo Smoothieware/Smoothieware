@@ -27,6 +27,7 @@
 #define spindle_checksum                    CHECKSUM("spindle")
 #define spindle_pwm_pin_checksum            CHECKSUM("pwm_pin")
 #define spindle_pwm_period_checksum         CHECKSUM("pwm_period")
+#define spindle_max_pwm_checksum            CHECKSUM("max_pwm")
 #define spindle_feedback_pin_checksum       CHECKSUM("feedback_pin")
 #define spindle_pulses_per_rev_checksum     CHECKSUM("pulses_per_rev")
 #define spindle_default_rpm_checksum        CHECKSUM("default_rpm")
@@ -80,6 +81,8 @@ void PWMSpindleControl::on_module_loaded()
         delete this;
         return;
     }
+
+    max_pwm = THEKERNEL->config->value(spindle_checksum, spindle_max_pwm_checksum)->by_default(1.0f)->as_number();
     
     int period = THEKERNEL->config->value(spindle_checksum, spindle_pwm_period_checksum)->by_default(1000)->as_int();
     pwm_pin->period_us(period);
@@ -152,6 +155,10 @@ uint32_t PWMSpindleControl::on_update_speed(uint32_t dummy)
         prev_error = error;
 
         current_pwm_value = new_pwm;
+
+        if (current_pwm_value > max_pwm) {
+            current_pwm_value = max_pwm;
+        }
     } else {
         current_I_value = 0;
         current_pwm_value = 0;
