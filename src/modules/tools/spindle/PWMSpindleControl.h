@@ -35,7 +35,6 @@ class PWMSpindleControl: public SpindleControl {
         bool vfd_spindle; // true if we have a VFD driven spindle
 
         // Current values, updated at runtime
-        bool spindle_on;
         float current_rpm;
         float target_rpm;
         float current_I_value;
