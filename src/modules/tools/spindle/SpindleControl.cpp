@@ -34,7 +34,7 @@ void SpindleControl::on_gcode_received(void *argument)
             if (gcode->has_letter('D'))
                 set_p_term( gcode->get_value('D') );
             // report PID settings
-            get_pid_settings();
+            report_settings();
           
         }
         else if (gcode->m == 3) 

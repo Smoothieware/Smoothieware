@@ -29,7 +29,7 @@ class SpindleControl: public Module {
         virtual void set_p_term(float) {};
         virtual void set_i_term(float) {};
         virtual void set_d_term(float) {};
-        virtual void get_pid_settings(void) {};
+        virtual void report_settings(void) {};
 };
 
 #endif
