@@ -11,7 +11,6 @@
 #include "Config.h"
 #include "checksumm.h"
 #include "ConfigValue.h"
-#include "Gcode.h"
 #include "StreamOutputPool.h"
 #include "SlowTicker.h"
 #include "Conveyor.h"
@@ -35,7 +34,6 @@
 #define spindle_control_I_checksum          CHECKSUM("control_I")
 #define spindle_control_D_checksum          CHECKSUM("control_D")
 #define spindle_control_smoothing_checksum  CHECKSUM("control_smoothing")
-#define spindle_ignore_on_halt_checksum     CHECKSUM("ignore_on_halt")
 
 #define UPDATE_FREQ 1000
 
@@ -108,12 +106,6 @@ void PWMSpindleControl::on_module_loaded()
     }
     
     THEKERNEL->slow_ticker->attach(UPDATE_FREQ, this, &PWMSpindleControl::on_update_speed);
-
-    // register for events
-    register_for_event(ON_GCODE_RECEIVED);
-    if (!THEKERNEL->config->value(spindle_checksum, spindle_ignore_on_halt_checksum)->by_default(false)->as_bool()) {
-        register_for_event(ON_HALT);
-    }
 }
 
 void PWMSpindleControl::on_pin_rise()

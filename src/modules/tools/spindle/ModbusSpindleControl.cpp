@@ -19,7 +19,6 @@
 #define spindle_rx_pin_checksum             CHECKSUM("rx_pin")
 #define spindle_tx_pin_checksum             CHECKSUM("tx_pin")
 #define spindle_dir_pin_checksum            CHECKSUM("dir_pin")
-#define spindle_ignore_on_halt_checksum     CHECKSUM("ignore_on_halt")
 
 void ModbusSpindleControl::on_module_loaded()
 {
@@ -49,11 +48,5 @@ void ModbusSpindleControl::on_module_loaded()
 
     // setup the Modbus interface
     modbus = new Modbus(tx_pin, rx_pin, dir_pin);
-
-    // register for events
-    register_for_event(ON_GCODE_RECEIVED);
-    if (!THEKERNEL->config->value(spindle_checksum, spindle_ignore_on_halt_checksum)->by_default(false)->as_bool()) {
-        register_for_event(ON_HALT);
-    }
 }
 
