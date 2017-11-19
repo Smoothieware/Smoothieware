@@ -21,6 +21,7 @@
 #define spindle_pwm_pin_checksum            CHECKSUM("pwm_pin")
 #define spindle_pwm_period_checksum         CHECKSUM("pwm_period")
 #define spindle_switch_on_pin_checksum      CHECKSUM("switch_on_pin")
+#define spindle_ignore_on_halt_checksum     CHECKSUM("ignore_on_halt")
 
 void AnalogSpindleControl::on_module_loaded()
 {
@@ -61,6 +62,9 @@ void AnalogSpindleControl::on_module_loaded()
     }
     // register for events
     register_for_event(ON_GCODE_RECEIVED);
+    if (!THEKERNEL->config->value(spindle_checksum, spindle_ignore_on_halt_checksum)->by_default(false)->as_bool()) {
+        register_for_event(ON_HALT);
+    }
 }
 
 void AnalogSpindleControl::turn_on() 
