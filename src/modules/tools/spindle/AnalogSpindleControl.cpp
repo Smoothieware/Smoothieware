@@ -59,8 +59,6 @@ void AnalogSpindleControl::on_module_loaded()
         switch_on = new Pin();
         switch_on->from_string(switch_on_pin)->as_output()->set(false);
     }
-    // register for events
-    register_for_event(ON_GCODE_RECEIVED);
 }
 
 void AnalogSpindleControl::turn_on() 

@@ -63,3 +63,11 @@ void SpindleControl::on_gcode_received(void *argument)
 
 }
 
+void SpindleControl::on_halt(void *argument)
+{
+    if (argument == nullptr) {
+        if(spindle_on) {
+            turn_off();
+        }
+    }
+}

@@ -11,7 +11,6 @@
 #include "Config.h"
 #include "checksumm.h"
 #include "ConfigValue.h"
-#include "Gcode.h"
 #include "StreamOutputPool.h"
 #include "SlowTicker.h"
 #include "Conveyor.h"
@@ -107,8 +106,6 @@ void PWMSpindleControl::on_module_loaded()
     }
     
     THEKERNEL->slow_ticker->attach(UPDATE_FREQ, this, &PWMSpindleControl::on_update_speed);
-
-    register_for_event(ON_GCODE_RECEIVED);
 }
 
 void PWMSpindleControl::on_pin_rise()
