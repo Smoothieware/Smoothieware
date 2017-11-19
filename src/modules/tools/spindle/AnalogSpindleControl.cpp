@@ -103,9 +103,10 @@ void AnalogSpindleControl::set_speed(int rpm)
 
 void AnalogSpindleControl::report_speed() 
 {
-    // report the current RPM value, calculate the current PWM value and report it as well
-    THEKERNEL->streams->printf("Current RPM: %d Analog value: %5.3f\n",
-                               target_rpm, (1.0f / max_rpm * target_rpm));
+    // report the current PWM value, calculate the current RPM value and report it as well
+    float current_pwm = pwm_pin->read();
+    THEKERNEL->streams->printf("Current RPM: %.0f Analog value: %5.3f Target RPM: %d\n",
+                               max_rpm * current_pwm, current_pwm, target_rpm);
 
 }
 
