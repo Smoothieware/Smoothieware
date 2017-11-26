@@ -21,6 +21,7 @@ class SpindleControl: public Module {
 
     private:
         void on_gcode_received(void *argument);
+        void on_halt(void *argument);
         
         virtual void turn_on(void) {};
         virtual void turn_off(void) {};
@@ -29,7 +30,7 @@ class SpindleControl: public Module {
         virtual void set_p_term(float) {};
         virtual void set_i_term(float) {};
         virtual void set_d_term(float) {};
-        virtual void get_pid_settings(void) {};
+        virtual void report_settings(void) {};
 };
 
 #endif
