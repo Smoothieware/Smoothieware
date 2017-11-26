@@ -90,12 +90,12 @@ zeta_en_pin                                  0.23
 
 # MOTOR CURRENT
 
-alpha_current                                1.2
-beta_current                                 1.5
-gamma_current                                0.8
-delta_current                                0.8
-epsilon_current                              0.25
-zeta_current                                 0.25
+alpha_current                                1.0
+beta_current                                 1.2
+gamma_current                                0.6
+delta_current                                0.6
+epsilon_current                              0.1
+zeta_current                                 0.1
 
 ##################################
 ##################################
