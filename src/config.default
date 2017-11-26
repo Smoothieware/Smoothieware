@@ -143,50 +143,50 @@ endstop.miny.retract                         0
 # Z endstop
 endstop.minz.axis                            Z
 endstop.minz.enable                          true
-endstop.minz.limit_enable                    true
+endstop.minz.limit_enable                    false
 endstop.minz.pin                             1.26^
 endstop.minz.homing_direction                home_to_max
 endstop.minz.homing_position                 228
 endstop.minz.max_travel                      230
 endstop.minz.fast_rate                       30
 endstop.minz.slow_rate                       5
-endstop.minz.retract                         2
+endstop.minz.retract                         0
 
 # A endstop
 endstop.mina.axis                            A
 endstop.mina.enable                          true
-endstop.mina.limit_enable                    true
+endstop.mina.limit_enable                    false
 endstop.mina.pin                             1.27^
 endstop.mina.homing_direction                home_to_max
 endstop.mina.homing_position                 228
 endstop.mina.max_travel                      230
 endstop.mina.fast_rate                       30
 endstop.mina.slow_rate                       5
-endstop.mina.retract                         2
+endstop.mina.retract                         0
 
 # B endstop
 endstop.minb.axis                            B
 endstop.minb.enable                          true
-endstop.minb.limit_enable                    true
+endstop.minb.limit_enable                    false
 endstop.minb.pin                             1.28^
 endstop.minb.homing_direction                home_to_max
 endstop.minb.homing_position                 20
 endstop.minb.max_travel                      30
 endstop.minb.fast_rate                       10
 endstop.minb.slow_rate                       2
-endstop.minb.retract                         1
+endstop.minb.retract                         0
 
 # C endstop
 endstop.minc.axis                            C
 endstop.minc.enable                          true
-endstop.minc.limit_enable                    true
+endstop.minc.limit_enable                    false
 endstop.minc.pin                             1.29^
 endstop.minc.homing_direction                home_to_max
 endstop.minc.homing_position                 20
 endstop.minc.max_travel                      30
 endstop.minc.fast_rate                       10
 endstop.minc.slow_rate                       2
-endstop.minc.retract                         1
+endstop.minc.retract                         0
 
 ##################################
 ##################################
