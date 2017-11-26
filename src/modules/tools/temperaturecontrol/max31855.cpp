@@ -22,6 +22,7 @@
 Max31855::Max31855() :
     spi(nullptr)
 {
+    this->read_flag=true;
 }
 
 Max31855::~Max31855()
@@ -57,40 +58,36 @@ void Max31855::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
     spi->format(16);
 }
 
+// returns an average of the last few temperature values we've read
 float Max31855::get_temperature()
 {
-	// Return an average of the last readings
-    if (readings.size() >= readings.capacity()) {
-        readings.delete_tail();
-    }
+    // allow read from hardware via SPI on next call to on_idle()
+    this->read_flag=true;
 
-	float temp = read_temp();
+    // Return an average of the last readings
+    if(readings.size()==0) return infinityf();
 
-	// Discard occasional errors...
-	if(!isinf(temp))
-	{
-		readings.push_back(temp);
-	}
-
-	if(readings.size()==0) return infinityf();
-
-	float sum = 0;
+    float sum = 0;
     for (int i=0; i<readings.size(); i++) {
         sum += *readings.get_ref(i);
     }
 
-	return sum / readings.size();
+    return sum / readings.size();
 }
 
-float Max31855::read_temp()
+// ask the temperature sensor hardware for a value, store it in a buffer
+void Max31855::on_idle()
 {
+    // this rate limits SPI access
+    if(!this->read_flag) return;
+
     this->spi_cs_pin.set(false);
     wait_us(1); // Must wait for first bit valid
 
     // Read 16 bits (writing something as well is required by the api)
     uint16_t data = spi->write(0);
-	//  Read next 16 bits (diagnostics)
-//	uint16_t data2 = spi->write(0);
+    //  Read next 16 bits (diagnostics)
+    //	uint16_t data2 = spi->write(0);
 
     this->spi_cs_pin.set(true);
 
@@ -114,5 +111,17 @@ float Max31855::read_temp()
             temperature = ((data & 0x1FFF) + 1) / -4.f;
         }
     }
-    return temperature;
+
+    if (readings.size() >= readings.capacity()) {
+        readings.delete_tail();
+    }
+
+    // Discard occasional errors...
+    if(!isinf(temperature))
+    {
+        readings.push_back(temperature);
+    }
+
+    // don't read again until get_temperature() is called
+    this->read_flag=false;
 }
