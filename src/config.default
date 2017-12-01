@@ -131,14 +131,14 @@ endstop.minx.retract                         0.5
 # Y endstop
 endstop.miny.axis                            Y
 endstop.miny.enable                          true
-endstop.miny.limit_enable                    true
+endstop.miny.limit_enable                    false
 endstop.miny.pin                             1.25!^
 endstop.miny.homing_direction                home_to_max
 endstop.miny.homing_position                 345
 endstop.miny.max_travel                      350
 endstop.miny.fast_rate                       30
 endstop.miny.slow_rate                       5
-endstop.miny.retract                         1
+endstop.miny.retract                         2
 
 # Z endstop
 endstop.minz.axis                            Z
@@ -150,7 +150,7 @@ endstop.minz.homing_position                 228
 endstop.minz.max_travel                      230
 endstop.minz.fast_rate                       30
 endstop.minz.slow_rate                       5
-endstop.minz.retract                         1
+endstop.minz.retract                         2
 
 # A endstop
 endstop.mina.axis                            A
@@ -162,7 +162,7 @@ endstop.mina.homing_position                 228
 endstop.mina.max_travel                      230
 endstop.mina.fast_rate                       30
 endstop.mina.slow_rate                       5
-endstop.mina.retract                         1
+endstop.mina.retract                         2
 
 # B endstop
 endstop.minb.axis                            B
