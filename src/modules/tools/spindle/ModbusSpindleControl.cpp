@@ -48,8 +48,5 @@ void ModbusSpindleControl::on_module_loaded()
 
     // setup the Modbus interface
     modbus = new Modbus(tx_pin, rx_pin, dir_pin);
-
-    // register for events
-    register_for_event(ON_GCODE_RECEIVED);
 }
 

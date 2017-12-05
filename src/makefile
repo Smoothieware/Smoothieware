@@ -108,12 +108,17 @@ include $(BUILD_DIR)/build.mk
 CONSOLE?=/dev/arduino
 BAUD?=9600
 
-.PHONY: debug-store flash upload debug console dfu
+ifneq "$(OS)" "Windows_NT"
+COPY=cp
+else
+COPY=copy
+endif
 
+.PHONY: debug-store flash upload debug console dfu
 print-%  : ; @echo $* = $($*)
 
 debug-store: ../LPC1768/$(PROJECT).elf
-	cp ../LPC1768/$(PROJECT).elf ../LPC1768/$(PROJECT)_lastupload.elf
+	cd .. && cd LPC1768 && $(COPY) $(PROJECT).elf $(PROJECT)_lastupload.elf
 
 flash: ../LPC1768/$(PROJECT).hex debug-store
 	lpc21isp $< $(CONSOLE) 115200 12000

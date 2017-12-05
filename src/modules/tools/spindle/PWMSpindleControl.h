@@ -35,7 +35,6 @@ class PWMSpindleControl: public SpindleControl {
         bool vfd_spindle; // true if we have a VFD driven spindle
 
         // Current values, updated at runtime
-        bool spindle_on;
         float current_rpm;
         float target_rpm;
         float current_I_value;
@@ -50,6 +49,7 @@ class PWMSpindleControl: public SpindleControl {
         float control_I_term;
         float control_D_term;
         float smoothing_decay;
+        float max_pwm;
 
         // These fields are updated by the interrupt
         uint32_t last_edge; // Timestamp of last edge

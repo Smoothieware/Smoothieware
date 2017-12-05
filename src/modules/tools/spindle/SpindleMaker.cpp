@@ -17,10 +17,11 @@
 #include "ConfigValue.h"
 #include "StreamOutputPool.h"
 
-#define spindle_checksum            CHECKSUM("spindle")
-#define enable_checksum             CHECKSUM("enable")
-#define spindle_type_checksum       CHECKSUM("type")
-#define spindle_vfd_type_checksum   CHECKSUM("vfd_type")
+#define spindle_checksum                   CHECKSUM("spindle")
+#define enable_checksum                    CHECKSUM("enable")
+#define spindle_type_checksum              CHECKSUM("type")
+#define spindle_vfd_type_checksum          CHECKSUM("vfd_type")
+#define spindle_ignore_on_halt_checksum    CHECKSUM("ignore_on_halt")
 
 void SpindleMaker::load_spindle(){
 
@@ -55,6 +56,12 @@ void SpindleMaker::load_spindle(){
 
     // Add the spindle if we successfully initialized one
     if( spindle != NULL) {
+
+        spindle->register_for_event(ON_GCODE_RECEIVED);
+        if (!THEKERNEL->config->value(spindle_checksum, spindle_ignore_on_halt_checksum)->by_default(false)->as_bool()) {
+            spindle->register_for_event(ON_HALT);
+        }
+
         THEKERNEL->add_module( spindle );
     }
 

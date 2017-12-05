@@ -268,5 +268,6 @@ void Laser::on_halt(void *argument)
 
 float Laser::get_current_power() const
 {
-    return pwm_pin->read() * 100;
+	float p= pwm_pin->read();
+    return (this->pwm_inverting ? 1 - p : p) * 100;
 }
