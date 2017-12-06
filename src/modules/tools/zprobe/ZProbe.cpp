@@ -179,6 +179,8 @@ uint32_t ZProbe::read_probe(uint32_t dummy)
 // returns boolean value indicating if probe was triggered
 bool ZProbe::run_probe(float& mm, float feedrate, float max_dist, bool reverse)
 {
+    if(dwell_before_probing > .0001F) safe_delay_ms(dwell_before_probing*1000);
+
     if(this->pin.get()) {
         // probe already triggered so abort
         return false;
@@ -193,8 +195,6 @@ bool ZProbe::run_probe(float& mm, float feedrate, float max_dist, bool reverse)
     // save current actuator position so we can report how far we moved
     float z_start_pos= THEROBOT->actuators[Z_AXIS]->get_current_position();
 
-    if(dwell_before_probing > .0001F) safe_delay_ms(dwell_before_probing*1000);
-    
     // move Z down
     bool dir= (!reverse_z != reverse); // xor
     float delta[3]= {0,0,0};
