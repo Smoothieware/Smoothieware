@@ -172,7 +172,7 @@ endstop.minb.pin                             1.28^
 endstop.minb.homing_direction                home_to_max
 endstop.minb.homing_position                 20
 endstop.minb.max_travel                      30
-endstop.minb.fast_rate                       10
+endstop.minb.fast_rate                       25
 endstop.minb.slow_rate                       2
 endstop.minb.retract                         1
 
@@ -184,7 +184,7 @@ endstop.minc.pin                             1.29^
 endstop.minc.homing_direction                home_to_max
 endstop.minc.homing_position                 20
 endstop.minc.max_travel                      30
-endstop.minc.fast_rate                       10
+endstop.minc.fast_rate                       25
 endstop.minc.slow_rate                       2
 endstop.minc.retract                         1
 
