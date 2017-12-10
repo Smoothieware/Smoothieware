@@ -26,33 +26,32 @@ class Instrument : public Module{
             this->i2c = new mbed::I2C(P0_27, P0_28);
             this->i2c->frequency(10000);
             this->register_for_event(ON_GCODE_RECEIVED);
+            this->memory_addr[0] = 0x00;
+            this->memory_addr[1] = 0x00;
+            for (int i=0; i<9; i++) this->return_data[i] = 0;
         }
 
         void on_gcode_received(void *argument) {
             Gcode *gcode = static_cast<Gcode*>(argument);
             if (gcode->has_m) {
-                if (gcode->m == 911) {
-                    char addr;
-                    if (gcode->has_letter('L')) {
-                        addr = 'L';
-                    }
-                    else if (gcode->has_letter('R')) {
-                        addr = 'R';
-                    }
-                    else {
-                        return;
-                    }
+                if (gcode->m == 369) {
+                    uint8_t device_address = 0xA0;
+                    if (gcode->has_letter('R')) device_address &= 0x08;
+                    else if(!gcode->has_letter('L')) return;
 
-                    // FIXME (andy): for some unknown reason, I need to double
-                    // the value of the address here, so the slave device recieves
-                    // the request. This shouldn't be possible but it makes it work...
-                    addr *= 2;
+                    for (int i=0; i<9; i++) this->return_data[i] = 0;
 
-                    char data[5];
-                    this->i2c->read(addr, data, 5);
+                    // read data from EEPROM at specified memory address
+                    this->i2c->write(device_address, this->memory_addr, 2);
+                    this->i2c->read(device_address, this->return_data, 9);
+
                     gcode->stream->printf(
-                        "Instrument: %d, %d, %d, %d, %d\r\n",
-                        data[0], data[1], data[2], data[3], data[4]);
+                        "uid: %X%X%X%X, model: %X%X, nL/mm: %X%X%X\r\n",
+                        this->return_data[0], this->return_data[1],
+                        this->return_data[2], this->return_data[3],
+                        this->return_data[4], this->return_data[5],
+                        this->return_data[6], this->return_data[7],
+                        this->return_data[8]);
                 }
             }
         }
@@ -60,6 +59,8 @@ class Instrument : public Module{
     private:
 
         mbed::I2C* i2c;
+        char memory_addr[2];
+        char return_data[9];
 };
 
 #endif
