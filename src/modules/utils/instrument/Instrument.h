@@ -10,6 +10,16 @@
 #include <string>
 #include <math.h>
 
+#define EEPROM_LEFT_ADDRESS 0xA6
+#define EEPROM_RIGHT_ADDRESS 0xAE
+
+#define EEPROM_SERIAL_LOCATION 0x80
+#define EEPROM_SERIAL_LENGTH 16
+#define EEPROM_SERIAL_ADDRESS_OFFSET 0x10
+
+#define OT_DATA_LOCATION 0x00
+#define OT_DATA_LENGTH 5
+
 
 class Instrument : public Module{
     public:
@@ -30,51 +40,62 @@ class Instrument : public Module{
         void on_gcode_received(void *argument) {
             Gcode *gcode = static_cast<Gcode*>(argument);
             if (gcode->has_m && gcode->m == 369) {
-
-                // left instrument
-                this->_update_from_i2c_address(0xA6);
-                if (this->error) this->_print_error('L', gcode);
-                else this->_print_data('L', gcode);
-
-                // right instrument
-                this->_update_from_i2c_address(0xAE);
-                if (this->error) this->_print_error('R', gcode);
-                else this->_print_data('R', gcode);
+                this->_detect_instrument(EEPROM_LEFT_ADDRESS, 'L', gcode);
+                this->_detect_instrument(EEPROM_RIGHT_ADDRESS, 'R', gcode);
             }
         }
 
     private:
 
         mbed::I2C* i2c;
-        char memory_addr[2];
-        char return_data[9];
-        int error;
 
-        void _update_from_i2c_address(uint8_t device_address) {
-            // read data from EEPROM at specified memory address
+        char serial[EEPROM_SERIAL_LENGTH];
+        char data[OT_DATA_LENGTH];
+        int error;
+        char memory_addr[1];
+
+        void _detect_instrument(uint8_t address, char label, Gcode *gcode) {
+            this->_read_data(
+                address + EEPROM_SERIAL_ADDRESS_OFFSET,
+                EEPROM_SERIAL_LOCATION,
+                this->serial,
+                EEPROM_SERIAL_LENGTH
+            );
+            if (this->error) this->_print_error(label, gcode);
+            else {
+                this->_read_data(
+                    address,
+                    OT_DATA_LOCATION,
+                    this->data,
+                    OT_DATA_LENGTH
+                );
+                if (this->error) this->_print_error(label, gcode);
+                else this->_print_data(label, gcode);
+            }
+        }
+
+        void _read_data(uint8_t address, char mem, char *data, int length) {
             int i;
             this->error = 0;
-            for (i=0; i<2; i++) this->memory_addr[i] = 0x00; // data's position on EEPROM
-            for (i=0; i<9; i++) this->return_data[i] = 0x00;
+            this->memory_addr[0] = mem;
+            for (i=0; i<length; i++) data[i] = 0x00;
 
-            // set EEPROM register to register where our data begins
-            this->error = this->i2c->write(device_address, this->memory_addr, 2);
+            this->error = this->i2c->write(address, this->memory_addr, 1);
             if (this->error == 0) {
                 wait(0.1);
-                // read 9 bytes from starting from register set above
-                this->error = this->i2c->read(device_address, this->return_data, 9);
+                this->error = this->i2c->read(address, data, length);
             }
         }
 
         void _print_data(char label, Gcode *gcode){
             gcode->stream->printf(
-                "[%c] uid:%02X-%02X-%02X-%02X, model:%02X-%02X, nL/mm:%02X-%02X-%02X\r\n",
+                "[%c] serial:%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X, model:%02X%02X, nL/mm:%02X%02X%02X\r\n",
                 label,
-                this->return_data[0], this->return_data[1],
-                this->return_data[2], this->return_data[3],
-                this->return_data[4], this->return_data[5],
-                this->return_data[6], this->return_data[7],
-                this->return_data[8]
+                this->serial[0], this->serial[1], this->serial[2], this->serial[3],
+                this->serial[4], this->serial[5], this->serial[6], this->serial[7],
+                this->serial[8], this->serial[9], this->serial[10], this->serial[11],
+                this->serial[12], this->serial[13], this->serial[14], this->serial[15],
+                this->data[0], this->data[1], this->data[2], this->data[3], this->data[4]
             );
         }
 
