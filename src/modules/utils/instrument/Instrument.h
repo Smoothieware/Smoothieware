@@ -22,37 +22,24 @@ class Instrument : public Module{
         }
 
         void on_module_loaded(){
-            // I2C com
             this->i2c = new mbed::I2C(P0_27, P0_28);
             this->i2c->frequency(10000);
             this->register_for_event(ON_GCODE_RECEIVED);
-            this->memory_addr[0] = 0x00;
-            this->memory_addr[1] = 0x00;
-            for (int i=0; i<9; i++) this->return_data[i] = 0;
         }
 
         void on_gcode_received(void *argument) {
             Gcode *gcode = static_cast<Gcode*>(argument);
-            if (gcode->has_m) {
-                if (gcode->m == 369) {
-                    uint8_t device_address = 0xA0;
-                    if (gcode->has_letter('R')) device_address &= 0x08;
-                    else if(!gcode->has_letter('L')) return;
+            if (gcode->has_m && gcode->m == 369) {
 
-                    for (int i=0; i<9; i++) this->return_data[i] = 0;
+                // left instrument
+                this->_update_from_i2c_address(0xA6);
+                if (this->error) this->_print_error('L', gcode);
+                else this->_print_data('L', gcode);
 
-                    // read data from EEPROM at specified memory address
-                    this->i2c->write(device_address, this->memory_addr, 2);
-                    this->i2c->read(device_address, this->return_data, 9);
-
-                    gcode->stream->printf(
-                        "uid: %X%X%X%X, model: %X%X, nL/mm: %X%X%X\r\n",
-                        this->return_data[0], this->return_data[1],
-                        this->return_data[2], this->return_data[3],
-                        this->return_data[4], this->return_data[5],
-                        this->return_data[6], this->return_data[7],
-                        this->return_data[8]);
-                }
+                // right instrument
+                this->_update_from_i2c_address(0xAE);
+                if (this->error) this->_print_error('R', gcode);
+                else this->_print_data('R', gcode);
             }
         }
 
@@ -61,6 +48,39 @@ class Instrument : public Module{
         mbed::I2C* i2c;
         char memory_addr[2];
         char return_data[9];
+        int error;
+
+        void _update_from_i2c_address(uint8_t device_address) {
+            // read data from EEPROM at specified memory address
+            int i;
+            this->error = 0;
+            for (i=0; i<2; i++) this->memory_addr[i] = 0x00; // data's position on EEPROM
+            for (i=0; i<9; i++) this->return_data[i] = 0x00;
+
+            // set EEPROM register to register where our data begins
+            this->error = this->i2c->write(device_address, this->memory_addr, 2);
+            if (this->error == 0) {
+                wait(0.1);
+                // read 9 bytes from starting from register set above
+                this->error = this->i2c->read(device_address, this->return_data, 9);
+            }
+        }
+
+        void _print_data(char label, Gcode *gcode){
+            gcode->stream->printf(
+                "[%c] uid:%02X-%02X-%02X-%02X, model:%02X-%02X, nL/mm:%02X-%02X-%02X\r\n",
+                label,
+                this->return_data[0], this->return_data[1],
+                this->return_data[2], this->return_data[3],
+                this->return_data[4], this->return_data[5],
+                this->return_data[6], this->return_data[7],
+                this->return_data[8]
+            );
+        }
+
+        void _print_error(char label, Gcode *gcode) {
+            gcode->stream->printf("[%c] error: %d\r\n", label, this->error);
+        }
 };
 
 #endif
