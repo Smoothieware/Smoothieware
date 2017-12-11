@@ -124,19 +124,25 @@ class Instrument : public Module{
         void _parse_hex_from_gcode(char label, Gcode *gcode) {
             unsigned int i;
             int increment = 1;
-            char c;
+            char c = 0x00;
+            bool msb = true;
             for (i=0;i<strlen(gcode->command);i++){
                 if (gcode->command[i] == label) {
                     for (i=i+1;i<strlen(gcode->command);i++) {
                         if (this->_is_hex_ascii(gcode->command[i])) {
-                            c = this->_decode_ascii(gcode->command[i]);
-                            c *= 0x10;
-                            i++;
                             c += this->_decode_ascii(gcode->command[i]);
-                            this->write_data[increment] = c;
-                            increment++;
-                            if (increment == OT_DATA_LENGTH + 1) {
-                                break;
+                            if (msb == true) {
+                                c *= 0x10;
+                                msb = false;
+                            }
+                            else if (msb == false) {
+                                this->write_data[increment] = c;
+                                increment++;
+                                msb = true;
+                                c = 0x00;
+                                if (increment == OT_DATA_LENGTH + 1) {
+                                    break;
+                                }
                             }
                         }
                     }
@@ -160,9 +166,6 @@ class Instrument : public Module{
             }
             else if (c >= '0' && c <= '9') {
                 c -= '0';
-            }
-            else {
-                this->error = 42;
             }
             return c;
         }
