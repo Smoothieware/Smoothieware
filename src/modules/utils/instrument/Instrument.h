@@ -59,26 +59,26 @@ class Instrument : public Module{
 
         mbed::I2C* i2c;
 
-        char serial[EEPROM_SERIAL_LENGTH];
+        char unique_id[EEPROM_SERIAL_LENGTH];
         char read_data[OT_DATA_LENGTH];
         char write_data[OT_DATA_LENGTH + 1];
         int error;
         char memory_addr[1];
 
         void _detect_instrument(uint8_t address, char label, Gcode *gcode) {
-            // read unique serial number
+            // read unique unique_id number
             this->_read_data(
                 address + EEPROM_SERIAL_ADDRESS_OFFSET,
-                EEPROM_SERIAL_LOCATION, this->serial, EEPROM_SERIAL_LENGTH);
-            if (this->error) {
-                this->_print_error(label, gcode);
+                EEPROM_SERIAL_LOCATION, this->unique_id, EEPROM_SERIAL_LENGTH);
+            if (this->error) {  // if error 32, no instrument is present
+                // this->_print_error(label, gcode);
                 return;
             }
             // read ot-data bytes
             this->_read_data(
                 address, OT_DATA_LOCATION, this->read_data, OT_DATA_LENGTH);
-            if (this->error) {
-                this->_print_error(label, gcode);
+            if (this->error) {  // if error 32, no instrument is present
+                // this->_print_error(label, gcode);
                 return;
             }
             // print results
@@ -179,12 +179,12 @@ class Instrument : public Module{
 
         void _print_data(char label, Gcode *gcode){
             gcode->stream->printf(
-                "%c: serial:%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X model:%02X%02X nL/mm:%02X%02X%02X\r\n",
+                "%c: id:%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X model:%02X%02X nL/mm:%02X%02X%02X\r\n",
                 label,
-                this->serial[0], this->serial[1], this->serial[2], this->serial[3],
-                this->serial[4], this->serial[5], this->serial[6], this->serial[7],
-                this->serial[8], this->serial[9], this->serial[10], this->serial[11],
-                this->serial[12], this->serial[13], this->serial[14], this->serial[15],
+                this->unique_id[0], this->unique_id[1], this->unique_id[2], this->unique_id[3],
+                this->unique_id[4], this->unique_id[5], this->unique_id[6], this->unique_id[7],
+                this->unique_id[8], this->unique_id[9], this->unique_id[10], this->unique_id[11],
+                this->unique_id[12], this->unique_id[13], this->unique_id[14], this->unique_id[15],
                 this->read_data[0], this->read_data[1], this->read_data[2], this->read_data[3], this->read_data[4]
             );
         }
