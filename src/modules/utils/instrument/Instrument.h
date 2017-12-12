@@ -114,7 +114,7 @@ class Instrument : public Module{
                 return;
             }
             gcode->stream->printf(
-                "%c: model:%02X%02X, nL/mm:%02X%02X%02X\r\n",
+                "%c: model:%02X%02X nL/mm:%02X%02X%02X\r\n",
                 label,
                 this->write_data[1], this->write_data[2],
                 this->write_data[3], this->write_data[4], this->write_data[5]
@@ -179,7 +179,7 @@ class Instrument : public Module{
 
         void _print_data(char label, Gcode *gcode){
             gcode->stream->printf(
-                "%c: serial:%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X, model:%02X%02X, nL/mm:%02X%02X%02X\r\n",
+                "%c: serial:%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X model:%02X%02X nL/mm:%02X%02X%02X\r\n",
                 label,
                 this->serial[0], this->serial[1], this->serial[2], this->serial[3],
                 this->serial[4], this->serial[5], this->serial[6], this->serial[7],
@@ -190,7 +190,7 @@ class Instrument : public Module{
         }
 
         void _print_error(char label, Gcode *gcode) {
-            gcode->stream->printf("[%c] error:%d\r\n", label, this->error);
+            gcode->stream->printf("%c: error:%d\r\n", label, this->error);
         }
 };
 
