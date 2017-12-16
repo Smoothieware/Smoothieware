@@ -113,40 +113,38 @@ class Instrument : public Module{
                 this->_print_error(label, gcode);
                 return;
             }
-            gcode->stream->printf(
-                "%c: model:%02X%02X nL/mm:%02X%02X%02X\r\n",
-                label,
-                this->write_data[1], this->write_data[2],
-                this->write_data[3], this->write_data[4], this->write_data[5]
-            );
+            this->_detect_instrument(EEPROM_LEFT_ADDRESS, label, gcode);
         }
 
         void _parse_hex_from_gcode(char label, Gcode *gcode) {
             unsigned int i;
-            int increment = 1;
-            char c = 0x00;
-            bool msb = true;
-            for (i=0;i<strlen(gcode->command);i++){
+            char len = strlen(gcode->command);
+            for (i=0;i<len;i++){
                 if (gcode->command[i] == label) {
-                    for (i=i+1;i<strlen(gcode->command);i++) {
-                        if (this->_is_hex_ascii(gcode->command[i])) {
-                            c += this->_decode_ascii(gcode->command[i]);
-                            if (msb == true) {
-                                c *= 0x10;
-                                msb = false;
-                            }
-                            else if (msb == false) {
-                                this->write_data[increment] = c;
-                                increment++;
-                                msb = true;
-                                c = 0x00;
-                                if (increment == OT_DATA_LENGTH + 1) {
-                                    break;
-                                }
-                            }
+                    break;  // start following loop where this one broke
+                }
+            }
+            int increment = 1;
+            bool msb = true;
+            char c = 0x00;
+            char h = 0x00;
+            for (i=i+1;i<len;i++) {  // begins after "label" character
+                c = gcode->command[i];
+                if (this->_is_hex_ascii(c)) {
+                    h += this->_decode_ascii(c);
+                    if (msb == true) {
+                        h *= 0x10;
+                        msb = false;
+                    }
+                    else if (msb == false) {
+                        this->write_data[increment] = h;
+                        increment++;
+                        msb = true;
+                        h = 0x00;
+                        if (increment == OT_DATA_LENGTH + 1) {
+                            break;
                         }
                     }
-                    break;
                 }
             }
             this->error = 0;
@@ -179,7 +177,7 @@ class Instrument : public Module{
 
         void _print_data(char label, Gcode *gcode){
             gcode->stream->printf(
-                "%c: id:%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X model:%02X%02X nL/mm:%02X%02X%02X\r\n",
+                "%c: id:%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X data:%02X%02X%02X%02X%02X\r\n",
                 label,
                 this->unique_id[0], this->unique_id[1], this->unique_id[2], this->unique_id[3],
                 this->unique_id[4], this->unique_id[5], this->unique_id[6], this->unique_id[7],
