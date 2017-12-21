@@ -1344,8 +1344,8 @@ bool Robot::append_line(Gcode *gcode, const float target[], float rate_mm_s, flo
         // We always add another point after this loop so we stop at segments-1, ie i < segments
         for (int i = 1; i < segments; i++) {
             if(THEKERNEL->is_halted()) return false; // don't queue any more segments
-            for (int i = 0; i < n_motors; i++)
-                segment_end[i] += segment_delta[i];
+            for (int j = 0; j < n_motors; j++)
+                segment_end[j] += segment_delta[j];
 
             // Append the end of this segment to the queue
             // this can block waiting for free block queue or if in feed hold
