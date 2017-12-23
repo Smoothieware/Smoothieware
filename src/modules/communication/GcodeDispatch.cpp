@@ -60,9 +60,8 @@ void GcodeDispatch::on_console_line_received(void *line)
     int ln = 0;
     int cs = 0;
 
-    // just reply ok to empty lines
+    // empty line is just an incorrect input in most cases. Just skip it.
     if(possible_command.empty()) {
-        new_message.stream->printf("ok\r\n");
         return;
     }
 
@@ -114,8 +113,10 @@ try_again:
 			if(lnsize != string::npos) {
 				possible_command = possible_command.substr(lnsize);
 			}else{
-				// it is a blank line
+				// Blank line with the N prefix it's an error.
+                new_message.stream->printf("Error: Empty command with N!.\r\n");
 				possible_command.clear();
+                return;
 			}
 
         } else {
@@ -449,6 +450,7 @@ try_again:
 
         // Ignore comments and blank lines
     } else if ( first_char == ';' || first_char == '(' || first_char == ' ' || first_char == '\n' || first_char == '\r' ) {
+        new_message.stream->printf("Invalid input: \"%s\"\r\n", first_char);
         new_message.stream->printf("ok\r\n");
     }
 }
