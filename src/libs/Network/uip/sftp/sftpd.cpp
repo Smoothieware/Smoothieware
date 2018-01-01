@@ -149,10 +149,6 @@ int Sftpd::handle_download()
         }
         filesize -= readlen;
         DEBUG_PRINTF("sftp: saved %d bytes %d left\n", readlen, filesize);
-        // HACK ALERT... to work around the fwrite/filesystem bug where writing large amounts of data corrupts the file
-        // we workaround by closing the file, the reopening for append until we are done
-        fclose(fd);
-        fd = fopen(this->filename, "a");
     }
     if (filesize == 0) {
         DEBUG_PRINTF("sftp: download complete\n");

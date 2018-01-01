@@ -487,10 +487,7 @@ void SimpleShell::upload_command( string parameters, StreamOutput *stream )
                 uploading= false;
 
             } else {
-                if ((cnt%400) == 0) {
-                    // HACK ALERT to get around fwrite corruption close and re open for append
-                    fclose(fd);
-                    fd = fopen(upload_filename.c_str(), "a");
+                if ((cnt%1000) == 0) {
                     // we need to kick things or they die
                     THEKERNEL->call_event(ON_IDLE);
                 }
