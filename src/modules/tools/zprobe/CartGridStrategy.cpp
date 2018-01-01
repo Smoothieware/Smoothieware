@@ -550,27 +550,36 @@ bool CartGridStrategy::doProbe(Gcode *gc)
 void CartGridStrategy::doCompensation(float *target, bool inverse)
 {
     // Adjust print surface height by linear interpolation over the bed_level array.
-    if ((std::min(this->x_start, this->x_start + this->x_size) <= target[X_AXIS]) && (target[X_AXIS] <= std::max(this->x_start, this->x_start + this->x_size)) &&
-        (std::min(this->y_start, this->y_start + this->y_size) <= target[Y_AXIS]) && (target[Y_AXIS] <= std::max(this->y_start, this->y_start + this->y_size))) {
 
-            float grid_x = std::max(0.001F, (target[X_AXIS] - this->x_start) / (this->x_size / (this->current_grid_x_size - 1)));
-            float grid_y = std::max(0.001F, (target[Y_AXIS] - this->y_start) / (this->y_size / (this->current_grid_y_size - 1)));
-            int floor_x = floorf(grid_x);
-            int floor_y = floorf(grid_y);
-            float ratio_x = grid_x - floor_x;
-            float ratio_y = grid_y - floor_y;
-            float z1 = grid[(floor_x) + ((floor_y) * this->current_grid_x_size)];
-            float z2 = grid[(floor_x) + ((floor_y + 1) * this->current_grid_x_size)];
-            float z3 = grid[(floor_x + 1) + ((floor_y) * this->current_grid_x_size)];
-            float z4 = grid[(floor_x + 1) + ((floor_y + 1) * this->current_grid_x_size)];
-            float left = (1 - ratio_y) * z1 + ratio_y * z2;
-            float right = (1 - ratio_y) * z3 + ratio_y * z4;
-            float offset = (1 - ratio_x) * left + ratio_x * right;
+    // find min/maxes, and handle the case where size is negative (assuming this is possible? Legacy code supported this)
+    float min_x = std::min(this->x_start, this->x_start + this->x_size);
+    float max_x = std::max(this->x_start, this->x_start + this->x_size);
+    float min_y = std::min(this->y_start, this->y_start + this->y_size);
+    float max_y = std::max(this->y_start, this->y_start + this->y_size);
 
-            if(inverse)
-                target[Z_AXIS] -= offset;
-            else
-                target[Z_AXIS] += offset;
+    // clamp the input to the bounds of the compensation grid
+    // if a point is beyond the bounds of the grid, it will get the offset of the closest grid point
+    float x_target = std::min(std::max(target[X_AXIS], min_x), max_x);
+    float y_target = std::min(std::max(target[Y_AXIS], min_y), max_y);
+
+    float grid_x = std::max(0.001F, (x_target - this->x_start) / (this->x_size / (this->current_grid_x_size - 1)));
+    float grid_y = std::max(0.001F, (y_target - this->y_start) / (this->y_size / (this->current_grid_y_size - 1)));
+    int floor_x = floorf(grid_x);
+    int floor_y = floorf(grid_y);
+    float ratio_x = grid_x - floor_x;
+    float ratio_y = grid_y - floor_y;
+    float z1 = grid[(floor_x) + ((floor_y) * this->current_grid_x_size)];
+    float z2 = grid[(floor_x) + ((floor_y + 1) * this->current_grid_x_size)];
+    float z3 = grid[(floor_x + 1) + ((floor_y) * this->current_grid_x_size)];
+    float z4 = grid[(floor_x + 1) + ((floor_y + 1) * this->current_grid_x_size)];
+    float left = (1 - ratio_y) * z1 + ratio_y * z2;
+    float right = (1 - ratio_y) * z3 + ratio_y * z4;
+    float offset = (1 - ratio_x) * left + ratio_x * right;
+
+    if(inverse)
+        target[Z_AXIS] -= offset;
+    else
+        target[Z_AXIS] += offset;
 
 
     /*
@@ -589,7 +598,6 @@ void CartGridStrategy::doCompensation(float *target, bool inverse)
         THEKERNEL->streams->printf("//DEBUG: right= %f\n", right);
         THEKERNEL->streams->printf("//DEBUG: offset= %f\n", offset);
     */
-        }
 }
 
 
