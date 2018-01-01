@@ -413,7 +413,6 @@ try_again:
                     }
 
                     single_command.append("\n");
-                    static int cnt = 0;
                     if(fwrite(single_command.c_str(), 1, single_command.size(), upload_fd) != single_command.size()) {
                         // error writing to file
                         new_message.stream->printf("Error:error writing to file.\r\n");
@@ -422,14 +421,7 @@ try_again:
                         continue;
 
                     } else {
-                        cnt += single_command.size();
-                        if (cnt > 400) {
-                            // HACK ALERT to get around fwrite corruption close and re open for append
-                            fclose(upload_fd);
-                            upload_fd = fopen(upload_filename.c_str(), "a");
-                            cnt = 0;
-                        }
-                        new_message.stream->printf("ok\r\n");
+                         new_message.stream->printf("ok\r\n");
                         //printf("uploading file write ok\n");
                     }
                 }

@@ -219,19 +219,12 @@ void CartGridStrategy::save_grid(StreamOutput *stream)
         return;
     }
 
-    int cnt= 0;
     for (int y = 0; y < configured_grid_y_size; y++) {
         for (int x = 0; x < configured_grid_x_size; x++) {
             if(fwrite(&grid[x + (configured_grid_x_size * y)], sizeof(float), 1, fp) != 1) {
                 stream->printf("error:Failed to write grid\n");
                 fclose(fp);
                 return;
-            }
-            cnt += 4;
-            if ((cnt % 400) == 0) {
-                // HACK ALERT to get around fwrite corruption close and re open for append
-                fclose(fp);
-                fp = fopen(GRIDFILE, "a");
             }
         }
     }

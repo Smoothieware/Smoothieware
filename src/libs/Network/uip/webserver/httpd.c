@@ -171,12 +171,6 @@ static int save_file(uint8_t *buf, unsigned int len)
 {
     if (fwrite(buf, 1, len, fd) == len) {
         file_cnt += len;
-        // HACK alert work around bug causing file corruption when writing large amounts of data
-        if (file_cnt >= 400) {
-            file_cnt = 0;
-            fclose(fd);
-            fd = fopen(output_filename, "a");
-        }
         return 1;
 
     } else {
