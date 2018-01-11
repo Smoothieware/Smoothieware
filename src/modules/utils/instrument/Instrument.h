@@ -12,12 +12,14 @@
 
 using std::string;
 
-#define EEPROM_LEFT_ADDRESS 0xA6
-#define EEPROM_RIGHT_ADDRESS 0xAE
+#define EEPROM_LEFT_ADDRESS 0xA0
+#define EEPROM_RIGHT_ADDRESS 0xA2
 
-#define EEPROM_SERIAL_LOCATION 0x80
-#define EEPROM_SERIAL_LENGTH 16
-#define EEPROM_SERIAL_ADDRESS_OFFSET 0x10
+#define OT_ID_LOCATION 0x80
+#define OT_ID_LENGTH 16
+
+#define OT_MODEL_LOCATION 0x30  // not used yet
+#define OT_MODEL_LENGTH 5    // not used yet
 
 #define OT_DATA_LOCATION 0x00
 #define OT_DATA_LENGTH 5
@@ -59,7 +61,7 @@ class Instrument : public Module{
 
         mbed::I2C* i2c;
 
-        char unique_id[EEPROM_SERIAL_LENGTH];
+        char unique_id[OT_ID_LENGTH];
         char read_data[OT_DATA_LENGTH];
         char write_data[OT_DATA_LENGTH + 1];
         int error;
@@ -68,17 +70,18 @@ class Instrument : public Module{
         void _detect_instrument(uint8_t address, char label, Gcode *gcode) {
             // read unique unique_id number
             this->_read_data(
-                address + EEPROM_SERIAL_ADDRESS_OFFSET,
-                EEPROM_SERIAL_LOCATION, this->unique_id, EEPROM_SERIAL_LENGTH);
+                address,
+                OT_ID_LOCATION, this->unique_id, OT_ID_LENGTH);
             if (this->error) {  // if error 32, no instrument is present
-                // this->_print_error(label, gcode);
+                this->_print_error(label, gcode);
                 return;
             }
+
             // read ot-data bytes
             this->_read_data(
                 address, OT_DATA_LOCATION, this->read_data, OT_DATA_LENGTH);
             if (this->error) {  // if error 32, no instrument is present
-                // this->_print_error(label, gcode);
+                this->_print_error(label, gcode);
                 return;
             }
             // print results
