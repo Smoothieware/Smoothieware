@@ -16,13 +16,14 @@ using std::string;
 #define EEPROM_RIGHT_ADDRESS 0xA2
 
 #define OT_ID_LOCATION 0x80
-#define OT_ID_LENGTH 16
-
-#define OT_MODEL_LOCATION 0x30  // not used yet
-#define OT_MODEL_LENGTH 5    // not used yet
+#define OT_ID_LENGTH 6          // 6-byte instrument ID
 
 #define OT_DATA_LOCATION 0x00
-#define OT_DATA_LENGTH 5
+#define OT_DATA_LENGTH 8        // 8 bytes is arbitrary (need data contents)
+
+#define NO_ERROR 0
+#define WRITE_ARGUMENTS_ERROR 1
+#define I2C_ERROR 32
 
 
 class Instrument : public Module{
@@ -92,9 +93,9 @@ class Instrument : public Module{
             this->memory_addr[0] = mem;
             for (int i=0; i<length; i++) data[i] = 0x00; // erase buffer
 
-            this->error = 0;
+            this->error = NO_ERROR;
             this->error = this->i2c->write(address, this->memory_addr, 1);
-            if (this->error == 0) {
+            if (this->error == NO_ERROR) {
                 wait(0.1);
                 this->error = this->i2c->read(address, data, length);
             }
@@ -110,7 +111,7 @@ class Instrument : public Module{
             }
 
             this->write_data[0] = OT_DATA_LOCATION;
-            this->error = 0;
+            this->error = NO_ERROR;
             this->error = this->i2c->write(address, this->write_data, OT_DATA_LENGTH + 1);
             if (this->error) {
                 this->_print_error(label, gcode);
@@ -150,9 +151,9 @@ class Instrument : public Module{
                     }
                 }
             }
-            this->error = 0;
+            this->error = NO_ERROR;
             if (increment < OT_DATA_LENGTH + 1) {
-                this->error = 42;
+                this->error = WRITE_ARGUMENTS_ERROR;
             }
         }
 
@@ -180,18 +181,23 @@ class Instrument : public Module{
 
         void _print_data(char label, Gcode *gcode){
             gcode->stream->printf(
-                "%c: id:%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X data:%02X%02X%02X%02X%02X\r\n",
+                "%c: id:%02X%02X%02X%02X%02X%02X data:%02X%02X%02X%02X%02X%02X%02X%02X\r\n",
                 label,
-                this->unique_id[0], this->unique_id[1], this->unique_id[2], this->unique_id[3],
-                this->unique_id[4], this->unique_id[5], this->unique_id[6], this->unique_id[7],
-                this->unique_id[8], this->unique_id[9], this->unique_id[10], this->unique_id[11],
-                this->unique_id[12], this->unique_id[13], this->unique_id[14], this->unique_id[15],
+                this->unique_id[0], this->unique_id[1], this->unique_id[2], this->unique_id[3], this->unique_id[4], this->unique_id[5],
                 this->read_data[0], this->read_data[1], this->read_data[2], this->read_data[3], this->read_data[4]
             );
         }
 
         void _print_error(char label, Gcode *gcode) {
-            gcode->stream->printf("%c: error:%d\r\n", label, this->error);
+            if (this->error == NO_ERROR){
+                return;
+            }
+            else if (this->error == I2C_ERROR) {
+                gcode->stream->printf("Error (%c): No instrument found\r\n", label);
+            }
+            else if (this->error == WRITE_ARGUMENTS_ERROR) {
+                gcode->stream->printf("Error (%c): Data must be %d bytes bytes long\r\n", label, OT_DATA_LENGTH);
+            }
         }
 };
 
