@@ -116,29 +116,31 @@ zeta_steps_per_mm                            768
 
 # ENDSTOPS and HOMING
 
+endstop_debounce_ms                          1
+
 # X endstop
 endstop.minx.axis                            X
 endstop.minx.enable                          true
-endstop.minx.limit_enable                    false
+endstop.minx.limit_enable                    true
 endstop.minx.pin                             1.24!^
 endstop.minx.homing_direction                home_to_max
 endstop.minx.homing_position                 395
 endstop.minx.max_travel                      430
 endstop.minx.fast_rate                       100
 endstop.minx.slow_rate                       8
-endstop.minx.retract                         0.5
+endstop.minx.retract                         3
 
 # Y endstop
 endstop.miny.axis                            Y
 endstop.miny.enable                          true
-endstop.miny.limit_enable                    false
+endstop.miny.limit_enable                    true
 endstop.miny.pin                             1.25!^
 endstop.miny.homing_direction                home_to_max
 endstop.miny.homing_position                 345
 endstop.miny.max_travel                      370
 endstop.miny.fast_rate                       100
 endstop.miny.slow_rate                       5
-endstop.miny.retract                         2
+endstop.miny.retract                         3
 
 # Z endstop
 endstop.minz.axis                            Z
