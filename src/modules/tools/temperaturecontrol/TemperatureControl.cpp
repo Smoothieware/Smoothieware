@@ -305,7 +305,7 @@ void TemperatureControl::on_gcode_received(void *argument)
                     this->heater_pin.max_pwm(gcode->get_value('Y'));
 
             }else if(!gcode->has_letter('S')) {
-                gcode->stream->printf("%s(S%d): Pf:%g If:%g Df:%g X(I_max):%g max pwm: %d O:%d\n", this->designator.c_str(), this->pool_index, this->p_factor, this->i_factor / this->PIDdt, this->d_factor * this->PIDdt, this->i_max, this->heater_pin.max_pwm(), o);
+                gcode->stream->printf("%s(S%d): Pf:%g If:%g Df:%g X(I_max):%g Y(max pwm):%d O:%d\n", this->designator.c_str(), this->pool_index, this->p_factor, this->i_factor / this->PIDdt, this->d_factor * this->PIDdt, this->i_max, this->heater_pin.max_pwm(), o);
             }
 
         } else if (gcode->m == 500 || gcode->m == 503) { // M500 saves some volatile settings to config override file, M503 just prints the settings
