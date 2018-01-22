@@ -124,7 +124,7 @@ endstop.minx.enable                          true
 endstop.minx.limit_enable                    true
 endstop.minx.pin                             1.24!^
 endstop.minx.homing_direction                home_to_max
-endstop.minx.homing_position                 395
+endstop.minx.homing_position                 421
 endstop.minx.max_travel                      430
 endstop.minx.fast_rate                       100
 endstop.minx.slow_rate                       8
@@ -136,7 +136,7 @@ endstop.miny.enable                          true
 endstop.miny.limit_enable                    true
 endstop.miny.pin                             1.25!^
 endstop.miny.homing_direction                home_to_max
-endstop.miny.homing_position                 345
+endstop.miny.homing_position                 353
 endstop.miny.max_travel                      370
 endstop.miny.fast_rate                       100
 endstop.miny.slow_rate                       5
@@ -148,8 +148,8 @@ endstop.minz.enable                          true
 endstop.minz.limit_enable                    true
 endstop.minz.pin                             1.26^
 endstop.minz.homing_direction                home_to_max
-endstop.minz.homing_position                 228
-endstop.minz.max_travel                      240
+endstop.minz.homing_position                 220
+endstop.minz.max_travel                      230
 endstop.minz.fast_rate                       60
 endstop.minz.slow_rate                       5
 endstop.minz.retract                         2
@@ -160,8 +160,8 @@ endstop.mina.enable                          true
 endstop.mina.limit_enable                    true
 endstop.mina.pin                             1.27^
 endstop.mina.homing_direction                home_to_max
-endstop.mina.homing_position                 228
-endstop.mina.max_travel                      240
+endstop.mina.homing_position                 220
+endstop.mina.max_travel                      230
 endstop.mina.fast_rate                       60
 endstop.mina.slow_rate                       5
 endstop.mina.retract                         2
