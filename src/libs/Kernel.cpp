@@ -204,7 +204,8 @@ std::string Kernel::get_query_string()
 
         char buf[128];
         // machine position
-        size_t n = snprintf(buf, sizeof(buf), "%1.4f,%1.4f,%1.4f", robot->from_millimeters(mpos[0]), robot->from_millimeters(mpos[1]), robot->from_millimeters(mpos[2]));
+        size_t n = snprintf(buf, sizeof(buf)-1, "%1.4f,%1.4f,%1.4f", robot->from_millimeters(mpos[0]), robot->from_millimeters(mpos[1]), robot->from_millimeters(mpos[2]));
+        if(n > sizeof(buf)) n= sizeof(buf);
 
         if(new_status_format) {
             str.append("|MPos:").append(buf, n);
@@ -213,7 +214,8 @@ std::string Kernel::get_query_string()
             // deal with the ABC axis (E will be A)
             for (int i = A_AXIS; i < robot->get_number_registered_motors(); ++i) {
                 // current actuator position
-                n = snprintf(buf, sizeof(buf), ",%1.4f", robot->from_millimeters(robot->actuators[i]->get_current_position()));
+                n = snprintf(buf, sizeof(buf)-1, ",%1.4f", robot->from_millimeters(robot->actuators[i]->get_current_position()));
+                if(n > sizeof(buf)) n= sizeof(buf);
                 str.append(buf, n);
             }
 #endif
@@ -224,16 +226,19 @@ std::string Kernel::get_query_string()
 
         // work space position
         Robot::wcs_t pos = robot->mcs2wcs(mpos);
-        n = snprintf(buf, sizeof(buf), "%1.4f,%1.4f,%1.4f", robot->from_millimeters(std::get<X_AXIS>(pos)), robot->from_millimeters(std::get<Y_AXIS>(pos)), robot->from_millimeters(std::get<Z_AXIS>(pos)));
+        n = snprintf(buf, sizeof(buf)-1, "%1.4f,%1.4f,%1.4f", robot->from_millimeters(std::get<X_AXIS>(pos)), robot->from_millimeters(std::get<Y_AXIS>(pos)), robot->from_millimeters(std::get<Z_AXIS>(pos)));
+        if(n > sizeof(buf)) n= sizeof(buf);
 
         if(new_status_format) {
             str.append("|WPos:").append(buf, n);
             // current feedrate
             float fr= robot->from_millimeters(conveyor->get_current_feedrate()*60.0F);
-            n = snprintf(buf, sizeof(buf), "|F:%1.4f", fr);
+            n = snprintf(buf, sizeof(buf)-1, "|F:%1.4f", fr);
+            if(n > sizeof(buf)) n= sizeof(buf);
             str.append(buf, n);
             float sr= robot->get_s_value();
-            n = snprintf(buf, sizeof(buf), "|S:%1.4f", sr);
+            n = snprintf(buf, sizeof(buf)-1, "|S:%1.4f", sr);
+            if(n > sizeof(buf)) n= sizeof(buf);
             str.append(buf, n);
 
             // current Laser power
@@ -241,7 +246,8 @@ std::string Kernel::get_query_string()
                 Laser *plaser= nullptr;
                 if(PublicData::get_value(laser_checksum, (void *)&plaser) && plaser != nullptr) {
                    float lp= plaser->get_current_power();
-                    n = snprintf(buf, sizeof(buf), "|L:%1.4f", lp);
+                    n = snprintf(buf, sizeof(buf)-1, "|L:%1.4f", lp);
+                    if(n > sizeof(buf)) n= sizeof(buf);
                     str.append(buf, n);
                 }
             #endif
@@ -257,14 +263,16 @@ std::string Kernel::get_query_string()
         char buf[128];
         // machine position
         Robot::wcs_t mpos = robot->get_axis_position();
-        size_t n = snprintf(buf, sizeof(buf), "%1.4f,%1.4f,%1.4f", robot->from_millimeters(std::get<X_AXIS>(mpos)), robot->from_millimeters(std::get<Y_AXIS>(mpos)), robot->from_millimeters(std::get<Z_AXIS>(mpos)));
+        size_t n = snprintf(buf, sizeof(buf)-1, "%1.4f,%1.4f,%1.4f", robot->from_millimeters(std::get<X_AXIS>(mpos)), robot->from_millimeters(std::get<Y_AXIS>(mpos)), robot->from_millimeters(std::get<Z_AXIS>(mpos)));
+        if(n > sizeof(buf)) n= sizeof(buf);
         if(new_status_format) {
             str.append("|MPos:").append(buf, n);
 #if MAX_ROBOT_ACTUATORS > 3
             // deal with the ABC axis (E will be A)
             for (int i = A_AXIS; i < robot->get_number_registered_motors(); ++i) {
                 // current actuator position
-                n = snprintf(buf, sizeof(buf), ",%1.4f", robot->from_millimeters(robot->actuators[i]->get_current_position()));
+                n = snprintf(buf, sizeof(buf)-1, ",%1.4f", robot->from_millimeters(robot->actuators[i]->get_current_position()));
+                if(n > sizeof(buf)) n= sizeof(buf);
                 str.append(buf, n);
             }
 #endif
@@ -275,7 +283,8 @@ std::string Kernel::get_query_string()
 
         // work space position
         Robot::wcs_t pos = robot->mcs2wcs(mpos);
-        n = snprintf(buf, sizeof(buf), "%1.4f,%1.4f,%1.4f", robot->from_millimeters(std::get<X_AXIS>(pos)), robot->from_millimeters(std::get<Y_AXIS>(pos)), robot->from_millimeters(std::get<Z_AXIS>(pos)));
+        n = snprintf(buf, sizeof(buf)-1, "%1.4f,%1.4f,%1.4f", robot->from_millimeters(std::get<X_AXIS>(pos)), robot->from_millimeters(std::get<Y_AXIS>(pos)), robot->from_millimeters(std::get<Z_AXIS>(pos)));
+        if(n > sizeof(buf)) n= sizeof(buf);
         if(new_status_format) {
             str.append("|WPos:").append(buf, n);
         }else{
@@ -284,7 +293,8 @@ std::string Kernel::get_query_string()
 
         if(new_status_format) {
             float fr= robot->from_millimeters(robot->get_feed_rate());
-            n = snprintf(buf, sizeof(buf), "|F:%1.4f", fr);
+            n = snprintf(buf, sizeof(buf)-1, "|F:%1.4f", fr);
+            if(n > sizeof(buf)) n= sizeof(buf);
             str.append(buf, n);
         }
 

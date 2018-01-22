@@ -331,7 +331,7 @@ void Robot::print_position(uint8_t subcode, std::string& res, bool ignore_extrud
     // this does require a FK to get a machine position from the actuator position
     // and then invert all the transforms to get a workspace position from machine position
     // M114 just does it the old way uses machine_position and does inverse transforms to get the requested position
-    int n = 0;
+    uint32_t n = 0;
     char buf[64];
     if(subcode == 0) { // M114 print WCS
         wcs_t pos= mcs2wcs(machine_position);
@@ -372,6 +372,7 @@ void Robot::print_position(uint8_t subcode, std::string& res, bool ignore_extrud
         }
     }
 
+    if(n > sizeof(buf)) n= sizeof(buf);
     res.append(buf, n);
 
     #if MAX_ROBOT_ACTUATORS > 3
@@ -386,6 +387,7 @@ void Robot::print_position(uint8_t subcode, std::string& res, bool ignore_extrud
             // current actuator position
             n= snprintf(buf, sizeof(buf), " %c:%1.4f", 'A'+i-A_AXIS, actuators[i]->get_current_position());
         }
+        if(n > sizeof(buf)) n= sizeof(buf);
         if(n > 0) res.append(buf, n);
     }
     #endif
