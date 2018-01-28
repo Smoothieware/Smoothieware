@@ -136,7 +136,7 @@ endstop.miny.enable                          true
 endstop.miny.limit_enable                    false
 endstop.miny.pin                             1.25!^
 endstop.miny.homing_direction                home_to_max
-endstop.miny.homing_position                 350
+endstop.miny.homing_position                 353
 endstop.miny.max_travel                      370
 endstop.miny.fast_rate                       100
 endstop.miny.slow_rate                       5
