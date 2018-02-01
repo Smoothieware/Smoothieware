@@ -145,7 +145,7 @@ void TemperatureControl::load_config()
 
     this->designator          = THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, designator_checksum)->by_default(string("T"))->as_string();
 
-      // Runaway parameters
+    // Runaway parameters
     uint32_t n= THEKERNEL->config->value(temperature_control_checksum, this->name_checksum, runaway_range_checksum)->by_default(20)->as_number();
     if(n > 63) n= 63;
     this->runaway_range= n;
@@ -590,7 +590,7 @@ void TemperatureControl::on_second_tick(void *argument)
                     tick= 0;
 
                 }else{
-                    uint16_t t= (runaway_state == HEATING_UP) ? this->runaway_heating_timeout : this->runaway_cooling_timeout;                   
+                    uint16_t t= (runaway_state == HEATING_UP) ? this->runaway_heating_timeout : this->runaway_cooling_timeout;
                     // we are still heating up see if we have hit the max time allowed
                     if(t > 0 && ++this->runaway_timer > t){
                         THEKERNEL->streams->printf("ERROR: Temperature took too long to be reached on %s, HALT asserted, TURN POWER OFF IMMEDIATELY - reset or M999 required\n", designator.c_str());
