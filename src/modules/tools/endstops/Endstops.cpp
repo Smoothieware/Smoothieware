@@ -821,7 +821,7 @@ void Endstops::process_home_command(Gcode* gcode)
     // check if on_halt (eg kill or fail)
     if(THEKERNEL->is_halted()) {
         if(!THEKERNEL->is_grbl_mode()) {
-            THEKERNEL->streams->printf("ERROR: Homing cycle failed\n");
+            THEKERNEL->streams->printf("ERROR: Homing cycle failed - check the max_travel settings\n");
         }else{
             THEKERNEL->streams->printf("ALARM: Homing fail\n");
         }
