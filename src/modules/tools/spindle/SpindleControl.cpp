@@ -30,9 +30,9 @@ void SpindleControl::on_gcode_received(void *argument)
             if (gcode->has_letter('P'))
                 set_p_term( gcode->get_value('P') );
             if (gcode->has_letter('I'))
-                set_p_term( gcode->get_value('I') );
+                set_i_term( gcode->get_value('I') );
             if (gcode->has_letter('D'))
-                set_p_term( gcode->get_value('D') );
+                set_d_term( gcode->get_value('D') );
             // report PID settings
             report_settings();
           
