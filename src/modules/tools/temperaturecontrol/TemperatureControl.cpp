@@ -29,6 +29,7 @@
 // Temp sensor implementations:
 #include "Thermistor.h"
 #include "max31855.h"
+#include "max6675.h"
 #include "AD8495.h"
 #include "PT100_E3D.h"
 
@@ -182,6 +183,8 @@ void TemperatureControl::load_config()
     sensor = nullptr; // In case we fail to create a new sensor.
     if(sensor_type.compare("thermistor") == 0) {
         sensor = new Thermistor();
+    } else if(sensor_type.compare("max6675") == 0) {
+        sensor = new Max6675();
     } else if(sensor_type.compare("max31855") == 0) {
         sensor = new Max31855();
     } else if(sensor_type.compare("ad8495") == 0) {
