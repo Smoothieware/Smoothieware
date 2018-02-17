@@ -25,6 +25,7 @@
 #include "SimpleShell.h"
 #include "utils.h"
 #include "LPC17xx.h"
+#include "version.h"
 
 #define panel_display_message_checksum CHECKSUM("display_message")
 #define panel_checksum             CHECKSUM("panel")
@@ -257,6 +258,26 @@ try_again:
                                 THEKERNEL->call_event(ON_HALT, nullptr);
                                 THEKERNEL->streams->printf("ok Emergency Stop Requested - reset or M999 required to exit HALT state\r\n");
                                 delete gcode;
+                                return;
+
+                            case 115: // M115 Get firmware version and capabilities
+                                Version vers;
+
+                                new_message.stream->printf("FIRMWARE_NAME:Smoothieware, FIRMWARE_URL:http://smoothieware.org, SOURCE_CODE_URL:https://github.com/Smoothieware/Smoothieware, FIRMWARE_VERSION:%s, BUILD_DATE:%s, SYSTEM_CLOCK:%ldMHz, AXES:%d", vers.get_build(), vers.get_build_date(), SystemCoreClock / 1000000, MAX_ROBOT_ACTUATORS);
+
+                                #ifdef CNC
+                                new_message.stream->printf(", CNC:1");
+                                #else
+                                new_message.stream->printf(", CNC:0");
+                                #endif
+
+                                #ifdef DISABLEMSD
+                                new_message.stream->printf(", MSD:0");
+                                #else
+                                new_message.stream->printf(", MSD:1");
+                                #endif
+
+                                new_message.stream->printf("\r\nok\r\n");
                                 return;
 
                             case 117: // M117 is a special non compliant Gcode as it allows arbitrary text on the line following the command
