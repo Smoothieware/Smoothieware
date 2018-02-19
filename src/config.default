@@ -36,23 +36,23 @@ zeta_acceleration                            3000.0
 
 # SPEED LIMITS (mm/min)
 
-x_axis_max_speed                             35000
-alpha_max_rate                               35000
+x_axis_max_speed                             60000
+alpha_max_rate                               60000
 
-y_axis_max_speed                             25000
-beta_max_rate                                25000
+y_axis_max_speed                             48000
+beta_max_rate                                48000
 
-z_axis_max_speed                             7000
-gamma_max_rate                               7000
+z_axis_max_speed                             10800
+gamma_max_rate                               10800
 
-a_axis_max_speed                             7000
-delta_max_rate                               7000
+a_axis_max_speed                             10800
+delta_max_rate                               10800
 
-b_axis_max_speed                             1200
-epsilon_max_rate                             1200
+b_axis_max_speed                             6000
+epsilon_max_rate                             6000
 
-c_axis_max_speed                             1200
-zeta_max_rate                                1200
+c_axis_max_speed                             6000
+zeta_max_rate                                6000
 
 ##################################
 ##################################
@@ -124,7 +124,7 @@ endstop.minx.enable                          true
 endstop.minx.limit_enable                    true
 endstop.minx.pin                             1.24!^
 endstop.minx.homing_direction                home_to_max
-endstop.minx.homing_position                 395
+endstop.minx.homing_position                 421
 endstop.minx.max_travel                      430
 endstop.minx.fast_rate                       100
 endstop.minx.slow_rate                       8
@@ -133,14 +133,14 @@ endstop.minx.retract                         3
 # Y endstop
 endstop.miny.axis                            Y
 endstop.miny.enable                          true
-endstop.miny.limit_enable                    true
+endstop.miny.limit_enable                    false
 endstop.miny.pin                             1.25!^
 endstop.miny.homing_direction                home_to_max
-endstop.miny.homing_position                 345
+endstop.miny.homing_position                 353
 endstop.miny.max_travel                      370
 endstop.miny.fast_rate                       100
 endstop.miny.slow_rate                       5
-endstop.miny.retract                         3
+endstop.miny.retract                         0
 
 # Z endstop
 endstop.minz.axis                            Z
@@ -148,8 +148,8 @@ endstop.minz.enable                          true
 endstop.minz.limit_enable                    true
 endstop.minz.pin                             1.26^
 endstop.minz.homing_direction                home_to_max
-endstop.minz.homing_position                 228
-endstop.minz.max_travel                      240
+endstop.minz.homing_position                 220
+endstop.minz.max_travel                      230
 endstop.minz.fast_rate                       60
 endstop.minz.slow_rate                       5
 endstop.minz.retract                         2
@@ -160,8 +160,8 @@ endstop.mina.enable                          true
 endstop.mina.limit_enable                    true
 endstop.mina.pin                             1.27^
 endstop.mina.homing_direction                home_to_max
-endstop.mina.homing_position                 228
-endstop.mina.max_travel                      240
+endstop.mina.homing_position                 220
+endstop.mina.max_travel                      230
 endstop.mina.fast_rate                       60
 endstop.mina.slow_rate                       5
 endstop.mina.retract                         2
