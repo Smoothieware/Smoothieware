@@ -166,19 +166,12 @@ void DeltaGridStrategy::save_grid(StreamOutput *stream)
         return;
     }
 
-    int cnt= 0;
     for (int y = 0; y < grid_size; y++) {
         for (int x = 0; x < grid_size; x++) {
             if(fwrite(&grid[x + (grid_size * y)], sizeof(float), 1, fp) != 1) {
                 stream->printf("error:Failed to write grid\n");
                 fclose(fp);
                 return;
-            }
-            cnt += 4;
-            if ((cnt % 400) == 0) {
-                // HACK ALERT to get around fwrite corruption close and re open for append
-                fclose(fp);
-                fp = fopen(GRIDFILE, "a");
             }
         }
     }
@@ -330,7 +323,7 @@ bool DeltaGridStrategy::handleGcode(Gcode *gcode)
             if(!doProbe(gcode)) {
                 gcode->stream->printf("Probe failed to complete, check the initial probe height and/or initial_height settings\n");
             } else {
-                gcode->stream->printf("Probe completed\n");
+                gcode->stream->printf("Probe completed - Enter M374 to save this grid\n");
             }
             return true;
         }

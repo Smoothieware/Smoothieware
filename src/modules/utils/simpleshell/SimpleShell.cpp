@@ -487,10 +487,7 @@ void SimpleShell::upload_command( string parameters, StreamOutput *stream )
                 uploading= false;
 
             } else {
-                if ((cnt%400) == 0) {
-                    // HACK ALERT to get around fwrite corruption close and re open for append
-                    fclose(fd);
-                    fd = fopen(upload_filename.c_str(), "a");
+                if ((cnt%1000) == 0) {
                     // we need to kick things or they die
                     THEKERNEL->call_event(ON_IDLE);
                 }
@@ -899,7 +896,8 @@ void SimpleShell::calc_thermistor_command( string parameters, StreamOutput *stre
             stream->printf("  Paste the above in the M305 S0 command, then save with M500\n");
         }else{
             char buf[80];
-            int n = snprintf(buf, sizeof(buf), "M305 S%d I%1.18f J%1.18f K%1.18f", saveto, c1, c2, c3);
+            size_t n = snprintf(buf, sizeof(buf), "M305 S%d I%1.18f J%1.18f K%1.18f", saveto, c1, c2, c3);
+            if(n > sizeof(buf)) n= sizeof(buf);
             string g(buf, n);
             Gcode gcode(g, &(StreamOutput::NullStream));
             THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcode );

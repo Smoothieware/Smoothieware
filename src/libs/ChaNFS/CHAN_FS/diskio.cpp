@@ -58,7 +58,7 @@ DRESULT disk_write (
 	FFSDEBUG("disk_write(sector %d, count %d) on drv [%d]\n", sector, count, drv);
 	for(unsigned int s=sector; s<sector+count; s++) {
 		FFSDEBUG(" disk_write(sector %d)\n", s);
-		int res = FATFileSystem::_ffs[drv]->disk_write((char*)buff, sector);
+		int res = FATFileSystem::_ffs[drv]->disk_write((char*)buff, s);
 		if(res) {
 			return RES_PARERR;
 		}
