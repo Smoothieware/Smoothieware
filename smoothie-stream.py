@@ -8,6 +8,7 @@ Based on GRBL stream.py
 from __future__ import print_function
 import sys
 import telnetlib
+import re
 import argparse
 
 def write_raw_sequence(tn, seq):
@@ -23,13 +24,18 @@ parser.add_argument('ipaddr',
         help='Smoothie IP address')
 parser.add_argument('-q','--quiet',action='store_true', default=False,
         help='suppress output text')
+parser.add_argument('-l','--log',action='store_true', default=False,
+        help='suppress output text and output to file (gcode file with .log appended)')
 args = parser.parse_args()
 
 f = args.gcode_file
-verbose = not args.quiet
+verbose = not (args.quiet or args.log)
 
 # Stream g-code to Smoothie
 print("Streaming " + args.gcode_file.name + " to " + args.ipaddr)
+outlog = None
+if args.log: 
+    outlog = open(args.gcode_file.name + ".log", 'w')
 
 tn = telnetlib.Telnet(args.ipaddr)
 # turn on prompt
@@ -46,14 +52,17 @@ for line in f:
     rep= tn.read_eager()
     okcnt += rep.count("ok")
     if verbose: print("SND " + str(linecnt) + ": " + line.strip() + " - " + str(okcnt))
-
+    if args.log: outlog.write("SND " + str(linecnt) + ": " + line.strip() + " - " + str(okcnt) + "\n" )
 print("Waiting for complete...")
 
 while okcnt < linecnt:
     rep= tn.read_some()
     okcnt += rep.count("ok")
     if verbose: print(str(linecnt) + " - " + str(okcnt) )
+    if args.log: outlog.write(str(linecnt) + " - " + str(okcnt) + "\n" )
 
+
+if args.log: outlog.close()
 tn.write("exit\n")
 tn.read_all()
 

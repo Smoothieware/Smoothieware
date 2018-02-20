@@ -25,6 +25,7 @@
 #include "SimpleShell.h"
 #include "utils.h"
 #include "LPC17xx.h"
+#include "version.h"
 
 #define panel_display_message_checksum CHECKSUM("display_message")
 #define panel_checksum             CHECKSUM("panel")
@@ -99,17 +100,24 @@ try_again:
 
             //Strip checksum value from possible_command
             size_t chkpos = possible_command.find_first_of("*");
-            possible_command = possible_command.substr(0, chkpos);
-            //Calculate checksum
+
+			//Calculate checksum
             if ( chkpos != string::npos ) {
+				possible_command = possible_command.substr(0, chkpos);
                 for (auto c = possible_command.cbegin(); *c != '*' && c != possible_command.cend(); c++)
                     cs = cs ^ *c;
                 cs &= 0xff;  // Defensive programming...
                 cs -= chksum;
-            }
+			}
+			
             //Strip line number value from possible_command
-            size_t lnsize = possible_command.find_first_not_of("N0123456789.,- ");
-            possible_command = possible_command.substr(lnsize);
+			size_t lnsize = possible_command.find_first_not_of("N0123456789.,- ");
+			if(lnsize != string::npos) {
+				possible_command = possible_command.substr(lnsize);
+			}else{
+				// it is a blank line
+				possible_command.clear();
+			}
 
         } else {
             //Assume checks succeeded
@@ -250,6 +258,26 @@ try_again:
                                 THEKERNEL->call_event(ON_HALT, nullptr);
                                 THEKERNEL->streams->printf("ok Emergency Stop Requested - reset or M999 required to exit HALT state\r\n");
                                 delete gcode;
+                                return;
+
+                            case 115: // M115 Get firmware version and capabilities
+                                Version vers;
+
+                                new_message.stream->printf("FIRMWARE_NAME:Smoothieware, FIRMWARE_URL:http://smoothieware.org, SOURCE_CODE_URL:https://github.com/Smoothieware/Smoothieware, FIRMWARE_VERSION:%s, BUILD_DATE:%s, SYSTEM_CLOCK:%ldMHz, AXES:%d", vers.get_build(), vers.get_build_date(), SystemCoreClock / 1000000, MAX_ROBOT_ACTUATORS);
+
+                                #ifdef CNC
+                                new_message.stream->printf(", CNC:1");
+                                #else
+                                new_message.stream->printf(", CNC:0");
+                                #endif
+
+                                #ifdef DISABLEMSD
+                                new_message.stream->printf(", MSD:0");
+                                #else
+                                new_message.stream->printf(", MSD:1");
+                                #endif
+
+                                new_message.stream->printf("\r\nok\r\n");
                                 return;
 
                             case 117: // M117 is a special non compliant Gcode as it allows arbitrary text on the line following the command
@@ -406,7 +434,6 @@ try_again:
                     }
 
                     single_command.append("\n");
-                    static int cnt = 0;
                     if(fwrite(single_command.c_str(), 1, single_command.size(), upload_fd) != single_command.size()) {
                         // error writing to file
                         new_message.stream->printf("Error:error writing to file.\r\n");
@@ -415,14 +442,7 @@ try_again:
                         continue;
 
                     } else {
-                        cnt += single_command.size();
-                        if (cnt > 400) {
-                            // HACK ALERT to get around fwrite corruption close and re open for append
-                            fclose(upload_fd);
-                            upload_fd = fopen(upload_filename.c_str(), "a");
-                            cnt = 0;
-                        }
-                        new_message.stream->printf("ok\r\n");
+                         new_message.stream->printf("ok\r\n");
                         //printf("uploading file write ok\n");
                     }
                 }
