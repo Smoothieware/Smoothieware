@@ -119,7 +119,7 @@ Kernel::Kernel()
     // we expect ok per line now not per G code, setting this to false will return to the old (incorrect) way of ok per G code
     this->ok_per_line = this->config->value( ok_per_line_checksum )->by_default(true)->as_bool();
 
-    this->new_status_format = this->config->value( new_status_format_checksum )->by_default(false)->as_bool();
+    this->new_status_format = this->config->value( new_status_format_checksum )->by_default(true)->as_bool();
 
     this->add_module( this->serial );
 
