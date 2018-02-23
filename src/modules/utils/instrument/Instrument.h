@@ -213,7 +213,7 @@ class Instrument : public Module{
             this->write_data[0] = mem;
             this->error = this->i2c->write(address, this->write_data, length + 1);
             if (this->error == NO_ERROR) {
-                wait(0.01);
+                this->_i2c_delay();
             }
         }
 
@@ -223,10 +223,10 @@ class Instrument : public Module{
 
             this->error = NO_ERROR;
             this->error = this->i2c->write(address, this->memory_addr, 1);
-            wait(0.05);
+            this->_i2c_delay();
             if (this->error == NO_ERROR) {
                 this->error = this->i2c->read(address, data, length);
-                wait(0.01);
+                this->_i2c_delay();
             }
         }
 
@@ -273,6 +273,10 @@ class Instrument : public Module{
             // gcode->stream->printf("\r\n");
         }
 
+        void _i2c_delay() {
+            // wait(0.005)
+        }
+
         char _decode_ascii(char c) {
             if (c >= 'a' && c <= 'f') {
                 c -= 'a';
@@ -304,22 +308,15 @@ class Instrument : public Module{
         void _print_data(char label, Gcode *gcode){
             gcode->stream->printf("%c: data:", label);
             for (uint8_t i=0;i<OT_DATA_LENGTH;i++) {
-                 gcode->stream->printf("%02X", this->read_data[i]);
-                 if (i < OT_DATA_LENGTH - 1) {
-                    gcode->stream->printf("-");
-                 }
+                gcode->stream->printf("%02X", this->read_data[i]);
             }
             gcode->stream->printf("\r\n");
-
         }
 
         void _print_id(char label, Gcode *gcode){
             gcode->stream->printf("%c: id:", label);
             for (uint8_t i=0;i<OT_ID_LENGTH;i++) {
-                 gcode->stream->printf("%02X", this->unique_id[i]);
-                 if (i < OT_ID_LENGTH - 1) {
-                    gcode->stream->printf("-");
-                 }
+                gcode->stream->printf("%02X", this->unique_id[i]);
             }
             gcode->stream->printf("\r\n");
         }
