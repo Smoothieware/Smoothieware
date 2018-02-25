@@ -87,7 +87,7 @@
 
 #define laser_module_default_power_checksum     CHECKSUM("laser_module_default_power")
 
-#define ARC_ANGULAR_TRAVEL_EPSILON 5E-7F // Float (radians)
+#define ARC_ANGULAR_TRAVEL_EPSILON 5E-9F // Float (radians)
 #define PI 3.14159265358979323846F // force to be float, do not use M_PI
 
 // The Robot converts GCodes into actual movements, and then adds them to the Planner, which passes them to the Conveyor so they can be added to the queue
@@ -1389,7 +1389,7 @@ bool Robot::append_arc(Gcode * gcode, const float target[], const float offset[]
     // Patch from GRBL Firmware - Christoph Baumann 04072015
     // CCW angle between position and target from circle center. Only one atan2() trig computation required.
     float angular_travel = atan2f(r_axis0 * rt_axis1 - r_axis1 * rt_axis0, r_axis0 * rt_axis0 + r_axis1 * rt_axis1);
-    if (plane_axis_2 == Y_AXIS) { is_clockwise = !is_clockwise; }  //Math for XZ plane is revere of other 2 planes
+    if (plane_axis_2 == Y_AXIS) { is_clockwise = !is_clockwise; }  //Math for XZ plane is reverse of other 2 planes
     if (is_clockwise) { // Correct atan2 output per direction
         if (angular_travel >= -ARC_ANGULAR_TRAVEL_EPSILON) { angular_travel -= (2 * PI); }
     } else {
@@ -1400,7 +1400,7 @@ bool Robot::append_arc(Gcode * gcode, const float target[], const float offset[]
     float millimeters_of_travel = hypotf(angular_travel * radius, fabsf(linear_travel));
 
     // We don't care about non-XYZ moves ( for example the extruder produces some of those )
-    if( millimeters_of_travel < 0.00001F ) {
+    if( millimeters_of_travel < 0.000001F ) {
         return false;
     }
 
@@ -1412,83 +1412,90 @@ bool Robot::append_arc(Gcode * gcode, const float target[], const float offset[]
             arc_segment = min_err_segment;
         }
     }
+
+    // catch fall through on above
+    if(arc_segment < 0.0001F) {
+        arc_segment= 0.5F; /// the old default, so we avoid the divide by zero
+    }
+
     // Figure out how many segments for this gcode
     // TODO for deltas we need to make sure we are at least as many segments as requested, also if mm_per_line_segment is set we need to use the
-    uint16_t segments = ceilf(millimeters_of_travel / arc_segment);
-
-  //printf("Radius %f - Segment Length %f - Number of Segments %d\r\n",radius,arc_segment,segments);  // Testing Purposes ONLY
-    float theta_per_segment = angular_travel / segments;
-    float linear_per_segment = linear_travel / segments;
-
-    /* Vector rotation by transformation matrix: r is the original vector, r_T is the rotated vector,
-    and phi is the angle of rotation. Based on the solution approach by Jens Geisler.
-    r_T = [cos(phi) -sin(phi);
-    sin(phi) cos(phi] * r ;
-    For arc generation, the center of the circle is the axis of rotation and the radius vector is
-    defined from the circle center to the initial position. Each line segment is formed by successive
-    vector rotations. This requires only two cos() and sin() computations to form the rotation
-    matrix for the duration of the entire arc. Error may accumulate from numerical round-off, since
-    all float numbers are single precision on the Arduino. (True float precision will not have
-    round off issues for CNC applications.) Single precision error can accumulate to be greater than
-    tool precision in some cases. Therefore, arc path correction is implemented.
-
-    Small angle approximation may be used to reduce computation overhead further. This approximation
-    holds for everything, but very small circles and large mm_per_arc_segment values. In other words,
-    theta_per_segment would need to be greater than 0.1 rad and N_ARC_CORRECTION would need to be large
-    to cause an appreciable drift error. N_ARC_CORRECTION~=25 is more than small enough to correct for
-    numerical drift error. N_ARC_CORRECTION may be on the order a hundred(s) before error becomes an
-    issue for CNC machines with the single precision Arduino calculations.
-    This approximation also allows mc_arc to immediately insert a line segment into the planner
-    without the initial overhead of computing cos() or sin(). By the time the arc needs to be applied
-    a correction, the planner should have caught up to the lag caused by the initial mc_arc overhead.
-    This is important when there are successive arc motions.
-    */
-    // Vector rotation matrix values
-    float cos_T = 1 - 0.5F * theta_per_segment * theta_per_segment; // Small angle approximation
-    float sin_T = theta_per_segment;
-
-    // TODO we need to handle the ABC axis here by segmenting them
-    float arc_target[n_motors];
-    float sin_Ti;
-    float cos_Ti;
-    float r_axisi;
-    uint16_t i;
-    int8_t count = 0;
-
-    // init array for all axis
-    memcpy(arc_target, machine_position, n_motors*sizeof(float));
-
-    // Initialize the linear axis
-    arc_target[this->plane_axis_2] = this->machine_position[this->plane_axis_2];
-
+    uint16_t segments = floorf(millimeters_of_travel / arc_segment);
     bool moved= false;
-    for (i = 1; i < segments; i++) { // Increment (segments-1)
-        if(THEKERNEL->is_halted()) return false; // don't queue any more segments
 
-        if (count < this->arc_correction ) {
-            // Apply vector rotation matrix
-            r_axisi = r_axis0 * sin_T + r_axis1 * cos_T;
-            r_axis0 = r_axis0 * cos_T - r_axis1 * sin_T;
-            r_axis1 = r_axisi;
-            count++;
-        } else {
-            // Arc correction to radius vector. Computed only every N_ARC_CORRECTION increments.
-            // Compute exact location by applying transformation matrix from initial radius vector(=-offset).
-            cos_Ti = cosf(i * theta_per_segment);
-            sin_Ti = sinf(i * theta_per_segment);
-            r_axis0 = -offset[this->plane_axis_0] * cos_Ti + offset[this->plane_axis_1] * sin_Ti;
-            r_axis1 = -offset[this->plane_axis_0] * sin_Ti - offset[this->plane_axis_1] * cos_Ti;
-            count = 0;
+    if(segments > 1) {
+        float theta_per_segment = angular_travel / segments;
+        float linear_per_segment = linear_travel / segments;
+
+        /* Vector rotation by transformation matrix: r is the original vector, r_T is the rotated vector,
+        and phi is the angle of rotation. Based on the solution approach by Jens Geisler.
+        r_T = [cos(phi) -sin(phi);
+        sin(phi) cos(phi] * r ;
+        For arc generation, the center of the circle is the axis of rotation and the radius vector is
+        defined from the circle center to the initial position. Each line segment is formed by successive
+        vector rotations. This requires only two cos() and sin() computations to form the rotation
+        matrix for the duration of the entire arc. Error may accumulate from numerical round-off, since
+        all float numbers are single precision on the Arduino. (True float precision will not have
+        round off issues for CNC applications.) Single precision error can accumulate to be greater than
+        tool precision in some cases. Therefore, arc path correction is implemented.
+
+        Small angle approximation may be used to reduce computation overhead further. This approximation
+        holds for everything, but very small circles and large mm_per_arc_segment values. In other words,
+        theta_per_segment would need to be greater than 0.1 rad and N_ARC_CORRECTION would need to be large
+        to cause an appreciable drift error. N_ARC_CORRECTION~=25 is more than small enough to correct for
+        numerical drift error. N_ARC_CORRECTION may be on the order a hundred(s) before error becomes an
+        issue for CNC machines with the single precision Arduino calculations.
+        This approximation also allows mc_arc to immediately insert a line segment into the planner
+        without the initial overhead of computing cos() or sin(). By the time the arc needs to be applied
+        a correction, the planner should have caught up to the lag caused by the initial mc_arc overhead.
+        This is important when there are successive arc motions.
+        */
+        // Vector rotation matrix values
+        float cos_T = 1 - 0.5F * theta_per_segment * theta_per_segment; // Small angle approximation
+        float sin_T = theta_per_segment;
+
+        // TODO we need to handle the ABC axis here by segmenting them
+        float arc_target[n_motors];
+        float sin_Ti;
+        float cos_Ti;
+        float r_axisi;
+        uint16_t i;
+        int8_t count = 0;
+
+        // init array for all axis
+        memcpy(arc_target, machine_position, n_motors*sizeof(float));
+
+        // Initialize the linear axis
+        arc_target[this->plane_axis_2] = this->machine_position[this->plane_axis_2];
+
+        for (i = 1; i < segments; i++) { // Increment (segments-1)
+            if(THEKERNEL->is_halted()) return false; // don't queue any more segments
+
+            if (count < this->arc_correction ) {
+                // Apply vector rotation matrix
+                r_axisi = r_axis0 * sin_T + r_axis1 * cos_T;
+                r_axis0 = r_axis0 * cos_T - r_axis1 * sin_T;
+                r_axis1 = r_axisi;
+                count++;
+            } else {
+                // Arc correction to radius vector. Computed only every N_ARC_CORRECTION increments.
+                // Compute exact location by applying transformation matrix from initial radius vector(=-offset).
+                cos_Ti = cosf(i * theta_per_segment);
+                sin_Ti = sinf(i * theta_per_segment);
+                r_axis0 = -offset[this->plane_axis_0] * cos_Ti + offset[this->plane_axis_1] * sin_Ti;
+                r_axis1 = -offset[this->plane_axis_0] * sin_Ti - offset[this->plane_axis_1] * cos_Ti;
+                count = 0;
+            }
+
+            // Update arc_target location
+            arc_target[this->plane_axis_0] = center_axis0 + r_axis0;
+            arc_target[this->plane_axis_1] = center_axis1 + r_axis1;
+            arc_target[this->plane_axis_2] += linear_per_segment;
+
+            // Append this segment to the queue
+            bool b= this->append_milestone(arc_target, rate_mm_s);
+            moved= moved || b;
         }
-
-        // Update arc_target location
-        arc_target[this->plane_axis_0] = center_axis0 + r_axis0;
-        arc_target[this->plane_axis_1] = center_axis1 + r_axis1;
-        arc_target[this->plane_axis_2] += linear_per_segment;
-
-        // Append this segment to the queue
-        bool b= this->append_milestone(arc_target, rate_mm_s);
-        moved= moved || b;
     }
 
     // Ensure last segment arrives at target location.
