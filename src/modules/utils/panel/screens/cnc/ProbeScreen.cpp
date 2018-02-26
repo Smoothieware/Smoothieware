@@ -67,15 +67,9 @@ void ProbeScreen::on_refresh()
 
     if(this->new_result) {
         this->new_result= false;
-        THEPANEL->lcd->setCursor(0, 3);
-        THEPANEL->lcd->printf("%20s", this->result.substr(0, 20).c_str());
-        if(this->result.size() > 20 && THEPANEL->get_screen_lines() > 4) {
-            THEPANEL->lcd->setCursor(0, 4);
-            THEPANEL->lcd->printf("%20s", this->result.substr(20, 20).c_str());
-        }
-        if(this->result.size() > 40 && THEPANEL->get_screen_lines() > 5) {
-            THEPANEL->lcd->setCursor(0, 5);
-            THEPANEL->lcd->printf("%20s", this->result.substr(40, 20).c_str());
+        for ( uint8_t l=0; (l < THEPANEL->get_screen_lines()-3) && (this->result.size() > l*20); l++ ) {
+            THEPANEL->lcd->setCursor(0, l+3);
+            THEPANEL->lcd->printf("%-20s", this->result.substr(l*20,20).c_str());
         }
     }
 }

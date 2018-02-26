@@ -21,7 +21,7 @@ public:
 private:
 
     bool doProbe(Gcode *gc);
-    float findBed();
+    bool findBed();
     void setAdjustFunction(bool on);
     void print_bed_level(StreamOutput *stream);
     void doCompensation(float *target, bool inverse);

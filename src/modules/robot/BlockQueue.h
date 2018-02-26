@@ -1,33 +1,33 @@
-#ifndef _HEAPRING_H
-#define _HEAPRING_H
+#pragma once
 
-template<class kind> class HeapRing {
+class Block;
 
-    // smoothie-specific friend classes
+class BlockQueue {
+
+    // friend classes
     friend class Planner;
     friend class Conveyor;
-    friend class Block;
 
 public:
-    HeapRing();
-    HeapRing(unsigned int length);
+    BlockQueue();
+    BlockQueue(unsigned int length);
 
-    ~HeapRing();
+    ~BlockQueue();
 
     /*
      * direct accessors
      */
-    kind& head();
-    kind& tail();
+    Block& head();
+    Block& tail();
 
-    void push_front(kind&) __attribute__ ((warning("Not thread-safe if pop_back() is used in ISR context!"))); // instead, prepare(head_ref()); produce_head();
-    kind& pop_back(void) __attribute__ ((warning("Not thread-safe if head_ref() is used to prepare new items, or push_front() is used in ISR context!"))); // instead, consume(tail_ref()); consume_tail();
+    void push_front(Block&) __attribute__ ((warning("Not thread-safe if pop_back() is used in ISR context!"))); // instead, prepare(head_ref()); produce_head();
+    Block& pop_back(void) __attribute__ ((warning("Not thread-safe if head_ref() is used to prepare new items, or push_front() is used in ISR context!"))); // instead, consume(tail_ref()); consume_tail();
 
     /*
      * pointer accessors
      */
-    kind* head_ref();
-    kind* tail_ref();
+    Block* head_ref();
+    Block* tail_ref();
 
     void  produce_head(void);
     void  consume_tail(void);
@@ -47,22 +47,22 @@ public:
 
     /*
      * provide
-     * kind*      - new buffer pointer
+     * Block*      - new buffer pointer
      * int length - number of items in buffer (NOT size in bytes!)
      *
-     * cause HeapRing to use a specific memory location instead of allocating its own
+     * cause BlockQueue to use a specific memory location instead of allocating its own
      *
      * returns true on success, or false if queue is not empty
      */
-    bool provide(kind*, unsigned int length);
+    //bool provide(Block*, unsigned int length);
 
 protected:
     /*
      * these functions are protected as they should only be used internally
      * or in extremely specific circumstances
      */
-    kind& item(unsigned int);
-    kind* item_ref(unsigned int);
+    Block& item(unsigned int);
+    Block* item_ref(unsigned int);
 
     unsigned int next(unsigned int) const;
     unsigned int prev(unsigned int) const;
@@ -77,7 +77,5 @@ protected:
     volatile unsigned int isr_tail_i;
 
 private:
-    kind* ring;
+    Block* ring;
 };
-
-#endif /* _HEAPRING_H */

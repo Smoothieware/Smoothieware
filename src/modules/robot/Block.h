@@ -14,8 +14,10 @@
 class Block {
     public:
         Block();
+
+        static void init(uint8_t);
+
         void calculate_trapezoid( float entry_speed, float exit_speed );
-        float max_allowable_speed( float acceleration, float target_velocity, float distance);
 
         float reverse_pass(float exit_speed);
         float forward_pass(float next_entry_speed);
@@ -23,10 +25,15 @@ class Block {
         void debug() const;
         void ready() { is_ready= true; }
         void clear();
-        void prepare();
-
         float get_trapezoid_rate(int i) const;
 
+    private:
+        float max_allowable_speed( float acceleration, float target_velocity, float distance);
+        void prepare(float acceleration_in_steps, float deceleration_in_steps);
+
+        static double fp_scale; // optimize to store this as it does not change
+
+    public:
         std::array<uint32_t, k_max_actuators> steps; // Number of steps for each axis for this block
         uint32_t steps_event_count;  // Steps for the longest axis
         float nominal_rate;       // Nominal rate in steps per second
@@ -38,9 +45,6 @@ class Block {
         float initial_rate;       // Initial rate in steps per second
         float maximum_rate;
 
-        float acceleration_per_tick{0};
-        float deceleration_per_tick {0};
-
         float max_entry_speed;
 
         // this is tick info needed for this block. applies to all motors
@@ -51,19 +55,19 @@ class Block {
 
         // this is the data needed to determine when each motor needs to be issued a step
         using tickinfo_t= struct {
-            int32_t steps_per_tick; // 2.30 fixed point
-            int32_t counter; // 2.30 fixed point
-            int32_t acceleration_change; // 2.30 fixed point signed
-            int32_t deceleration_change; // 2.30 fixed point
-            int32_t plateau_rate; // 2.30 fixed point
+            int64_t steps_per_tick; // 2.62 fixed point
+            int64_t counter; // 2.62 fixed point
+            int64_t acceleration_change; // 2.62 fixed point signed
+            int64_t deceleration_change; // 2.62 fixed point
+            int64_t plateau_rate; // 2.62 fixed point
             uint32_t steps_to_move;
             uint32_t step_count;
             uint32_t next_accel_event;
         };
 
         // need info for each active motor
-        //std::array<tickinfo_t, k_max_actuators> tick_info;
-        std::vector<tickinfo_t> tick_info;
+        tickinfo_t *tick_info;
+
         static uint8_t n_actuators;
 
         struct {

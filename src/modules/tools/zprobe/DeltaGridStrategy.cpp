@@ -323,7 +323,7 @@ bool DeltaGridStrategy::handleGcode(Gcode *gcode)
             if(!doProbe(gcode)) {
                 gcode->stream->printf("Probe failed to complete, check the initial probe height and/or initial_height settings\n");
             } else {
-                gcode->stream->printf("Probe completed\n");
+                gcode->stream->printf("Probe completed - Enter M374 to save this grid\n");
             }
             return true;
         }

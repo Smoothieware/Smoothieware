@@ -198,20 +198,16 @@ bool USBSerial::USBEvent_EPOut(uint8_t bEP, uint8_t bEPStatus)
             continue;
         }
 
-        if(THEKERNEL->is_grbl_mode()) {
+        if(THEKERNEL->is_grbl_mode() || THEKERNEL->is_feed_hold_enabled()) {
             if(c[i] == '!') { // safe pause
-                //THEKERNEL->set_feed_hold(true);
+                THEKERNEL->set_feed_hold(true);
                 continue;
             }
 
             if(c[i] == '~') { // safe resume
-                //THEKERNEL->set_feed_hold(false);
+                THEKERNEL->set_feed_hold(false);
                 continue;
             }
-            // if(last_char_was_dollar && (c[i] == 'X' || c[i] == 'H')) {
-            //     // we need to do this otherwise $X/$H won't work if there was a feed hold like when stop is clicked in bCNC
-            //     THEKERNEL->set_feed_hold(false);
-            // }
         }
 
         last_char_was_dollar = (c[i] == '$');
@@ -283,7 +279,7 @@ void USBSerial::on_idle(void *argument)
         halt_flag = false;
         THEKERNEL->call_event(ON_HALT, nullptr);
         if(THEKERNEL->is_grbl_mode()) {
-            puts("ALARM:Abort during cycle\r\n");
+            puts("ALARM: Abort during cycle\r\n");
         } else {
             puts("HALTED, M999 or $X to exit HALT state\r\n");
         }

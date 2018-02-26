@@ -26,6 +26,7 @@ class TemperatureControl : public Module {
         void on_get_public_data(void* argument);
         void on_set_public_data(void* argument);
         void on_halt(void* argument);
+        void on_idle(void* argument);
 
         void set_desired_temperature(float desired_temperature);
 
@@ -89,7 +90,6 @@ class TemperatureControl : public Module {
             bool use_bangbang:1;
             bool waiting:1;
             bool temp_violated:1;
-            bool link_to_tool:1;
             bool active:1;
             bool readonly:1;
             bool windup:1;
