@@ -282,7 +282,7 @@ void ZProbe::on_gcode_received(void *argument)
 
             if(probe_result) {
                 // the result is in actuator coordinates moved
-                gcode->stream->printf("Z:%1.4f\n", mm);
+                gcode->stream->printf("Z:%1.4f\n", THEKERNEL->robot->from_millimeters(mm));
 
                 if(set_z) {
                     // set current Z to the specified value, shortcut for G92 Znnn
@@ -435,7 +435,7 @@ void ZProbe::probe_XYZ(Gcode *gcode, int axis)
     uint8_t probeok= this->probe_detected ? 1 : 0;
 
     // print results using the GRBL format
-    gcode->stream->printf("[PRB:%1.3f,%1.3f,%1.3f:%d]\n", pos[X_AXIS], pos[Y_AXIS], pos[Z_AXIS], probeok);
+    gcode->stream->printf("[PRB:%1.3f,%1.3f,%1.3f:%d]\n", THEKERNEL->robot->from_millimeters(pos[X_AXIS]), THEKERNEL->robot->from_millimeters(pos[Y_AXIS]), THEKERNEL->robot->from_millimeters(pos[Z_AXIS]), probeok);
     THEROBOT->set_last_probe_position(std::make_tuple(pos[X_AXIS], pos[Y_AXIS], pos[Z_AXIS], probeok));
 
     if(probeok == 0 && gcode->subcode == 2) {
