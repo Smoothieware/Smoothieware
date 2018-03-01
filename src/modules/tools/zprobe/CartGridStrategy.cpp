@@ -108,6 +108,8 @@
 #define do_home_checksum             CHECKSUM("do_home")
 #define only_by_two_corners_checksum CHECKSUM("only_by_two_corners")
 #define human_readable_checksum      CHECKSUM("human_readable")
+#define height_limit_checksum      CHECKSUM("height_limit") 
+#define dampening_start_checksum      CHECKSUM("dampening_start")
 
 #define GRIDFILE "/sd/cartesian.grid"
 #define GRIDFILE_NM "/sd/cartesian_nm.grid"
@@ -133,7 +135,11 @@ bool CartGridStrategy::handleConfig()
     do_home = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, do_home_checksum)->by_default(true)->as_bool();
     only_by_two_corners = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, only_by_two_corners_checksum)->by_default(false)->as_bool();
     human_readable = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, human_readable_checksum)->by_default(false)->as_bool();
-
+ 
+    this->height_limit = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, height_limit_checksum)->by_default(1.0F)->as_number(); 
+    this->dampening_start = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, dampening_start_checksum)->by_default(0.5F)->as_number(); 
+	this->damping_interval = height_limit - dampening_start;
+	
     this->x_start = 0.0F;
     this->y_start = 0.0F;
     this->x_size = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, x_size_checksum)->by_default(0.0F)->as_number();
@@ -541,42 +547,53 @@ bool CartGridStrategy::doProbe(Gcode *gc)
 }
 
 void CartGridStrategy::doCompensation(float *target, bool inverse)
-{
+{ 
     // Adjust print surface height by linear interpolation over the bed_level array.
+	
+	// first let's find out our 'world coordinate' positions for checking the limits:
+	Robot::wcs_t world_coordinates = THEROBOT->mcs2wcs(THEROBOT->get_axis_position());
+	float current_z = THEROBOT->from_millimeters(std::get<Z_AXIS>(world_coordinates));
+    // THEKERNEL->streams->printf("//DEBUG: Current Z: %f\n", current_z); 
 
-    // find min/maxes, and handle the case where size is negative (assuming this is possible? Legacy code supported this)
-    float min_x = std::min(this->x_start, this->x_start + this->x_size);
-    float max_x = std::max(this->x_start, this->x_start + this->x_size);
-    float min_y = std::min(this->y_start, this->y_start + this->y_size);
-    float max_y = std::max(this->y_start, this->y_start + this->y_size);
+	// if the height is below our compensation limit:
+	if(current_z <= this->height_limit) {
+		// find min/maxes, and handle the case where size is negative (assuming this is possible? Legacy code supported this)
+		float min_x = std::min(this->x_start, this->x_start + this->x_size);
+		float max_x = std::max(this->x_start, this->x_start + this->x_size);
+		float min_y = std::min(this->y_start, this->y_start + this->y_size);
+		float max_y = std::max(this->y_start, this->y_start + this->y_size);
 
-    // clamp the input to the bounds of the compensation grid
-    // if a point is beyond the bounds of the grid, it will get the offset of the closest grid point
-    float x_target = std::min(std::max(target[X_AXIS], min_x), max_x);
-    float y_target = std::min(std::max(target[Y_AXIS], min_y), max_y);
+		// clamp the input to the bounds of the compensation grid
+		// if a point is beyond the bounds of the grid, it will get the offset of the closest grid point
+		float x_target = std::min(std::max(target[X_AXIS], min_x), max_x);
+		float y_target = std::min(std::max(target[Y_AXIS], min_y), max_y);
 
-    float grid_x = std::max(0.001F, (x_target - this->x_start) / (this->x_size / (this->current_grid_x_size - 1)));
-    float grid_y = std::max(0.001F, (y_target - this->y_start) / (this->y_size / (this->current_grid_y_size - 1)));
-    int floor_x = floorf(grid_x);
-    int floor_y = floorf(grid_y);
-    float ratio_x = grid_x - floor_x;
-    float ratio_y = grid_y - floor_y;
-    float z1 = grid[(floor_x) + ((floor_y) * this->current_grid_x_size)];
-    float z2 = grid[(floor_x) + ((floor_y + 1) * this->current_grid_x_size)];
-    float z3 = grid[(floor_x + 1) + ((floor_y) * this->current_grid_x_size)];
-    float z4 = grid[(floor_x + 1) + ((floor_y + 1) * this->current_grid_x_size)];
-    float left = (1 - ratio_y) * z1 + ratio_y * z2;
-    float right = (1 - ratio_y) * z3 + ratio_y * z4;
-    float offset = (1 - ratio_x) * left + ratio_x * right;
-
-    if(inverse)
-        target[Z_AXIS] -= offset;
-    else
-        target[Z_AXIS] += offset;
-
-
-    /*
-        THEKERNEL->streams->printf("//DEBUG: TARGET: %f, %f, %f\n", target[0], target[1], target[2]);
+		float grid_x = std::max(0.001F, (x_target - this->x_start) / (this->x_size / (this->current_grid_x_size - 1)));
+		float grid_y = std::max(0.001F, (y_target - this->y_start) / (this->y_size / (this->current_grid_y_size - 1)));
+		int floor_x = floorf(grid_x);
+		int floor_y = floorf(grid_y);
+		float ratio_x = grid_x - floor_x;
+		float ratio_y = grid_y - floor_y;
+		float z1 = grid[(floor_x) + ((floor_y) * this->current_grid_x_size)];
+		float z2 = grid[(floor_x) + ((floor_y + 1) * this->current_grid_x_size)];
+		float z3 = grid[(floor_x + 1) + ((floor_y) * this->current_grid_x_size)];
+		float z4 = grid[(floor_x + 1) + ((floor_y + 1) * this->current_grid_x_size)];
+		float left = (1 - ratio_y) * z1 + ratio_y * z2;
+		float right = (1 - ratio_y) * z3 + ratio_y * z4;
+		float offset = (1 - ratio_x) * left + ratio_x * right;
+		// offset scale: 1 for default (use offset as is)
+		float scale = 1.0;
+	
+		// scale the offset as necessary:
+	    if( current_z >= this->dampening_start) 
+			scale = ( 1- ( (current_z - this->dampening_start ) / this->damping_interval) ); 
+		
+		if(inverse)
+			target[Z_AXIS] -= offset * scale;
+		else
+			target[Z_AXIS] += offset * scale;
+    
+        /*THEKERNEL->streams->printf("//DEBUG: TARGET: %f, %f, %f\n", target[0], target[1], target[2]); 
         THEKERNEL->streams->printf("//DEBUG: grid_x= %f\n", grid_x);
         THEKERNEL->streams->printf("//DEBUG: grid_y= %f\n", grid_y);
         THEKERNEL->streams->printf("//DEBUG: floor_x= %d\n", floor_x);
@@ -590,7 +607,9 @@ void CartGridStrategy::doCompensation(float *target, bool inverse)
         THEKERNEL->streams->printf("//DEBUG: left= %f\n", left);
         THEKERNEL->streams->printf("//DEBUG: right= %f\n", right);
         THEKERNEL->streams->printf("//DEBUG: offset= %f\n", offset);
-    */
+        THEKERNEL->streams->printf("//DEBUG: scale= %f\n", scale);
+		*/
+	} 
 }
 
 
