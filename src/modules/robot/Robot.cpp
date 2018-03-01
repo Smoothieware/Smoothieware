@@ -33,6 +33,7 @@
 #include "ExtruderPublicAccess.h"
 #include "GcodeDispatch.h"
 #include "ActuatorCoordinates.h"
+#include "EndstopsPublicAccess.h"
 
 #include "mbed.h" // for us_ticker_read()
 #include "mri.h"
@@ -86,6 +87,16 @@
 #define  gamma_checksum                      CHECKSUM("gamma")
 
 #define laser_module_default_power_checksum     CHECKSUM("laser_module_default_power")
+
+#define enable_checksum                    CHECKSUM("enable")
+#define halt_checksum                      CHECKSUM("halt")
+#define soft_endstop_checksum              CHECKSUM("soft_endstop")
+#define xmin_checksum                      CHECKSUM("x_min")
+#define ymin_checksum                      CHECKSUM("y_min")
+#define zmin_checksum                      CHECKSUM("z_min")
+#define xmax_checksum                      CHECKSUM("x_max")
+#define ymax_checksum                      CHECKSUM("y_max")
+#define zmax_checksum                      CHECKSUM("z_max")
 
 #define ARC_ANGULAR_TRAVEL_EPSILON 5E-9F // Float (radians)
 #define PI 3.14159265358979323846F // force to be float, do not use M_PI
@@ -194,7 +205,7 @@ void Robot::load_config()
     this->s_value             = THEKERNEL->config->value(laser_module_default_power_checksum)->by_default(0.8F)->as_number();
 
      // Make our Primary XYZ StepperMotors, and potentially A B C
-    uint16_t const checksums[][6] = {
+    uint16_t const motor_checksums[][6] = {
         ACTUATOR_CHECKSUMS("alpha"), // X
         ACTUATOR_CHECKSUMS("beta"),  // Y
         ACTUATOR_CHECKSUMS("gamma"), // Z
@@ -216,7 +227,7 @@ void Robot::load_config()
     for (size_t a = 0; a < MAX_ROBOT_ACTUATORS; a++) {
         Pin pins[3]; //step, dir, enable
         for (size_t i = 0; i < 3; i++) {
-            pins[i].from_string(THEKERNEL->config->value(checksums[a][i])->by_default("nc")->as_string())->as_output();
+            pins[i].from_string(THEKERNEL->config->value(motor_checksums[a][i])->by_default("nc")->as_string())->as_output();
         }
 
         if(!pins[0].connected() || !pins[1].connected()) { // step and dir must be defined, but enable is optional
@@ -237,9 +248,9 @@ void Robot::load_config()
             return;
         }
 
-        actuators[a]->change_steps_per_mm(THEKERNEL->config->value(checksums[a][3])->by_default(a == 2 ? 2560.0F : 80.0F)->as_number());
-        actuators[a]->set_max_rate(THEKERNEL->config->value(checksums[a][4])->by_default(30000.0F)->as_number()/60.0F); // it is in mm/min and converted to mm/sec
-        actuators[a]->set_acceleration(THEKERNEL->config->value(checksums[a][5])->by_default(NAN)->as_number()); // mm/secs²
+        actuators[a]->change_steps_per_mm(THEKERNEL->config->value(motor_checksums[a][3])->by_default(a == 2 ? 2560.0F : 80.0F)->as_number());
+        actuators[a]->set_max_rate(THEKERNEL->config->value(motor_checksums[a][4])->by_default(30000.0F)->as_number()/60.0F); // it is in mm/min and converted to mm/sec
+        actuators[a]->set_acceleration(THEKERNEL->config->value(motor_checksums[a][5])->by_default(NAN)->as_number()); // mm/secs²
     }
 
     check_max_actuator_speeds(); // check the configs are sane
@@ -260,6 +271,16 @@ void Robot::load_config()
         actuators[i]->change_last_milestone(actuator_pos[i]);
 
     //this->clearToolOffset();
+
+    soft_endstop_enabled= THEKERNEL->config->value(soft_endstop_checksum, enable_checksum)->by_default(false)->as_bool();
+    soft_endstop_halt= THEKERNEL->config->value(soft_endstop_checksum, halt_checksum)->by_default(true)->as_bool();
+
+    soft_endstop_min[X_AXIS]= THEKERNEL->config->value(soft_endstop_checksum, xmin_checksum)->by_default(NAN)->as_number();
+    soft_endstop_min[Y_AXIS]= THEKERNEL->config->value(soft_endstop_checksum, ymin_checksum)->by_default(NAN)->as_number();
+    soft_endstop_min[Z_AXIS]= THEKERNEL->config->value(soft_endstop_checksum, zmin_checksum)->by_default(NAN)->as_number();
+    soft_endstop_max[X_AXIS]= THEKERNEL->config->value(soft_endstop_checksum, xmax_checksum)->by_default(NAN)->as_number();
+    soft_endstop_max[Y_AXIS]= THEKERNEL->config->value(soft_endstop_checksum, ymax_checksum)->by_default(NAN)->as_number();
+    soft_endstop_max[Z_AXIS]= THEKERNEL->config->value(soft_endstop_checksum, zmax_checksum)->by_default(NAN)->as_number();
 }
 
 uint8_t Robot::register_motor(StepperMotor *motor)
@@ -739,6 +760,26 @@ void Robot::on_gcode_received(void *argument)
                 }
                 break;
 
+            case 211: // M211 Sn turns soft endstops on/off
+                if(gcode->has_letter('S')) {
+                    soft_endstop_enabled= gcode->get_uint('S') == 1;
+                }else{
+                    gcode->stream->printf("Soft endstops are %s", soft_endstop_enabled ? "Enabled" : "Disabled");
+                    for (int i = X_AXIS; i <= Z_AXIS; ++i) {
+                        if(isnan(soft_endstop_min[i])) {
+                            gcode->stream->printf(",%c min is disabled", 'X'+i);
+                        }
+                        if(isnan(soft_endstop_max[i])) {
+                            gcode->stream->printf(",%c max is disabled", 'X'+i);
+                        }
+                        if(!is_homed(i)) {
+                            gcode->stream->printf(",%c axis is not homed", 'X'+i);
+                        }
+                     }
+                    gcode->stream->printf("\n");
+                }
+                break;
+
             case 220: // M220 - speed override percentage
                 if (gcode->has_letter('S')) {
                     float factor = gcode->get_value('S');
@@ -1113,6 +1154,30 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
         // some compensation strategies can transform XYZ, some just change Z
         compensationTransform(transformed_target, false);
     }
+
+    // check soft endstops only for homed axis that are enabled
+    if(soft_endstop_enabled) {
+        for (int i = 0; i <= Z_AXIS; ++i) {
+            if(!is_homed(i)) continue;
+            if( (!isnan(soft_endstop_min[i]) && transformed_target[i] < soft_endstop_min[i]) || (!isnan(soft_endstop_max[i]) && transformed_target[i] > soft_endstop_max[i]) ) {
+                if(soft_endstop_halt) {
+                    THEKERNEL->streams->printf("Soft Endstop %c was exceeded - reset or M999 required\n", i+'X');
+                    THEKERNEL->call_event(ON_HALT, nullptr);
+                    return false;
+
+                //} else if(soft_endstop_truncate) {
+                    // TODO VERY hard to do need to go back and change the target, and calculate intercept with the edge
+                    // and store all preceding vectors that have on eor more points ourtside of bounds so we can create a propper clip against the boundaries
+
+                } else {
+                    // ignore it
+                    THEKERNEL->streams->printf("WARNING Soft Endstop %c was exceeded - entire move ignored\n", i+'X');
+                    return false;
+                }
+            }
+        }
+    }
+
 
     bool move= false;
     float sos= 0; // sum of squares for just primary axis (XYZ usually)
@@ -1556,4 +1621,20 @@ void Robot::setToolOffset(const float offset[3])
 float Robot::get_feed_rate() const
 {
     return THEKERNEL->gcode_dispatch->get_modal_command() == 0 ? seek_rate : feed_rate;
+}
+
+bool Robot::is_homed(uint8_t i) const
+{
+    if(i >= 3) return false; // safety
+
+    // if we are homing we ignore soft endstops so return false
+    bool homing;
+    bool ok = PublicData::get_value(endstops_checksum, get_homing_status_checksum, 0, &homing);
+    if(!ok || homing) return false;
+
+    // check individual axis homing status
+    bool homed[3];
+    ok = PublicData::get_value(endstops_checksum, get_homed_status_checksum, 0, homed);
+    if(!ok) return false;
+    return homed[i];
 }

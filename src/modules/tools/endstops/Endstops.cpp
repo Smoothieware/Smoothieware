@@ -1167,6 +1167,13 @@ void Endstops::on_get_public_data(void* argument)
         bool *homing = static_cast<bool *>(pdr->get_data_ptr());
         *homing = this->status != NOT_HOMING;
         pdr->set_taken();
+
+    } else if(pdr->second_element_is(get_homed_status_checksum)) {
+        bool *homed = static_cast<bool *>(pdr->get_data_ptr());
+        for (int i = 0; i < 3; ++i) {
+            homed[i]= homing_axis[i].homed;
+        }
+        pdr->set_taken();
     }
 }
 

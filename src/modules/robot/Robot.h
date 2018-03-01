@@ -86,6 +86,8 @@ class Robot : public Module {
             bool segment_z_moves:1;
             bool save_g92:1;                                  // save g92 on M500 if set
             bool is_g123:1;
+            bool soft_endstop_enabled:1;
+            bool soft_endstop_halt:1;
             uint8_t plane_axis_0:2;                           // Current plane ( XY, XZ, YZ )
             uint8_t plane_axis_1:2;
             uint8_t plane_axis_2:2;
@@ -106,6 +108,7 @@ class Robot : public Module {
         bool append_arc( Gcode* gcode, const float target[], const float offset[], float radius, bool is_clockwise );
         bool compute_arc(Gcode* gcode, const float offset[], const float target[], enum MOTION_MODE_T motion_mode);
         void process_move(Gcode *gcode, enum MOTION_MODE_T);
+        bool is_homed(uint8_t i) const;
 
         float theta(float x, float y);
         void select_plane(uint8_t axis_0, uint8_t axis_1, uint8_t axis_2);
@@ -141,6 +144,8 @@ class Robot : public Module {
         // computational efficiency of generating arcs.
         int arc_correction;                                  // Setting : how often to rectify arc computation
         float max_speeds[3];                                 // Setting : max allowable speed in mm/s for each axis
+
+        float soft_endstop_min[3], soft_endstop_max[3];
 
         uint8_t n_motors;                                    //count of the motors/axis registered
 
