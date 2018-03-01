@@ -108,6 +108,8 @@
 #define do_home_checksum             CHECKSUM("do_home")
 #define only_by_two_corners_checksum CHECKSUM("only_by_two_corners")
 #define human_readable_checksum      CHECKSUM("human_readable")
+#define height_limit_checksum      CHECKSUM("height_limit") 
+#define dampening_start_checksum      CHECKSUM("dampening_start")
 
 #define GRIDFILE "/sd/cartesian.grid"
 #define GRIDFILE_NM "/sd/cartesian_nm.grid"
@@ -133,7 +135,16 @@ bool CartGridStrategy::handleConfig()
     do_home = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, do_home_checksum)->by_default(true)->as_bool();
     only_by_two_corners = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, only_by_two_corners_checksum)->by_default(false)->as_bool();
     human_readable = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, human_readable_checksum)->by_default(false)->as_bool();
+ 
+    this->height_limit = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, height_limit_checksum)->by_default(NAN)->as_number();
+    this->dampening_start = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, dampening_start_checksum)->by_default(NAN)->as_number();
 
+    if(!isnan(this->height_limit) && !isnan(this->dampening_start)) {
+        this->damping_interval = height_limit - dampening_start;
+    } else {
+        this->damping_interval = NAN;
+    }
+	
     this->x_start = 0.0F;
     this->y_start = 0.0F;
     this->x_size = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, x_size_checksum)->by_default(0.0F)->as_number();
@@ -568,29 +579,47 @@ void CartGridStrategy::doCompensation(float *target, bool inverse)
     float left = (1 - ratio_y) * z1 + ratio_y * z2;
     float right = (1 - ratio_y) * z3 + ratio_y * z4;
     float offset = (1 - ratio_x) * left + ratio_x * right;
+    // offset scale: 1 for default (use offset as is)
+    float scale = 1.0;
 
-    if(inverse)
-        target[Z_AXIS] -= offset;
-    else
-        target[Z_AXIS] += offset;
+    if (!isnan(this->damping_interval)) {
+        // first let's find out our 'world coordinate' positions for checking the limits:
+        Robot::wcs_t world_coordinates = THEROBOT->mcs2wcs(THEROBOT->get_axis_position());
+        float current_z = std::get<Z_AXIS>(world_coordinates); // no need to convert to mm, if machine is in inches; so is config!
+        // THEKERNEL->streams->printf("//DEBUG: Current Z: %f\n", current_z);
+        // if the height is below our compensation limit:
+        if(current_z <= this->height_limit) {
+            // scale the offset as necessary:
+            if( current_z >= this->dampening_start) {
+                scale = ( 1- ( (current_z - this->dampening_start ) / this->damping_interval) );
+            } // else leave scale at 1.0;
+        } else {
+            scale = 0.0; // if Z is higher than max, no compensation
+        }
+    }
 
+    if (inverse) {
+        target[Z_AXIS] -= offset * scale;
+    } else {
+        target[Z_AXIS] += offset * scale;
+    }
 
-    /*
-        THEKERNEL->streams->printf("//DEBUG: TARGET: %f, %f, %f\n", target[0], target[1], target[2]);
-        THEKERNEL->streams->printf("//DEBUG: grid_x= %f\n", grid_x);
-        THEKERNEL->streams->printf("//DEBUG: grid_y= %f\n", grid_y);
-        THEKERNEL->streams->printf("//DEBUG: floor_x= %d\n", floor_x);
-        THEKERNEL->streams->printf("//DEBUG: floor_y= %d\n", floor_y);
-        THEKERNEL->streams->printf("//DEBUG: ratio_x= %f\n", ratio_x);
-        THEKERNEL->streams->printf("//DEBUG: ratio_y= %f\n", ratio_y);
-        THEKERNEL->streams->printf("//DEBUG: z1= %f\n", z1);
-        THEKERNEL->streams->printf("//DEBUG: z2= %f\n", z2);
-        THEKERNEL->streams->printf("//DEBUG: z3= %f\n", z3);
-        THEKERNEL->streams->printf("//DEBUG: z4= %f\n", z4);
-        THEKERNEL->streams->printf("//DEBUG: left= %f\n", left);
-        THEKERNEL->streams->printf("//DEBUG: right= %f\n", right);
-        THEKERNEL->streams->printf("//DEBUG: offset= %f\n", offset);
-    */
+    /*THEKERNEL->streams->printf("//DEBUG: TARGET: %f, %f, %f\n", target[0], target[1], target[2]);
+     THEKERNEL->streams->printf("//DEBUG: grid_x= %f\n", grid_x);
+     THEKERNEL->streams->printf("//DEBUG: grid_y= %f\n", grid_y);
+     THEKERNEL->streams->printf("//DEBUG: floor_x= %d\n", floor_x);
+     THEKERNEL->streams->printf("//DEBUG: floor_y= %d\n", floor_y);
+     THEKERNEL->streams->printf("//DEBUG: ratio_x= %f\n", ratio_x);
+     THEKERNEL->streams->printf("//DEBUG: ratio_y= %f\n", ratio_y);
+     THEKERNEL->streams->printf("//DEBUG: z1= %f\n", z1);
+     THEKERNEL->streams->printf("//DEBUG: z2= %f\n", z2);
+     THEKERNEL->streams->printf("//DEBUG: z3= %f\n", z3);
+     THEKERNEL->streams->printf("//DEBUG: z4= %f\n", z4);
+     THEKERNEL->streams->printf("//DEBUG: left= %f\n", left);
+     THEKERNEL->streams->printf("//DEBUG: right= %f\n", right);
+     THEKERNEL->streams->printf("//DEBUG: offset= %f\n", offset);
+     THEKERNEL->streams->printf("//DEBUG: scale= %f\n", scale);
+     */
 }
 
 

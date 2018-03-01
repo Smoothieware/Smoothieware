@@ -31,8 +31,12 @@ private:
     bool probe_grid(int n, int m, float _x_start, float _y_start, float _x_size, float _y_size, StreamOutput *stream);
 
     float initial_height;
-    float tolerance;
-
+    float tolerance; 
+	
+    float height_limit;
+    float dampening_start; 
+    float damping_interval;
+	
     float *grid;
     std::tuple<float, float, float> probe_offsets;
     float x_start,y_start;
