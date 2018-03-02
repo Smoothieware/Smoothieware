@@ -384,8 +384,6 @@ void Kernel::report_error(bool cause_halt, uint16_t error_number, const char *fo
 
 // Report an error
 void Kernel::report_error(StreamOutput* stream, bool cause_halt, uint16_t error_number, const char *format, ... ){
-
-  // TODO : figure out is_grbl_mode
   char b[64];
   char *buffer;
 
@@ -403,10 +401,6 @@ void Kernel::report_error(StreamOutput* stream, bool cause_halt, uint16_t error_
   }
   va_end(args);
 
-  puts(buffer);
-
-  if (buffer != b)
-      delete[] buffer;
 
   // Display the error
   if(THEKERNEL->is_grbl_mode()) {
@@ -416,6 +410,24 @@ void Kernel::report_error(StreamOutput* stream, bool cause_halt, uint16_t error_
   }
 
 
+  if( error_number == 15 ){ // SPECIAL CASE : ERROR 15
+    if(!THEKERNEL->is_grbl_mode()) {
+      stream->printf("Limit switch %s was hit - reset or M999 required\n", buffer );
+    }else{
+      stream->printf("ALARM: Hard limit %s\n", buffer);
+    }
+  }else if( error_number == 17  ){
+      stream->printf("ALARM: Homing fail\r\n");
+  }else if( error_number == 125 ){ // SPECIAL CASE : ERROR 125
+      stream->printf("ALARM: Kill button pressed - reset or M999 to continue\r\n");
+  }else{ // DEFAULT CASE
+
+
+  }
+
+  // Delete the buffer
+  if (buffer != b)
+      delete[] buffer;
 
   // Go into halt mode if requested
   if( cause_halt ){

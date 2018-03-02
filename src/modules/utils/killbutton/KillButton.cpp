@@ -60,9 +60,7 @@ void KillButton::on_idle(void *argument)
 {
     if(state == KILL_BUTTON_DOWN) {
         if(!THEKERNEL->is_halted()) {
-            THEKERNEL->report_error(true, 125, "Kill button pressed, M999 or reset to continue"); 
-            //THEKERNEL->call_event(ON_HALT, nullptr);
-            //THEKERNEL->streams->printf("ALARM: Kill button pressed - reset or M999 to continue\r\n");
+            THEKERNEL->report_error(true, 125, "Kill button pressed, M999 or reset to continue");
         }
 
     }else if(state == UNKILL_FIRE) {

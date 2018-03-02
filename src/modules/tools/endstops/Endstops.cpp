@@ -440,13 +440,7 @@ void Endstops::on_idle(void *argument)
             // check min and max endstops
             if(debounced_get(&i->pin)) {
                 // endstop triggered
-                if(THEKERNEL->is_grbl_mode()) { THEKERNEL->streams->printf("ALARM: Hard limit "); }
-
-                //THEKERNEL->report_error(true, 15, "%c%c",  STEPPER[i->axis_index]->which_direction() ? '-' : '+', i->axis);
-                // TODO : put back the way it was
-                THEKERNEL->streams->printf("Limit switch %c%c was hit - reset or M999 required\n", STEPPER[i->axis_index]->which_direction() ? '-' : '+', i->axis);
-                THEKERNEL->call_event(ON_HALT, nullptr);
-
+                THEKERNEL->report_error(true, 15, "%c%c", STEPPER[i->axis_index]->which_direction() ? '-' : '+', i->axis);
                 this->status = LIMIT_TRIGGERED;
                 i->debounce= 0;
                 return;
@@ -820,7 +814,6 @@ void Endstops::process_home_command(Gcode* gcode)
 
     // check if on_halt (eg kill or fail)
     if(THEKERNEL->is_halted()) {
-        if(THEKERNEL->is_grbl_mode()) { THEKERNEL->streams->printf("ALARM: Homing fail "); }
 
         THEKERNEL->report_error(gcode->stream, false, 17, "Homing cycle failed");
 
