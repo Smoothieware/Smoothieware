@@ -402,12 +402,7 @@ void Kernel::report_error(StreamOutput* stream, bool cause_halt, uint16_t error_
   va_end(args);
 
 
-  // Display the error
-  if(THEKERNEL->is_grbl_mode()) {
-        THEKERNEL->streams->printf("error: ");
-  }else{
-        THEKERNEL->streams->printf("Error: ");
-  }
+  // Extract the parameters from the message
 
 
   if( error_number == 15 ){ // SPECIAL CASE : ERROR 15
@@ -421,8 +416,11 @@ void Kernel::report_error(StreamOutput* stream, bool cause_halt, uint16_t error_
   }else if( error_number == 125 ){ // SPECIAL CASE : ERROR 125
       stream->printf("ALARM: Kill button pressed - reset or M999 to continue\r\n");
   }else{ // DEFAULT CASE
-
-
+      if( cause_halt ){
+        stream->printf("ALARM: %s error:%d", buffer, error_number);
+      }else{
+        stream->printf("ERROR: %s error:%d", buffer, error_number);
+      }
   }
 
   // Delete the buffer
