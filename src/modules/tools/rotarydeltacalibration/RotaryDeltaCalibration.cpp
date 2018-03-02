@@ -75,7 +75,7 @@ void RotaryDeltaCalibration::on_gcode_received(void *argument)
                     uint8_t ok;
                     std::tie(current_angle[0], current_angle[1], current_angle[2], ok) = THEROBOT->get_last_probe_position();
                     if(ok == 0) {
-                        THEKERNEL->report_error(false, 20, "Nothing set as probe failed or not run", "");
+                        THEKERNEL->report_error(gcode->stream, false, 20, "Nothing set as probe failed or not run", "");
                         return;
                     }
                 }

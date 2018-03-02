@@ -351,7 +351,7 @@ void TemperatureControl::on_gcode_received(void *argument)
                     // wait for temp to be reached, no more gcodes will be fetched until this is complete
                     if( gcode->m == this->set_and_wait_m_code) {
                         if(isinf(get_temperature()) && isinf(sensor->get_temperature())) {
-                            THEKERNEL->report_error(true, 31, "Temperature reading unreliable, designator: ", "%s", designator.c_str());   // Temperature reading is unreliable on %s HALT asserted - reset or M999 required
+                            THEKERNEL->report_error(gcode->stream, true, 31, "Temperature reading unreliable, designator: ", "%s", designator.c_str());   // Temperature reading is unreliable on %s HALT asserted - reset or M999 required
                             // THEKERNEL->streams->printf("Temperature reading is unreliable on %s HALT asserted - reset or M999 required\n", designator.c_str());
                             // THEKERNEL->call_event(ON_HALT, nullptr);
                             return;

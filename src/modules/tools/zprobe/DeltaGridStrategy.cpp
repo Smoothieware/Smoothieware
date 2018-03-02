@@ -144,24 +144,24 @@ bool DeltaGridStrategy::handleConfig()
 void DeltaGridStrategy::save_grid(StreamOutput *stream)
 {
     if(isnan(grid[0])) {
-        THEKERNEL->report_error(false, 87, "DeltaGrid: No grid to save", "");
+        THEKERNEL->report_error(stream, false, 87, "DeltaGrid: No grid to save", "");
         return;
     }
 
     FILE *fp = fopen(GRIDFILE, "w");
     if(fp == NULL) {
-        THEKERNEL->report_error(false, 88, "DeltaGrid: Failed to open file, file: ", "%s", GRIDFILE);
+        THEKERNEL->report_error(stream, false, 88, "DeltaGrid: Failed to open file, file: ", "%s", GRIDFILE);
         return;
     }
 
     if(fwrite(&grid_size, sizeof(uint8_t), 1, fp) != 1) {
-        THEKERNEL->report_error(false, 89, "DeltaGrid: Failed to write grid size", "");
+        THEKERNEL->report_error(stream, false, 89, "DeltaGrid: Failed to write grid size", "");
         fclose(fp);
         return;
     }
 
     if(fwrite(&grid_radius, sizeof(float), 1, fp) != 1) {
-        THEKERNEL->report_error(false, 90, "DeltaGrid: Failed to write grid radius", "");
+        THEKERNEL->report_error(stream, false, 90, "DeltaGrid: Failed to write grid radius", "");
         fclose(fp);
         return;
     }
@@ -169,7 +169,7 @@ void DeltaGridStrategy::save_grid(StreamOutput *stream)
     for (int y = 0; y < grid_size; y++) {
         for (int x = 0; x < grid_size; x++) {
             if(fwrite(&grid[x + (grid_size * y)], sizeof(float), 1, fp) != 1) {
-                THEKERNEL->report_error(false, 91, "DeltaGrid: Failed to write grid", "");
+                THEKERNEL->report_error(stream, false, 91, "DeltaGrid: Failed to write grid", "");
                 fclose(fp);
                 return;
             }
@@ -183,7 +183,7 @@ bool DeltaGridStrategy::load_grid(StreamOutput *stream)
 {
     FILE *fp = fopen(GRIDFILE, "r");
     if(fp == NULL) {
-        THEKERNEL->report_error(false, 88, "DeltaGrid: Failed to open grid, file: ", "%s", GRIDFILE);
+        THEKERNEL->report_error(stream, false, 88, "DeltaGrid: Failed to open grid, file: ", "%s", GRIDFILE);
         return false;
     }
 
@@ -191,32 +191,32 @@ bool DeltaGridStrategy::load_grid(StreamOutput *stream)
     float radius;
 
     if(fread(&size, sizeof(uint8_t), 1, fp) != 1) {
-        THEKERNEL->report_error(false, 70, "DeltaGrid: Failed to read grid size", "");
+        THEKERNEL->report_error(stream, false, 70, "DeltaGrid: Failed to read grid size", "");
         fclose(fp);
         return false;
     }
 
     if(size != grid_size) {
-        THEKERNEL->report_error(false, 94, "DeltaGrid: Grid size is different, file/config: ", "%d,%d", size, grid_size);
+        THEKERNEL->report_error(stream, false, 94, "DeltaGrid: Grid size is different, file/config: ", "%d,%d", size, grid_size);
         fclose(fp);
         return false;
     }
 
     if(fread(&radius, sizeof(float), 1, fp) != 1) {
-        THEKERNEL->report_error(false, 95, "DeltaGrid: Failed to read grid radius", "");
+        THEKERNEL->report_error(stream, false, 95, "DeltaGrid: Failed to read grid radius", "");
         fclose(fp);
         return false;
     }
 
     if(radius != grid_radius) {
-        THEKERNEL->report_error(false, 96, "DeltaGrid: Grid radius is different, file/config: ", "%f,%f", radius, grid_radius);
+        THEKERNEL->report_error(stream, false, 96, "DeltaGrid: Grid radius is different, file/config: ", "%f,%f", radius, grid_radius);
         grid_radius = radius;
     }
 
     for (int y = 0; y < grid_size; y++) {
         for (int x = 0; x < grid_size; x++) {
             if(fread(&grid[x + (grid_size * y)], sizeof(float), 1, fp) != 1) {
-                THEKERNEL->report_error(false, 88, "DeltaGrid: Failed to read grid", "");
+                THEKERNEL->report_error(stream, false, 88, "DeltaGrid: Failed to read grid", "");
                 fclose(fp);
                 return false;
             }
@@ -230,7 +230,7 @@ bool DeltaGridStrategy::load_grid(StreamOutput *stream)
 bool DeltaGridStrategy::probe_grid(int n, float radius, StreamOutput *stream)
 {
     if(n < 5) {
-        THEKERNEL->report_error(false, 98, "DeltaGrid: Need at least 5x5 grid to probe", "");
+        THEKERNEL->report_error(stream, false, 98, "DeltaGrid: Need at least 5x5 grid to probe", "");
         return true;
     }
 
@@ -313,7 +313,7 @@ bool DeltaGridStrategy::handleGcode(Gcode *gcode)
 
             if(is_square) {
                 // Handle deprecated is_square
-                THEKERNEL->report_error(false, 99, "DeltaGrid: is_square has been removed, use new config", "");
+                THEKERNEL->report_error(gcode->stream, false, 99, "DeltaGrid: is_square has been removed, use new config", "");
                 return false;
             }
 
@@ -321,7 +321,7 @@ bool DeltaGridStrategy::handleGcode(Gcode *gcode)
             THEKERNEL->conveyor->wait_for_idle();
 
             if(!doProbe(gcode)) {
-                THEKERNEL->report_error(false, 100, "DeltaGrid: Probe failed to complete, check initial probe height and initial height setting", "");
+                THEKERNEL->report_error(gcode->stream, false, 100, "DeltaGrid: Probe failed to complete, check initial probe height and initial height setting", "");
             } else {
                 gcode->stream->printf("Probe completed - Enter M374 to save this grid\n");
             }
@@ -435,7 +435,7 @@ bool DeltaGridStrategy::doProbe(Gcode *gc)
     // find bed, and leave probe probe height above bed
     float initial_z = findBed();
     if(isnan(initial_z)) {
-        THEKERNEL->report_error(false, 105, "DeltaGrid: Finding bed failed, check maxz and initial height settings", "");
+        THEKERNEL->report_error(gc->stream, false, 105, "DeltaGrid: Finding bed failed, check maxz and initial height settings", "");
         return false;
     }
 

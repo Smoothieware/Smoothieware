@@ -358,6 +358,10 @@ void Kernel::unregister_for_event(_EVENT_ENUM id_event, Module *mod)
     }
 }
 
+void Kernel::report_error(StreamOutput* stream, bool cause_halt, uint16_t error_number, const std::string& message, const char *format, ... ){
+
+}
+
 // Report an error
 void Kernel::report_error(bool cause_halt, uint16_t error_number, const std::string& message, const char *format, ... ){
 
