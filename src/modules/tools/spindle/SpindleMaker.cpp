@@ -25,17 +25,17 @@
 
 void SpindleMaker::load_spindle(){
 
-    // If the spindle module is disabled load no Spindle 
+    // If the spindle module is disabled load no Spindle
     if( !THEKERNEL->config->value( spindle_checksum, enable_checksum  )->by_default(false)->as_bool() ) {
         THEKERNEL->streams->printf("NOTE: Spindle Module is disabled\n");
-        return;    
+        return;
     }
-    
+
     spindle = NULL;
 
     // get the two config options that make us able to determine which spindle module we need to load
     std::string spindle_type = THEKERNEL->config->value( spindle_checksum, spindle_type_checksum )->by_default("pwm")->as_string();
-    std::string vfd_type = THEKERNEL->config->value( spindle_checksum, spindle_vfd_type_checksum )->by_default("none")->as_string(); 
+    std::string vfd_type = THEKERNEL->config->value( spindle_checksum, spindle_vfd_type_checksum )->by_default("none")->as_string();
 
     // check config which spindle type we need
     if( spindle_type.compare("pwm") == 0 ) {
@@ -43,15 +43,15 @@ void SpindleMaker::load_spindle(){
     } else if ( spindle_type.compare("analog") == 0 ) {
         spindle = new AnalogSpindleControl();
     } else if ( spindle_type.compare("modbus") == 0 ) {
-        if(vfd_type.compare("huanyang") == 0) { 
+        if(vfd_type.compare("huanyang") == 0) {
             spindle = new HuanyangSpindleControl();
         } else {
             delete spindle;
-            THEKERNEL->streams->printf("ERROR: No valid spindle VFD type defined\n");
+            THEKERNEL->report_error(false, 23, "");    // THEKERNEL->streams->printf("ERROR: No valid spindle VFD type defined\n");
         }
     } else {
         delete spindle;
-        THEKERNEL->streams->printf("ERROR: No valid spindle type defined\n");
+        THEKERNEL->report_error(false, 24, "");     // THEKERNEL->streams->printf("ERROR: No valid spindle type defined\n");
     }
 
     // Add the spindle if we successfully initialized one
@@ -66,4 +66,3 @@ void SpindleMaker::load_spindle(){
     }
 
 }
-

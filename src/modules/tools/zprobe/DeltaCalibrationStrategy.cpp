@@ -53,13 +53,13 @@ bool DeltaCalibrationStrategy::handleGcode(Gcode *gcode)
 
             if(!gcode->has_letter('R')) {
                 if(!calibrate_delta_endstops(gcode)) {
-                    gcode->stream->printf("Calibration failed to complete, check the initial probe height and/or initial_height settings\n");
+                    THEKERNEL->report_error(false, 77, ""); // gcode->stream->printf("Calibration failed to complete, check the initial probe height and/or initial_height settings\n");
                     return true;
                 }
             }
             if(!gcode->has_letter('E')) {
                 if(!calibrate_delta_radius(gcode)) {
-                    gcode->stream->printf("Calibration failed to complete, check the initial probe height and/or initial_height settings\n");
+                    THEKERNEL->report_error(false, 77, ""); // gcode->stream->printf("Calibration failed to complete, check the initial probe height and/or initial_height settings\n");
                     return true;
                 }
             }
@@ -69,7 +69,7 @@ bool DeltaCalibrationStrategy::handleGcode(Gcode *gcode)
         }else if (gcode->g == 29) {
             // probe the 7 points
             if(!probe_delta_points(gcode)) {
-                gcode->stream->printf("Calibration failed to complete, check the initial probe height and/or initial_height settings\n");
+                THEKERNEL->report_error(false, 77, ""); // gcode->stream->printf("Calibration failed to complete, check the initial probe height and/or initial_height settings\n");
             }
             return true;
         }
@@ -199,7 +199,7 @@ bool DeltaCalibrationStrategy::calibrate_delta_endstops(Gcode *gcode)
             gcode->stream->printf("Current Trim X: %f, Y: %f, Z: %f\r\n", trimx, trimy, trimz);
 
         } else {
-            gcode->stream->printf("Could not get current trim, are endstops enabled?\n");
+            THEKERNEL->report_error(false, 80, ""); //  gcode->stream->printf("Could not get current trim, are endstops enabled?\n");
             return false;
         }
     }
@@ -216,7 +216,7 @@ bool DeltaCalibrationStrategy::calibrate_delta_endstops(Gcode *gcode)
     float dz = zprobe->getProbeHeight() - mm;
     gcode->stream->printf("center probe: %1.4f\n", dz);
     if(fabsf(dz) > target) {
-         gcode->stream->printf("Probe was not repeatable to %f mm, (%f)\n", target, dz);
+         THEKERNEL->report_error(false, 81, "%f,%f", target, dz); //  gcode->stream->printf("Probe was not repeatable to %f mm, (%f)\n", target, dz);
          return false;
     }
 
@@ -288,7 +288,7 @@ bool DeltaCalibrationStrategy::calibrate_delta_endstops(Gcode *gcode)
     }
 
     if((mmx.second - mmx.first) > target) {
-        gcode->stream->printf("WARNING: trim did not resolve to within required parameters: delta %f\n", mmx.second - mmx.first);
+        THEKERNEL->report_error(false, 83, "%f", mmx.second - mmx.first); //  gcode->stream->printf("WARNING: trim did not resolve to within required parameters: delta %f\n", mmx.second - mmx.first);
     }
 
     return true;
@@ -323,7 +323,7 @@ bool DeltaCalibrationStrategy::calibrate_delta_radius(Gcode *gcode)
     float dz = zprobe->getProbeHeight() - mm;
     gcode->stream->printf("center probe: %1.4f\n", dz);
     if(fabsf(dz) > target) {
-         gcode->stream->printf("Probe was not repeatable to %f mm, (%f)\n", target, dz);
+         THEKERNEL->report_error(false, 81, "%f,%f", target, dz); //   gcode->stream->printf("Probe was not repeatable to %f mm, (%f)\n", target, dz);
          return false;
     }
 
@@ -384,7 +384,7 @@ bool DeltaCalibrationStrategy::calibrate_delta_radius(Gcode *gcode)
     }
 
     if(!good) {
-        gcode->stream->printf("WARNING: delta radius did not resolve to within required parameters: %f\n", target);
+        THEKERNEL->report_error(false, 85, "%f", target); //   gcode->stream->printf("WARNING: delta radius did not resolve to within required parameters: %f\n", target);
     }
 
     return true;

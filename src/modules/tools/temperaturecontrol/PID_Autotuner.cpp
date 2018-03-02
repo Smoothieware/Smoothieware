@@ -160,7 +160,7 @@ void PID_Autotuner::on_idle(void *)
 
     if(peakCount >= requested_cycles) {
         // NOTE we output to kernel::streams becuase it is out-of-band data and original stream may be closed
-        THEKERNEL->streams->printf("// WARNING: Autopid did not resolve within %d cycles, these results are probably innacurate\n", requested_cycles);
+        THEKERNEL->report_error(false, 27, "%d", requested_cycles);    // THEKERNEL->streams->printf("// WARNING: Autopid did not resolve within %d cycles, these results are probably innacurate\n", requested_cycles);
         finishUp();
         return;
     }

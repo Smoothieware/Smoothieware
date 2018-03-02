@@ -12,6 +12,7 @@ Pwm::Pwm()
     _pwm = -1;
     _sd_direction= false;
     _sd_accumulator= 0;
+
 }
 
 void Pwm::pwm(int new_pwm)

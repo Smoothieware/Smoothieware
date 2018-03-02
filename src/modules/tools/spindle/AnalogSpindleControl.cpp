@@ -41,11 +41,11 @@ void AnalogSpindleControl::on_module_loaded()
     // If we got no hardware PWM pin, delete this module
     if (pwm_pin == NULL)
     {
-        THEKERNEL->streams->printf("Error: Spindle PWM pin must be P2.0-2.5 or other PWM pin\n");
+        THEKERNEL->report_error(false, 21, "");  // THEKERNEL->streams->printf("Error: Spindle PWM pin must be P2.0-2.5 or other PWM pin\n");
         delete this;
         return;
     }
-    
+
     // set pwm frequency
     int period = THEKERNEL->config->value(spindle_checksum, spindle_pwm_period_checksum)->by_default(1000)->as_int();
     pwm_pin->period_us(period);
@@ -61,20 +61,20 @@ void AnalogSpindleControl::on_module_loaded()
     }
 }
 
-void AnalogSpindleControl::turn_on() 
+void AnalogSpindleControl::turn_on()
 {
     // set the output for switching the VFD on
-    if(switch_on != NULL) 
-        switch_on->set(true); 
+    if(switch_on != NULL)
+        switch_on->set(true);
     spindle_on = true;
 
 }
 
 
-void AnalogSpindleControl::turn_off() 
+void AnalogSpindleControl::turn_off()
 {
-    // clear the output for switching the VFD on 
-    if(switch_on != NULL) 
+    // clear the output for switching the VFD on
+    if(switch_on != NULL)
         switch_on->set(false);
     spindle_on = false;
     // set the PWM value to 0 to make sure it stops
@@ -83,7 +83,7 @@ void AnalogSpindleControl::turn_off()
 }
 
 
-void AnalogSpindleControl::set_speed(int rpm) 
+void AnalogSpindleControl::set_speed(int rpm)
 {
     // limit the requested RPM value
     if(rpm < 0) {
@@ -101,7 +101,7 @@ void AnalogSpindleControl::set_speed(int rpm)
 }
 
 
-void AnalogSpindleControl::report_speed() 
+void AnalogSpindleControl::report_speed()
 {
     // report the current PWM value, calculate the current RPM value and report it as well
     float current_pwm = pwm_pin->read();
@@ -111,7 +111,7 @@ void AnalogSpindleControl::report_speed()
 }
 
 
-void AnalogSpindleControl::update_pwm(float value) 
+void AnalogSpindleControl::update_pwm(float value)
 {
     // set the requested PWM value, invert it if necessary
     if(output_inverted)
@@ -120,4 +120,3 @@ void AnalogSpindleControl::update_pwm(float value)
         pwm_pin->write(value);
 
 }
-

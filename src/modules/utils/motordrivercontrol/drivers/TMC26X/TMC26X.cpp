@@ -970,14 +970,14 @@ bool TMC26X::check_error_status_bits(StreamOutput *stream)
     readStatus(TMC26X_READOUT_POSITION); // get the status bits
 
     if (this->getOverTemperature()&TMC26X_OVERTEMPERATURE_PREWARING) {
-        if(!error_reported.test(0)) stream->printf("%c - WARNING: Overtemperature Prewarning!\n", designator);
+        if(!error_reported.test(0)) THEKERNEL->report_error(false, 131, "%c", designator); // stream->printf("%c - WARNING: Overtemperature Prewarning!\n", designator);
         error_reported.set(0);
     }else{
         error_reported.reset(0);
     }
 
     if (this->getOverTemperature()&TMC26X_OVERTEMPERATURE_SHUTDOWN) {
-        if(!error_reported.test(1)) stream->printf("%c - ERROR: Overtemperature Shutdown!\n", designator);
+        if(!error_reported.test(1)) THEKERNEL->report_error(false, 132, "%c", designator); //stream->printf("%c - ERROR: Overtemperature Shutdown!\n", designator);
         error=true;
         error_reported.set(1);
     }else{
@@ -985,7 +985,7 @@ bool TMC26X::check_error_status_bits(StreamOutput *stream)
     }
 
     if (this->isShortToGroundA()) {
-        if(!error_reported.test(2)) stream->printf("%c - ERROR: SHORT to ground on channel A!\n", designator);
+        if(!error_reported.test(2)) THEKERNEL->report_error(false, 133, "%c", designator); //stream->printf("%c - ERROR: SHORT to ground on channel A!\n", designator);
         error=true;
         error_reported.set(2);
     }else{
@@ -993,7 +993,7 @@ bool TMC26X::check_error_status_bits(StreamOutput *stream)
     }
 
     if (this->isShortToGroundB()) {
-        if(!error_reported.test(3)) stream->printf("%c - ERROR: SHORT to ground on channel B!\n", designator);
+        if(!error_reported.test(3)) THEKERNEL->report_error(false, 134, "%c", designator); //stream->printf("%c - ERROR: SHORT to ground on channel B!\n", designator);
         error=true;
         error_reported.set(3);
     }else{
@@ -1002,7 +1002,7 @@ bool TMC26X::check_error_status_bits(StreamOutput *stream)
 
     // these seem to be triggered when moving so ignore them for now
     if (this->isOpenLoadA()) {
-        if(!error_reported.test(4)) stream->printf("%c - ERROR: Channel A seems to be unconnected!\n", designator);
+        if(!error_reported.test(4)) THEKERNEL->report_error(false, 135, "%c", designator); //stream->printf("%c - ERROR: Channel A seems to be unconnected!\n", designator);
         error=true;
         error_reported.set(4);
     }else{
@@ -1010,7 +1010,7 @@ bool TMC26X::check_error_status_bits(StreamOutput *stream)
     }
 
     if (this->isOpenLoadB()) {
-        if(!error_reported.test(5)) stream->printf("%c - ERROR: Channel B seems to be unconnected!\n", designator);
+        if(!error_reported.test(5)) THEKERNEL->report_error(false, 136, "%c", designator); //stream->printf("%c - ERROR: Channel B seems to be unconnected!\n", designator);
         error=true;
         error_reported.set(5);
     }else{

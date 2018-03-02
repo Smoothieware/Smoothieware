@@ -258,12 +258,12 @@ void ZProbe::on_gcode_received(void *argument)
 
         // make sure the probe is defined and not already triggered before moving motors
         if(!this->pin.connected()) {
-            gcode->stream->printf("ZProbe pin not configured.\n");
+            THEKERNEL->report_error(false, 111, ""); // gcode->stream->printf("ZProbe pin not configured.\n");
             return;
         }
 
         if(this->pin.get()) {
-            gcode->stream->printf("ZProbe triggered before move, aborting command.\n");
+            THEKERNEL->report_error(false, 112, ""); //  gcode->stream->printf("ZProbe triggered before move, aborting command.\n");
             return;
         }
 
@@ -294,7 +294,7 @@ void ZProbe::on_gcode_received(void *argument)
                 }
 
             } else {
-                gcode->stream->printf("ZProbe not triggered\n");
+                THEKERNEL->report_error(false, 113, ""); //  gcode->stream->printf("ZProbe not triggered\n");
             }
 
         } else {
@@ -305,7 +305,7 @@ void ZProbe::on_gcode_received(void *argument)
                         return;
                     }
                 }
-                gcode->stream->printf("No strategy found to handle G%d\n", gcode->g);
+                THEKERNEL->report_error(false, 114, "%d", gcode->g); //  gcode->stream->printf("No strategy found to handle G%d\n", gcode->g);
 
             }else{
                 // P paramater selects which strategy to send the code to
@@ -313,7 +313,7 @@ void ZProbe::on_gcode_received(void *argument)
                 uint16_t i= gcode->get_value('P');
                 if(i < strategies.size()) {
                     if(!strategies[i]->handleGcode(gcode)){
-                        gcode->stream->printf("strategy #%d did not handle G%d\n", i, gcode->g);
+                        THEKERNEL->report_error(false, 114, "%d", gcode->g); //  gcode->stream->printf("strategy #%d did not handle G%d\n", i, gcode->g);
                     }
                     return;
 
@@ -332,12 +332,12 @@ void ZProbe::on_gcode_received(void *argument)
 
         // make sure the probe is defined and not already triggered before moving motors
         if(!this->pin.connected()) {
-            gcode->stream->printf("error:ZProbe not connected.\n");
+            THEKERNEL->report_error(false, 111, ""); //  gcode->stream->printf("error:ZProbe not connected.\n");
             return;
         }
 
         if(this->pin.get()) {
-            gcode->stream->printf("error:ZProbe triggered before move, aborting command.\n");
+            THEKERNEL->report_error(false, 112, ""); //  gcode->stream->printf("error:ZProbe triggered before move, aborting command.\n");
             return;
         }
 
@@ -440,8 +440,8 @@ void ZProbe::probe_XYZ(Gcode *gcode, int axis)
 
     if(probeok == 0 && gcode->subcode == 2) {
         // issue error if probe was not triggered and subcode == 2
-        gcode->stream->printf("ALARM: Probe fail\n");
-        THEKERNEL->call_event(ON_HALT, nullptr);
+        THEKERNEL->report_error(true, 120, ""); //  gcode->stream->printf("ALARM: Probe fail\n");
+        //THEKERNEL->call_event(ON_HALT, nullptr);
     }
 }
 

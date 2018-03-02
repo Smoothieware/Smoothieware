@@ -76,19 +76,19 @@ bool MotorDriverControl::config_module(uint16_t cs)
         // NOTE Deprecated use of designator for backward compatibility
         str= THEKERNEL->config->value( motor_driver_control_checksum, cs, designator_checksum)->by_default("")->as_string();
         if(str.empty()) {
-            THEKERNEL->streams->printf("MotorDriverControl ERROR: axis not defined\n");
+            THEKERNEL->report_error(false, 137, ""); //THEKERNEL->streams->printf("MotorDriverControl ERROR: axis not defined\n");
             return false; // axis/axis required
         }
     }
     axis= str[0];
     if( !((axis >= 'X' && axis <= 'Z') || (axis >= 'A' && axis <= 'C')) ) {
-        THEKERNEL->streams->printf("MotorDriverControl ERROR: axis must be one of XYZABC\n");
+        THEKERNEL->report_error(false, 138, ""); // THEKERNEL->streams->printf("MotorDriverControl ERROR: axis must be one of XYZABC\n");
         return false; // axis is illegal
     }
 
     spi_cs_pin.from_string(THEKERNEL->config->value( motor_driver_control_checksum, cs, spi_cs_pin_checksum)->by_default("nc")->as_string())->as_output();
     if(!spi_cs_pin.connected()) {
-        THEKERNEL->streams->printf("MotorDriverControl %c ERROR: chip select not defined\n", axis);
+        THEKERNEL->report_error(false, 139, "%c", axis); //THEKERNEL->streams->printf("MotorDriverControl %c ERROR: chip select not defined\n", axis);
         return false; // if not defined then we can't use this instance
     }
     spi_cs_pin.set(1);
@@ -96,7 +96,7 @@ bool MotorDriverControl::config_module(uint16_t cs)
 
     str= THEKERNEL->config->value( motor_driver_control_checksum, cs, chip_checksum)->by_default("")->as_string();
     if(str.empty()) {
-        THEKERNEL->streams->printf("MotorDriverControl %c ERROR: chip type not defined\n", axis);
+        THEKERNEL->report_error(false, 140, "axis"); //THEKERNEL->streams->printf("MotorDriverControl %c ERROR: chip type not defined\n", axis);
         return false; // chip type required
     }
 
@@ -113,7 +113,7 @@ bool MotorDriverControl::config_module(uint16_t cs)
         tmc26x= new TMC26X(std::bind( &MotorDriverControl::sendSPI, this, _1, _2, _3), axis);
 
     }else{
-        THEKERNEL->streams->printf("MotorDriverControl %c ERROR: Unknown chip type: %s\n", axis, str.c_str());
+        THEKERNEL->report_error(false, 141, "%c,%s", axis, str.c_str()); // THEKERNEL->streams->printf("MotorDriverControl %c ERROR: Unknown chip type: %s\n", axis, str.c_str());
         return false;
     }
 
@@ -128,7 +128,7 @@ bool MotorDriverControl::config_module(uint16_t cs)
     } else if(spi_channel == 1) {
         mosi = P0_9; miso = P0_8; sclk = P0_7;
     } else {
-        THEKERNEL->streams->printf("MotorDriverControl %c ERROR: Unknown SPI Channel: %d\n", axis, spi_channel);
+        THEKERNEL->report_error(false, 142, "%c,%d", axis, spi_channel); //THEKERNEL->streams->printf("MotorDriverControl %c ERROR: Unknown SPI Channel: %d\n", axis, spi_channel);
         return false;
     }
 
@@ -246,8 +246,9 @@ void MotorDriverControl::on_second_tick(void *argument)
     }
 
     if(halt_on_alarm && alarm) {
-        THEKERNEL->call_event(ON_HALT, nullptr);
-        THEKERNEL->streams->printf("Error: Motor Driver alarm - reset or M999 required to continue\r\n");
+        THEKERNEL->report_error(true, 145, ""); //
+        //THEKERNEL->call_event(ON_HALT, nullptr);
+        //THEKERNEL->streams->printf("Error: Motor Driver alarm - reset or M999 required to continue\r\n");
     }
 }
 
@@ -471,4 +472,3 @@ int MotorDriverControl::sendSPI(uint8_t *b, int cnt, uint8_t *r)
     spi_cs_pin.set(1);
     return cnt;
 }
-

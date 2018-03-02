@@ -362,7 +362,7 @@ void Kernel::unregister_for_event(_EVENT_ENUM id_event, Module *mod)
 void Kernel::report_error(bool cause_halt, uint16_t error_number, const char *format, ... ){
   char b[64];
   char *buffer;
-  
+
   // Make the message
   va_list args;
   va_start(args, format);
@@ -381,5 +381,19 @@ void Kernel::report_error(bool cause_halt, uint16_t error_number, const char *fo
 
   if (buffer != b)
       delete[] buffer;
+
+  // Display the error
+  if(THEKERNEL->is_grbl_mode()) {
+        THEKERNEL->streams->printf("error: ");
+  }else{
+        THEKERNEL->streams->printf("Error: ");
+  }
+
+
+
+  // Go into halt mode if requested
+  if( cause_halt ){
+    THEKERNEL->call_event(ON_HALT, nullptr);
+  }
 
 }

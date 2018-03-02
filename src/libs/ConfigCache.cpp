@@ -1,5 +1,6 @@
 #include "ConfigCache.h"
 #include "ConfigValue.h"
+#include "Kernel.h"
 
 #include "libs/StreamOutput.h"
 
@@ -43,7 +44,7 @@ void ConfigCache::replace_or_push_back(ConfigValue *new_value)
             // Replace with the provided value
             delete cv; // free up old one
             cv =  new_value;
-            printf("WARNING: duplicate config line replaced\n");
+            THEKERNEL->report_error(false, 7, "%s", cv->value.c_str() );       // printf("WARNING: duplicate config line replaced\n");
             return;
         }
     }

@@ -49,9 +49,9 @@ void PWMSpindleControl::on_module_loaded()
     current_I_value = 0;
     current_pwm_value = 0;
     time_since_update = 0;
-    
+
     spindle_on = false;
-    
+
     pulses_per_rev = THEKERNEL->config->value(spindle_checksum, spindle_pulses_per_rev_checksum)->by_default(1.0f)->as_number();
     target_rpm = THEKERNEL->config->value(spindle_checksum, spindle_default_rpm_checksum)->by_default(5000.0f)->as_number();
     control_P_term = THEKERNEL->config->value(spindle_checksum, spindle_control_P_checksum)->by_default(0.0001f)->as_number();
@@ -73,16 +73,16 @@ void PWMSpindleControl::on_module_loaded()
         output_inverted = smoothie_pin->is_inverting();
         delete smoothie_pin;
     }
-    
+
     if (pwm_pin == NULL)
     {
-        THEKERNEL->streams->printf("Error: Spindle PWM pin must be P2.0-2.5 or other PWM pin\n");
+        THEKERNEL->report_error(false, 22, "");   // THEKERNEL->streams->printf("Error: Spindle PWM pin must be P2.0-2.5 or other PWM pin\n");
         delete this;
         return;
     }
 
     max_pwm = THEKERNEL->config->value(spindle_checksum, spindle_max_pwm_checksum)->by_default(1.0f)->as_number();
-    
+
     int period = THEKERNEL->config->value(spindle_checksum, spindle_pwm_period_checksum)->by_default(1000)->as_int();
     pwm_pin->period_us(period);
     pwm_pin->write(output_inverted ? 1 : 0);
@@ -98,13 +98,13 @@ void PWMSpindleControl::on_module_loaded()
             feedback_pin->rise(this, &PWMSpindleControl::on_pin_rise);
             NVIC_SetPriority(EINT3_IRQn, 16);
         } else {
-            THEKERNEL->streams->printf("Error: Spindle feedback pin has to be on P0 or P2.\n");
+            THEKERNEL->report_error(false, 23, "");  //  THEKERNEL->streams->printf("Error: Spindle feedback pin has to be on P0 or P2.\n");
             delete this;
             return;
         }
         delete smoothie_pin;
     }
-    
+
     THEKERNEL->slow_ticker->attach(UPDATE_FREQ, this, &PWMSpindleControl::on_update_speed);
 }
 
@@ -165,7 +165,7 @@ uint32_t PWMSpindleControl::on_update_speed(uint32_t dummy)
         pwm_pin->write(1.0f - current_pwm_value);
     else
         pwm_pin->write(current_pwm_value);
-    
+
     return 0;
 }
 
@@ -208,4 +208,3 @@ void PWMSpindleControl::report_settings() {
     THEKERNEL->streams->printf("P: %0.6f I: %0.6f D: %0.6f\n",
                                control_P_term, control_I_term, control_D_term);
 }
-

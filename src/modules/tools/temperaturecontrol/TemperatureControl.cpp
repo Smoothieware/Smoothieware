@@ -127,9 +127,10 @@ void TemperatureControl::on_main_loop(void *argument)
 {
     if (this->temp_violated) {
         this->temp_violated = false;
-        THEKERNEL->streams->printf("ERROR: MINTEMP or MAXTEMP triggered on %s. Check your temperature sensors!\n", designator.c_str());
-        THEKERNEL->streams->printf("HALT asserted - reset or M999 required\n");
-        THEKERNEL->call_event(ON_HALT, nullptr);
+        THEKERNEL->report_error(true, 30, "%s", designator.c_str()); // ERROR: MINTEMP or MAXTEMP triggered on %s. Check your temperature sensors!
+        // THEKERNEL->streams->printf("ERROR: MINTEMP or MAXTEMP triggered on %s. Check your temperature sensors!\n", designator.c_str());
+        // THEKERNEL->streams->printf("HALT asserted - reset or M999 required\n");
+        // THEKERNEL->call_event(ON_HALT, nullptr);
     }
 }
 
@@ -352,8 +353,9 @@ void TemperatureControl::on_gcode_received(void *argument)
                     // wait for temp to be reached, no more gcodes will be fetched until this is complete
                     if( gcode->m == this->set_and_wait_m_code) {
                         if(isinf(get_temperature()) && isinf(sensor->get_temperature())) {
-                            THEKERNEL->streams->printf("Temperature reading is unreliable on %s HALT asserted - reset or M999 required\n", designator.c_str());
-                            THEKERNEL->call_event(ON_HALT, nullptr);
+                            THEKERNEL->report_error(true, 31, "%s", designator.c_str());   // Temperature reading is unreliable on %s HALT asserted - reset or M999 required
+                            // THEKERNEL->streams->printf("Temperature reading is unreliable on %s HALT asserted - reset or M999 required\n", designator.c_str());
+                            // THEKERNEL->call_event(ON_HALT, nullptr);
                             return;
                         }
 
@@ -582,8 +584,9 @@ void TemperatureControl::on_second_tick(void *argument)
                     uint16_t t= (runaway_state == HEATING_UP) ? this->runaway_heating_timeout : this->runaway_cooling_timeout;
                     // we are still heating up see if we have hit the max time allowed
                     if(t > 0 && ++this->runaway_timer > t){
-                        THEKERNEL->streams->printf("ERROR: Temperature took too long to be reached on %s, HALT asserted, TURN POWER OFF IMMEDIATELY - reset or M999 required\n", designator.c_str());
-                        THEKERNEL->call_event(ON_HALT, nullptr);
+                        THEKERNEL->report_error(true, 32, "%s", designator.c_str()); // ERROR: Temperature took too long to be reached on %s, HALT asserted, TURN POWER OFF IMMEDIATELY - reset or M999 required
+                        //THEKERNEL->streams->printf("ERROR: Temperature took too long to be reached on %s, HALT asserted, TURN POWER OFF IMMEDIATELY - reset or M999 required\n", designator.c_str());
+                        //THEKERNEL->call_event(ON_HALT, nullptr);
                         this->runaway_state = NOT_HEATING;
                         this->runaway_timer = 0;
                     }
@@ -598,8 +601,9 @@ void TemperatureControl::on_second_tick(void *argument)
                     // If the temperature is outside the acceptable range for 8 seconds, this allows for some noise spikes without halting
                     if(fabsf(delta) > this->runaway_range){
                         if(this->runaway_timer++ >= 1) { // this being 8 seconds
-                            THEKERNEL->streams->printf("ERROR: Temperature runaway on %s (delta temp %f), HALT asserted, TURN POWER OFF IMMEDIATELY - reset or M999 required\n", designator.c_str(), delta);
-                            THEKERNEL->call_event(ON_HALT, nullptr);
+                            THEKERNEL->report_error(true, 33, "%s,%f", designator.c_str(), delta);
+                            // THEKERNEL->streams->printf("ERROR: Temperature runaway on %s (delta temp %f), HALT asserted, TURN POWER OFF IMMEDIATELY - reset or M999 required\n", designator.c_str(), delta);
+                            // THEKERNEL->call_event(ON_HALT, nullptr);
                             this->runaway_state = NOT_HEATING;
                             this->runaway_timer= 0;
                         }

@@ -84,7 +84,7 @@ void CurrentControl::on_gcode_received(void *argument)
         if (gcode->m == 907) {
             if(gcode->has_letter('E')) { // thi smeans it was the old setting, E is no longer allowed
                 char alpha[] = { 'X', 'Y', 'Z', 'E', 'A', 'B', 'C' };
-                gcode->stream->printf("WARNING: Using E is deprecated, use A and B for channels 3 and 4\n");
+                THEKERNEL->report_error(false, 121, ""); //  gcode->stream->printf("WARNING: Using E is deprecated, use A and B for channels 3 and 4\n");
                 // this is the old format where E => A, A => B, B => C, C => D
                 for (int i = 0; i < 7; i++) {
                     if (gcode->has_letter(alpha[i])) {

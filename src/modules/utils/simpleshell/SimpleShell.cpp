@@ -1163,4 +1163,3 @@ void SimpleShell::help_command( string parameters, StreamOutput *stream )
     stream->printf("thermistors - print out the predefined thermistors\r\n");
     stream->printf("md5sum file - prints md5 sum of the given file\r\n");
 }
-

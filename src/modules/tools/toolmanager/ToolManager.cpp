@@ -48,9 +48,10 @@ void ToolManager::on_gcode_received(void *argument)
         int new_tool = gcode->get_value('T');
         if(new_tool >= (int)this->tools.size() || new_tool < 0) {
             // invalid tool
-            char buf[32]; // should be big enough for any status
-            int n = snprintf(buf, sizeof(buf), "T%d invalid tool ", new_tool);
-            gcode->txt_after_ok.append(buf, n);
+            THEKERNEL->report_error(false, 45, "%d", new_tool); // , "T%d invalid tool ", new_tool);
+            //char buf[32]; // should be big enough for any status
+            //int n = snprintf(buf, sizeof(buf), "T%d invalid tool ", new_tool);
+            //gcode->txt_after_ok.append(buf, n);
 
         } else {
             if(new_tool != this->active_tool) {
@@ -125,6 +126,3 @@ void ToolManager::add_tool(Tool* tool_to_add)
     }
     this->tools.push_back( tool_to_add );
 }
-
-
-

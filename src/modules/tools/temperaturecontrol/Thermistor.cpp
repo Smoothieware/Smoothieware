@@ -144,7 +144,7 @@ void Thermistor::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
         std::vector<float> trl= parse_number_list(rtc.c_str());
         if(trl.size() != 6) {
             // punt we need 6 numbers, three pairs
-            THEKERNEL->streams->printf("Error in config need 6 numbers for Steinhart-Hart\n");
+            THEKERNEL->report_error(false, 34, ""); //  THEKERNEL->streams->printf("Error in config need 6 numbers for Steinhart-Hart\n");
             this->bad_config= true;
             return;
         }
@@ -160,7 +160,7 @@ void Thermistor::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
         std::vector<float> v= parse_number_list(coef.c_str());
         if(v.size() != 3) {
             // punt we need 6 numbers, three pairs
-            THEKERNEL->streams->printf("Error in config need 3 Steinhart-Hart coefficients\n");
+            THEKERNEL->report_error(false, 25, ""); // THEKERNEL->streams->printf("Error in config need 3 Steinhart-Hart coefficients\n");
             this->bad_config= true;
             return;
         }
@@ -175,7 +175,7 @@ void Thermistor::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
         calc_jk();
 
     }else if(!found) {
-        THEKERNEL->streams->printf("Error in config need rt_curve, coefficients, beta or a valid predefined thermistor defined\n");
+        THEKERNEL->report_error(false, 36, "");   // THEKERNEL->streams->printf("Error in config need rt_curve, coefficients, beta or a valid predefined thermistor defined\n");
         this->bad_config= true;
         return;
     }
@@ -216,7 +216,7 @@ std::tuple<float,float,float> Thermistor::calculate_steinhart_hart_coefficients(
     float a = y1 - (b + powf(l1,2) * c) * l1;
 
     if(c < 0) {
-        THEKERNEL->streams->printf("WARNING: negative coefficient in calculate_steinhart_hart_coefficients. Something may be wrong with the measurements\n");
+        THEKERNEL->report_error(false, 37, "");   // THEKERNEL->streams->printf("WARNING: negative coefficient in calculate_steinhart_hart_coefficients. Something may be wrong with the measurements\n");
         c = -c;
     }
     return std::make_tuple(a, b, c);
@@ -229,7 +229,7 @@ void Thermistor::calc_jk()
         j = (1.0F / beta);
         k = (1.0F / (t0 + 273.15F));
     }else{
-        THEKERNEL->streams->printf("WARNING: beta cannot be 0\n");
+        THEKERNEL->report_error(false, 38, "");  //   THEKERNEL->streams->printf("WARNING: beta cannot be 0\n");
         this->bad_config= true;
     }
 }
@@ -247,7 +247,7 @@ float Thermistor::get_temperature()
 void Thermistor::get_raw()
 {
     if(this->bad_config) {
-       THEKERNEL->streams->printf("WARNING: The config is bad for this temperature sensor\n");
+        THEKERNEL->report_error(false, 39, "");  // THEKERNEL->streams->printf("WARNING: The config is bad for this temperature sensor\n");
     }
 
     int adc_value= new_thermistor_reading();

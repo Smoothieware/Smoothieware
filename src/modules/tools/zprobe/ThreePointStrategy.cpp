@@ -118,7 +118,7 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
         // G code processing
         if(gcode->g == 29) { // test probe points for level
             if(!test_probe_points(gcode)) {
-                gcode->stream->printf("Probe failed to complete, probe not triggered or other error\n");
+                THEKERNEL->report_error(false, 106, ""); // gcode->stream->printf("Probe failed to complete, probe not triggered or other error\n");
             }
             return true;
 
@@ -141,7 +141,7 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
             setAdjustFunction(false);
 
             if(!doProbing(gcode->stream)) {
-                gcode->stream->printf("Probe failed to complete, probe not triggered or other error\n");
+                THEKERNEL->report_error(false, 106, ""); // gcode->stream->printf("Probe failed to complete, probe not triggered or other error\n");
             } else {
                 gcode->stream->printf("Probe completed, bed plane defined\n");
             }
@@ -158,7 +158,7 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
             if(idx >= 0 && idx <= 2) {
                 probe_points[idx] = std::make_tuple(x, y);
             }else{
-                 gcode->stream->printf("only 3 probe points allowed P0-P2\n");
+                 THEKERNEL->report_error(false, 107, ""); //  gcode->stream->printf("only 3 probe points allowed P0-P2\n");
             }
             return true;
 
@@ -302,7 +302,7 @@ bool ThreePointStrategy::doProbing(StreamOutput *stream)
 
     // if first point is not within tolerance report it, it should ideally be 0
     if(fabsf(v[0][2]) > this->tolerance) {
-        stream->printf("WARNING: probe is not within tolerance: %f > %f\n", fabsf(v[0][2]), this->tolerance);
+        THEKERNEL->report_error(false, 110, "%f,%f",fabsf(v[0][2]), this->tolerance ); //  stream->printf("WARNING: probe is not within tolerance: %f > %f\n", fabsf(v[0][2]), this->tolerance);
     }
 
     // define the plane

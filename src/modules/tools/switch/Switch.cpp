@@ -146,7 +146,7 @@ void Switch::on_config_reload(void *argument)
         }
         delete pin;
         if(this->pwm_pin == nullptr) {
-            THEKERNEL->streams->printf("Selected Switch output pin is not PWM capable - disabled");
+            THEKERNEL->report_error(false, 26, "");    // THEKERNEL->streams->printf("Selected Switch output pin is not PWM capable - disabled");
             this->output_type= NONE;
         }
 
@@ -431,4 +431,3 @@ void Switch::send_gcode(std::string msg, StreamOutput *stream)
     message.stream = stream;
     THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
 }
-
