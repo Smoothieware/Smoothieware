@@ -1161,7 +1161,13 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
             if(!is_homed(i)) continue;
             if( (!isnan(soft_endstop_min[i]) && transformed_target[i] < soft_endstop_min[i]) || (!isnan(soft_endstop_max[i]) && transformed_target[i] > soft_endstop_max[i]) ) {
                 if(soft_endstop_halt) {
-                    THEKERNEL->streams->printf("Soft Endstop %c was exceeded - reset or M999 required\n", i+'X');
+                    if(THEKERNEL->is_grbl_mode()) {
+                        THEKERNEL->streams->printf("error: ");
+                    }else{
+                        THEKERNEL->streams->printf("Error: ");
+                    }
+
+                    THEKERNEL->streams->printf("Soft Endstop %c was exceeded - reset or $X or M999 required\n", i+'X');
                     THEKERNEL->call_event(ON_HALT, nullptr);
                     return false;
 
@@ -1171,7 +1177,12 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
 
                 } else {
                     // ignore it
-                    THEKERNEL->streams->printf("WARNING Soft Endstop %c was exceeded - entire move ignored\n", i+'X');
+                    if(THEKERNEL->is_grbl_mode()) {
+                        THEKERNEL->streams->printf("error: ");
+                    }else{
+                        THEKERNEL->streams->printf("Error: ");
+                    }
+                    THEKERNEL->streams->printf("Soft Endstop %c was exceeded - entire move ignored\n", i+'X');
                     return false;
                 }
             }
