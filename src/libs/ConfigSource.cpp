@@ -2,10 +2,11 @@
 #include "ConfigSource.h"
 #include "ConfigValue.h"
 #include "ConfigCache.h"
+#include "Kernel.h"
 
 #include "stdio.h"
 
-ConfigValue* ConfigSource::process_line(const string &buffer)
+ConfigValue* ConfigSource::process_line(const string &buffer, uint16_t line_number)
 {
     if( buffer[0] == '#' ) {
         return NULL;
@@ -19,7 +20,7 @@ ConfigValue* ConfigSource::process_line(const string &buffer)
 
     size_t end_key = buffer.find_first_of(" \t", begin_key);
     if(end_key == string::npos) {
-        printf("ERROR: config file line %s is invalid, no key value pair found\r\n", buffer.c_str());
+        THEKERNEL->report_error(false, 1, "%d", line_number );    //printf("ERROR: config file line %s is invalid, no key value pair found\r\n", buffer.c_str());
         return NULL;
     }
 
@@ -48,9 +49,9 @@ ConfigValue* ConfigSource::process_line(const string &buffer)
     return result;
 }
 
-ConfigValue* ConfigSource::process_line_from_ascii_config(const string &buffer, ConfigCache *cache)
+ConfigValue* ConfigSource::process_line_from_ascii_config(const string &buffer, ConfigCache *cache, uint16_t line_number)
 {
-    ConfigValue *result = process_line(buffer);
+    ConfigValue *result = process_line(buffer, line_number);
     if(result != NULL) {
         // Append the newly found value to the cache we were passed
         cache->replace_or_push_back(result);
@@ -59,10 +60,10 @@ ConfigValue* ConfigSource::process_line_from_ascii_config(const string &buffer, 
     return NULL;
 }
 
-string ConfigSource::process_line_from_ascii_config(const string &buffer, uint16_t line_checksums[3])
+string ConfigSource::process_line_from_ascii_config(const string &buffer, uint16_t line_checksums[3], uint16_t line_number)
 {
     string value= "";
-    ConfigValue *result = process_line(buffer);
+    ConfigValue *result = process_line(buffer, line_number);
     if(result != NULL) {
         if(result->check_sums[0] == line_checksums[0] && result->check_sums[1] == line_checksums[1] && result->check_sums[2] == line_checksums[2]) {
             value= result->value;

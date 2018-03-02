@@ -73,7 +73,7 @@ void FileConfigSource::transfer_values_to_cache( ConfigCache *cache, const char 
         string line;
         if(readLine(line, ln++, lp)) {
             // process the config line and store the value in cache
-            ConfigValue* cv = process_line_from_ascii_config(line, cache);
+            ConfigValue* cv = process_line_from_ascii_config(line, cache, ln);
 
             if(cv == nullptr) continue;
 
@@ -146,7 +146,7 @@ bool FileConfigSource::write( string setting, string value )
         fgetpos( lp, &bol ); // get start of line
         if(readLine(line, 0, lp)) {
             fgetpos( lp, &eol ); // get end of line
-            if(!process_line_from_ascii_config(line, setting_checksums).empty()) {
+            if(!process_line_from_ascii_config(line, setting_checksums,0).empty()) {
                 // found it
                 unsigned int free_space = eol - bol - 4; // length of line
                 // check we have enough space for this insertion
@@ -192,11 +192,14 @@ string FileConfigSource::read( uint16_t check_sums[3] )
 
     // Open the config file ( find it if we haven't already found it )
     FILE *lp = fopen(this->get_config_file().c_str(), "r");
+
+    uint16_t line_number = 0;
     // For each line
     while(!feof(lp)) {
+        line_number++;
         string line;
          if(readLine(line, 0, lp)) {
-            value = process_line_from_ascii_config(line, check_sums);
+            value = process_line_from_ascii_config(line, check_sums, line_number);
             if(!value.empty()) break; // found it
         }else break;
     }
@@ -241,9 +244,3 @@ string FileConfigSource::get_config_file()
         return "";
     }
 }
-
-
-
-
-
-

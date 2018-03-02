@@ -36,8 +36,11 @@ FirmConfigSource::FirmConfigSource(const char* name, const char *start, const ch
 void FirmConfigSource::transfer_values_to_cache( ConfigCache* cache ){
 
     const char* p = this->start;
+    uint16_t line_number = 0;
+
     // For each line
     while( p < this->end ){
+        line_number++;
         // find eol
         const char *eol= p;
         while(eol < this->end) {
@@ -46,7 +49,7 @@ void FirmConfigSource::transfer_values_to_cache( ConfigCache* cache ){
         string line(p, eol-p);
         //printf("firm: processing %s\n", line.c_str());
         p= eol;
-        process_line_from_ascii_config(line, cache);
+        process_line_from_ascii_config(line, cache, line_number);
     }
 }
 
@@ -65,6 +68,7 @@ bool FirmConfigSource::write( string setting, string value ){
 string FirmConfigSource::read( uint16_t check_sums[3] ){
 
     string value = "";
+    uint16_t line_number = 0;
 
     const char* p = this->start;
     // For each line
@@ -76,10 +80,9 @@ string FirmConfigSource::read( uint16_t check_sums[3] ){
         }
         string line(p, eol-p);
         p= eol;
-        value = process_line_from_ascii_config(line, check_sums);
+        value = process_line_from_ascii_config(line, check_sums, line_number);
         if(!value.empty()) return value;
     }
 
     return value;
 }
-

@@ -27,12 +27,12 @@ class ConfigSource {
         virtual string read( uint16_t check_sums[3] ) = 0;
 
     protected:
-        virtual ConfigValue* process_line_from_ascii_config(const string& line, ConfigCache* cache);
-        virtual string process_line_from_ascii_config(const string& line, uint16_t line_checksums[3]);
+        virtual ConfigValue* process_line_from_ascii_config(const string& line, ConfigCache* cache, uint16_t line_number);
+        virtual string process_line_from_ascii_config(const string& line, uint16_t line_checksums[3], uint16_t line_number); 
         uint16_t name_checksum;
 
     private:
-        ConfigValue* process_line(const string &buffer);
+        ConfigValue* process_line(const string &buffer, uint16_t line_number);
 };
 
 
