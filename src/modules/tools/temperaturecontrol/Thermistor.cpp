@@ -144,7 +144,7 @@ void Thermistor::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
         std::vector<float> trl= parse_number_list(rtc.c_str());
         if(trl.size() != 6) {
             // punt we need 6 numbers, three pairs
-            THEKERNEL->report_error(false, 34, "Thermistor needs 6 numbers for Steinhart-Hart", "");
+            THEKERNEL->report_error(false, 34, "Thermistor: Need 6 numbers for Steinhart-Hart");
             this->bad_config= true;
             return;
         }
@@ -160,7 +160,7 @@ void Thermistor::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
         std::vector<float> v= parse_number_list(coef.c_str());
         if(v.size() != 3) {
             // punt we need 6 numbers, three pairs
-            THEKERNEL->report_error(false, 25, "Thermistor needs 3 Steinhart-Hart coefficients", "");
+            THEKERNEL->report_error(false, 25, "Thermistor: Need 3 Steinhart-Hart coefficients");
             this->bad_config= true;
             return;
         }
@@ -175,7 +175,7 @@ void Thermistor::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
         calc_jk();
 
     }else if(!found) {
-        THEKERNEL->report_error(false, 36, "Thermistor needs rt_curve, coefficients, beta or a valid prefedined thermistor", "");
+        THEKERNEL->report_error(false, 36, "Thermistor: Need rt_curve, coefficients, beta or a valid prefedined thermistor");
         this->bad_config= true;
         return;
     }
@@ -216,7 +216,7 @@ std::tuple<float,float,float> Thermistor::calculate_steinhart_hart_coefficients(
     float a = y1 - (b + powf(l1,2) * c) * l1;
 
     if(c < 0) {
-        THEKERNEL->report_error(false, 37, "Thermistor: negative coefficient for Steinhart-Hart, check measurements", "");
+        THEKERNEL->report_error(false, 37, "Thermistor: Negative coefficient for Steinhart-Hart, check measurements");
         c = -c;
     }
     return std::make_tuple(a, b, c);
@@ -229,7 +229,7 @@ void Thermistor::calc_jk()
         j = (1.0F / beta);
         k = (1.0F / (t0 + 273.15F));
     }else{
-        THEKERNEL->report_error(false, 38, "Thermistor beta can not be zero", "");
+        THEKERNEL->report_error(false, 38, "Thermistor: Beta can not be zero");
         this->bad_config= true;
     }
 }
@@ -247,7 +247,7 @@ float Thermistor::get_temperature()
 void Thermistor::get_raw()
 {
     if(this->bad_config) {
-        THEKERNEL->report_error(false, 39, "Thermistor: Bad config", "");
+        THEKERNEL->report_error(false, 39, "Thermistor: Bad config");
     }
 
     int adc_value= new_thermistor_reading();

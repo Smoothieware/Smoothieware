@@ -778,7 +778,7 @@ void Endstops::process_home_command(Gcode* gcode)
     }
 
     if(haxis.none()) {
-        THEKERNEL->report_error(gcode->stream, false, 16, "Nothing to home";
+        THEKERNEL->report_error(gcode->stream, false, 16, "Nothing to home");
         return;
     }
 

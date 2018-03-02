@@ -48,7 +48,7 @@ void ToolManager::on_gcode_received(void *argument)
         int new_tool = gcode->get_value('T');
         if(new_tool >= (int)this->tools.size() || new_tool < 0) {
             // invalid tool
-            THEKERNEL->report_error(gcode->stream, false, 45, "Invalid tool, number: ", "%d", new_tool);
+            THEKERNEL->report_error(gcode->stream, false, 45, "Tools: Invalid tool, number: #%d", new_tool);
         } else {
             if(new_tool != this->active_tool) {
                 // We must wait for an empty queue before we can disable the current extruder

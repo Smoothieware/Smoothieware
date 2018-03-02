@@ -677,7 +677,7 @@ bool Panel::mount_external_sd(bool on)
                 mosi = P0_9; miso = P0_8; sclk = P0_7;
             } else{
                 this->external_sd_enable= false;
-                THEKERNEL->report_error(false, 151, "Panel: Bad SPI channel for external SD card", ""); 
+                THEKERNEL->report_error(false, 151, "Panel: Bad SPI channel for external SD card"); 
                 return false;
             }
             size_t n= sizeof(SDCard);

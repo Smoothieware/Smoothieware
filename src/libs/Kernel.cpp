@@ -376,7 +376,7 @@ void Kernel::report_error(bool cause_halt, uint16_t error_number, const char *fo
   }
   va_end(args);
 
-  this->report_error(this->serial, cause_halt, error_number, message, buffer);
+  this->report_error(this->serial, cause_halt, error_number, buffer);
 
   if (buffer != b)
       delete[] buffer;
