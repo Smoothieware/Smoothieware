@@ -56,9 +56,8 @@ class Kernel {
         bool get_feed_hold() const { return feed_hold; }
         bool is_feed_hold_enabled() const { return enable_feed_hold; }
 
-        void report_error(bool cause_halt, uint16_t error_number, const std::string& message, const char *format, ...);
-        void report_error(StreamOutput* stream, bool cause_halt, uint16_t error_number, const std::string& message, const char *format, ...);
-
+        void report_error(                      bool cause_halt, uint16_t error_number, const char *format, ...);
+        void report_error(StreamOutput* stream, bool cause_halt, uint16_t error_number, const char *format, ...);
 
         std::string get_query_string();
 

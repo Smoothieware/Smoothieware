@@ -358,12 +358,32 @@ void Kernel::unregister_for_event(_EVENT_ENUM id_event, Module *mod)
     }
 }
 
-void Kernel::report_error(StreamOutput* stream, bool cause_halt, uint16_t error_number, const std::string& message, const char *format, ... ){
+void Kernel::report_error(bool cause_halt, uint16_t error_number, const char *format, ... ){
+  char b[64];
+  char *buffer;
 
+  // Make the message
+  va_list args;
+  va_start(args, format);
+
+  int size = vsnprintf(b, 64, format, args) + 1; // we add one to take into account space for the terminating \0
+
+  if (size < 64) {
+      buffer = b;
+  } else {
+      buffer = new char[size];
+      vsnprintf(buffer, size, format, args);
+  }
+  va_end(args);
+
+  this->report_error(this->streams, cause_halt, error_number, message, buffer);
+
+  if (buffer != b)
+      delete[] buffer;
 }
 
 // Report an error
-void Kernel::report_error(bool cause_halt, uint16_t error_number, const std::string& message, const char *format, ... ){
+void Kernel::report_error(StreamOutput* stream, bool cause_halt, uint16_t error_number, const char *format, ... ){
 
   // TODO : figure out is_grbl_mode
   char b[64];

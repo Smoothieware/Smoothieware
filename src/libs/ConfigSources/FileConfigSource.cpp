@@ -36,7 +36,7 @@ bool FileConfigSource::readLine(string& line, int lineno, FILE *fp)
             if(lineno != 0) {
                 // report if it is not truncating a comment
                 if(strchr(buf, '#') == NULL)
-                    THEKERNEL->report_error(false, 3, "Truncated long config line", "%d,%s", lineno, config_file.c_str());
+                    THEKERNEL->report_error(false, 3, "Config: Truncated long line, line/file: #%d,%s", lineno, config_file.c_str());
             }
             // read until the next \n or eof
             int c;
@@ -109,7 +109,7 @@ void FileConfigSource::transfer_values_to_cache( ConfigCache *cache, const char 
                     freopen(file_name, "r", lp);
                     fsetpos(lp, &pos);
                 }else{
-                    THEKERNEL->report_error(false, 4, "Unable to find included config file ", "%s", inc_file_name.c_str());
+                    THEKERNEL->report_error(false, 4, "Config: Unable to find included config file : #%s", inc_file_name.c_str());
                 }
             }
 
@@ -240,7 +240,7 @@ string FileConfigSource::get_config_file()
     if( this->has_config_file() ) {
         return this->config_file;
     } else {
-        THEKERNEL->report_error(false, 5, "Config file not found", ""); 
+        THEKERNEL->report_error(false, 5, "Config: File not found", "");
         return "";
     }
 }

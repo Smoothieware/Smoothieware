@@ -47,11 +47,11 @@ void SpindleMaker::load_spindle(){
             spindle = new HuanyangSpindleControl();
         } else {
             delete spindle;
-            THEKERNEL->report_error(false, 23, "No valid spindle VFD type defined", "");
+            THEKERNEL->report_error(false, 23, "No valid spindle VFD type defined");
         }
     } else {
         delete spindle;
-        THEKERNEL->report_error(false, 24, "No valid spindle type defined", "");
+        THEKERNEL->report_error(false, 24, "No valid spindle type defined");
     }
 
     // Add the spindle if we successfully initialized one

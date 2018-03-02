@@ -778,7 +778,7 @@ void Endstops::process_home_command(Gcode* gcode)
     }
 
     if(haxis.none()) {
-        THEKERNEL->report_error(gcode->stream, false, 16, "Nothing to home", "");
+        THEKERNEL->report_error(gcode->stream, false, 16, "Nothing to home";
         return;
     }
 
@@ -822,7 +822,7 @@ void Endstops::process_home_command(Gcode* gcode)
     if(THEKERNEL->is_halted()) {
         if(THEKERNEL->is_grbl_mode()) { THEKERNEL->streams->printf("ALARM: Homing fail "); }
 
-        THEKERNEL->report_error(gcode->stream, false, 17, "Homing cycle failed", "");
+        THEKERNEL->report_error(gcode->stream, false, 17, "Homing cycle failed");
 
         // clear all the homed flags
         for (auto &p : homing_axis) p.homed= false;

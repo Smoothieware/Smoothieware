@@ -76,7 +76,7 @@ void PWMSpindleControl::on_module_loaded()
 
     if (pwm_pin == NULL)
     {
-        THEKERNEL->report_error(false, 22, "Spindle pin must be PWM capable", "");
+        THEKERNEL->report_error(false, 22, "Spindle pin must be PWM capable");
         delete this;
         return;
     }
@@ -98,7 +98,7 @@ void PWMSpindleControl::on_module_loaded()
             feedback_pin->rise(this, &PWMSpindleControl::on_pin_rise);
             NVIC_SetPriority(EINT3_IRQn, 16);
         } else {
-            THEKERNEL->report_error(false, 23, "Spindle feedback pin must be on P0 or P2", "");
+            THEKERNEL->report_error(false, 23, "Spindle feedback pin must be on P0 or P2");
             delete this;
             return;
         }

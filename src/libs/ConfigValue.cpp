@@ -58,7 +58,7 @@ ConfigValue& ConfigValue::operator= (const ConfigValue& to_copy)
 ConfigValue *ConfigValue::required()
 {
     if( !this->found ) {
-        THEKERNEL->report_error(false, 8, "Could not find config setting", "");
+        THEKERNEL->report_error(false, 8, "Config: Could not find setting", "");
     }
     return this;
 }
@@ -73,7 +73,7 @@ float ConfigValue::as_number()
         const char *cp= str.c_str();
         float result = strtof(cp, &endptr);
         if( endptr <= cp ) {
-          THEKERNEL->report_error(false, 9, "Config setting not a valid number, value/checksums: ", "%s,%04X,%04X,%04X", this->value.c_str(), this->check_sums[0], this->check_sums[1], this->check_sums[2] );  // printErrorandExit("config setting with value '%s' and checksums[%04X,%04X,%04X] is not a valid number, please see http://smoothieware.org/configuring-smoothie\r\n", this->value.c_str(), this->check_sums[0], this->check_sums[1], this->check_sums[2] );
+          THEKERNEL->report_error(false, 9, "Config: Setting not a valid number, value/checksums: #%s,%04X,%04X,%04X", this->value.c_str(), this->check_sums[0], this->check_sums[1], this->check_sums[2] );  // printErrorandExit("config setting with value '%s' and checksums[%04X,%04X,%04X] is not a valid number, please see http://smoothieware.org/configuring-smoothie\r\n", this->value.c_str(), this->check_sums[0], this->check_sums[1], this->check_sums[2] );
         }
         return result;
     }
@@ -89,7 +89,7 @@ int ConfigValue::as_int()
         const char *cp= str.c_str();
         int result = strtol(cp, &endptr, 10);
         if( endptr <= cp ) {
-          THEKERNEL->report_error(false, 10, "Config setting not a valid integer, value/checksums: ", "%s,%04X,%04X,%04X", this->value.c_str(), this->check_sums[0], this->check_sums[1], this->check_sums[2] );   //      printErrorandExit("config setting with value '%s' and checksums[%04X,%04X,%04X] is not a valid int, please see http://smoothieware.org/configuring-smoothie\r\n", this->value.c_str(), this->check_sums[0], this->check_sums[1], this->check_sums[2] );
+          THEKERNEL->report_error(false, 10, "Config: Setting not a valid integer, value/checksums: #%s,%04X,%04X,%04X", this->value.c_str(), this->check_sums[0], this->check_sums[1], this->check_sums[2] );   //      printErrorandExit("config setting with value '%s' and checksums[%04X,%04X,%04X] is not a valid int, please see http://smoothieware.org/configuring-smoothie\r\n", this->value.c_str(), this->check_sums[0], this->check_sums[1], this->check_sums[2] );
         }
         return result;
     }

@@ -65,7 +65,7 @@ void Laser::on_module_loaded()
     pwm_pin = dummy_pin->hardware_pwm();
 
     if (pwm_pin == NULL) {
-        THEKERNEL->report_error(false, 18, "Pin is not PWM-capable", "%d.%d", dummy_pin->port_number, dummy_pin->pin);
+        THEKERNEL->report_error(false, 18, "Pin is not PWM-capable, pin: #P%d.%d", dummy_pin->port_number, dummy_pin->pin);
         delete dummy_pin;
         delete this;
         return;

@@ -44,7 +44,7 @@ void ConfigCache::replace_or_push_back(ConfigValue *new_value)
             // Replace with the provided value
             delete cv; // free up old one
             cv =  new_value;
-            THEKERNEL->report_error(false, 7, "%s", "Duplicate config file", cv->value.c_str() );
+            THEKERNEL->report_error(false, 7, "Config: duplicate in file: #%s", cv->value.c_str() );
             return;
         }
     }

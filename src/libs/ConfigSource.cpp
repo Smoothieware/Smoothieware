@@ -20,13 +20,13 @@ ConfigValue* ConfigSource::process_line(const string &buffer, uint16_t line_numb
 
     size_t end_key = buffer.find_first_of(" \t", begin_key);
     if(end_key == string::npos) {
-        THEKERNEL->report_error(false, 1, "Config file line is invalid, line number: ", "%d", line_number );
+        THEKERNEL->report_error(false, 1, "Config: File line is invalid, line number: #%d", line_number );
         return NULL;
     }
 
     size_t begin_value = buffer.find_first_not_of(" \t", end_key);
     if(begin_value == string::npos || buffer[begin_value] == '#') {
-        THEKERNEL->report_error(false, 2, "Config file line has no value, line: " "%s", buffer.c_str()); 
+        THEKERNEL->report_error(false, 2, "Config: File line has no value, line: #%s", buffer.c_str());
         return NULL;
     }
 
