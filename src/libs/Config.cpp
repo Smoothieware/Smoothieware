@@ -108,7 +108,7 @@ static ConfigValue dummyValue;
 ConfigValue *Config::value(uint16_t check_sums[])
 {
     if( !is_config_cache_loaded() ) {
-        THEKERNEL->report_error(false, 6, "");    // THEKERNEL->streams->printf("ERROR: calling value after config cache has been cleared\n");
+        THEKERNEL->report_error(false, 6, "Fetching value from cleared cache", "");
         // note this will cause whatever called it to blow up!
         return NULL;
     }

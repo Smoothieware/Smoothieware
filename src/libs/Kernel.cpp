@@ -359,7 +359,9 @@ void Kernel::unregister_for_event(_EVENT_ENUM id_event, Module *mod)
 }
 
 // Report an error
-void Kernel::report_error(bool cause_halt, uint16_t error_number, const char *format, ... ){
+void Kernel::report_error(bool cause_halt, uint16_t error_number, const std::string& message, const char *format, ... ){
+
+  // TODO : figure out is_grbl_mode
   char b[64];
   char *buffer;
 

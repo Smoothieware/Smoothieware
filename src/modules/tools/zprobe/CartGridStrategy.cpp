@@ -150,7 +150,7 @@ bool CartGridStrategy::handleConfig()
     this->x_size = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, x_size_checksum)->by_default(0.0F)->as_number();
     this->y_size = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, y_size_checksum)->by_default(0.0F)->as_number();
     if (this->x_size == 0.0F || this->y_size == 0.0F) {
-        THEKERNEL->report_error(false, 50, ""); // THEKERNEL->streams->printf("Error: Invalid config, x_size and y_size must be defined\n");
+        THEKERNEL->report_error(false, 50, "CartGrid: Invalid size config", "");
         return false;
     }
 
@@ -171,7 +171,7 @@ bool CartGridStrategy::handleConfig()
     grid = (float *)AHB0.alloc(configured_grid_x_size * configured_grid_y_size * sizeof(float));
 
     if(grid == nullptr) {
-        THEKERNEL->report_error(false, 51, "");   // THEKERNEL->streams->printf("Error: Not enough memory\n");
+        THEKERNEL->report_error(false, 51, "CartGrid: Out of Memory", "");
         return false;
     }
 
@@ -183,28 +183,28 @@ bool CartGridStrategy::handleConfig()
 void CartGridStrategy::save_grid(StreamOutput *stream)
 {
     if(only_by_two_corners){
-        THEKERNEL->report_error(false, 52, "");   // stream->printf("error:Unable to save grid in only_by_two_corners mode\n");
+        THEKERNEL->report_error(false, 52, "CartGrid: Can't save in two_corners mode", "");
         return;
     }
 
     if(isnan(grid[0])) {
-        THEKERNEL->report_error(false, 53, "");  // stream->printf("error:No grid to save\n");
+        THEKERNEL->report_error(false, 53, "CartGrid: No grid to save", "");
         return;
     }
 
     if((current_grid_x_size != configured_grid_x_size) || (current_grid_y_size != configured_grid_y_size)) {
-        THEKERNEL->report_error(false, 54, ""); //  stream->printf("error:Unable to save grid with size different from configured\n");
+        THEKERNEL->report_error(false, 54, "CartGrid: Unable to save grid with different size", "");
         return;
     }
 
     FILE *fp = (configured_grid_x_size == configured_grid_y_size)?fopen(GRIDFILE, "w"):fopen(GRIDFILE_NM, "w");
     if(fp == NULL) {
-        THEKERNEL->report_error(false, 55, "%s", GRIDFILE);    // stream->printf("error:Failed to open grid file %s\n", GRIDFILE);
+        THEKERNEL->report_error(false, 55, "CartGrid: Failed to open, file: ", "%s", GRIDFILE);
         return;
     }
     uint8_t tmp_configured_grid_size = configured_grid_x_size;
     if(fwrite(&tmp_configured_grid_size, sizeof(uint8_t), 1, fp) != 1) {
-        THEKERNEL->report_error(false, 56, ""); // stream->printf("error:Failed to write grid x size\n");
+        THEKERNEL->report_error(false, 56, "CartGrid: Failed to write grid x size", "");
         fclose(fp);
         return;
     }
@@ -212,20 +212,20 @@ void CartGridStrategy::save_grid(StreamOutput *stream)
     tmp_configured_grid_size = configured_grid_y_size;
     if(configured_grid_y_size != configured_grid_x_size){
         if(fwrite(&tmp_configured_grid_size, sizeof(uint8_t), 1, fp) != 1) {
-            THEKERNEL->report_error(false, 57, "");  // stream->printf("error:Failed to write grid y size\n");
+            THEKERNEL->report_error(false, 57, "CartGrid: Failed to write grid y size", "");
             fclose(fp);
             return;
         }
     }
 
     if(fwrite(&x_size, sizeof(float), 1, fp) != 1)  {
-        THEKERNEL->report_error(false, 58, "");  // stream->printf("error:Failed to write x_size\n");
+        THEKERNEL->report_error(false, 58, "CartGrid: Failed to write x size", "");
         fclose(fp);
         return;
     }
 
     if(fwrite(&y_size, sizeof(float), 1, fp) != 1)  {
-        THEKERNEL->report_error(false, 59, "");  // stream->printf("error:Failed to write y_size\n");
+        THEKERNEL->report_error(false, 59, "CartGrid: Failed to write y size", "");
         fclose(fp);
         return;
     }
@@ -233,7 +233,7 @@ void CartGridStrategy::save_grid(StreamOutput *stream)
     for (int y = 0; y < configured_grid_y_size; y++) {
         for (int x = 0; x < configured_grid_x_size; x++) {
             if(fwrite(&grid[x + (configured_grid_x_size * y)], sizeof(float), 1, fp) != 1) {
-                THEKERNEL->report_error(false, 60, ""); // stream->printf("error:Failed to write grid\n");
+                THEKERNEL->report_error(false, 60, "CartGrid: Failed to write grid", "");
                 fclose(fp);
                 return;
             }
@@ -246,13 +246,13 @@ void CartGridStrategy::save_grid(StreamOutput *stream)
 bool CartGridStrategy::load_grid(StreamOutput *stream)
 {
     if(only_by_two_corners){
-        THEKERNEL->report_error(false, 61, "");  // stream->printf("error:Unable to load grid in only_by_two_corners mode\n");
+        THEKERNEL->report_error(false, 52, "CartGrid: Unable to load grid in two corners mode", "");
         return false;
     }
 
     FILE *fp = (configured_grid_x_size == configured_grid_y_size)?fopen(GRIDFILE, "r"):fopen(GRIDFILE_NM, "r");
     if(fp == NULL) {
-        THEKERNEL->report_error(false, 62, "%s", GRIDFILE);  // stream->printf("error:Failed to open grid %s\n", GRIDFILE);
+        THEKERNEL->report_error(false, 62, "CartGrid: Failed to open grid, file: ", "%s", GRIDFILE);
         return false;
     }
 
@@ -260,13 +260,13 @@ bool CartGridStrategy::load_grid(StreamOutput *stream)
     float x, y;
 
     if(fread(&load_grid_x_size, sizeof(uint8_t), 1, fp) != 1) {
-        THEKERNEL->report_error(false, 63, "");  // stream->printf("error:Failed to read grid size\n");
+        THEKERNEL->report_error(false, 63, "CartGrid: Failed to read grid size", "");
         fclose(fp);
         return false;
     }
 
     if(load_grid_x_size != configured_grid_x_size) {
-        THEKERNEL->report_error(false, 64, "%d,%d", load_grid_x_size, configured_grid_x_size);  // stream->printf("error:grid size x is different read %d - config %d\n", load_grid_x_size, configured_grid_x_size);
+        THEKERNEL->report_error(false, 64, "CartGrid: Grid X size is different from config, grid/config: ", "%d,%d", load_grid_x_size, configured_grid_x_size);
         fclose(fp);
         return false;
     }
@@ -275,32 +275,32 @@ bool CartGridStrategy::load_grid(StreamOutput *stream)
 
     if(configured_grid_x_size != configured_grid_y_size){
         if(fread(&load_grid_y_size, sizeof(uint8_t), 1, fp) != 1) {
-            THEKERNEL->report_error(false, 65, "");  // stream->printf("error:Failed to read grid size\n");
+            THEKERNEL->report_error(false, 63, "CartGrid: Failed to read grid size", "");
             fclose(fp);
             return false;
         }
 
         if(load_grid_y_size != configured_grid_y_size) {
-            THEKERNEL->report_error(false, 66, "%d,%d", load_grid_y_size, configured_grid_y_size );  // stream->printf("error:grid size y is different read %d - config %d\n", load_grid_y_size, configured_grid_x_size);
+            THEKERNEL->report_error(false, 66, "CartGrid: Grid Y size is different from config, grid/config: ", "%d,%d", load_grid_y_size, configured_grid_y_size);
             fclose(fp);
             return false;
         }
     }
 
     if(fread(&x, sizeof(float), 1, fp) != 1) {
-        THEKERNEL->report_error(false, 67, "");  // stream->printf("error:Failed to read grid x size\n");
+        THEKERNEL->report_error(false, 67, "CartGrid: Failed to read grid X size", "");
         fclose(fp);
         return false;
     }
 
     if(fread(&y, sizeof(float), 1, fp) != 1) {
-        THEKERNEL->report_error(false, 68, "");  // stream->printf("error:Failed to read grid y size\n");
+        THEKERNEL->report_error(false, 68, "CartGrid: Failed to read grid Y size", "");
         fclose(fp);
         return false;
     }
 
     if(x != x_size || y != y_size) {
-        THEKERNEL->report_error(false, 69, "%f,%f,%f,%f", x, y, x_size, y_size);  // stream->printf("error:bed dimensions changed read (%f, %f) - config (%f,%f)\n", x, y, x_size, y_size);
+        THEKERNEL->report_error(false, 69, "CartGrid: Bed dimensions changed, file/config: ", "%f,%f,%f,%f", x, y, x_size, y_size);
         fclose(fp);
         return false;
     }
@@ -308,7 +308,7 @@ bool CartGridStrategy::load_grid(StreamOutput *stream)
     for (int y = 0; y < configured_grid_y_size; y++) {
         for (int x = 0; x < configured_grid_x_size; x++) {
             if(fread(&grid[x + (configured_grid_x_size * y)], sizeof(float), 1, fp) != 1) {
-                THEKERNEL->report_error(false, 70, "");  // stream->printf("error:Failed to read grid\n");
+                THEKERNEL->report_error(false, 70, "CartGrid: Failed to read grid", "");
                 fclose(fp);
                 return false;
             }
@@ -322,7 +322,7 @@ bool CartGridStrategy::load_grid(StreamOutput *stream)
 bool CartGridStrategy::probe_grid(int n, int m, float _x_start, float _y_start, float _x_size, float _y_size, StreamOutput *stream)
 {
     if((n < 5)||(m < 5)) {
-        THEKERNEL->report_error(false, 71, ""); //  stream->printf("Need at least a 5x5 grid to probe\n");
+        THEKERNEL->report_error(false, 71, "CartGrid: Need at least a 5x5 grid", "");
         return true;
     }
 
@@ -383,7 +383,7 @@ bool CartGridStrategy::handleGcode(Gcode *gcode)
             THEKERNEL->conveyor->wait_for_idle();
 
             if(!doProbe(gcode)) {
-                THEKERNEL->report_error(false, 74, ""); // gcode->stream->printf("Probe failed to complete, check the initial probe height and/or initial_height settings\n");
+                THEKERNEL->report_error(false, 74, "CartGrid: Probe failed to complete, check initial probe height and setting", ""); 
             } else {
                 gcode->stream->printf("Probe completed\n");
             }
@@ -508,7 +508,7 @@ bool CartGridStrategy::doProbe(Gcode *gc)
 
     // find bed, and leave probe probe height above bed
     if(!findBed()) {
-        THEKERNEL->report_error(false, 76, ""); // gc->stream->printf("Finding bed failed, check the initial height setting\n");
+        THEKERNEL->report_error(false, 76, "CartGrid: Couldn't find bed, check initial height", "");
         return false;
     }
 

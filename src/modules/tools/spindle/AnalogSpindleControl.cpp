@@ -41,7 +41,7 @@ void AnalogSpindleControl::on_module_loaded()
     // If we got no hardware PWM pin, delete this module
     if (pwm_pin == NULL)
     {
-        THEKERNEL->report_error(false, 21, "");  // THEKERNEL->streams->printf("Error: Spindle PWM pin must be P2.0-2.5 or other PWM pin\n");
+        THEKERNEL->report_error(false, 21, "Spindle pin must be PWM-capable", "");
         delete this;
         return;
     }

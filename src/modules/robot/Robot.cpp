@@ -232,7 +232,7 @@ void Robot::load_config()
 
         if(!pins[0].connected() || !pins[1].connected()) { // step and dir must be defined, but enable is optional
             if(a <= Z_AXIS) {
-                THEKERNEL->report_error(false, 11, "%c", 'X'+a);    // THEKERNEL->streams->printf("FATAL: motor %c is not defined in config\n", 'X'+a);
+                THEKERNEL->report_error(false, 11, "Motor not defined in config, motor: ", "%c", 'X'+a);    // THEKERNEL->streams->printf("FATAL: motor %c is not defined in config\n", 'X'+a);
                 n_motors= a; // we only have this number of motors
                 return;
             }
@@ -244,7 +244,7 @@ void Robot::load_config()
         uint8_t n= register_motor(sm);
         if(n != a) {
             // this is a fatal error
-            THEKERNEL->report_error(false, 12, "%d,%d", n, a);           // THEKERNEL->streams->printf("FATAL: motor %d does not match index %d\n", n, a);
+            THEKERNEL->report_error(false, 12, "Motor doesn't match index, motor/index: ", "%d,%d", n, a);
             return;
         }
 
@@ -289,7 +289,7 @@ uint8_t Robot::register_motor(StepperMotor *motor)
     THEKERNEL->step_ticker->register_motor(motor);
     if(n_motors >= k_max_actuators) {
         // this is a fatal error
-        THEKERNEL->report_error(false, 13, "");        // THEKERNEL->streams->printf("FATAL: too many motors, increase k_max_actuators\n");
+        THEKERNEL->report_error(false, 13, "Too many motors", "");
         __debugbreak();
     }
     actuators.push_back(motor);
@@ -434,7 +434,7 @@ void Robot::check_max_actuator_speeds()
         float step_freq = actuators[i]->get_max_rate() * actuators[i]->get_steps_per_mm();
         if (step_freq > THEKERNEL->base_stepping_frequency) {
             actuators[i]->set_max_rate(floorf(THEKERNEL->base_stepping_frequency / actuators[i]->get_steps_per_mm()));
-            THEKERNEL->report_error(false, 14, "%d,%f,%f", i, step_freq, actuators[i]->get_max_rate());  // THEKERNEL->streams->printf("WARNING: actuator %d rate exceeds base_stepping_frequency * ..._steps_per_mm: %f, setting to %f\n", i, step_freq, actuators[i]->get_max_rate());
+            THEKERNEL->report_error(false, 14, "Actuator rate reduced", "%d,%f,%f", i, step_freq, actuators[i]->get_max_rate());
         }
     }
 }
@@ -1161,7 +1161,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
             if(!is_homed(i)) continue;
             if( (!isnan(soft_endstop_min[i]) && transformed_target[i] < soft_endstop_min[i]) || (!isnan(soft_endstop_max[i]) && transformed_target[i] > soft_endstop_max[i]) ) {
                 if(soft_endstop_halt) {
-                    THEKERNEL->report_error(true, 15, "%c", i+'X'); //  THEKERNEL->streams->printf("Soft Endstop %c was exceeded - reset or $X or M999 required\n", i+'X');
+                    THEKERNEL->report_error(true, 15, "Soft endstop exceeded, endstop: ", "%c", i+'X');
                     return false;
                 //} else if(soft_endstop_truncate) {
                     // TODO VERY hard to do need to go back and change the target, and calculate intercept with the edge
@@ -1169,7 +1169,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
 
                 } else {
                     // ignore it
-                    THEKERNEL->report_error(false, 16, "%c", i+'X');    // ->streams->printf("Soft Endstop %c was exceeded - entire move ignored\n", i+'X');
+                    THEKERNEL->streams->printf("Soft Endstop %c was exceeded, entire move ignored\n", i+'X');
                     return false;
                 }
             }

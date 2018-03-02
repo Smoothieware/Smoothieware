@@ -146,7 +146,7 @@ void Switch::on_config_reload(void *argument)
         }
         delete pin;
         if(this->pwm_pin == nullptr) {
-            THEKERNEL->report_error(false, 26, "");    // THEKERNEL->streams->printf("Selected Switch output pin is not PWM capable - disabled");
+            THEKERNEL->report_error(false, 26, "Selected switch output pin must be PWM capable", "");  
             this->output_type= NONE;
         }
 
