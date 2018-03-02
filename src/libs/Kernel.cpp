@@ -401,10 +401,15 @@ void Kernel::report_error(StreamOutput* stream, bool cause_halt, uint16_t error_
   }
   va_end(args);
 
-
   // Extract the parameters from the message
+  std::string message;
+  message = buffer;
+  std::size_t comment_found = buffer.find_first_off("#");
+  if( found != std::string::npos ){
+    message = message.substr(comment_found);
+  }
 
-
+  // Handle special cases
   if( error_number == 15 ){ // SPECIAL CASE : ERROR 15
     if(!THEKERNEL->is_grbl_mode()) {
       stream->printf("Limit switch %s was hit - reset or M999 required\n", buffer );
@@ -417,9 +422,9 @@ void Kernel::report_error(StreamOutput* stream, bool cause_halt, uint16_t error_
       stream->printf("ALARM: Kill button pressed - reset or M999 to continue\r\n");
   }else{ // DEFAULT CASE
       if( cause_halt ){
-        stream->printf("ALARM: %s error:%d", buffer, error_number);
+        stream->printf("ALARM: %s See http://smoothieware.org/error?%d#%s", buffer, error_number, message);
       }else{
-        stream->printf("ERROR: %s error:%d", buffer, error_number);
+        stream->printf("ALARM: %s See http://smoothieware.org/error?%d#%s", buffer, error_number, message);
       }
   }
 
