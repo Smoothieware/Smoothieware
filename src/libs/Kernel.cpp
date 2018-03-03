@@ -406,7 +406,9 @@ void Kernel::report_error(StreamOutput* stream, bool cause_halt, uint16_t error_
   message = buffer;
   std::size_t comment_found = message.find_first_of("#");
   if( comment_found != std::string::npos ){
-    message = message.substr(comment_found);
+    message = message.substr(comment_found+1);
+  }else{
+    message = "";
   }
 
   // Display the error message

@@ -26,7 +26,7 @@ ConfigValue* ConfigSource::process_line(const string &buffer, uint16_t line_numb
 
     size_t begin_value = buffer.find_first_not_of(" \t", end_key);
     if(begin_value == string::npos || buffer[begin_value] == '#') {
-        THEKERNEL->report_error(false, 2, "Config: File line has no value, line: #%s", buffer.c_str());
+        THEKERNEL->report_error(false, 2, "Config: File line has no value, line: #%d", line_number);
         return NULL;
     }
 
