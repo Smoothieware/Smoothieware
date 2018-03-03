@@ -1144,7 +1144,9 @@ void SimpleShell::errors_command( string parameters, StreamOutput *stream){
     string command = shift_parameter( parameters );
     if( command == "clear" ){
       stream->printf("Cleared errors\r\n");
-      THEKERNEL->error_log = "";
+      THEKERNEL->error_log.clear(); // clear
+      string dummy;
+      std::string(THEKERNEL->error_log).swap(dummy); // compact
     }
 
     // In case the list is empty
