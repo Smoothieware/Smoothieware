@@ -116,12 +116,19 @@ void SlowTicker::on_idle(void*)
     if(THEKERNEL->is_using_leds()) {
         // flash led 3 to show we are alive
         leds[2]= (ledcnt++ & 0x1000) ? 1 : 0;
+        if( THEKERNEL->error_log.length() > 0 ){
+          leds[0]= (ledcnt++ & 0x1000) ? 1 : 0;
+        } else {
+          leds[0]= 1;
+        }
     }
 
     // if interrupt has set the 1 second flag
-    if (flag_1s())
+    if (flag_1s()){
         // fire the on_second_tick event
         THEKERNEL->call_event(ON_SECOND_TICK);
+    }
+
 }
 
 extern "C" void TIMER2_IRQHandler (void){
@@ -130,4 +137,3 @@ extern "C" void TIMER2_IRQHandler (void){
     }
     global_slow_ticker->tick();
 }
-

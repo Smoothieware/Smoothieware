@@ -55,7 +55,7 @@ class SlowTicker : public Module{
         vector<Hook*> hooks;
         uint32_t max_frequency;
         uint32_t interval;
-
+        bool error_blink;
         Pin ispbtn;
 protected:
     int flag_1s_count;
