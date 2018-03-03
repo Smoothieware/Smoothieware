@@ -186,6 +186,10 @@ void SimpleShell::on_gcode_received(void *argument)
         } else if (gcode->m == 30) { // remove file
             if(!args.empty() && !THEKERNEL->is_grbl_mode())
                 rm_command("/sd/" + args, gcode->stream);
+        } else if (gcode->m == 951 ) {
+            errors_command("", gcode->stream);
+        } else if (gcode->m == 952 ) {
+            errors_command("clear", gcode->stream);
         }
     }
 }
