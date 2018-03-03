@@ -1145,8 +1145,8 @@ void SimpleShell::errors_command( string parameters, StreamOutput *stream){
     if( command == "clear" ){
       stream->printf("Cleared errors\r\n");
       THEKERNEL->error_log.clear(); // clear
-      string dummy;
-      std::string(THEKERNEL->error_log).swap(dummy); // compact
+      std::string().swap(THEKERNEL->error_log); // compact
+      return;
     }
 
     // In case the list is empty
@@ -1201,4 +1201,5 @@ void SimpleShell::help_command( string parameters, StreamOutput *stream )
     stream->printf("calc_thermistor [-s0] T1,R1,T2,R2,T3,R3 - calculate the Steinhart Hart coefficients for a thermistor\r\n");
     stream->printf("thermistors - print out the predefined thermistors\r\n");
     stream->printf("md5sum file - prints md5 sum of the given file\r\n");
+    stream->printf("errors [clear] - Displays or clears the list of configuration errors\r\n");
 }
