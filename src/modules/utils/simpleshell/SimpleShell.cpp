@@ -53,6 +53,8 @@ extern unsigned int g_maximumHeapAddress;
 #include <stdio.h>
 #include <stdint.h>
 #include <functional>
+#include <iostream>
+#include <sstream>
 
 extern "C" uint32_t  __end__;
 extern "C" uint32_t  __malloc_free_list;
@@ -87,6 +89,7 @@ const SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {"thermistors", SimpleShell::print_thermistors_command},
     {"md5sum",   SimpleShell::md5sum_command},
     {"test",     SimpleShell::test_command},
+    {"errors",   SimpleShell::errors_command},
 
     // unknown command
     {NULL, NULL}
@@ -1130,6 +1133,36 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
         stream->printf(" test raw axis steps steps/sec\n");
     }
 }
+
+// List all errors as links to the documentation
+void SimpleShell::errors_command( string parameters, StreamOutput *stream){
+    // Get parameter
+    string command = shift_parameter( parameters );
+    if( command == "clear" ){
+      stream->printf("Cleared errors\r\n");
+      THEKERNEL->error_log = "";
+    }
+
+    // In case the list is empty
+    if( THEKERNEL->error_log.length() == 0 ){
+      stream->printf("No error in log\r\n");
+      return;
+    }
+
+    // Go over each error in the list
+    std::istringstream ss;
+    ss.str(THEKERNEL->error_log);
+    uint8_t number = 0;
+    for( std::string error; std::getline(ss, error, ';'); ){
+      // Skip any empty entries
+      if( error.length() == 0 ){ continue; }
+      number++;
+      // Display error
+      stream->printf("* %u Error %s, see http://smoothieware.org/error#%s\r\n", number, error.c_str(), error.c_str());
+    }
+
+}
+
 
 void SimpleShell::help_command( string parameters, StreamOutput *stream )
 {

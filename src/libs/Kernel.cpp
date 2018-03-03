@@ -422,9 +422,9 @@ void Kernel::report_error(StreamOutput* stream, bool cause_halt, uint16_t error_
       stream->printf("ALARM: Kill button pressed - reset or M999 to continue\r\n");
   }else{ // DEFAULT CASE
       if( cause_halt ){
-        stream->printf("ALARM: %s See http://smoothieware.org/error?%d#%s", buffer, error_number, message.c_str());
+        stream->printf("ALARM: %s (%u %s) Send 'errors' command", buffer, error_number, message.c_str());
       }else{
-        stream->printf("ALARM: %s See http://smoothieware.org/error?%d#%s", buffer, error_number, message.c_str());
+        stream->printf("ALARM: %s (%u %s) Send 'errors' command", buffer, error_number, message.c_str());
       }
   }
 
