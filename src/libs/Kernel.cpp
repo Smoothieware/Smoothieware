@@ -422,16 +422,18 @@ void Kernel::report_error(StreamOutput* stream, bool cause_halt, uint16_t error_
       stream->printf("ALARM: Kill button pressed - reset or M999 to continue\r\n");
   }else{ // DEFAULT CASE
       if( cause_halt ){
-        stream->printf("ALARM: %s (%u %s) Send 'errors' command", buffer, error_number, message.c_str());
+        stream->printf("ALARM: %s (%u %s) \r\n", buffer, error_number, message.c_str());
       }else{
-        stream->printf("ALARM: %s (%u %s) Send 'errors' command", buffer, error_number, message.c_str());
+        stream->printf("ALARM: %s (%u %s) Send M951\r\n", buffer, error_number, message.c_str());
       }
   }
 
   // Log the error
-  char id [6];
-  sprintf(id, "%u", error_number);
-  this->error_log = this->error_log + id + ":" + message + ";";
+  if( !cause_halt ){
+    char id [6];
+    sprintf(id, "%u", error_number);
+    this->error_log = this->error_log + id + ":" + message + ";";
+  }
 
   // Delete the buffer
   if (buffer != b)
