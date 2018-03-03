@@ -440,7 +440,7 @@ void Endstops::on_idle(void *argument)
             // check min and max endstops
             if(debounced_get(&i->pin)) {
                 // endstop triggered
-                THEKERNEL->report_error(true, 15, "%c%c", STEPPER[i->axis_index]->which_direction() ? '-' : '+', i->axis);
+                THEKERNEL->report_error(true, 215, "Limit switch was hit - reset or M999 required, switch: #%c%c", STEPPER[i->axis_index]->which_direction() ? '-' : '+', i->axis);
                 this->status = LIMIT_TRIGGERED;
                 i->debounce= 0;
                 return;

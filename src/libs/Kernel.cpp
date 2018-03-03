@@ -409,23 +409,11 @@ void Kernel::report_error(StreamOutput* stream, bool cause_halt, uint16_t error_
     message = message.substr(comment_found);
   }
 
-  // Handle special cases
-  if( error_number == 15 ){ // SPECIAL CASE : ERROR 15
-    if(!THEKERNEL->is_grbl_mode()) {
-      stream->printf("Limit switch %s was hit - reset or M999 required\n", buffer );
-    }else{
-      stream->printf("ALARM: Hard limit %s\n", buffer);
-    }
-  }else if( error_number == 17  ){
-      stream->printf("ALARM: Homing fail\r\n");
-  }else if( error_number == 125 ){ // SPECIAL CASE : ERROR 125
-      stream->printf("ALARM: Kill button pressed - reset or M999 to continue\r\n");
-  }else{ // DEFAULT CASE
-      if( cause_halt ){
-        stream->printf("ALARM: %s (%u %s) \r\n", buffer, error_number, message.c_str());
-      }else{
-        stream->printf("ALARM: %s (%u %s) Send M951\r\n", buffer, error_number, message.c_str());
-      }
+  // Display the error message
+  if( cause_halt ){
+      stream->printf("ALARM: %s (%u %s)\r\n", buffer, error_number, message.c_str());
+  }else{
+      stream->printf("ALARM: %s (%u %s) Send M951\r\n", buffer, error_number, message.c_str());
   }
 
   // Log the error
