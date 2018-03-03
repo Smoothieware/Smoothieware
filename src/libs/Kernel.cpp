@@ -404,8 +404,8 @@ void Kernel::report_error(StreamOutput* stream, bool cause_halt, uint16_t error_
   // Extract the parameters from the message
   std::string message;
   message = buffer;
-  std::size_t comment_found = buffer.find_first_off("#");
-  if( found != std::string::npos ){
+  std::size_t comment_found = message.find_first_of("#");
+  if( comment_found != std::string::npos ){
     message = message.substr(comment_found);
   }
 
@@ -422,11 +422,16 @@ void Kernel::report_error(StreamOutput* stream, bool cause_halt, uint16_t error_
       stream->printf("ALARM: Kill button pressed - reset or M999 to continue\r\n");
   }else{ // DEFAULT CASE
       if( cause_halt ){
-        stream->printf("ALARM: %s See http://smoothieware.org/error?%d#%s", buffer, error_number, message);
+        stream->printf("ALARM: %s See http://smoothieware.org/error?%d#%s", buffer, error_number, message.c_str());
       }else{
-        stream->printf("ALARM: %s See http://smoothieware.org/error?%d#%s", buffer, error_number, message);
+        stream->printf("ALARM: %s See http://smoothieware.org/error?%d#%s", buffer, error_number, message.c_str());
       }
   }
+
+  // Log the error
+  char id [6];
+  sprintf(id, "%u", error_number);
+  this->error_log = this->error_log + id + ":" + message + ";";
 
   // Delete the buffer
   if (buffer != b)

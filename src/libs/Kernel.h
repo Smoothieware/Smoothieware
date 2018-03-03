@@ -76,6 +76,7 @@ class Kernel {
         StepTicker*       step_ticker;
         Adc*              adc;
         std::string       current_path;
+        std::string       error_log;
         uint32_t          base_stepping_frequency;
 
     private:
