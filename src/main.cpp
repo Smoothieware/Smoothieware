@@ -104,7 +104,9 @@ void init() {
     SimpleShell::version_command("", kernel->streams);
 
     bool sdok= (sd.disk_initialize() == 0);
-    if(!sdok) kernel->streams->printf("SDCard failed to initialize\r\n");
+    if(!sdok){
+      kernel->report_error(false, 200, "SD Card failed to initialize, are you sure the card is inserted ?");
+    }
 
     #ifdef NONETWORK
         kernel->streams->printf("NETWORK is disabled\r\n");
