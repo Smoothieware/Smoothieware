@@ -44,6 +44,7 @@ Laser::Laser()
     laser_on = false;
     scale= 1;
     manual_fire= false;
+    fire_duration = 0;
 }
 
 void Laser::on_module_loaded()
@@ -134,19 +135,32 @@ void Laser::on_console_line_received( void *argument )
     if (cmd == "fire") {
         string power = shift_parameter(possible_command);
         if(power.empty()) {
-            msgp->stream->printf("Usage: fire power%%|off\n");
+            msgp->stream->printf("Usage: fire power%% [durationms]|off|status\n");
             return;
         }
 
         float p;
+        fire_duration = 0; // By default unlimited
+        if(power == "status") {
+          msgp->stream->printf("laser manual state: %s\n", manual_fire ? "on" : "off");
+          return;
+        }
         if(power == "off" || power == "0") {
             p= 0;
             msgp->stream->printf("turning laser off and returning to auto mode\n");
-
         }else{
             p= strtof(power.c_str(), NULL);
             p= confine(p, 0.0F, 100.0F);
-            msgp->stream->printf("WARNING: Firing laser at %1.2f%% power, entering manual mode use fire off to return to auto mode\n", p);
+            string duration = shift_parameter(possible_command);
+            if(!duration.empty()) {
+                fire_duration=atoi(duration.c_str());
+                // Avoid negative values, its just incorrect
+                if(fire_duration < 0)
+                  fire_duration = 0;
+                msgp->stream->printf("WARNING: Firing laser at %1.2f%% power, for %ld ms, use fire off to return to auto mode\n", p, fire_duration);
+            } else {
+                msgp->stream->printf("WARNING: Firing laser at %1.2f%% power, entering manual mode use fire off to return to auto mode\n", p);
+            }
         }
 
         p= p/100.0F;
@@ -224,7 +238,19 @@ bool Laser::get_laser_power(float& power) const
 // called every millisecond from timer ISR
 uint32_t Laser::set_proportional_power(uint32_t dummy)
 {
-    if(manual_fire) return 0;
+    if(manual_fire) {
+      // If we have fire duration set
+      if (fire_duration) {
+        // Decrease it each ms
+        fire_duration--;
+        // And if it turned 0, disable laser and manual fire mode
+        if (!fire_duration) {
+          set_laser_power(0);
+          manual_fire = false;
+        }
+      }
+      return 0;
+    }
 
     float power;
     if(get_laser_power(power)) {
