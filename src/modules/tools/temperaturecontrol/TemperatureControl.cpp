@@ -325,7 +325,8 @@ void TemperatureControl::on_gcode_received(void *argument)
                 }
             }
 
-        } else if( ( gcode->m == this->set_m_code || gcode->m == this->set_and_wait_m_code ) && gcode->has_letter('S')) {
+        } else if ((gcode->m == this->set_m_code && gcode->has_letter('S')) ||
+                (gcode->m == this->set_and_wait_m_code && (gcode->has_letter('S') || gcode->has_letter('R')))) {
             // this only gets handled if it is not controlled by the tool manager or is active in the toolmanager
             this->active = true;
 
@@ -342,7 +343,16 @@ void TemperatureControl::on_gcode_received(void *argument)
                 // required so temp change happens in order
                 THEKERNEL->conveyor->wait_for_idle();
 
-                float v = gcode->get_value('S');
+                float v;
+                bool exact = false;
+
+                // S has priority over R and if both are specified then R is ignored
+                if (gcode->has_letter('S')) {
+                    v = gcode->get_value('S');
+                } else {
+                    v = gcode->get_value('R');
+                    exact = true;
+                }
 
                 if (v == 0.0) {
                     this->target_temperature = UNDEFINED;
@@ -351,14 +361,24 @@ void TemperatureControl::on_gcode_received(void *argument)
                     this->set_desired_temperature(v);
                     // wait for temp to be reached, no more gcodes will be fetched until this is complete
                     if( gcode->m == this->set_and_wait_m_code) {
-                        if(isinf(get_temperature()) && isinf(sensor->get_temperature())) {
+                        float start_temp;
+                        bool cooling;
+
+                        start_temp = get_temperature();
+                        if (isinf(start_temp)) {
+                            start_temp = sensor->get_temperature();
+                        }
+
+                        if(isinf(start_temp)) {
                             THEKERNEL->streams->printf("Temperature reading is unreliable on %s HALT asserted - reset or M999 required\n", designator.c_str());
                             THEKERNEL->call_event(ON_HALT, nullptr);
                             return;
                         }
 
+                        cooling = (exact && start_temp > v);
+
                         this->waiting = true; // on_second_tick will announce temps
-                        while ( get_temperature() < target_temperature ) {
+                        while ((cooling && get_temperature() >= target_temperature) || (!cooling && get_temperature() < target_temperature)) {
                             THEKERNEL->call_event(ON_IDLE, this);
                             // check if ON_HALT was called (usually by kill button)
                             if(THEKERNEL->is_halted() || this->target_temperature == UNDEFINED) {
