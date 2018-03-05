@@ -247,7 +247,7 @@ uint32_t Laser::set_proportional_power(uint32_t dummy)
 {
     if(manual_fire) {
         // If we have fire duration set
-        if (fire_duration) {
+        if (fire_duration > 0) {
             // Decrease it each ms
             fire_duration -= ms_per_tick;
             // And if it turned 0, disable laser and manual fire mode
