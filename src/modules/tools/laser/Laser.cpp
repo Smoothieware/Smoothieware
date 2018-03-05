@@ -157,7 +157,7 @@ void Laser::on_console_line_received( void *argument )
                 fire_duration=atoi(duration.c_str());
                 // Avoid negative values, its just incorrect
                 if (fire_duration < ms_per_tick) {
-                  msgp->stream->printf("WARNING: Minimal duration is %d ms, not firing\n", ms_per_tick);
+                  msgp->stream->printf("WARNING: Minimal duration is %ld ms, not firing\n", ms_per_tick);
                   return;
                 }
                 // rounding to minimal value

@@ -51,5 +51,5 @@ class Laser : public Module{
             bool manual_fire:1;     // set when manually firing
         };
         int32_t fire_duration; // manual fire command duration
-        uint32_t ms_per_tick; // ms between each ticks, depends on PWM frequency
+        int32_t ms_per_tick; // ms between each ticks, depends on PWM frequency
 };
