@@ -113,7 +113,8 @@ void Laser::on_module_loaded()
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
     this->register_for_event(ON_GET_PUBLIC_DATA);
 
-    // no point in updating the power more than the PWM frequency, but no more than 1KHz
+    // no point in updating the power more than the PWM frequency, but not faster than 1KHz
+    ms_per_tick = 1000 / std::min(1000UL, 1000000/period);
     THEKERNEL->slow_ticker->attach(std::min(1000UL, 1000000/period), this, &Laser::set_proportional_power);
 }
 
@@ -155,9 +156,15 @@ void Laser::on_console_line_received( void *argument )
             if(!duration.empty()) {
                 fire_duration=atoi(duration.c_str());
                 // Avoid negative values, its just incorrect
-                if(fire_duration < 0)
-                  fire_duration = 0;
-                msgp->stream->printf("WARNING: Firing laser at %1.2f%% power, for %ld ms, use fire off to return to auto mode\n", p, fire_duration);
+                if (fire_duration < ms_per_tick) {
+                  msgp->stream->printf("WARNING: Minimal duration is %d ms, not firing\n", ms_per_tick);
+                  return;
+                }
+                // rounding to minimal value
+                if (fire_duration % ms_per_tick != 0) {
+                  fire_duration = (fire_duration / ms_per_tick) * ms_per_tick;
+                }
+                msgp->stream->printf("WARNING: Firing laser at %1.2f%% power, for %ld ms, use fire off to stop test fire earlier\n", p, fire_duration);
             } else {
                 msgp->stream->printf("WARNING: Firing laser at %1.2f%% power, entering manual mode use fire off to return to auto mode\n", p);
             }
@@ -242,9 +249,9 @@ uint32_t Laser::set_proportional_power(uint32_t dummy)
       // If we have fire duration set
       if (fire_duration) {
         // Decrease it each ms
-        fire_duration--;
+        fire_duration -= ms_per_tick;
         // And if it turned 0, disable laser and manual fire mode
-        if (!fire_duration) {
+        if (fire_duration <= 0) {
           set_laser_power(0);
           manual_fire = false;
         }
