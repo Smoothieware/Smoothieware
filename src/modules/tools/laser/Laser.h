@@ -50,4 +50,6 @@ class Laser : public Module{
             bool ttl_inverting:1;   // stores whether the TTL output should be inverted
             bool manual_fire:1;     // set when manually firing
         };
+        int32_t fire_duration; // manual fire command duration
+        int32_t ms_per_tick; // ms between each ticks, depends on PWM frequency
 };
