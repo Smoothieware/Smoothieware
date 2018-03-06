@@ -414,12 +414,8 @@ void ZProbe::probe_XYZ(Gcode *gcode, int axis)
     float rate = (gcode->has_letter('F')) ? gcode->get_value('F')/60 : this->slow_feedrate;
 
     // do a regular move which will stop as soon as the probe is triggered, or the distance is reached
-    switch(axis) {
-        case X_AXIS: coordinated_move(gcode->get_value('X'), 0, 0, rate, true); break;
-        case Y_AXIS: coordinated_move(0, gcode->get_value('Y'), 0, rate, true); break;
-        case Z_AXIS: coordinated_move(0, 0, gcode->get_value('Z'), rate, true); break;
-    }
-
+    coordinated_move(gcode->get_value('X'), gcode->get_value('Y'), gcode->get_value('Z'), rate, true);
+    
     // coordinated_move returns when the move is finished
 
     // disable probe checking
