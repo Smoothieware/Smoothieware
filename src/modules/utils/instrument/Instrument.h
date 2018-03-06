@@ -302,7 +302,7 @@ class Instrument : public Module{
         }
 
         void _print_data(char label, Gcode *gcode){
-            gcode->stream->printf("%c: data:", label);
+            gcode->stream->printf("%c:", label);
             for (uint8_t i=0;i<OT_DATA_LENGTH;i++) {
                 gcode->stream->printf("%02X", this->read_data[i]);
             }
@@ -310,7 +310,7 @@ class Instrument : public Module{
         }
 
         void _print_id(char label, Gcode *gcode){
-            gcode->stream->printf("%c: id:", label);
+            gcode->stream->printf("%c:", label);
             for (uint8_t i=0;i<OT_ID_LENGTH;i++) {
                 gcode->stream->printf("%02X", this->unique_id[i]);
             }
