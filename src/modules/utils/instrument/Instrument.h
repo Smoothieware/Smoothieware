@@ -57,32 +57,28 @@ class Instrument : public Module{
 
         void on_gcode_received(void *argument) {
             Gcode *gcode = static_cast<Gcode*>(argument);
-            if (gcode->has_m && gcode->m == GCODE_SCAN_ID) {
-                this->_read_ot_id(EEPROM_LEFT_ADDRESS, 'L', gcode);
-                this->_read_ot_id(EEPROM_RIGHT_ADDRESS, 'R', gcode);
+            uint8_t address = 0;
+            char label = 0;
+            if (gcode->has_letter('L')) {
+                address = EEPROM_LEFT_ADDRESS;
+                label = 'L';
             }
-            else if (gcode->has_m && gcode->m == GCODE_WRITE_ID) {
-                if (gcode->has_letter('L')) {
-                    this->_write_ot_id(EEPROM_LEFT_ADDRESS, 'L', gcode);
-                }
-                else if (gcode->has_letter('R')) {
-                    this->_write_ot_id(EEPROM_RIGHT_ADDRESS, 'R', gcode);
-                }
+            else if (gcode->has_letter('R')) {
+                address = EEPROM_RIGHT_ADDRESS;
+                label = 'R';
             }
-            else if (gcode->has_m && gcode->m == GCODE_WRITE_DATA) {
-                if (gcode->has_letter('L')) {
-                    this->_write_ot_data(EEPROM_LEFT_ADDRESS, 'L', gcode);
+            if (label != 0 && address != 0) {
+                if (gcode->has_m && gcode->m == GCODE_SCAN_ID) {
+                    this->_read_ot_id(address, label, gcode);
                 }
-                else if (gcode->has_letter('R')) {
-                    this->_write_ot_data(EEPROM_RIGHT_ADDRESS, 'R', gcode);
+                else if (gcode->has_m && gcode->m == GCODE_WRITE_ID) {
+                    this->_write_ot_id(address, label, gcode);
                 }
-            }
-            else if (gcode->has_m && gcode->m == GCODE_READ_DATA) {
-                if (gcode->has_letter('L')) {
-                    this->_read_ot_data(EEPROM_LEFT_ADDRESS, 'L', gcode);
+                else if (gcode->has_m && gcode->m == GCODE_READ_DATA) {
+                    this->_read_ot_data(address, label, gcode);
                 }
-                else if (gcode->has_letter('R')) {
-                    this->_read_ot_data(EEPROM_RIGHT_ADDRESS, 'R', gcode);
+                else if (gcode->has_m && gcode->m == GCODE_WRITE_DATA) {
+                    this->_write_ot_data(address, label, gcode);
                 }
             }
         }
@@ -109,41 +105,10 @@ class Instrument : public Module{
                 address,
                 OT_ID_LOCATION, this->unique_id, OT_ID_LENGTH);
             if (this->error) {
-                // no need to print error, because that means no instrument
+                this->_print_error(label, gcode);
                 return;
             }
             this->_print_id(label, gcode);
-        }
-
-        void _read_ot_data(uint8_t address, char label, Gcode *gcode) {
-            this->_check_ot_signature(address, label, gcode);
-            if (this->error) {
-                this->_print_error(label, gcode);
-                return;
-            }
-            this->_i2c_read(
-                address, OT_DATA_LOCATION, this->read_data, OT_DATA_LENGTH);
-            if (this->error) {
-                this->_print_error(label, gcode);
-                return;
-            }
-            this->_print_data(label, gcode);
-        }
-
-        void _check_ot_signature(uint8_t address, char label, Gcode *gcode) {
-            this->_i2c_read(
-                address, OT_SIGNATURE_LOCATION, this->signature_data, OT_SIGNATURE_LENGTH);
-            if (this->error) {
-                return;
-            }
-            else {
-                for (uint8_t n=0;n<OT_SIGNATURE_LENGTH;n++) {
-                    if (this->signature_data[n] != OT_INSTRUMENT_DATA_SIGNATURE[n]) {
-                        this->error = NO_DATA_ERROR;
-                        return;
-                    }
-                }
-            }
         }
 
         void _write_ot_id(uint8_t address, char label, Gcode *gcode) {
@@ -164,6 +129,21 @@ class Instrument : public Module{
             }
         }
 
+        void _read_ot_data(uint8_t address, char label, Gcode *gcode) {
+            this->_check_ot_signature(address, label, gcode);
+            if (this->error) {
+                this->_print_error(label, gcode);
+                return;
+            }
+            this->_i2c_read(
+                address, OT_DATA_LOCATION, this->read_data, OT_DATA_LENGTH);
+            if (this->error) {
+                this->_print_error(label, gcode);
+                return;
+            }
+            this->_print_data(label, gcode);
+        }
+
         void _write_ot_data(uint8_t address, char label, Gcode *gcode) {
             this->_parse_hex_from_gcode(label, gcode, OT_DATA_LENGTH);
             if (this->error) {
@@ -174,6 +154,22 @@ class Instrument : public Module{
             if (this->error) {
                 this->_print_error(label, gcode);
                 return;
+            }
+        }
+
+        void _check_ot_signature(uint8_t address, char label, Gcode *gcode) {
+            this->_i2c_read(
+                address, OT_SIGNATURE_LOCATION, this->signature_data, OT_SIGNATURE_LENGTH);
+            if (this->error) {
+                return;
+            }
+            else {
+                for (uint8_t n=0;n<OT_SIGNATURE_LENGTH;n++) {
+                    if (this->signature_data[n] != OT_INSTRUMENT_DATA_SIGNATURE[n]) {
+                        this->error = NO_DATA_ERROR;
+                        return;
+                    }
+                }
             }
         }
 
@@ -274,7 +270,7 @@ class Instrument : public Module{
         }
 
         void _i2c_delay() {
-            // wait(0.005)
+            wait(0.01);
         }
 
         char _decode_ascii(char c) {
