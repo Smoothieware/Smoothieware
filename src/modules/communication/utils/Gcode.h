@@ -49,8 +49,9 @@ class Gcode {
         StreamOutput* stream;
         string txt_after_ok;
 
+        char *command;
+
     private:
         void prepare_cached_values(bool strip=true);
-        char *command;
 };
 #endif
