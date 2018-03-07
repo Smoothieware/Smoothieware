@@ -32,104 +32,36 @@ void Instrument::on_gcode_received(void *argument) {
         address = EEPROM_RIGHT_ADDRESS;
         label = 'R';
     }
-    if (label != 0 && address != 0) {
-        if (gcode->has_m && gcode->m == GCODE_READ_ID) {
-            this->_read_ot_id(address, label, gcode);
+    if (label != 0 && address != 0 && gcode->has_m) {
+        if (gcode->m == GCODE_READ_ID) {
+            this->_read_from_location(OT_ID_LOCATION, address, label, gcode);
         }
-        else if (gcode->has_m && gcode->m == GCODE_WRITE_ID) {
-            this->_write_ot_id(address, label, gcode);
+        else if (gcode->m == GCODE_WRITE_ID) {
+            this->_write_at_location(OT_ID_LOCATION, address, label, gcode);
         }
-        else if (gcode->has_m && gcode->m == GCODE_READ_MODEL) {
-            this->_read_ot_model(address, label, gcode);
+        else if (gcode->m == GCODE_READ_MODEL) {
+            this->_read_from_location(OT_MODEL_LOCATION, address, label, gcode);
         }
-        else if (gcode->has_m && gcode->m == GCODE_WRITE_MODEL) {
-            this->_write_ot_model(address, label, gcode);
+        else if (gcode->m == GCODE_WRITE_MODEL) {
+            this->_write_at_location(OT_MODEL_LOCATION, address, label, gcode);
         }
-        else if (gcode->has_m && gcode->m == GCODE_READ_DATA) {
-            this->_read_ot_data(address, label, gcode);
+        else if (gcode->m == GCODE_READ_DATA) {
+            this->_read_from_location(OT_DATA_LOCATION, address, label, gcode);
         }
-        else if (gcode->has_m && gcode->m == GCODE_WRITE_DATA) {
-            this->_write_ot_data(address, label, gcode);
+        else if (gcode->m == GCODE_WRITE_DATA) {
+            this->_write_at_location(OT_DATA_LOCATION, address, label, gcode);
         }
     }
 }
 
-void Instrument::_read_ot_id(uint8_t address, char label, Gcode *gcode) {
-    this->_check_ot_signature(address, label, gcode);
-    if (this->error) {
-        // no need to print error, because that means no instrument
-        return;
-    }
-    this->_i2c_read(
-        address,
-        OT_ID_LOCATION, this->unique_id, OT_ID_LENGTH);
-    if (this->error) {
-        this->_print_error(label, gcode);
-        return;
-    }
-    this->_print_id(label, gcode);
-}
-
-void Instrument::_write_ot_id(uint8_t address, char label, Gcode *gcode) {
-    this->_write_ot_signature(address, label, gcode);
-    if (this->error) {
-        this->_print_error(label, gcode);
-        return;
-    }
-    this->_parse_hex_from_gcode(label, gcode, OT_ID_LENGTH);
-    if (this->error) {
-        this->_print_error(label, gcode);
-        return;
-    }
-    this->_i2c_write(address, OT_ID_LOCATION, OT_ID_LENGTH);
-    if (this->error) {
-        this->_print_error(label, gcode);
-        return;
-    }
-}
-
-void Instrument::_read_ot_model(uint8_t address, char label, Gcode *gcode) {
-    this->_check_ot_signature(address, label, gcode);
-    if (this->error) {
-        // no need to print error, because that means no instrument
-        return;
-    }
-    this->_i2c_read(
-        address,
-        OT_MODEL_LOCATION, this->unique_id, OT_MODEL_LENGTH);
-    if (this->error) {
-        this->_print_error(label, gcode);
-        return;
-    }
-    this->_print_id(label, gcode);
-}
-
-void Instrument::_write_ot_model(uint8_t address, char label, Gcode *gcode) {
-    this->_write_ot_signature(address, label, gcode);
-    if (this->error) {
-        this->_print_error(label, gcode);
-        return;
-    }
-    this->_parse_hex_from_gcode(label, gcode, OT_MODEL_LENGTH);
-    if (this->error) {
-        this->_print_error(label, gcode);
-        return;
-    }
-    this->_i2c_write(address, OT_MODEL_LOCATION, OT_MODEL_LENGTH);
-    if (this->error) {
-        this->_print_error(label, gcode);
-        return;
-    }
-}
-
-void Instrument::_read_ot_data(uint8_t address, char label, Gcode *gcode) {
+void Instrument::_read_from_location(uint8_t location, uint8_t address, char label, Gcode *gcode) {
     this->_check_ot_signature(address, label, gcode);
     if (this->error) {
         this->_print_error(label, gcode);
         return;
     }
     this->_i2c_read(
-        address, OT_DATA_LOCATION, this->read_data, OT_DATA_LENGTH);
+        address, location, this->read_data, OT_DATA_LENGTH);
     if (this->error) {
         this->_print_error(label, gcode);
         return;
@@ -137,13 +69,18 @@ void Instrument::_read_ot_data(uint8_t address, char label, Gcode *gcode) {
     this->_print_data(label, gcode);
 }
 
-void Instrument::_write_ot_data(uint8_t address, char label, Gcode *gcode) {
+void Instrument::_write_at_location(uint8_t location, uint8_t address, char label, Gcode *gcode) {
+    this->_write_ot_signature(address, label, gcode);
+    if (this->error) {
+        this->_print_error(label, gcode);
+        return;
+    }
     this->_parse_hex_from_gcode(label, gcode, OT_DATA_LENGTH);
     if (this->error) {
         this->_print_error(label, gcode);
         return;
     }
-    this->_i2c_write(address, OT_DATA_LOCATION, OT_DATA_LENGTH);
+    this->_i2c_write(address, location, OT_DATA_LENGTH);
     if (this->error) {
         this->_print_error(label, gcode);
         return;
@@ -300,14 +237,6 @@ void Instrument::_print_data(char label, Gcode *gcode){
     gcode->stream->printf("%c:", label);
     for (uint8_t i=0;i<OT_DATA_LENGTH;i++) {
         gcode->stream->printf("%02X", this->read_data[i]);
-    }
-    gcode->stream->printf("\r\n");
-}
-
-void Instrument::_print_id(char label, Gcode *gcode){
-    gcode->stream->printf("%c:", label);
-    for (uint8_t i=0;i<OT_ID_LENGTH;i++) {
-        gcode->stream->printf("%02X", this->unique_id[i]);
     }
     gcode->stream->printf("\r\n");
 }
