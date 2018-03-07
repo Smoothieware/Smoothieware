@@ -33,11 +33,17 @@ void Instrument::on_gcode_received(void *argument) {
         label = 'R';
     }
     if (label != 0 && address != 0) {
-        if (gcode->has_m && gcode->m == GCODE_SCAN_ID) {
+        if (gcode->has_m && gcode->m == GCODE_READ_ID) {
             this->_read_ot_id(address, label, gcode);
         }
         else if (gcode->has_m && gcode->m == GCODE_WRITE_ID) {
             this->_write_ot_id(address, label, gcode);
+        }
+        else if (gcode->has_m && gcode->m == GCODE_READ_MODEL) {
+            this->_read_ot_model(address, label, gcode);
+        }
+        else if (gcode->has_m && gcode->m == GCODE_WRITE_MODEL) {
+            this->_write_ot_model(address, label, gcode);
         }
         else if (gcode->has_m && gcode->m == GCODE_READ_DATA) {
             this->_read_ot_data(address, label, gcode);
@@ -76,6 +82,40 @@ void Instrument::_write_ot_id(uint8_t address, char label, Gcode *gcode) {
         return;
     }
     this->_i2c_write(address, OT_ID_LOCATION, OT_ID_LENGTH);
+    if (this->error) {
+        this->_print_error(label, gcode);
+        return;
+    }
+}
+
+void Instrument::_read_ot_model(uint8_t address, char label, Gcode *gcode) {
+    this->_check_ot_signature(address, label, gcode);
+    if (this->error) {
+        // no need to print error, because that means no instrument
+        return;
+    }
+    this->_i2c_read(
+        address,
+        OT_MODEL_LOCATION, this->unique_id, OT_MODEL_LENGTH);
+    if (this->error) {
+        this->_print_error(label, gcode);
+        return;
+    }
+    this->_print_id(label, gcode);
+}
+
+void Instrument::_write_ot_model(uint8_t address, char label, Gcode *gcode) {
+    this->_write_ot_signature(address, label, gcode);
+    if (this->error) {
+        this->_print_error(label, gcode);
+        return;
+    }
+    this->_parse_hex_from_gcode(label, gcode, OT_MODEL_LENGTH);
+    if (this->error) {
+        this->_print_error(label, gcode);
+        return;
+    }
+    this->_i2c_write(address, OT_MODEL_LOCATION, OT_MODEL_LENGTH);
     if (this->error) {
         this->_print_error(label, gcode);
         return;
@@ -145,37 +185,43 @@ void Instrument::_write_ot_signature(uint8_t address, char label, Gcode *gcode) 
     }
 }
 
-void Instrument::_write_hex_from_gcode(uint8_t address, char label, Gcode *gcode, char mem, uint8_t len) {
-    this->_parse_hex_from_gcode(label, gcode, len);
-    if (this->error) {
-        return;
-    }
-
-    this->_i2c_write(address, mem, len);
-    if (this->error) {
-        return;
-    }
-}
-
 void Instrument::_i2c_write(uint8_t address, char mem, int length) {
-    this->error = NO_ERROR;
-    this->write_data[0] = mem;
-    this->error = this->i2c->write(address, this->write_data, length + 1);
-    if (this->error == NO_ERROR) {
+    const uint8_t sub_length = 8;
+    char sub_data[sub_length + 1];
+    for (uint8_t l=0;l<length;l+=sub_length) {
+        this->error = NO_ERROR;
+        sub_data[0] = mem + l;
+        for (int i=0; i<sub_length; i++) {
+            sub_data[i + 1] = this->write_data[l + i + 1];
+        }
+        this->error = this->i2c->write(address, sub_data, sub_length + 1);
+        if (this->error != NO_ERROR) break;
         this->_i2c_delay();
     }
 }
 
 void Instrument::_i2c_read(uint8_t address, char mem, char *data, int length) {
-    this->memory_addr[0] = mem;
-    for (int i=0; i<length; i++) data[i] = 0x00; // erase buffer
-
-    this->error = NO_ERROR;
-    this->error = this->i2c->write(address, this->memory_addr, 1);
-    this->_i2c_delay();
-    if (this->error == NO_ERROR) {
-        this->error = this->i2c->read(address, data, length);
+    const uint8_t sub_length = 8;
+    char sub_data[sub_length];
+    for (int i=0; i<length; i++) data[i] = 0x00;
+    for (uint8_t l=0;l<length;l+=sub_length) {
+        this->error = NO_ERROR;
+        // set address to write to
+        this->memory_addr[0] = mem + l;
+        this->error = this->i2c->write(address, this->memory_addr, 1);
+        if (this->error != NO_ERROR) break;
         this->_i2c_delay();
+
+        // read 8-bytes from that address
+        for (int i=0; i<sub_length; i++) sub_data[i] = 0x00; // erase buffer
+        this->error = this->i2c->read(address, sub_data, sub_length);
+        if (this->error != NO_ERROR) break;
+        this->_i2c_delay();
+
+        // copy the 8-bytes just ready to the 
+        for (int i=0; i<sub_length; i++) {
+            data[i + l] = sub_data[i];
+        }
     }
 }
 
@@ -210,10 +256,6 @@ void Instrument::_parse_hex_from_gcode(char label, Gcode *gcode, uint8_t data_le
                 }
             }
         }
-    }
-    this->error = NO_ERROR;
-    if (increment < data_len + 1) {
-        this->error = WRITE_ARGUMENTS_ERROR;
     }
     // gcode->stream->printf("Parsed: ");
     // for (uint8_t i=0;i<data_len;i++) {
