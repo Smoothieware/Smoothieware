@@ -47,7 +47,7 @@ public:
 
 private:
     void config_load();
-    void probe_XYZ(Gcode *gc, int axis);
+    void probe_XYZ(Gcode *gc, float x, float y, float z);
     uint32_t read_probe(uint32_t dummy);
 
     float slow_feedrate;
