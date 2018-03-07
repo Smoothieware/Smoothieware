@@ -470,7 +470,8 @@ void Player::on_get_public_data(void *argument)
         static struct pad_progress p;
         if(file_size > 0 && playing_file) {
             p.elapsed_secs = this->elapsed_secs;
-            p.percent_complete = (this->file_size - (this->file_size - this->played_cnt)) * 100 / this->file_size;
+            float pcnt = (((float)file_size - (file_size - played_cnt)) * 100.0F) / file_size;
+            p.percent_complete = roundf(pcnt);
             p.filename = this->filename;
             pdr->set_data_ptr(&p);
             pdr->set_taken();
