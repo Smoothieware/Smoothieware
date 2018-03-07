@@ -344,21 +344,25 @@ void ZProbe::on_gcode_received(void *argument)
         // first wait for all moves to finish
         THEKERNEL->conveyor->wait_for_idle();
 
+        float x= NAN, y=NAN, z=NAN;
         if(gcode->has_letter('X')) {
-            // probe in the X axis
-            probe_XYZ(gcode, X_AXIS);
-
-        }else if(gcode->has_letter('Y')) {
-            // probe in the Y axis
-            probe_XYZ(gcode, Y_AXIS);
-
-        }else if(gcode->has_letter('Z')) {
-            // probe in the Z axis
-            probe_XYZ(gcode, Z_AXIS);
-
-        }else{
-            gcode->stream->printf("error:at least one of X Y or Z must be specified\n");
+            x= gcode->get_value('X');
         }
+
+        if(gcode->has_letter('Y')) {
+            y= gcode->get_value('Y');
+        }
+
+        if(gcode->has_letter('Z')) {
+            z= gcode->get_value('Z');
+        }
+
+        if(isnan(x) && isnan(y) && isnan(z)) {
+            gcode->stream->printf("error:at least one of X Y or Z must be specified\n");
+            return;
+        }
+
+        probe_XYZ(gcode, x, y, z);
 
         return;
 
@@ -403,7 +407,7 @@ void ZProbe::on_gcode_received(void *argument)
 }
 
 // special way to probe in the X or Y or Z direction using planned moves, should work with any kinematics
-void ZProbe::probe_XYZ(Gcode *gcode, int axis)
+void ZProbe::probe_XYZ(Gcode *gcode, float x, float y, float z)
 {
     // enable the probe checking in the timer
     probing= true;
@@ -414,11 +418,7 @@ void ZProbe::probe_XYZ(Gcode *gcode, int axis)
     float rate = (gcode->has_letter('F')) ? gcode->get_value('F')/60 : this->slow_feedrate;
 
     // do a regular move which will stop as soon as the probe is triggered, or the distance is reached
-    switch(axis) {
-        case X_AXIS: coordinated_move(gcode->get_value('X'), 0, 0, rate, true); break;
-        case Y_AXIS: coordinated_move(0, gcode->get_value('Y'), 0, rate, true); break;
-        case Z_AXIS: coordinated_move(0, 0, gcode->get_value('Z'), rate, true); break;
-    }
+    coordinated_move(x, y, z, rate, true);
 
     // coordinated_move returns when the move is finished
 
