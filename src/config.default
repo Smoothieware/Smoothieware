@@ -176,7 +176,7 @@ endstop.minb.homing_position                 20
 endstop.minb.max_travel                      30
 endstop.minb.fast_rate                       25
 endstop.minb.slow_rate                       2
-endstop.minb.retract                         1
+endstop.minb.retract                         2
 
 # C endstop
 endstop.minc.axis                            C
@@ -188,7 +188,7 @@ endstop.minc.homing_position                 20
 endstop.minc.max_travel                      30
 endstop.minc.fast_rate                       25
 endstop.minc.slow_rate                       2
-endstop.minc.retract                         1
+endstop.minc.retract                         2
 
 ##################################
 ##################################
