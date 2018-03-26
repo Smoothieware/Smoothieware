@@ -109,7 +109,7 @@ try_again:
                 cs &= 0xff;  // Defensive programming...
                 cs -= chksum;
 			}
-			
+
             //Strip line number value from possible_command
 			size_t lnsize = possible_command.find_first_not_of("N0123456789.,- ");
 			if(lnsize != string::npos) {

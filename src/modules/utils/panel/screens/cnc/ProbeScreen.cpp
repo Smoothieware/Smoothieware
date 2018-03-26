@@ -157,6 +157,12 @@ void ProbeScreen::on_main_loop()
         Gcode gcode("M119", &string_stream);
         THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcode);
         this->result= string_stream.getOutput();
+        size_t p= result.find("PRB:");
+        if(p != string::npos) {
+            result= result.substr(p+1); // extract just coordinates
+            result.pop_back(); // remove end of string
+            result.pop_back(); // remove end of string
+        }
         this->new_result= true;
         this->display_result= true;
     }
