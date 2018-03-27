@@ -146,6 +146,12 @@ void ProbeScreen::on_main_loop()
         THEPANEL->lcd->setCursor(0, 1);
         THEPANEL->lcd->printf("Click to exit");
         this->result= string_stream.getOutput();
+        size_t p= this->result.find("PRB:");
+        if(p != string::npos) {
+            this->result= this->result.substr(p+5); // extract just coordinates
+            size_t p= this->result.find("]");
+            this->result= this->result.substr(0, p); // chop off end
+        }
         this->new_result= true;
         this->probing= false;
         this->display_result= true;
@@ -157,12 +163,6 @@ void ProbeScreen::on_main_loop()
         Gcode gcode("M119", &string_stream);
         THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcode);
         this->result= string_stream.getOutput();
-        size_t p= result.find("PRB:");
-        if(p != string::npos) {
-            result= result.substr(p+1); // extract just coordinates
-            result.pop_back(); // remove end of string
-            result.pop_back(); // remove end of string
-        }
         this->new_result= true;
         this->display_result= true;
     }
