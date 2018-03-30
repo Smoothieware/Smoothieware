@@ -1461,30 +1461,17 @@ bool Robot::append_arc(Gcode * gcode, const float target[], const float offset[]
     float r_axis1 = -offset[this->plane_axis_1];
     float rt_axis0 = target[this->plane_axis_0] - center_axis0;
     float rt_axis1 = target[this->plane_axis_1] - center_axis1;
-    float angular_travel = 0;
 
-    //Check to see if we have a full circle, and if so, set angualr_travel.   
-    if ((this->machine_position[this->plane_axis_0]==target[this->plane_axis_0]) and
-    (this->machine_position[this->plane_axis_1]==target[this->plane_axis_1])) {
-        if (is_clockwise) {
-           angular_travel = (-2 * PI);
-        } else {
-           angular_travel = (2 * PI);
-        }
+    // Patch from GRBL Firmware - Christoph Baumann 04072015
+    // CCW angle between position and target from circle center. Only one atan2() trig computation required.
+    float angular_travel = atan2f(r_axis0 * rt_axis1 - r_axis1 * rt_axis0, r_axis0 * rt_axis0 + r_axis1 * rt_axis1);
+    if (plane_axis_2 == Y_AXIS) { is_clockwise = !is_clockwise; }  //Math for XZ plane is reverse of other 2 planes
+    if (is_clockwise) { // Correct atan2 output per direction
+        if (angular_travel >= -ARC_ANGULAR_TRAVEL_EPSILON) { angular_travel -= (2 * PI); }
     } else {
-        // Patch from GRBL Firmware - Christoph Baumann 04072015
-        // CCW angle between position and target from circle center. Only one atan2() trig computation required.
-        // Only run if not a full circle.
-        angular_travel = atan2f(r_axis0 * rt_axis1 - r_axis1 * rt_axis0, r_axis0 * rt_axis0 + r_axis1 * rt_axis1);
-     
-        if (plane_axis_2 == Y_AXIS) { is_clockwise = !is_clockwise; }  //Math for XZ plane is reverse of other 2 planes
-        if (is_clockwise) { // Adjust atan2 output per direction
-           if (angular_travel > 0) { angular_travel -= (2 * PI); }  //Adjust angular_travel to be between 0 and -2Pi
-        } else {
-           if (angular_travel < 0) { angular_travel += (2 * PI); }  //Adjust angular_travel to be between 0 and 2Pi
-        }
-    } 
-    
+        if (angular_travel <= ARC_ANGULAR_TRAVEL_EPSILON) { angular_travel += (2 * PI); }
+    }
+
     // Find the distance for this gcode
     float millimeters_of_travel = hypotf(angular_travel * radius, fabsf(linear_travel));
 
@@ -1599,6 +1586,7 @@ bool Robot::compute_arc(Gcode * gcode, const float offset[], const float target[
 
     // Find the radius
     float radius = hypotf(offset[this->plane_axis_0], offset[this->plane_axis_1]);
+
     // Set clockwise/counter-clockwise sign for mc_arc computations
     bool is_clockwise = false;
     if( motion_mode == CW_ARC ) {
