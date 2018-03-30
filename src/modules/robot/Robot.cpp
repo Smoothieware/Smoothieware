@@ -1041,6 +1041,9 @@ void Robot::process_move(Gcode *gcode, enum MOTION_MODE_T motion_mode)
             break;
     }
 
+    // needed to act as start of next arc command
+    memcpy(arc_milestone, target, sizeof(arc_milestone));
+
     if(moved) {
         // set machine_position to the calculated target
         memcpy(machine_position, target, n_motors*sizeof(float));
@@ -1461,61 +1464,19 @@ bool Robot::append_arc(Gcode * gcode, const float target[], const float offset[]
     float r_axis1 = -offset[this->plane_axis_1];
     float rt_axis0 = target[this->plane_axis_0] - center_axis0;
     float rt_axis1 = target[this->plane_axis_1] - center_axis1;
-    float angular_travel = 0;
 
-    gcode->stream->printf("Mpos Plane_Axis_0: %8.34f\r\n", machine_position[this->plane_axis_0]);
-    gcode->stream->printf("Mpos Plane_Axis_1: %8.34f\r\n", machine_position[this->plane_axis_1]);
-    gcode->stream->printf("Offset Plane_Axis_0: %8.34f\r\n", offset[this->plane_axis_0]);
-    gcode->stream->printf("Offset Plane_Axis_1: %8.34f\r\n", offset[this->plane_axis_1]);
-    gcode->stream->printf("Target Plane_Axis_0: %8.34f\r\n", target[this->plane_axis_0]);
-    gcode->stream->printf("Target Plane_Axis_1: %8.34f\r\n", target[this->plane_axis_1]);
-    gcode->stream->printf("center_axis0: %8.34f\r\n", center_axis0);
-    gcode->stream->printf("center_axis1: %8.34f\r\n", center_axis1);
-    gcode->stream->printf("Radius: %8.34f\r\n",radius);
-    gcode->stream->printf("r_axis0: %8.34f\r\n",r_axis0);
-    gcode->stream->printf("rt_axis0: %8.34f\r\n",rt_axis0);
-    gcode->stream->printf("r_axis1: %8.34f\r\n",r_axis1);
-    gcode->stream->printf("rt_axis1: %8.34f\r\n",rt_axis1);
-    gcode->stream->printf("ARC_ANGULAR_TRAVEL_EPSILON: %8.64f\r\n",ARC_ANGULAR_TRAVEL_EPSILON);
-
-    if((this->machine_position[this->plane_axis_0]==target[this->plane_axis_0]) and(this->machine_position[this->plane_axis_1]==target[this->plane_axis_1])) {
-        gcode->stream->printf("Full Circle: True\r\n");
-        if (is_clockwise) {
-           angular_travel = (-2 * PI);
-        } else {
-           angular_travel = (2 * PI);
-        }
-        gcode->stream->printf("Full Circle angular_travel: %8.34f\r\n",angular_travel);
+    // Patch from GRBL Firmware - Christoph Baumann 04072015
+    // CCW angle between position and target from circle center. Only one atan2() trig computation required.
+    float angular_travel = atan2f(r_axis0 * rt_axis1 - r_axis1 * rt_axis0, r_axis0 * rt_axis0 + r_axis1 * rt_axis1);
+    if (plane_axis_2 == Y_AXIS) { is_clockwise = !is_clockwise; }  //Math for XZ plane is reverse of other 2 planes
+    if (is_clockwise) { // Correct atan2 output per direction
+        if (angular_travel >= -ARC_ANGULAR_TRAVEL_EPSILON) { angular_travel -= (2 * PI); }
     } else {
-        gcode->stream->printf("Full Circle: False\r\n");
-        // Patch from GRBL Firmware - Christoph Baumann 04072015
-        // CCW angle between position and target from circle center. Only one atan2() trig computation required.
-        // Only run if not a full circle
-        angular_travel = atan2f(r_axis0 * rt_axis1 - r_axis1 * rt_axis0, r_axis0 * rt_axis0 + r_axis1 * rt_axis1);
-        gcode->stream->printf("initial angular_travel1: %8.34f\r\n",angular_travel);
-        if (plane_axis_2 == Y_AXIS) { is_clockwise = !is_clockwise; }  //Math for XZ plane is reverse of other 2 planes
-        if (is_clockwise) { // Correct atan2 output per direction
-           if (angular_travel >= -ARC_ANGULAR_TRAVEL_EPSILON) { angular_travel -= (2 * PI); }
-        } else {
-           if (angular_travel <= ARC_ANGULAR_TRAVEL_EPSILON) { angular_travel += (2 * PI); }
-        }
-        gcode->stream->printf("old angular_travel2: %8.34f\r\n",angular_travel);
-     
-        angular_travel = atan2f(r_axis0 * rt_axis1 - r_axis1 * rt_axis0, r_axis0 * rt_axis0 + r_axis1 * rt_axis1);
-     
-        if (plane_axis_2 == Y_AXIS) { is_clockwise = !is_clockwise; }  //Math for XZ plane is reverse of other 2 planes
-        if (is_clockwise) { // Correct atan2 output per direction
-           if (angular_travel > 0) { angular_travel -= (2 * PI); }
-        } else {
-           if (angular_travel < 0) { angular_travel += (2 * PI); }
-        }
-        gcode->stream->printf("new angular_travel2: %8.34f\r\n",angular_travel);
-    } 
-     
-    
+        if (angular_travel <= ARC_ANGULAR_TRAVEL_EPSILON) { angular_travel += (2 * PI); }
+    }
+
     // Find the distance for this gcode
     float millimeters_of_travel = hypotf(angular_travel * radius, fabsf(linear_travel));
-    gcode->stream->printf("millimeters_of_travel:%8.34f\r\n",millimeters_of_travel);
 
     // We don't care about non-XYZ moves ( for example the extruder produces some of those )
     if( millimeters_of_travel < 0.000001F ) {
@@ -1628,6 +1589,7 @@ bool Robot::compute_arc(Gcode * gcode, const float offset[], const float target[
 
     // Find the radius
     float radius = hypotf(offset[this->plane_axis_0], offset[this->plane_axis_1]);
+
     // Set clockwise/counter-clockwise sign for mc_arc computations
     bool is_clockwise = false;
     if( motion_mode == CW_ARC ) {
