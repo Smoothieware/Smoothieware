@@ -1464,8 +1464,7 @@ bool Robot::append_arc(Gcode * gcode, const float target[], const float offset[]
     float angular_travel = 0;
 
     //Check to see if we have a full circle, and if so, set angualr_travel.   
-    if ((this->machine_position[this->plane_axis_0]==target[this->plane_axis_0]) and
-    (this->machine_position[this->plane_axis_1]==target[this->plane_axis_1])) {
+    if ((this->machine_position[this->plane_axis_0]==target[this->plane_axis_0]) && (this->machine_position[this->plane_axis_1]==target[this->plane_axis_1])) {
         if (is_clockwise) {
            angular_travel = (-2 * PI);
         } else {
