@@ -1457,17 +1457,19 @@ bool Robot::append_arc(Gcode * gcode, const float target[], const float offset[]
     }
 
     // Scary math
-    float center_axis0 = this->machine_position[this->plane_axis_0] + offset[this->plane_axis_0];
-    float center_axis1 = this->machine_position[this->plane_axis_1] + offset[this->plane_axis_1];
-    float linear_travel = target[this->plane_axis_2] - this->machine_position[this->plane_axis_2];
+    float center_axis0 = this->arc_milestone[this->plane_axis_0] + offset[this->plane_axis_0];
+    float center_axis1 = this->arc_milestone[this->plane_axis_1] + offset[this->plane_axis_1];
+    float linear_travel = target[this->plane_axis_2] - this->arc_milestone[this->plane_axis_2];
     float r_axis0 = -offset[this->plane_axis_0]; // Radius vector from center to current location
     float r_axis1 = -offset[this->plane_axis_1];
-    float rt_axis0 = target[this->plane_axis_0] - center_axis0;
-    float rt_axis1 = target[this->plane_axis_1] - center_axis1;
+    float rt_axis0 = target[this->plane_axis_0] - this->arc_milestone[this->plane_axis_0] - offset[this->plane_axis_0];
+    float rt_axis1 = target[this->plane_axis_1] - this->arc_milestone[this->plane_axis_1] - offset[this->plane_axis_1];
     float angular_travel = 0;
 
-    gcode->stream->printf("Mpos Plane_Axis_0: %8.34f\r\n", machine_position[this->plane_axis_0]);
-    gcode->stream->printf("Mpos Plane_Axis_1: %8.34f\r\n", machine_position[this->plane_axis_1]);
+    gcode->stream->printf("Machine_Position Plane_Axis_0: %8.34f\r\n", machine_position[this->plane_axis_0]);
+    gcode->stream->printf("Machine_Position Plane_Axis_1: %8.34f\r\n", machine_position[this->plane_axis_1]);
+    gcode->stream->printf("Arc Milestone Plane_Axis_0: %8.34f\r\n", arc_milestone[this->plane_axis_0]);
+    gcode->stream->printf("Arc_Milestone Plane_Axis_1: %8.34f\r\n", arc_milestone[this->plane_axis_1]);
     gcode->stream->printf("Offset Plane_Axis_0: %8.34f\r\n", offset[this->plane_axis_0]);
     gcode->stream->printf("Offset Plane_Axis_1: %8.34f\r\n", offset[this->plane_axis_1]);
     gcode->stream->printf("Target Plane_Axis_0: %8.34f\r\n", target[this->plane_axis_0]);
@@ -1476,12 +1478,14 @@ bool Robot::append_arc(Gcode * gcode, const float target[], const float offset[]
     gcode->stream->printf("center_axis1: %8.34f\r\n", center_axis1);
     gcode->stream->printf("Radius: %8.34f\r\n",radius);
     gcode->stream->printf("r_axis0: %8.34f\r\n",r_axis0);
-    gcode->stream->printf("rt_axis0: %8.34f\r\n",rt_axis0);
     gcode->stream->printf("r_axis1: %8.34f\r\n",r_axis1);
-    gcode->stream->printf("rt_axis1: %8.34f\r\n",rt_axis1);
+    gcode->stream->printf("rt2_axis0: %8.34f\r\n",rt_axis0);
+    gcode->stream->printf("rt2_axis1: %8.34f\r\n",rt_axis1);
+    gcode->stream->printf("Old rt_axis0: %8.34f\r\n",target[this->plane_axis_0] - center_axis0);
+    gcode->stream->printf("Old rt_axis1: %8.34f\r\n",target[this->plane_axis_1] - center_axis1);
     gcode->stream->printf("ARC_ANGULAR_TRAVEL_EPSILON: %8.64f\r\n",ARC_ANGULAR_TRAVEL_EPSILON);
 
-    if((this->machine_position[this->plane_axis_0]==target[this->plane_axis_0]) and(this->machine_position[this->plane_axis_1]==target[this->plane_axis_1])) {
+    if((this->arc_milestone[this->plane_axis_0]==target[this->plane_axis_0]) && (this->arc_milestone[this->plane_axis_1]==target[this->plane_axis_1])) {
         gcode->stream->printf("Full Circle: True\r\n");
         if (is_clockwise) {
            angular_travel = (-2 * PI);
@@ -1491,6 +1495,7 @@ bool Robot::append_arc(Gcode * gcode, const float target[], const float offset[]
         gcode->stream->printf("Full Circle angular_travel: %8.34f\r\n",angular_travel);
     } else {
         gcode->stream->printf("Full Circle: False\r\n");
+
         // Patch from GRBL Firmware - Christoph Baumann 04072015
         // CCW angle between position and target from circle center. Only one atan2() trig computation required.
         // Only run if not a full circle
@@ -1512,9 +1517,9 @@ bool Robot::append_arc(Gcode * gcode, const float target[], const float offset[]
         } else {
            if (angular_travel < 0) { angular_travel += (2 * PI); }
         }
+    }
         gcode->stream->printf("new angular_travel2: %8.34f\r\n",angular_travel);
-    } 
-     
+
     
     // Find the distance for this gcode
     float millimeters_of_travel = hypotf(angular_travel * radius, fabsf(linear_travel));
