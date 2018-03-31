@@ -220,7 +220,7 @@ void Robot::load_config()
         #endif
     };
 
-    // default acceleration setting, can be overriden with newer per axis settings
+    // default acceleration setting, can be overridden with newer per axis settings
     this->default_acceleration= THEKERNEL->config->value(acceleration_checksum)->by_default(100.0F )->as_number(); // Acceleration is in mm/s^2
 
     // make each motor
@@ -263,7 +263,7 @@ void Robot::load_config()
         }
     }
 
-    // initialise actuator positions to current cartesian position (X0 Y0 Z0)
+    // initialize actuator positions to current cartesian position (X0 Y0 Z0)
     // so the first move can be correct if homing is not performed
     ActuatorCoordinates actuator_pos;
     arm_solution->cartesian_to_actuator(machine_position, actuator_pos);
@@ -877,7 +877,7 @@ void Robot::on_gcode_received(void *argument)
                 }
                 options.clear();
                 if(arm_solution->get_optional(options)) {
-                    // foreach optional value
+                    // for each optional value
                     for(auto &i : options) {
                         // print all current values of supported options
                         gcode->stream->printf("%c: %8.4f ", i.first, i.second);
@@ -1099,7 +1099,7 @@ void Robot::reset_actuator_position(const ActuatorCoordinates &ac)
         if(!isnan(ac[i])) actuators[i]->change_last_milestone(ac[i]);
     }
 
-    // now correct axis positions then recorrect actuator to account for rounding
+    // now correct axis positions then re correct actuator to account for rounding
     reset_position_from_current_actuator_position();
 }
 
@@ -1109,7 +1109,7 @@ void Robot::reset_position_from_current_actuator_position()
 {
     ActuatorCoordinates actuator_pos;
     for (size_t i = X_AXIS; i < n_motors; i++) {
-        // NOTE actuator::current_position is curently NOT the same as actuator::machine_position after an abrupt abort
+        // NOTE actuator::current_position is currently NOT the same as actuator::machine_position after an abrupt abort
         actuator_pos[i] = actuators[i]->get_current_position();
     }
 
@@ -1176,7 +1176,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
 
                 //} else if(soft_endstop_truncate) {
                     // TODO VERY hard to do need to go back and change the target, and calculate intercept with the edge
-                    // and store all preceding vectors that have on eor more points ourtside of bounds so we can create a propper clip against the boundaries
+                    // and store all preceding vectors that have one or more points outside of bounds so we can create a proper clip against the boundaries
 
                 } else {
                     // ignore it
@@ -1306,7 +1306,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
         }
     }
 
-    // if we are in feed hold wait here until it is released, this means that even segemnted lines will pause
+    // if we are in feed hold wait here until it is released, this means that even segmented lines will pause
     while(THEKERNEL->get_feed_hold()) {
         THEKERNEL->call_event(ON_IDLE, this);
         // if we also got a HALT then break out of this
@@ -1314,7 +1314,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     }
 
     // Append the block to the planner
-    // NOTE that distance here should be either the distance travelled by the XYZ axis, or the E mm travel if a solo E move
+    // NOTE that distance here should be either the distance traveled by the XYZ axis, or the E mm travel if a solo E move
     // NOTE this call will bock until there is room in the block queue, on_idle will continue to be called
     if(THEKERNEL->planner->append_block( actuator_pos, n_motors, rate_mm_s, distance, auxilliary_move ? nullptr : unit_vec, acceleration, s_value, is_g123)) {
         // this is the new compensated machine position
@@ -1374,7 +1374,7 @@ bool Robot::append_line(Gcode *gcode, const float target[], float rate_mm_s, flo
 
     /*
         For extruders, we need to do some extra work to limit the volumetric rate if specified...
-        If using volumetric limts we need to be using volumetric extrusion for this to work as Ennn needs to be in mm³ not mm
+        If using volumetric limits we need to be using volumetric extrusion for this to work as Ennn needs to be in mm³ not mm
         We ask Extruder to do all the work but we need to pass in the relevant data.
         NOTE we need to do this before we segment the line (for deltas)
     */
@@ -1551,7 +1551,7 @@ bool Robot::append_arc(Gcode * gcode, const float target[], const float offset[]
         uint16_t i;
         int8_t count = 0;
 
-        // init array for all axis
+        // Initialize array for all axis
         memcpy(arc_target, machine_position, n_motors*sizeof(float));
 
         // Initialize the linear axis
