@@ -1457,22 +1457,32 @@ bool Robot::append_arc(Gcode * gcode, const float target[], const float offset[]
     }
 
     // Scary math
-    float center_axis0 = this->machine_position[this->plane_axis_0] + offset[this->plane_axis_0];
-    float center_axis1 = this->machine_position[this->plane_axis_1] + offset[this->plane_axis_1];
-    float linear_travel = target[this->plane_axis_2] - this->machine_position[this->plane_axis_2];
-    float r_axis0 = -offset[this->plane_axis_0]; // Radius vector from center to current location
+    float center_axis0 = this->arc_milestone[this->plane_axis_0] + offset[this->plane_axis_0];
+    float center_axis1 = this->arc_milestone[this->plane_axis_1] + offset[this->plane_axis_1];
+    float linear_travel = target[this->plane_axis_2] - this->arc_milestone[this->plane_axis_2];
+    float r_axis0 = -offset[this->plane_axis_0]; // Radius vector from center to start position
     float r_axis1 = -offset[this->plane_axis_1];
-    float rt_axis0 = target[this->plane_axis_0] - center_axis0;
-    float rt_axis1 = target[this->plane_axis_1] - center_axis1;
-
-    // Patch from GRBL Firmware - Christoph Baumann 04072015
-    // CCW angle between position and target from circle center. Only one atan2() trig computation required.
-    float angular_travel = atan2f(r_axis0 * rt_axis1 - r_axis1 * rt_axis0, r_axis0 * rt_axis0 + r_axis1 * rt_axis1);
-    if (plane_axis_2 == Y_AXIS) { is_clockwise = !is_clockwise; }  //Math for XZ plane is reverse of other 2 planes
-    if (is_clockwise) { // Correct atan2 output per direction
-        if (angular_travel >= -ARC_ANGULAR_TRAVEL_EPSILON) { angular_travel -= (2 * PI); }
+    float rt_axis0 = target[this->plane_axis_0] - this->arc_milestone[this->plane_axis_0] - offset[this->plane_axis_0]; // Radius vector from center to target position
+    float rt_axis1 = target[this->plane_axis_1] - this->arc_milestone[this->plane_axis_1] - offset[this->plane_axis_1];
+    float angular_travel = 0;
+    //check for condition where atan2 formula will fail due to everything canceling out exactly
+    if((this->arc_milestone[this->plane_axis_0]==target[this->plane_axis_0]) && (this->arc_milestone[this->plane_axis_1]==target[this->plane_axis_1])) {
+        if (is_clockwise) { // set angular_travel to -2pi for a clockwise full circle
+           angular_travel = (-2 * PI);
+        } else { // set angular_travel to 2pi for a counterclockwise full circle
+           angular_travel = (2 * PI);
+        }
     } else {
-        if (angular_travel <= ARC_ANGULAR_TRAVEL_EPSILON) { angular_travel += (2 * PI); }
+        // Patch from GRBL Firmware - Christoph Baumann 04072015
+        // CCW angle between position and target from circle center. Only one atan2() trig computation required.
+        // Only run if not a full circle or angular travel will incorrectly result in 0.0f
+        angular_travel = atan2f(r_axis0 * rt_axis1 - r_axis1 * rt_axis0, r_axis0 * rt_axis0 + r_axis1 * rt_axis1);
+        if (plane_axis_2 == Y_AXIS) { is_clockwise = !is_clockwise; }  //Math for XZ plane is reverse of other 2 planes
+        if (is_clockwise) { // adjust angular_travel to be in the range of -2pi to 0 for clockwise arcs
+           if (angular_travel > 0) { angular_travel -= (2 * PI); }
+        } else {  // adjust angular_travel to be in the range of 0 to 2pi for counterclockwise arcs
+           if (angular_travel < 0) { angular_travel += (2 * PI); }
+        }
     }
 
     // Find the distance for this gcode
