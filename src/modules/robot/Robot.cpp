@@ -98,7 +98,6 @@
 #define ymax_checksum                      CHECKSUM("y_max")
 #define zmax_checksum                      CHECKSUM("z_max")
 
-#define ARC_ANGULAR_TRAVEL_EPSILON 5E-9F // Float (radians)
 #define PI 3.14159265358979323846F // force to be float, do not use M_PI
 
 // The Robot converts GCodes into actual movements, and then adds them to the Planner, which passes them to the Conveyor so they can be added to the queue
