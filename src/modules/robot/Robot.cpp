@@ -1138,6 +1138,8 @@ void Robot::reset_position_from_current_actuator_position()
         actuators[i]->change_last_milestone(actuator_pos[i]); // this updates the last_milestone in the actuator
     }
     #endif
+    // needed to act as start of next arc command
+    memcpy(arc_milestone, machine_position, sizeof(arc_milestone));
 }
 
 // Convert target (in machine coordinates) to machine_position, then convert to actuator position and append this to the planner
