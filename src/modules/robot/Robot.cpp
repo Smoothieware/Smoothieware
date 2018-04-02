@@ -111,6 +111,7 @@ Robot::Robot()
     this->e_absolute_mode = true;
     this->select_plane(X_AXIS, Y_AXIS, Z_AXIS);
     memset(this->machine_position, 0, sizeof machine_position);
+    memset(this->arc_milestone, 0, sizeof arc_milestone);
     memset(this->compensated_machine_position, 0, sizeof compensated_machine_position);
     this->arm_solution = NULL;
     seconds_per_minute = 60.0F;
@@ -1138,6 +1139,8 @@ void Robot::reset_position_from_current_actuator_position()
         actuators[i]->change_last_milestone(actuator_pos[i]); // this updates the last_milestone in the actuator
     }
     #endif
+    // needed to act as start of next arc command
+    memcpy(arc_milestone, machine_position, sizeof(arc_milestone));
 }
 
 // Convert target (in machine coordinates) to machine_position, then convert to actuator position and append this to the planner
