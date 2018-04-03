@@ -175,7 +175,7 @@ try_again:
                                 new_message.stream->printf("!!\r\n");
                             }
                             delete gcode;
-                            continue;
+                            return;
                         }
                     }
 
@@ -374,7 +374,7 @@ try_again:
                     if (gcode->is_error) {
                         // report error
                         if(THEKERNEL->is_grbl_mode()) {
-                            new_message.stream->printf("error: ");
+                            new_message.stream->printf("error:");
                         }else{
                             new_message.stream->printf("Error: ");
                         }

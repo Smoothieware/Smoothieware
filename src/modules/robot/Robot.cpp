@@ -1164,7 +1164,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
             if( (!isnan(soft_endstop_min[i]) && transformed_target[i] < soft_endstop_min[i]) || (!isnan(soft_endstop_max[i]) && transformed_target[i] > soft_endstop_max[i]) ) {
                 if(soft_endstop_halt) {
                     if(THEKERNEL->is_grbl_mode()) {
-                        THEKERNEL->streams->printf("error: ");
+                        THEKERNEL->streams->printf("error:");
                     }else{
                         THEKERNEL->streams->printf("Error: ");
                     }
@@ -1180,7 +1180,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
                 } else {
                     // ignore it
                     if(THEKERNEL->is_grbl_mode()) {
-                        THEKERNEL->streams->printf("error: ");
+                        THEKERNEL->streams->printf("error:");
                     }else{
                         THEKERNEL->streams->printf("Error: ");
                     }
