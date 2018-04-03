@@ -109,7 +109,7 @@ try_again:
                 cs &= 0xff;  // Defensive programming...
                 cs -= chksum;
 			}
-			
+
             //Strip line number value from possible_command
 			size_t lnsize = possible_command.find_first_not_of("N0123456789.,- ");
 			if(lnsize != string::npos) {
@@ -263,21 +263,21 @@ try_again:
                             case 115: // M115 Get firmware version and capabilities
                                 Version vers;
 
-                                new_message.stream->printf("FIRMWARE_NAME:Smoothieware, FIRMWARE_URL:http://smoothieware.org, SOURCE_CODE_URL:https://github.com/Smoothieware/Smoothieware, FIRMWARE_VERSION:%s, BUILD_DATE:%s, SYSTEM_CLOCK:%ldMHz, AXES:%d", vers.get_build(), vers.get_build_date(), SystemCoreClock / 1000000, MAX_ROBOT_ACTUATORS);
+                                new_message.stream->printf("FIRMWARE_NAME:Smoothieware, FIRMWARE_URL:http%%3A//smoothieware.org, X-SOURCE_CODE_URL:https://github.com/Smoothieware/Smoothieware, FIRMWARE_VERSION:%s, X-FIRMWARE_BUILD_DATE:%s, X-SYSTEM_CLOCK:%ldMHz, X-AXES:%d", vers.get_build(), vers.get_build_date(), SystemCoreClock / 1000000, MAX_ROBOT_ACTUATORS);
 
                                 #ifdef CNC
-                                new_message.stream->printf(", CNC:1");
+                                new_message.stream->printf(", X-CNC:1");
                                 #else
-                                new_message.stream->printf(", CNC:0");
+                                new_message.stream->printf(", X-CNC:0");
                                 #endif
 
                                 #ifdef DISABLEMSD
-                                new_message.stream->printf(", MSD:0");
+                                new_message.stream->printf(", X-MSD:0");
                                 #else
-                                new_message.stream->printf(", MSD:1");
+                                new_message.stream->printf(", X-MSD:1");
                                 #endif
 
-                                new_message.stream->printf("\r\nok\r\n");
+                                new_message.stream->printf("\nok\n");
                                 return;
 
                             case 117: // M117 is a special non compliant Gcode as it allows arbitrary text on the line following the command
