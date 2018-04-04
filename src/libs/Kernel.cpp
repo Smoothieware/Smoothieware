@@ -28,6 +28,7 @@
 #include "EndstopsPublicAccess.h"
 #include "Configurator.h"
 #include "SimpleShell.h"
+#include "TemperatureControlPublicAccess.h"
 
 #ifndef NO_TOOLS_LASER
 #include "Laser.h"
@@ -256,8 +257,6 @@ std::string Kernel::get_query_string()
             str.append(",WPos:").append(buf, n);
         }
 
-        str.append(">\r\n");
-
     } else {
         // return the last milestone if idle
         char buf[128];
@@ -298,8 +297,25 @@ std::string Kernel::get_query_string()
             str.append(buf, n);
         }
 
-        str.append(">\r\n");
     }
+
+    // if not grbl mode get temperatures
+    if(new_status_format && !is_grbl_mode()) {
+        struct pad_temperature temp;
+        // scan all temperature controls
+        std::vector<struct pad_temperature> controllers;
+        bool ok = PublicData::get_value(temperature_control_checksum, poll_controls_checksum, &controllers);
+        if (ok) {
+            char buf[32];
+            for (auto &c : controllers) {
+                size_t n= snprintf(buf, sizeof(buf), "|%s:%1.1f,%1.1f", c.designator.c_str(), c.current_temperature, c.target_temperature);
+                if(n > sizeof(buf)) n= sizeof(buf);
+                str.append(buf, n);
+            }
+        }
+    }
+
+    str.append(">\n");
     return str;
 }
 
