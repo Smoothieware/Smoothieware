@@ -202,6 +202,9 @@ bool Endstops::load_old_config()
     // if no pins defined then disable the module
     if(endstops.empty()) return false;
 
+    homing_axis.shrink_to_fit();
+    endstops.shrink_to_fit();
+
     get_global_configs();
 
     if(limit_enabled) {
@@ -361,6 +364,10 @@ bool Endstops::load_config()
             homing_axis.push_back(temp_axis_array[i]);
         }
     }
+
+    // saves some memory
+    homing_axis.shrink_to_fit();
+    endstops.shrink_to_fit();
 
     // sets some endstop global configs applicable to all endstops
     get_global_configs();
