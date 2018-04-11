@@ -11,10 +11,6 @@
 #define SLOWTICKER_H
 
 #include "Module.h"
-
-using namespace std;
-#include <vector>
-
 #include "libs/Hook.h"
 #include "libs/Pin.h"
 
@@ -52,7 +48,7 @@ class SlowTicker : public Module{
     private:
         bool flag_1s();
 
-        vector<Hook*> hooks;
+        std::vector<Hook*> hooks;
         uint32_t max_frequency;
         uint32_t interval;
 
