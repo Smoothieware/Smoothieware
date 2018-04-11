@@ -132,10 +132,6 @@ void init() {
     kernel->add_module( new(AHB0) PlayLed() );
 
     // these modules can be completely disabled in the Makefile by adding to EXCLUDE_MODULES
-    #ifndef NO_TOOLS_ENDSTOPS
-    kernel->add_module( new(AHB0) Endstops() );
-    #endif
-
     #ifndef NO_TOOLS_SWITCH
     SwitchPool *sp= new SwitchPool();
     sp->load_tools();
@@ -152,6 +148,9 @@ void init() {
     TemperatureControlPool *tp= new TemperatureControlPool();
     tp->load_tools();
     delete tp;
+    #endif
+    #ifndef NO_TOOLS_ENDSTOPS
+    kernel->add_module( new(AHB0) Endstops() );
     #endif
     #ifndef NO_TOOLS_LASER
     kernel->add_module( new Laser() );
