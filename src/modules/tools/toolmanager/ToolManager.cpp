@@ -7,9 +7,6 @@
 
 #include "libs/Module.h"
 #include "libs/Kernel.h"
-#include <math.h>
-using namespace std;
-#include <vector>
 #include "ToolManager.h"
 #include "Tool.h"
 #include "PublicDataRequest.h"
@@ -25,6 +22,8 @@ using namespace std;
 #include "libs/SerialMessage.h"
 #include "libs/StreamOutput.h"
 #include "FileStream.h"
+
+#include <math.h>
 
 ToolManager::ToolManager()
 {
