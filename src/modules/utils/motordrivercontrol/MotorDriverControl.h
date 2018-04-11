@@ -11,6 +11,7 @@ namespace mbed {
 
 class DRV8711DRV;
 class TMC26X;
+class TMC21X;
 class StreamOutput;
 class Gcode;
 
@@ -44,7 +45,8 @@ class MotorDriverControl : public Module {
 
         enum CHIP_TYPE {
             DRV8711,
-            TMC2660
+            TMC2660,
+            TMC2130,
         };
         CHIP_TYPE chip;
 
@@ -52,6 +54,7 @@ class MotorDriverControl : public Module {
         union {
             DRV8711DRV *drv8711;
             TMC26X *tmc26x;
+            TMC21X *tmc21x;
         };
 
         //float current_factor;

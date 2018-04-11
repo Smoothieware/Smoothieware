@@ -133,21 +133,26 @@ void init() {
 
     // these modules can be completely disabled in the Makefile by adding to EXCLUDE_MODULES
     #ifndef NO_TOOLS_ENDSTOPS
+    kernel->streams->printf("Add endstop\r\n");
     kernel->add_module( new(AHB0) Endstops() );
     #endif
 
     #ifndef NO_TOOLS_SWITCH
+    kernel->streams->printf("Add switch\r\n");
     SwitchPool *sp= new SwitchPool();
     sp->load_tools();
     delete sp;
     #endif
     #ifndef NO_TOOLS_EXTRUDER
+    kernel->streams->printf("Add extruder\r\n");
     // NOTE this must be done first before Temperature control so ToolManager can handle Tn before temperaturecontrol module does
     ExtruderMaker *em= new ExtruderMaker();
     em->load_tools();
     delete em;
     #endif
     #ifndef NO_TOOLS_TEMPERATURECONTROL
+    kernel->streams->printf("Add temperature control\r\n");
+
     // Note order is important here must be after extruder so Tn as a parameter will get executed first
     TemperatureControlPool *tp= new TemperatureControlPool();
     tp->load_tools();
@@ -188,6 +193,7 @@ void init() {
     kernel->add_module( new(AHB0) FilamentDetector() );
     #endif
     #ifndef NO_UTILS_MOTORDRIVERCONTROL
+
     kernel->add_module( new MotorDriverControl(0) );
     #endif
     // Create and initialize USB stuff

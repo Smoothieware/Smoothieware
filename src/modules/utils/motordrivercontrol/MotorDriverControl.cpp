@@ -16,6 +16,7 @@
 #include "mbed.h" // for SPI
 
 #include "drivers/TMC26X/TMC26X.h"
+#include "drivers/TMC21X/TMC21X.h"
 #include "drivers/DRV8711/drv8711.h"
 
 #include <string>
@@ -112,6 +113,11 @@ bool MotorDriverControl::config_module(uint16_t cs)
         chip= TMC2660;
         tmc26x= new TMC26X(std::bind( &MotorDriverControl::sendSPI, this, _1, _2, _3), axis);
 
+    }else if(str == "TMC2130") {
+        chip= TMC2130;
+        tmc21x= new TMC21X(std::bind( &MotorDriverControl::sendSPI, this, _1, _2, _3), axis);
+        THEKERNEL->streams->printf("new TMC2130 instance\n");
+
     }else{
         THEKERNEL->streams->printf("MotorDriverControl %c ERROR: Unknown chip type: %s\n", axis, str.c_str());
         return false;
@@ -140,6 +146,7 @@ bool MotorDriverControl::config_module(uint16_t cs)
     switch(chip) {
         case DRV8711: max_current= 4000; break;
         case TMC2660: max_current= 3000; break;
+        case TMC2130: max_current= 3000; break;
     }
 
     max_current= THEKERNEL->config->value(motor_driver_control_checksum, cs, max_current_checksum )->by_default((int)max_current)->as_number(); // in mA
@@ -164,6 +171,7 @@ bool MotorDriverControl::config_module(uint16_t cs)
                 switch(chip) {
                     case DRV8711: drv8711->set_raw_register(&StreamOutput::NullStream, ++reg, i); break;
                     case TMC2660: tmc26x->setRawRegister(&StreamOutput::NullStream, ++reg, i); break;
+                    case TMC2130: break;
                 }
             }
 
@@ -171,6 +179,7 @@ bool MotorDriverControl::config_module(uint16_t cs)
             switch(chip) {
                 case DRV8711: drv8711->set_raw_register(&StreamOutput::NullStream, 255, 0); break;
                 case TMC2660: tmc26x->setRawRegister(&StreamOutput::NullStream, 255, 0); break;
+                case TMC2130: break;
             }
         }
 
@@ -189,7 +198,7 @@ bool MotorDriverControl::config_module(uint16_t cs)
         this->register_for_event(ON_SECOND_TICK);
     }
 
-    THEKERNEL->streams->printf("MotorDriverControl INFO: configured motor %c (%d): as %s, cs: %04X\n", axis, id, chip==TMC2660?"TMC2660":chip==DRV8711?"DRV8711":"UNKNOWN", (spi_cs_pin.port_number<<8)|spi_cs_pin.pin);
+    THEKERNEL->streams->printf("MotorDriverControl INFO: configured motor %c (%d): as %s, cs: %04X\n", axis, id, chip==TMC2660?"TMC2660":chip==TMC2130?"TMC2130":chip==DRV8711?"DRV8711":"UNKNOWN", (spi_cs_pin.port_number<<8)|spi_cs_pin.pin);
 
     return true;
 }
@@ -243,6 +252,7 @@ void MotorDriverControl::on_second_tick(void *argument)
         case TMC2660:
             alarm= tmc26x->checkAlarm();
             break;
+        case TMC2130: break;
     }
 
     if(halt_on_alarm && alarm) {
@@ -349,6 +359,11 @@ void MotorDriverControl::initialize_chip(uint16_t cs)
         set_current(current);
         set_microstep(microsteps);
         //set_decay_mode(decay_mode);
+    }else if(chip == TMC2130){
+        tmc21x->init(cs);
+        set_current(current);
+        set_microstep(microsteps);
+        //set_decay_mode(decay_mode);
     }
 
 }
@@ -364,6 +379,7 @@ void MotorDriverControl::set_current(uint32_t c)
         case TMC2660:
             tmc26x->setCurrent(c);
             break;
+        case TMC2130: break;
     }
 }
 
@@ -380,6 +396,7 @@ uint32_t MotorDriverControl::set_microstep( uint32_t n )
             tmc26x->setMicrosteps(n);
             m= tmc26x->getMicrosteps();
             break;
+        case TMC2130: break;
     }
     return m;
 }
@@ -390,6 +407,7 @@ void MotorDriverControl::set_decay_mode( uint8_t dm )
     switch(chip) {
         case DRV8711: break;
         case TMC2660: break;
+        case TMC2130: break;
     }
 }
 
@@ -403,6 +421,7 @@ void MotorDriverControl::enable(bool on)
         case TMC2660:
             tmc26x->setEnabled(on);
             break;
+        case TMC2130: break;
     }
 }
 
@@ -416,6 +435,7 @@ void MotorDriverControl::dump_status(StreamOutput *stream, bool b)
         case TMC2660:
             tmc26x->dumpStatus(stream, b);
             break;
+        case TMC2130: break;
     }
 }
 
@@ -425,6 +445,7 @@ void MotorDriverControl::set_raw_register(StreamOutput *stream, uint32_t reg, ui
     switch(chip) {
         case DRV8711: ok= drv8711->set_raw_register(stream, reg, val); break;
         case TMC2660: ok= tmc26x->setRawRegister(stream, reg, val); break;
+        case TMC2130: break;
     }
     if(ok) {
         stream->printf("register operation succeeded\n");
@@ -456,6 +477,7 @@ void MotorDriverControl::set_options(Gcode *gcode)
             //         gcode->add_nl = true;
             //     }
             // }
+            case TMC2130: break;
         }
         break;
     }
