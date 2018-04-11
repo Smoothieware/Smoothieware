@@ -1015,6 +1015,7 @@ void Endstops::on_gcode_received(void *argument)
             case 3: // G28.3 is a smoothie special it sets manual homing
                 if(gcode->get_num_args() == 0) {
                     for (auto &p : homing_axis) {
+                        if(p.pin_info == nullptr) continue; // ignore if not a homing endstop
                         p.homed= true;
                         THEROBOT->reset_axis_position(0, p.axis_index);
                     }
@@ -1023,9 +1024,9 @@ void Endstops::on_gcode_received(void *argument)
                     if(gcode->has_letter('X')){ THEROBOT->reset_axis_position(gcode->get_value('X'), X_AXIS); homing_axis[X_AXIS].homed= true; }
                     if(gcode->has_letter('Y')){ THEROBOT->reset_axis_position(gcode->get_value('Y'), Y_AXIS); homing_axis[Y_AXIS].homed= true; }
                     if(gcode->has_letter('Z')){ THEROBOT->reset_axis_position(gcode->get_value('Z'), Z_AXIS); homing_axis[Z_AXIS].homed= true; }
-                    if(homing_axis.size() > A_AXIS && gcode->has_letter('A')){ THEROBOT->reset_axis_position(gcode->get_value('A'), A_AXIS); homing_axis[A_AXIS].homed= true; }
-                    if(homing_axis.size() > B_AXIS && gcode->has_letter('B')){ THEROBOT->reset_axis_position(gcode->get_value('B'), B_AXIS); homing_axis[B_AXIS].homed= true; }
-                    if(homing_axis.size() > C_AXIS && gcode->has_letter('C')){ THEROBOT->reset_axis_position(gcode->get_value('C'), C_AXIS); homing_axis[C_AXIS].homed= true; }
+                    if(homing_axis.size() > A_AXIS && homing_axis[A_AXIS].pin_info != nullptr && gcode->has_letter('A')){ THEROBOT->reset_axis_position(gcode->get_value('A'), A_AXIS); homing_axis[A_AXIS].homed= true; }
+                    if(homing_axis.size() > B_AXIS && homing_axis[B_AXIS].pin_info != nullptr && gcode->has_letter('B')){ THEROBOT->reset_axis_position(gcode->get_value('B'), B_AXIS); homing_axis[B_AXIS].homed= true; }
+                    if(homing_axis.size() > C_AXIS && homing_axis[C_AXIS].pin_info != nullptr && gcode->has_letter('C')){ THEROBOT->reset_axis_position(gcode->get_value('C'), C_AXIS); homing_axis[C_AXIS].homed= true; }
                 }
                 break;
 
@@ -1054,6 +1055,7 @@ void Endstops::on_gcode_received(void *argument)
 
             case 6: // G28.6 is a smoothie special it shows the homing status of each axis
                 for (auto &p : homing_axis) {
+                    if(p.pin_info == nullptr) continue; // ignore if not a homing endstop
                     gcode->stream->printf("%c:%d ", p.axis, p.homed);
                 }
                 gcode->add_nl= true;
@@ -1071,6 +1073,7 @@ void Endstops::on_gcode_received(void *argument)
         switch (gcode->m) {
             case 119: {
                 for(auto& h : homing_axis) {
+                    if(h.pin_info == nullptr) continue; // ignore if not a homing endstop
                     string name;
                     name.append(1, h.axis).append(h.home_direction ? "_min" : "_max");
                     gcode->stream->printf("%s:%d ", name.c_str(), h.pin_info->pin.get());
@@ -1088,10 +1091,12 @@ void Endstops::on_gcode_received(void *argument)
             case 206: // M206 - set homing offset
                 if(is_rdelta) return; // RotaryDeltaCalibration module will handle this
                 for (auto &p : homing_axis) {
+                    if(p.pin_info == nullptr) continue; // ignore if not a homing endstop
                     if (gcode->has_letter(p.axis)) p.home_offset= gcode->get_value(p.axis);
                 }
 
                 for (auto &p : homing_axis) {
+                    if(p.pin_info == nullptr) continue; // ignore if not a homing endstop
                     gcode->stream->printf("%c: %5.3f ", p.axis, p.home_offset);
                 }
 
@@ -1109,6 +1114,7 @@ void Endstops::on_gcode_received(void *argument)
                 if(!is_rdelta) {
                     gcode->stream->printf(";Home offset (mm):\nM206 ");
                     for (auto &p : homing_axis) {
+                        if(p.pin_info == nullptr) continue; // ignore if not a homing endstop
                         gcode->stream->printf("%c%1.2f ", p.axis, p.home_offset);
                     }
                     gcode->stream->printf("\n");
