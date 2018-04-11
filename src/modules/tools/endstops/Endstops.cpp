@@ -632,14 +632,15 @@ void Endstops::home(axis_bitmap_t a)
 
     // potentially home A B and C individually
     if(homing_axis.size() > 3){
-        for (size_t i = A_AXIS; i < homing_axis.size(); ++i) {
-            if(axis_to_home[i]) {
+        for (size_t ia = A_AXIS; ia <= homing_axis.size(); ++ia) {
+            size_t i = homing_axis[ia].axis_index;
+            if (axis_to_home[i]) {
                 // now home A B or C
                 float delta[i+1];
                 for (size_t j = 0; j <= i; ++j) delta[j]= 0;
-                delta[i]= homing_axis[i].max_travel; // we go the max
-                if(homing_axis[i].home_direction) delta[i]= -delta[i];
-                THEROBOT->delta_move(delta, homing_axis[i].fast_rate, i+1);
+                delta[i]= homing_axis[ia].max_travel; // we go the max
+                if(homing_axis[ia].home_direction) delta[i]= -delta[i];
+                THEROBOT->delta_move(delta, homing_axis[ia].fast_rate, i+1);
                 // wait for it
                 THECONVEYOR->wait_for_idle();
             }
@@ -661,8 +662,9 @@ void Endstops::home(axis_bitmap_t a)
 
     // also check ABC
     if(homing_axis.size() > 3){
-        for (size_t i = A_AXIS; i < homing_axis.size(); ++i) {
-            if(axis_to_home[i] && !homing_axis[i].pin_info->triggered) {
+        for (size_t ia = A_AXIS; ia < homing_axis.size(); ++ia) {
+            size_t i = homing_axis[ia].axis_index;
+            if (axis_to_home[i] && !homing_axis[ia].pin_info->triggered) {
                 this->status = NOT_HOMING;
                 THEKERNEL->call_event(ON_HALT, nullptr);
                 return;
@@ -679,8 +681,8 @@ void Endstops::home(axis_bitmap_t a)
 
     // Move back a small distance for all homing axis
     this->status = MOVING_BACK;
-    float delta[homing_axis.size()];
-    for (size_t i = 0; i < homing_axis.size(); ++i) delta[i]= 0;
+    float delta[C_AXIS+1];
+    for (size_t i = 0; i <= C_AXIS; ++i) delta[i]= 0;
 
     // use minimum feed rate of all axes that are being homed (sub optimal, but necessary)
     float feed_rate= homing_axis[X_AXIS].slow_rate;
@@ -693,7 +695,7 @@ void Endstops::home(axis_bitmap_t a)
         }
     }
 
-    THEROBOT->delta_move(delta, feed_rate, homing_axis.size());
+    THEROBOT->delta_move(delta, feed_rate, C_AXIS+1);
     // wait until finished
     THECONVEYOR->wait_for_idle();
 
@@ -708,7 +710,7 @@ void Endstops::home(axis_bitmap_t a)
             delta[c]= 0;
         }
     }
-    THEROBOT->delta_move(delta, feed_rate, homing_axis.size());
+    THEROBOT->delta_move(delta, feed_rate, C_AXIS+1);
     // wait until finished
     THECONVEYOR->wait_for_idle();
 
@@ -789,7 +791,7 @@ void Endstops::process_home_command(Gcode* gcode)
         // eg 0b0101011001010 would be Y X Z A, 011 010 001 100 101 would be  B A X Y Z
         for (uint32_t m = homing_order; m != 0; m >>= 3) {
             uint32_t a= (m & 0x07)-1; // axis to home
-            if(a < homing_axis.size() && haxis[a]) { // if axis is selected to home
+            if(haxis[a]) { // if axis is selected to home
                 axis_bitmap_t bs;
                 bs.set(a);
                 home(bs);
