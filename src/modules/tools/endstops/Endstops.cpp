@@ -274,6 +274,14 @@ bool Endstops::load_config()
                 continue;
         }
 
+        // check we are not going above the number of defined actuators/axis
+        if(i >= THEROBOT->get_number_registered_motors()) {
+            // too many axis we only have configured n_motors
+            THEKERNEL->streams->printf("ERROR: endstop %d is greater than number of defined motors\n", i);
+            delete pin_info;
+            return false;
+        }
+
         // keep track of the maximum index that has been defined
         if(i > max_index) max_index= i;
 
@@ -288,12 +296,6 @@ bool Endstops::load_config()
 
         // enter into endstop array
         endstops.push_back(pin_info);
-
-        // check we are not going above the number of defined actuators/axis
-        if(i >= k_max_actuators) {
-            // too many axis we only have configured k_max_actuators
-            continue;
-        }
 
         // if set to none it means not used for homing (maybe limit only) so do not add to the homing array
         string direction= THEKERNEL->config->value(endstop_checksum, cs, direction_checksum)->by_default("none")->as_string();
