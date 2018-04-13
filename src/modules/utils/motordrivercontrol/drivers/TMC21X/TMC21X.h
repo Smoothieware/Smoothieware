@@ -43,7 +43,7 @@ class TMC21X
 {
 public:
     /*!
-     * \brief creates a new represenatation of a stepper motor connected to a TMC21X stepper driver
+     * \brief creates a new representation of a stepper motor connected to a TMC21X stepper driver
      *
      * This is the main constructor. If in doubt use this. You must provide all parameters as described below.
      *
@@ -53,7 +53,7 @@ public:
      * This should work on most motors (YMMV). You may want to configure and use the Spread Cycle Chopper, see  setSpreadCycleChopper().
      *
      * By default a microstepping of 1/32th is used to provide a smooth motor run, while still giving a good progression per step.
-     * You can select a different stepping with setMicrosteps() to aa different value.
+     * You can select a different stepping with setMicrosteps() to a different value.
      * \sa start(), setMicrosteps()
      */
     TMC21X(std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi, char designator);
@@ -61,7 +61,7 @@ public:
     /*!
      * \brief configures the TMC21X stepper driver. Before you called this function the stepper driver is in nonfunctional mode.
      *
-     * \param rms_current the maximum current to privide to the motor in mA (!). A value of 200 would send up to 200mA to the motor
+     * \param rms_current the maximum current to provide to the motor in mA (!). A value of 200 would send up to 200mA to the motor
      * \param resistor the current sense resistor in milli Ohm, defaults to ,15 Ohm ( or 150 milli Ohm) as in the TMC260 Arduino Shield
 
      * This routine configures the TMC26X stepper driver for the given values via SPI.
