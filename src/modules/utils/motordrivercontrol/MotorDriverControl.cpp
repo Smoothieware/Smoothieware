@@ -477,8 +477,8 @@ void MotorDriverControl::set_options(Gcode *gcode)
             //         gcode->add_nl = true;
             //     }
             // }
-            case TMC2130: break;
         }
+        case TMC2130: break;
         break;
     }
 }

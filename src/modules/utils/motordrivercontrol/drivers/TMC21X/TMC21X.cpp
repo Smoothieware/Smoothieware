@@ -37,6 +37,59 @@
 #include "checksumm.h"
 #include "StepTicker.h"
 
+#define motor_driver_control_checksum  CHECKSUM("motor_driver_control")
+#define sense_resistor_checksum        CHECKSUM("sense_resistor")
+
+//! return value for TMC21X.getOverTemperature() if there is a overtemperature situation in the TMC chip
+/*!
+ * This warning indicates that the TCM chip is too warm.
+ * It is still working but some parameters may be inferior.
+ * You should do something against it.
+ */
+#define TMC21X_OVERTEMPERATURE_PREWARNING 1
+//! return value for TMC21X.getOverTemperature() if there is a overtemperature shutdown in the TMC chip
+/*!
+ * This warning indicates that the TCM chip is too warm to operate and has shut down to prevent damage.
+ * It will stop working until it cools down again.
+ * If you encouter this situation you must do something against it. Like reducing the current or improving the PCB layout
+ * and/or heat management.
+ */
+#define TMC21X_OVERTEMPERATURE_SHUTDOWN 2
+
+//which values can be read out
+/*!
+ * Selects to readout the microstep position from the motor.
+ *\sa readStatus()
+ */
+#define TMC21X_READOUT_POSITION 0
+/*!
+ * Selects to read out the StallGuard value of the motor.
+ *\sa readStatus()
+ */
+#define TMC21X_READOUT_STALLGUARD 1
+/*!
+ * Selects to read out the current current setting (acc. to CoolStep) and the upper bits of the StallGuard value from the motor.
+ *\sa readStatus(), setCurrent()
+ */
+#define TMC21X_READOUT_CURRENT 3
+
+/*!
+ * Define to set the minimum current for CoolStep operation to 1/2 of the selected CS minium.
+ *\sa setCoolStepConfiguration()
+ */
+#define COOL_STEP_HALF_CS_LIMIT 0
+/*!
+ * Define to set the minimum current for CoolStep operation to 1/4 of the selected CS minium.
+ *\sa setCoolStepConfiguration()
+ */
+#define COOL_STEP_QUARTDER_CS_LIMIT 1
+
+#define DEFAULT_MICROSTEPPING_VALUE 32       //some default values used in initialization
+#define DEFAULT_DATA 0x00000000             //for initial register definition
+
+#define READ  0x00                  //driver read access request (MSB bit is 0)
+#define WRITE 0x80                  //driver write access request (MSB bit is 1)
+
 //TMC21X register definitions
 
 /* GENERAL CONFIGURATION REGISTERS (0x00...0x0F) */
@@ -103,8 +156,8 @@
 #define IOIN_DCIN_CFG5                   1 << 3   //1: DCIN_CFG5 pin high state
 #define IOIN_DRV_ENN_CFG6                1 << 4   //1: DRV_ENN_CFG6 pin high state
 #define IOIN_DCO                         1 << 5   //1: DCO pin high state
-#define IOIN_VERSION_MASK                0xFF000000ul    //0x11=first version of the IC
-                                                         //24 Identical numbers mean full digital compatibilityBits 31..24 are the version of the IC
+#define IOIN_VERSION                     255 << 24 //0x11=first version of the IC
+#define IOIN_VERSION_SHIFT                 24     //24 Identical numbers mean full digital compatibility. Bits 31..24 are the version of the IC
 
 /* VELOCITY DEPENDENT DRIVER FEATURE CONTROL REGISTER SET (0X10...0X1F) */
 
@@ -112,14 +165,14 @@
 /********************************************************************************/
 #define IHOLD_IRUN_REGISTER  0x10      // W    5+5+4  //Driver current control
 /********************************************************************************/
-//         Function                          Bit      Description
-#define REG_IHOLD_IRUN_IHOLD_MASK           0x1Ful    //Bits 4..0: Standstill current (0=1/32…31=32/32)
-                                                      //In combination with stealthChop mode, setting IHOLD=0 allows to choose freewheeling or coil short circuit for motor stand still.
-#define REG_IHOLD_IRUN_IRUN_MASK            0x1F00ul  //Bits 12..8: Motor run current (0=1/32…31=32/32)
-                                                      //
+//         Function                         Bit       Description
+#define IHOLD_IRUN_IHOLD                 31 << 0      //Bits 4..0: Standstill current (0=1/32…31=32/32)
+#define IHOLD_IRUN_IHOLD_SHIFT               0         //In combination with stealthChop mode, setting IHOLD=0 allows to choose freewheeling or coil short circuit for motor stand still.
+#define IHOLD_IRUN_IRUN                  31 << 8      //Bits 12..8: Motor run current (0=1/32…31=32/32)
+#define IHOLD_IRUN_IRUN_SHIFT                8         //
                                                       //Hint: Choose sense resistors in a way, that normal IRUN is 16 to 31 for best microstep performance.
-#define REG_IHOLD_IRUN_IHOLDDELAY_MASK      0xF0000ul //Bits 19..16: Controls the number of clock cycles for motor power down after a motion as soon as standstill is detected (stst=1) and TPOWERDOWN has expired.
-                                                      //The smooth transition avoids a motor jerk upon power down.
+#define IHOLD_IRUN_IHOLDDELAY            15 << 16     //Bits 19..16: Controls the number of clock cycles for motor power down after a motion as soon as standstill is detected (stst=1) and TPOWERDOWN has expired.
+#define IHOLD_IRUN_IHOLDDELAY_SHIFT         16        //The smooth transition avoids a motor jerk upon power down.
                                                       //
                                                       //0: instant power down
                                                       //1..15: Delay per current reduction step in multiple of 2^18 clocks
@@ -204,10 +257,10 @@
                                                          //This will also enable automatic current scaling.
 /********************************************************************************/
 //         Function                          Bit         Description
-#define XDIRECT_COIL_A                       0x1FFUL     //Coil A current (bits 8..0) (signed)
-                                                         //Range: +-248 for normal operation, up to +-255 with stealthChop
-#define XDIRECT_COIL_B                       0x1FF0000UL //Coil B current (bits 24..16) (signed)
-                                                         //Range: +-248 for normal operation, up to +-255 with stealthChop
+#define XDIRECT_COIL_A                       511 << 0    //Coil A current (bits 8..0) (signed)
+#define XDIRECT_COIL_A_SHIFT                 0           //Range: +-248 for normal operation, up to +-255 with stealthChop
+#define XDIRECT_COIL_B                       511 << 16   //Coil B current (bits 24..16) (signed)
+#define XDIRECT_COIL_B_SHIFT                 16          //Range: +-248 for normal operation, up to +-255 with stealthChop
 
 /* DCSTEP MINIMUM VELOCITY REGISTER (0x33) */
 
@@ -262,10 +315,12 @@
 
 /********************************************************************************/
 //         Function                          Bit         Description
-#define MSUTSEL_X3                        0xFF000000ul   //LUT segment 3 start
-#define MSUTSEL_X2                        0xFF0000ul     //LUT segment 2 start
-#define MSUTSEL_X1                        0xFF00ul       //LUT segment 1 start
-                                                         //The sine wave look up table can be divided into up to four segments using an individual step width controlentry Wx.
+#define MSUTSEL_X3                        255 << 24      //LUT segment 3 start
+#define MSUTSEL_X3_SHIFT                  24
+#define MSUTSEL_X2                        255 << 16      //LUT segment 2 start
+#define MSUTSEL_X2_SHIFT                  16
+#define MSUTSEL_X1                        255 << 8       //LUT segment 1 start
+#define MSUTSEL_X1_SHIFT                  8              //The sine wave look up table can be divided into up to four segments using an individual step width controlentry Wx.
                                                          //The segment borders are selected by X1, X2 and X3.
                                                          //
                                                          //Segment 0 goes from 0 to X1-1.
@@ -276,10 +331,13 @@
                                                          //For defined response the values shall satisfy: 0<X1<X2<X3
 
 #define MSUTSEL_W3                        (3 << 7)       //LUT width select from ofs(X3) to ofs255
+#define MSUTSEL_W3_SHIFT                      7
 #define MSUTSEL_W2                        (3 << 5)       //LUT width select from ofs(X2) to ofs(X3-1)
+#define MSUTSEL_W2_SHIFT                      5
 #define MSUTSEL_W1                        (3 << 3)       //LUT width select from ofs(X1) to ofs(X2-1)
+#define MSUTSEL_W1_SHIFT                      3
 #define MSUTSEL_W0                        (3 << 1)       //LUT width select from ofs00 to ofs(X1-1)
-                                                         //
+#define MSUTSEL_W0_SHIFT                      1          //
                                                          //Width control bit coding W0...W3:
                                                          //%00: MSLUT entry 0, 1 select: -1, +0
                                                          //%01: MSLUT entry 0, 1 select: +0, +1
@@ -292,10 +350,10 @@
                                                          //bit 23… 16: START_SIN90
 /********************************************************************************/
 //         Function                       Bit            Description
-#define MSLUTSTART_START_SIN              0xFFul          //START_SIN gives the absolute current at microstep table entry 0.
-                                                         //Range: START_SIN, reset default =0
-#define MSLUTSTART_START_SIN90            0xFF00ul        //START_SIN90 gives the absolute current for microstep table entry at positions 256.
-                                                         //Range: START_SIN 90, reset default =247
+#define MSLUTSTART_START_SIN              255 << 0       //START_SIN gives the absolute current at microstep table entry 0.
+#define MSLUTSTART_START_SIN_SHIFT        0              //Range: START_SIN, reset default =0
+#define MSLUTSTART_START_SIN90            255 << 8       //START_SIN90 gives the absolute current for microstep table entry at positions 256.
+#define MSLUTSTART_START_SIN90_SHIFT      8              //Range: START_SIN 90, reset default =247
                                                          //
                                                          //Start values are transferred to the microstep registers CUR_A and CUR_B, whenever
                                                          //the reference position MSCNT=0 is passed.
@@ -315,10 +373,10 @@
                                                          //bit 24… 16: CUR_B (signed):
 /********************************************************************************/
 //         Function                       Bit            Description
-#define MSCURACT_CUR_A                   0x1FFul         //Actual microstep current for motor phase A as read from MSLUT (not scaled by current)
-                                                         //Range +/-0...255
-#define MSCURACT_CUR_B                   0x1FF0000ul     //Actual microstep current for motor phase B as read from MSLUT (not scaled by current)
-                                                         //Range +/-0...255
+#define MSCURACT_CUR_A                   511 << 0        //Actual microstep current for motor phase A as read from MSLUT (not scaled by current)
+#define MSCURACT_CUR_A_SHIFT             0               //Range +/-0...255
+#define MSCURACT_CUR_B                   511 << 16       //Actual microstep current for motor phase B as read from MSLUT (not scaled by current)
+#define MSCURACT_CUR_B_SHIFT             16              //Range +/-0...255
 
 //         Register         Address    Type    N Bits    Description
 /********************************************************************************/
@@ -334,6 +392,7 @@
 #define CHOPCONF_INTPOL                (1 << 28)         //interpolation to 256 microsteps
                                                          //1: The actual microstep resolution (MRES) becomes extrapolated to 256 microsteps for smoothest motor operation.
 #define CHOPCONF_MRES                  (15 << 24)        //micro step resolution
+#define CHOPCONF_MRES_SHIFT                24            //
                                                          //%0000: Native 256 microstep setting
                                                          //%0001 ... %1000: 128, 64, 32, 16, 8, 4, 2, FULLSTEP
                                                          //Reduced microstep resolution for STEP/DIR operation.
@@ -341,6 +400,7 @@
                                                          //The driver automatically uses microstep positions which result in a symmetrical wave, when choosing a lower microstep resolution.
                                                          //step width=2^MRES [microsteps]
 #define CHOPCONF_SYNC                  (15 << 20)        //PWM synchronization clock
+#define CHOPCONF_SYNC_SHIFT                20            //
                                                          //This register allows synchronization of the chopper for both phases of a two phase motor in order to avoid the
                                                          //occurrence of a beat, especially at low motor velocities. It is automatically switched off above VHIGH.
                                                          //%0000: Chopper sync function chopSync off
@@ -359,6 +419,7 @@
                                                          //0: Low sensitivity, high sense resistor voltage
                                                          //1: High sensitivity, low sense resistor voltage
 #define CHOPCONF_TBL                   (3 << 15)         //blank time select
+#define CHOPCONF_TBL_SHIFT                15             //
                                                          //%00 ... %11:
                                                          //Set comparator blank time to 16, 24, 36 or 54 clocks
                                                          //Hint: %01 or %10 is recommended for most applications
@@ -371,9 +432,10 @@
 #define CHOPCONF_DISFDCC               (1 << 12)         //fast decay mode
                                                          //chm=1: disfdcc=1 disables current comparator usage for termination of the fast decay cycle.
 #define CHOPCONF_FD3                   (1 << 11)         //TFD [3]
+#define CHOPCONF_FD3_SHIFT                11             //
                                                          //chm=1: MSB of fast decay time setting TFD.
 #define CHOPCONF_HEND                  (15 << 7)         //CHM=0: HEND hysteresis low value, CHM=1 OFFSET sine wave offset
-                                                         //
+#define CHOPCONF_HEND_SHIFT                7             //
                                                          //CHM=0
                                                          //%0000 ... %1111: Hysteresis is -3, -2, -1, 0, 1, ..., 12 (1/512 of this setting adds to current setting)
                                                          //This is the hysteresis value which becomes used for the hysteresis chopper.
@@ -381,8 +443,8 @@
                                                          //CHM=1
                                                          //%0000 ... %1111: Offset is -3, -2, -1, 0, 1, ..., 12
                                                          //This is the sine wave offset and 1/512 of the value becomes added to the absolute value of each sine wave entry.
-#define CHOPCONF_HSTART                (7 << 4)          //CHM=0: HSTRT hysteresis start value added to HEND, CHM=1 TFD [2--0] fast decay time setting (MSB: fd3)
-                                                         //
+#define CHOPCONF_HSTRT                (7 << 4)          //CHM=0: HSTRT hysteresis start value added to HEND, CHM=1 TFD [2--0] fast decay time setting (MSB: fd3)
+#define CHOPCONF_HSTRT_SHIFT             4              //
                                                          //CHM=0
                                                          //%0000 ... %1111: Add 1, 2, ..., 8 to hysteresis low value HEND (1/512 of this setting adds to current setting)
                                                          //Attention: Effective HEND+HSTRT ≤ 16.
@@ -392,6 +454,7 @@
                                                          //%0000 ... %1111: Offset is -3, -2, -1, 0, 1, ..., 12
                                                          //Fast decay time setting TFD with NCLK = 32*TFD (%0000: slow decay only)
 #define CHOPCONF_TOFF                  (15 << 0)         //off time and driver enable
+#define CHOPCONF_TOFF_SHIFT                0             //
                                                          //Off time setting controls duration of slow decay phase
                                                          //NCLK = 12 + 32*TOFF
                                                          //%0000: Driver disable, all bridges off
@@ -407,25 +470,30 @@
                                                          //0: Standard mode, high time resolution for stallGuard2
                                                          //1: Filtered mode, stallGuard2 signal updated for each four fullsteps (resp. six fullsteps for 3 phase motor) only to compensate for motor pole tolerances
 #define COOLCONF_SGT                   (255 << 16)       //stallGuard2 threshold value
+#define COOLCONF_SGT_SHIFT                16             //
                                                          //0: Standard mode, high time resolution for stallGuard2
                                                          //This signed value controls stallGuard2 level for stall output and sets the optimum measurement range for readout.
                                                          //A lower value gives a higher sensitivity. Zero is the starting value working with most motors.
                                                          //-64 to +63: A higher value makes stallGuard2 less sensitive and requires more torque to indicate a stall.
 #define COOLCONF_SEIMIN                (1 << 15)         //minimum current for smart current control
-                                                         //0: 1/2 of current setting (IRUN)
+#define COOLCONF_SEIMIN_SHIFT          15                //0: 1/2 of current setting (IRUN)
                                                          //1: 1/4 of current setting (IRUN)
 #define COOLCONF_SEDN                  (3 << 13)         //current down step speed
+#define COOLCONF_SEDN_SHIFT               13             //
                                                          //%00: For each 32 stallGuard2 values decrease by one
                                                          //%01: For each 8 stallGuard2 values decrease by one
                                                          //%10: For each 2 stallGuard2 values decrease by one
                                                          //%11: For each stallGuard2 value decrease by one
 #define COOLCONF_SEMAX                 (15 << 8)         //stallGuard2 hysteresis value for smart current control
+#define COOLCONF_SEMAX_SHIFT               8             //
                                                          //If the stallGuard2 result is equal to or above (SEMIN+SEMAX+1)*32, the motor current becomes decreased to save energy.
                                                          //%0000 ... %1111: 0 ... 15
 #define COOLCONF_SEUP                  (3 << 5)          //current up step width
+#define COOLCONF_SEUP_SHIFT                5             //
                                                          //Current increment steps per measured stallGuard2 value
                                                          //%00 ... %11: 1, 2, 4, 8
 #define COOLCONF_SEMIN                 (15 << 0)         //minimum stallGuard2 value for smart current control and smart current enable
+#define COOLCONF_SEMIN_SHIFT               0             //
                                                          //If the stallGuard2 result falls below SEMIN*32, the motor current becomes increased to reduce motor load angle.
                                                          //%0000: smart current control coolStep off
                                                          //%0001 ... %1111: 1 ... 15
@@ -443,34 +511,36 @@
 
 //         Register         Address    Type    N Bits    Description
 /********************************************************************************/
-#define DRVSTATUS_REGISTER  0x6F    // R  //    22       //stallGuard2 value and driver error flags
+#define DRV_STATUS_REGISTER  0x6F    // R  //    22       //stallGuard2 value and driver error flags
 /********************************************************************************/
 //         Function                    Bit            Description
-#define DRVSTATUS_STST                 (1 << 31)      //standstill indicator
+#define DRV_STATUS_STST                 (1 << 31)      //standstill indicator
                                                       //This flag indicates motor stand still in each operation mode. This occurs 2^20 clocks after the last step pulse.
-#define DRVSTATUS_OLB                  (1 << 30)      //open load indicator phase B
-#define DRVSTATUS_OLA                  (1 << 29)      //open load indicator phase A
+#define DRV_STATUS_OLB                  (1 << 30)      //open load indicator phase B
+#define DRV_STATUS_OLA                  (1 << 29)      //open load indicator phase A
                                                       //1: Open load detected on phase A or B.
                                                       //Hint: This is just an informative flag. The driver takes no action upon it.
                                                       //False detection may occur in fast motion and standstill. Check during slow motion, only.
-#define DRVSTATUS_S2GB                 (1 << 28)      //short to ground indicator phase B
-#define DRVSTATUS_S2GA                 (1 << 27)      //short to ground indicator phase A
+#define DRV_STATUS_S2GB                 (1 << 28)      //short to ground indicator phase B
+#define DRV_STATUS_S2GA                 (1 << 27)      //short to ground indicator phase A
                                                       //1: Short to GND detected on phase A or B. The driver becomes disabled.
                                                       //The flags stay active, until the driver is disabled by software (TOFF=0) or by the ENN input.
-#define DRVSTATUS_OTPW                 (1 << 26)      //overtemperature pre-warning flag
+#define DRV_STATUS_OTPW                 (1 << 26)      //overtemperature pre-warning flag
                                                       //1: Overtemperature pre-warning threshold is exceeded.
                                                       //The overtemperature pre-warning flag is common for both bridges.
-#define DRVSTATUS_OT                   (1 << 25)      //overtemperature flag
+#define DRV_STATUS_OT                   (1 << 25)      //overtemperature flag
                                                       //1: Overtemperature limit has been reached. Drivers become disabled until otpw is also cleared due to cooling down of the IC.
                                                       //The overtemperature flag is common for both bridges.
-#define DRVSTATUS_STALLGUARD           (1 << 24)      //stallGuard2 status
+#define DRV_STATUS_STALLGUARD           (1 << 24)      //stallGuard2 status
                                                       //1: Motor stall detected (SG_RESULT=0) or dcStep stall in dcStep mode.
-#define DRVSTATUS_CS_ACTUAL            (31 << 16)     //actual motor current / smart energy current
+#define DRV_STATUS_CS_ACTUAL            (31 << 16)     //actual motor current / smart energy current
+#define DRV_STATUS_CS_ACTUAL_SHIFT          16        //
                                                       //Actual current control scaling, for monitoring smart energy current scaling controlled via settings in register COOLCONF,
                                                       //or for monitoring the function of the automatic current scaling.
-#define DRVSTATUS_FSACTIVE             (1 << 15)      //full step active indicator
+#define DRV_STATUS_FSACTIVE             (1 << 15)      //full step active indicator
                                                       //1: Indicates that the driver has switched to fullstep as defined by chopper mode settings and velocity thresholds.
-#define DRVSTATUS_SG_RESULT            (1023 << 0)    //stallGuard2 result respectively PWM on time for coil A in stand still for motor temperature detection
+#define DRV_STATUS_SG_RESULT            (1023 << 0)    //stallGuard2 result respectively PWM on time for coil A in stand still for motor temperature detection
+#define DRV_STATUS_SG_RESULT_SHIFT          0        //
                                                       //Mechanical load measurement: The stallGuard2 result gives a means to measure mechanical motor load.
                                                       //A higher value means lower mechanical load. A value of 0 signals highest load. With optimum SGT setting,
                                                       //this is an indicator for a motor stall. The stall detection compares SG_RESULT to 0 in order to detect a stall.
@@ -489,6 +559,7 @@
 //         Function                    Bit            Description
 
 #define PWMCONF_FREEWHEEL              (3 << 20)      //Allows different standstill modes
+#define PWMCONF_FREEWHEEL_SHIFT           20          //
                                                       //Stand still option when motor current setting is zero (I_HOLD=0).
                                                       //%00: Normal operation
                                                       //%01: Freewheeling
@@ -508,10 +579,12 @@
                                                       //%10: fPWM =2/512 fCLK
                                                       //%11: fPWM =2/410 fCLK
 #define PWMCONF_PWM_GRAD               (255 << 8)     //User defined amplitude (gradient) or regulation loop gradient
+#define PWMCONF_PWM_GRAD_SHIFT             8          //
                                                       //pwm_autoscale=0: Velocity dependent gradient for PWM amplitude:
                                                       //PWM_GRAD * 256 / TSTEP is added to PWM_AMPL
                                                       //pwm_autoscale=1: User defined maximum PWM amplitude change per half wave (1 to 15)
 #define PWMCONF_PWM_AMPL               (255 << 0)     //User defined amplitude (offset)
+#define PWMCONF_PWM_AMPL_SHIFT             0          //
                                                       //pwm_autoscale=0: User defined PWM amplitude offset (0-255). The resulting amplitude (limited to 0...255) is:
                                                       //PWM_AMPL + PWM_GRAD * 256 / TSTEP
                                                       //pwm_autoscale=1: User defined maximum PWM amplitude when switching back from current chopper mode to voltage PWM mode (switch over velocity defined by TPWMTHRS).
@@ -547,7 +620,8 @@
 
 //         Register         Address       Type    N Bits    Description
 /********************************************************************************/
-#define SPI_STATUS          0xFF000000ul  // R        8       //status flags transmitted with each SPI access in bits 39 to 32
+#define SPI_STATUS          15 << 0  // R       8      //status flags transmitted with each SPI access in bits 39 to 32
+#define SPI_STATUS_SHIFT       0
 /********************************************************************************/
 //         Function                    Bit               Description
 #define SPI_STATUS_STANDSTILL          1 << 3            //DRV_STATUS[31] – 1: Signals motor stand still
@@ -561,10 +635,10 @@
 TMC21X::TMC21X(std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi, char d) : spi(spi), designator(d)
 {
     //we are not started yet
-    //started = false;
+    started = false;
     //by default cool step is not enabled
-    //cool_step_enabled = false;
-    //error_reported.reset();
+    cool_step_enabled = false;
+    error_reported.reset();
 }
 
 /*
@@ -573,13 +647,6 @@ TMC21X::TMC21X(std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi, char d) 
  */
 void TMC21X::init(uint16_t cs)
 {
-    //set the initial values
-//    send2130(0x00,0x00000000);
-//    send2130(0x80,0x00000000);
-//    send2130(0xA0,0x00000000);
-//    send2130(0xC0,0x00000000);
-//    send2130(0xE0,0x00000000);
-
     //Reference
 //    this->send2130(0x80,0x00000001UL); //voltage on AIN is current reference
 //    this->send2130(0x90,0x00001010UL); //IHOLD=0x10, IRUN=0x10
@@ -594,10 +661,10 @@ void TMC21X::init(uint16_t cs)
 //    this->send2130(0xF0,0x000401C8ul);    //PWM_CONF: AUTO=1, 2/1024 Fclk, Switch amplitude limit=200, Grad=1
 
     //Other example
-    send2130(0x6F,0x00000000);
-    send2130(0x6F,0x00000000);
-    send2130(0xEC,0x00ABCDEF);
-    send2130(0xEC,0x00123456);
+    //send2130(0x6F,0x00000000);
+    //send2130(0x6F,0x00000000);
+    //send2130(0xEC,0x00ABCDEF);
+    //send2130(0xEC,0x00123456);
 
     //All read status
 //    send2130(0x00,0x00000000);
@@ -612,28 +679,952 @@ void TMC21X::init(uint16_t cs)
 //    send2130(0x71,0x00000000);
 //    send2130(0x73,0x00000000);
 //    send2130(0x6F,0x00000000);
+
+    // read chip specific config entries
+    this->resistor= THEKERNEL->config->value(motor_driver_control_checksum, cs, sense_resistor_checksum)->by_default(50)->as_number(); // in milliohms
+
+    //setting the default register values
+    this->gconf_register_value = DEFAULT_DATA;
+    this->ihold_irun_register_value = DEFAULT_DATA;
+    this->xdirect_register_value = DEFAULT_DATA;
+    this->chopconf_register_value = DEFAULT_DATA;
+    this->coolconf_register_value = DEFAULT_DATA;
+
+    //set the initial values
+    send2130(WRITE|GCONF_REGISTER, this->gconf_register_value);
+    send2130(WRITE|IHOLD_IRUN_REGISTER, this->ihold_irun_register_value);
+    send2130(WRITE|XDIRECT_REGISTER, this->xdirect_register_value);
+    send2130(WRITE|CHOPCONF_REGISTER, this->chopconf_register_value);
+    send2130(WRITE|COOLCONF_REGISTER, this->coolconf_register_value);
+
+    started = true;
+
+
+#if 1
+    //set to a conservative start value
+    setConstantOffTimeChopper(7, 54, 13, 12, 1);
+#else
+    //void TMC21X::setSpreadCycleChopper( constant_off_time,  blank_time,  hysteresis_start,  hysteresis_end,  hysteresis_decrement);
+
+    // openbuilds high torque nema23 3amps (2.8)
+    setSpreadCycleChopper(5, 36, 6, 0, 0);
+    // for 1.5amp kysan @ 12v
+    setSpreadCycleChopper(5, 54, 5, 0, 0);
+    // for 4amp Nema24 @ 12v
+    //setSpreadCycleChopper(5, 54, 4, 0, 0);
+#endif
+
+    setEnabled(false);
+
+    //set a nice microstepping value
+    setMicrosteps(DEFAULT_MICROSTEPPING_VALUE);
+
+    // set stallguard to a conservative value so it doesn't trigger immediately
+    setStallGuardThreshold(10, 1);
+
+}
+
+/*
+ * Set the number of microsteps per step.
+ * 0,2,4,8,16,32,64,128,256 is supported
+ * any value in between will be mapped to the next smaller value
+ * 0 and 1 set the motor in full step mode
+ */
+void TMC21X::setMicrosteps(int number_of_steps)
+{
+    long setting_pattern;
+    //poor mans log
+    if (number_of_steps >= 256) {
+        setting_pattern = 0;
+        microsteps = 256;
+    } else if (number_of_steps >= 128) {
+        setting_pattern = 1;
+        microsteps = 128;
+    } else if (number_of_steps >= 64) {
+        setting_pattern = 2;
+        microsteps = 64;
+    } else if (number_of_steps >= 32) {
+        setting_pattern = 3;
+        microsteps = 32;
+    } else if (number_of_steps >= 16) {
+        setting_pattern = 4;
+        microsteps = 16;
+    } else if (number_of_steps >= 8) {
+        setting_pattern = 5;
+        microsteps = 8;
+    } else if (number_of_steps >= 4) {
+        setting_pattern = 6;
+        microsteps = 4;
+    } else if (number_of_steps >= 2) {
+        setting_pattern = 7;
+        microsteps = 2;
+        //1 and 0 lead to full step
+    } else if (number_of_steps <= 1) {
+        setting_pattern = 8;
+        microsteps = 1;
+    }
+
+    //delete the old value
+    this->chopconf_register_value &= ~(CHOPCONF_MRES);
+    //set the new value
+    this->chopconf_register_value |= (setting_pattern << CHOPCONF_MRES_SHIFT);
+
+    //if started we directly send it to the motor
+    if (started) {
+        send2130(WRITE|CHOPCONF_REGISTER, chopconf_register_value);
+    }
+}
+
+/*
+ * returns the effective number of microsteps at the moment
+ */
+int TMC21X::getMicrosteps(void)
+{
+    return microsteps;
+}
+
+void TMC21X::setStepInterpolation(int8_t value)
+{
+    if (value) {
+        chopconf_register_value |= CHOPCONF_INTPOL;
+    } else {
+        chopconf_register_value &= ~(CHOPCONF_INTPOL);
+    }
+    //if started we directly send it to the motor
+    if (started) {
+        send2130(WRITE|CHOPCONF_REGISTER, chopconf_register_value);
+    }
+}
+
+void TMC21X::setDoubleEdge(int8_t value)
+{
+    if (value) {
+        chopconf_register_value |= CHOPCONF_DEDGE;
+    } else {
+        chopconf_register_value &= ~(CHOPCONF_DEDGE);
+    }
+    //if started we directly send it to the motor
+    if (started) {
+        send2130(WRITE|CHOPCONF_REGISTER, chopconf_register_value);
+    }
+}
+
+/*
+ * constant_off_time: The off time setting controls the minimum chopper frequency.
+ * For most applications an off time within the range of 5μs to 20μs will fit.
+ *      2...15: off time setting
+ *
+ * blank_time: Selects the comparator blank time. This time needs to safely cover the switching event and the
+ * duration of the ringing on the sense resistor. For
+ *      0: min. setting 3: max. setting
+ *
+ * fast_decay_time_setting: Fast decay time setting. With CHM=1, these bits control the portion of fast decay for each chopper cycle.
+ *      0: slow decay only
+ *      1...15: duration of fast decay phase
+ *
+ * sine_wave_offset: Sine wave offset. With CHM=1, these bits control the sine wave offset.
+ * A positive offset corrects for zero crossing error.
+ *      -3..-1: negative offset 0: no offset 1...12: positive offset
+ *
+ * use_current_comparator: Selects usage of the current comparator for termination of the fast decay cycle.
+ * If current comparator is enabled, it terminates the fast decay cycle in case the current
+ * reaches a higher negative value than the actual positive value.
+ *      1: enable comparator termination of fast decay cycle
+ *      0: end by time only
+ */
+void TMC21X::setConstantOffTimeChopper(int8_t constant_off_time, int8_t blank_time, int8_t fast_decay_time_setting, int8_t sine_wave_offset, uint8_t use_current_comparator)
+{
+    //perform some sanity checks
+    if (constant_off_time < 2) {
+        constant_off_time = 2;
+    } else if (constant_off_time > 15) {
+        constant_off_time = 15;
+    }
+    //save the constant off time
+    this->constant_off_time = constant_off_time;
+    int8_t blank_value;
+    //calculate the value acc to the clock cycles
+    if (blank_time >= 54) {
+        blank_value = 3;
+    } else if (blank_time >= 36) {
+        blank_value = 2;
+    } else if (blank_time >= 24) {
+        blank_value = 1;
+    } else {
+        blank_value = 0;
+    }
+    this->blank_time = blank_time;
+
+    if (fast_decay_time_setting < 0) {
+        fast_decay_time_setting = 0;
+    } else if (fast_decay_time_setting > 15) {
+        fast_decay_time_setting = 15;
+    }
+    if (sine_wave_offset < -3) {
+        sine_wave_offset = -3;
+    } else if (sine_wave_offset > 12) {
+        sine_wave_offset = 12;
+    }
+    //shift the sine_wave_offset
+    sine_wave_offset += 3;
+
+    //calculate the register setting
+    //first of all delete all the values for this
+    chopconf_register_value &= ~(CHOPCONF_RNDTF | CHOPCONF_TBL | CHOPCONF_DISFDCC | CHOPCONF_FD3 | CHOPCONF_HEND | CHOPCONF_HSTRT | CHOPCONF_TOFF);
+    //set the constant off pattern
+    chopconf_register_value |= CHOPCONF_CHM;
+    //set the blank timing value
+    chopconf_register_value |= ((unsigned long)blank_value) << CHOPCONF_TBL_SHIFT;
+    //setting the constant off time
+    chopconf_register_value |= constant_off_time;
+    //set the fast decay time
+    //set msb
+    chopconf_register_value |= (((unsigned long)(fast_decay_time_setting & 0x8)) << CHOPCONF_FD3_SHIFT);
+    //other bits
+    chopconf_register_value |= (((unsigned long)(fast_decay_time_setting & 0x7)) << CHOPCONF_HSTRT_SHIFT);
+    //set the sine wave offset
+    chopconf_register_value |= (unsigned long)sine_wave_offset << CHOPCONF_HEND_SHIFT;
+    //using the current comparator?
+    if (!use_current_comparator) {
+        chopconf_register_value |= CHOPCONF_DISFDCC;
+    }
+    //if started we directly send it to the motor
+    if (started) {
+        send2130(WRITE|CHOPCONF_REGISTER,chopconf_register_value);
+    }
+}
+
+/*
+ * constant_off_time: The off time setting controls the minimum chopper frequency.
+ * For most applications an off time within the range of 5μs to 20μs will fit.
+ *      2...15: off time setting
+ *
+ * blank_time: Selects the comparator blank time. This time needs to safely cover the switching event and the
+ * duration of the ringing on the sense resistor. For
+ *      0: min. setting 3: max. setting
+ *
+ * hysteresis_start: Hysteresis start setting. Please remark, that this value is an offset to the hysteresis end value HEND.
+ *      1...8
+ *
+ * hysteresis_end: Hysteresis end setting. Sets the hysteresis end value after a number of decrements. Decrement interval time is controlled by HDEC.
+ * The sum HSTRT+HEND must be <16. At a current setting CS of max. 30 (amplitude reduced to 240), the sum is not limited.
+ *      -3..-1: negative HEND 0: zero HEND 1...12: positive HEND
+ *
+ * hysteresis_decrement: Hysteresis decrement setting. This setting determines the slope of the hysteresis during on time and during fast decay time.
+ *      0: fast decrement 3: very slow decrement
+ */
+
+void TMC21X::setSpreadCycleChopper(int8_t constant_off_time, int8_t blank_time, int8_t hysteresis_start, int8_t hysteresis_end, int8_t hysteresis_decrement)
+{
+    h_start = hysteresis_start;
+    h_end = hysteresis_end;
+    h_decrement = hysteresis_decrement;
+    this->blank_time = blank_time;
+
+    //perform some sanity checks
+    if (constant_off_time < 2) {
+        constant_off_time = 2;
+    } else if (constant_off_time > 15) {
+        constant_off_time = 15;
+    }
+    //save the constant off time
+    this->constant_off_time = constant_off_time;
+    int8_t blank_value;
+    //calculate the value acc to the clock cycles
+    if (blank_time >= 54) {
+        blank_value = 3;
+    } else if (blank_time >= 36) {
+        blank_value = 2;
+    } else if (blank_time >= 24) {
+        blank_value = 1;
+    } else {
+        blank_value = 0;
+    }
+
+    if (hysteresis_start < 1) {
+        hysteresis_start = 1;
+    } else if (hysteresis_start > 8) {
+        hysteresis_start = 8;
+    }
+    hysteresis_start--;
+
+    if (hysteresis_end < -3) {
+        hysteresis_end = -3;
+    } else if (hysteresis_end > 12) {
+        hysteresis_end = 12;
+    }
+    //shift the hysteresis_end
+    hysteresis_end += 3;
+
+    if (hysteresis_decrement < 0) {
+        hysteresis_decrement = 0;
+    } else if (hysteresis_decrement > 3) {
+        hysteresis_decrement = 3;
+    }
+
+    //first of all delete all the values for this
+    chopconf_register_value &= ~(CHOPCONF_CHM | CHOPCONF_TBL | CHOPCONF_DISFDCC | CHOPCONF_FD3 | CHOPCONF_HEND | CHOPCONF_HSTRT | CHOPCONF_TOFF);
+    //set the blank timing value
+    chopconf_register_value |= ((unsigned long)blank_value) << CHOPCONF_TBL_SHIFT;
+    //setting the constant off time
+    chopconf_register_value |= constant_off_time;
+    //set the hysteresis_start
+    chopconf_register_value |= ((unsigned long)hysteresis_start) << CHOPCONF_HSTRT_SHIFT;
+    //set the hysteresis end
+    chopconf_register_value |= ((unsigned long)hysteresis_end) << CHOPCONF_HEND_SHIFT;
+    //set the hystereis decrement
+    chopconf_register_value |= ((unsigned long)hysteresis_decrement) << CHOPCONF_FD3_SHIFT;
+
+    //if started we directly send it to the motor
+    if (started) {
+        send2130(WRITE|CHOPCONF_REGISTER,chopconf_register_value);
+    }
+}
+
+/*
+ * In a constant off time chopper scheme both coil choppers run freely, i.e. are not synchronized.
+ * The frequency of each chopper mainly depends on the coil current and the position dependant motor coil inductivity, thus it depends on the microstep position.
+ * With some motors a slightly audible beat can occur between the chopper frequencies, especially when they are near to each other. This typically occurs at a
+ * few microstep positions within each quarter wave. This effect normally is not audible when compared to mechanical noise generated by ball bearings, etc.
+ * Further factors which can cause a similar effect are a poor layout of sense resistor GND connection.
+ * Hint: A common factor, which can cause motor noise, is a bad PCB layout causing coupling of both sense resistor voltages
+ * (please refer to sense resistor layout hint in chapter 8.1).
+ * In order to minimize the effect of a beat between both chopper frequencies, an internal random generator is provided.
+ * It modulates the slow decay time setting when switched on by the RNDTF bit. The RNDTF feature further spreads the chopper spectrum,
+ * reducing electromagnetic emission on single frequencies.
+ */
+void TMC21X::setRandomOffTime(int8_t value)
+{
+    if (value) {
+        chopconf_register_value |= CHOPCONF_RNDTF;
+    } else {
+        chopconf_register_value &= ~(CHOPCONF_RNDTF);
+    }
+    //if started we directly send it to the motor
+    if (started) {
+        send2130(WRITE|CHOPCONF_REGISTER,chopconf_register_value);
+    }
+}
+
+void TMC21X::setCurrent(unsigned int current)
+{
+    uint8_t current_scaling = 0;
+    //calculate the current scaling from the max current setting (in mA)
+    double mASetting = (double)current;
+    double resistor_value = (double) this->resistor;
+    // remove vesense flag
+    this->chopconf_register_value &= ~(CHOPCONF_VSENSE);
+    //this is derrived from I=(cs+1)/32*(Vsense/Rsense)
+    //leading to cs = CS = 32*R*I/V (with V = 0,32V oder 0,18V  and I = 1000*current)
+    //with Rsense=0,15
+    //for vsense = 0,32V (VSENSE not set)
+    //or vsense = 0,18V (VSENSE set)
+    current_scaling = (uint8_t)(((resistor_value + 20) * mASetting * 32.0F / (0.32F * 1000.0F * 1000.0F)) - 0.5F); //theoretically - 1.0 for better rounding it is 0.5
+
+    //check if the current scaling is too low
+    if (current_scaling < 16) {
+        //set the csense bit to get a use half the sense voltage (to support lower motor currents)
+        this->chopconf_register_value |= CHOPCONF_VSENSE;
+        //and recalculate the current setting
+        current_scaling = (uint8_t)(((resistor_value + 20) * mASetting * 32.0F / (0.18F * 1000.0F * 1000.0F)) - 0.5F); //theoretically - 1.0 for better rounding it is 0.5
+    }
+
+    //do some sanity checks
+    if (current_scaling > 31) {
+        current_scaling = 31;
+    }
+
+    //delete the old value
+    ihold_irun_register_value &= ~(IHOLD_IRUN_IRUN);
+    //set the new current scaling
+    ihold_irun_register_value  |= current_scaling << IHOLD_IRUN_IRUN_SHIFT;
+    //if started we directly send it to the motor
+    if (started) {
+        send2130(WRITE|CHOPCONF_REGISTER,chopconf_register_value);
+        send2130(WRITE|IHOLD_IRUN_REGISTER,ihold_irun_register_value);
+    }
+}
+
+unsigned int TMC21X::getCurrent(void)
+{
+    //we calculate the current according to the datasheet to be on the safe side
+    //this is not the fastest but the most accurate and illustrative way
+    double result = (double)(ihold_irun_register_value & IHOLD_IRUN_IRUN);
+    double resistor_value = (double)this->resistor;
+    double voltage = (chopconf_register_value & CHOPCONF_VSENSE) ? 0.18F : 0.32F;
+    result = (result + 1.0F) / 32.0F * voltage / (resistor_value + 20) * 1000.0F * 1000.0F;
+    return (unsigned int)result;
+}
+
+void TMC21X::setStallGuardThreshold(int8_t stall_guard_threshold, int8_t stall_guard_filter_enabled)
+{
+    if (stall_guard_threshold < -64) {
+        stall_guard_threshold = -64;
+        //We just have 5 bits
+    } else if (stall_guard_threshold > 63) {
+        stall_guard_threshold = 63;
+    }
+    //add trim down to 7 bits
+    stall_guard_threshold &= 0x7f;
+    //delete old stall guard settings
+    coolconf_register_value &= ~(COOLCONF_SGT);
+    if (stall_guard_filter_enabled) {
+        coolconf_register_value |= COOLCONF_SFILT;
+    }
+    //Set the new stall guard threshold
+    coolconf_register_value |= (((unsigned long)stall_guard_threshold << COOLCONF_SGT_SHIFT) & COOLCONF_SGT);
+
+    //if started we directly send it to the motor
+    if (started) {
+        send2130(WRITE|COOLCONF_REGISTER,coolconf_register_value);
+    }
+}
+
+int8_t TMC21X::getStallGuardThreshold(void)
+{
+    unsigned long stall_guard_threshold = coolconf_register_value & COOLCONF_SGT;
+    //shift it down to bit 0
+    stall_guard_threshold >>= COOLCONF_SGT_SHIFT;
+    //convert the value to an int to correctly handle the negative numbers
+    int8_t result = stall_guard_threshold;
+    //check if it is negative and fill it up with leading 1 for proper negative number representation
+    if (result & (1 << 6)) {
+        result |= 0xC0;
+    }
+    return result;
+}
+
+int8_t TMC21X::getStallGuardFilter(void)
+{
+    if (coolconf_register_value & COOLCONF_SFILT) {
+        return -1;
+    } else {
+        return 0;
+    }
+}
+
+void TMC21X::setCoolStepConfiguration(unsigned int lower_SG_threshold, unsigned int SG_hysteresis, uint8_t current_decrement_step_size,
+                                      uint8_t current_increment_step_size, uint8_t lower_current_limit)
+{
+    //sanitize the input values
+    if (lower_SG_threshold > 480) {
+        lower_SG_threshold = 480;
+    }
+    //divide by 32
+    lower_SG_threshold >>= 5;
+    if (SG_hysteresis > 480) {
+        SG_hysteresis = 480;
+    }
+    //divide by 32
+    SG_hysteresis >>= 5;
+    if (current_decrement_step_size > 3) {
+        current_decrement_step_size = 3;
+    }
+    if (current_increment_step_size > 3) {
+        current_increment_step_size = 3;
+    }
+    if (lower_current_limit > 1) {
+        lower_current_limit = 1;
+    }
+    //store the lower level in order to enable/disable the cool step
+    this->cool_step_lower_threshold = lower_SG_threshold;
+    //if cool step is not enabled we delete the lower value to keep it disabled
+    if (!this->cool_step_enabled) {
+        lower_SG_threshold = 0;
+    }
+    //the good news is that we can start with a complete new cool step register value
+    //and simply set the values in the register
+    coolconf_register_value = ((unsigned long)lower_SG_threshold) << COOLCONF_SEMIN_SHIFT | (((unsigned long)SG_hysteresis) << COOLCONF_SEMAX_SHIFT) | (((unsigned long)current_decrement_step_size) << COOLCONF_SEUP_SHIFT)
+                               | (((unsigned long)current_increment_step_size) << COOLCONF_SEDN_SHIFT) | (((unsigned long)lower_current_limit) << COOLCONF_SEIMIN_SHIFT);
+
+    if (started) {
+        send2130(WRITE|COOLCONF_REGISTER,coolconf_register_value);
+    }
+}
+
+void TMC21X::setCoolStepEnabled(bool enabled)
+{
+    //simply delete the lower limit to disable the cool step
+    coolconf_register_value &= ~(COOLCONF_SEMIN);
+    //and set it to the proper value if cool step is to be enabled
+    if (enabled) {
+        coolconf_register_value |= this->cool_step_lower_threshold;
+    }
+    //and save the enabled status
+    this->cool_step_enabled = enabled;
+    //save the register value
+    if (started) {
+        send2130(WRITE|COOLCONF_REGISTER,coolconf_register_value);
+    }
+}
+
+bool TMC21X::isCoolStepEnabled(void)
+{
+    return this->cool_step_enabled;
+}
+
+unsigned int TMC21X::getCoolStepLowerSgThreshold()
+{
+    //we return our internally stored value - in order to provide the correct setting even if cool step is not enabled
+    return this->cool_step_lower_threshold << COOLCONF_SEMIN_SHIFT;
+}
+
+unsigned int TMC21X::getCoolStepUpperSgThreshold()
+{
+    return (uint8_t)((coolconf_register_value & COOLCONF_SEMAX) >> COOLCONF_SEMAX_SHIFT) << 5;
+}
+
+uint8_t TMC21X::getCoolStepCurrentIncrementSize()
+{
+    return (uint8_t)((coolconf_register_value & COOLCONF_SEDN) >> COOLCONF_SEDN_SHIFT);
+}
+
+uint8_t TMC21X::getCoolStepNumberOfSGReadings()
+{
+    return (uint8_t)((coolconf_register_value & COOLCONF_SEUP) >> COOLCONF_SEUP_SHIFT);
+}
+
+uint8_t TMC21X::getCoolStepLowerCurrentLimit()
+{
+    return (uint8_t)((coolconf_register_value & COOLCONF_SEIMIN) >> COOLCONF_SEIMIN_SHIFT);
+}
+
+//reads the stall guard setting from last status
+//returns -1 if stallguard information is not present
+int TMC21X::getCurrentStallGuardReading(void)
+{
+    //if we don't yet started there cannot be a stall guard value
+    if (!started) {
+        return -1;
+    }
+    return ((readStatus(false) & DRV_STATUS_SG_RESULT) << DRV_STATUS_SG_RESULT_SHIFT);
+}
+
+uint8_t TMC21X::getCurrentCSReading(void)
+{
+    //if we don't yet started there cannot be a stall guard value
+    if (!started) {
+        return 0;
+    }
+    return ((readStatus(false) & DRV_STATUS_CS_ACTUAL) << DRV_STATUS_CS_ACTUAL_SHIFT);
+}
+
+bool TMC21X::isCurrentScalingHalfed()
+{
+    if (this->chopconf_register_value & CHOPCONF_VSENSE) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+unsigned int TMC21X::getCoolstepCurrent(void)
+{
+    float result = (float)getCurrentCSReading();
+    float resistor_value = (float)this->resistor;
+    float voltage = (chopconf_register_value & CHOPCONF_VSENSE) ? 0.18F : 0.32F;
+    result = (result + 1.0F) / 32.0F * voltage / (resistor_value + 20) * 1000.0F * 1000.0F;
+    return (unsigned int)roundf(result);
+}
+
+/*
+ return true if the stallguard threshold has been reached
+*/
+bool TMC21X::isStallGuardOverThreshold(void)
+{
+    if (!this->started) {
+        return false;
+    }
+    return (driver_status_result & DRV_STATUS_STALLGUARD);
+}
+
+/*
+ returns if there is any over temperature condition:
+ OVER_TEMPERATURE_PREWARING if pre warning level has been reached
+ OVER_TEMPERATURE_SHUTDOWN if the temperature is so hot that the driver is shut down
+ Any of those levels are not too good.
+*/
+int8_t TMC21X::getOverTemperature(void)
+{
+    if (!this->started) {
+        return 0;
+    }
+    if (driver_status_result & DRV_STATUS_OT) {
+        return TMC21X_OVERTEMPERATURE_SHUTDOWN;
+    }
+    if (driver_status_result & DRV_STATUS_OTPW) {
+        return TMC21X_OVERTEMPERATURE_PREWARNING;
+    }
+    return 0;
+}
+
+//is motor channel A shorted to ground
+bool TMC21X::isShortToGroundA(void)
+{
+    if (!this->started) {
+        return false;
+    }
+    return (driver_status_result & DRV_STATUS_S2GA);
+}
+
+//is motor channel B shorted to ground
+bool TMC21X::isShortToGroundB(void)
+{
+    if (!this->started) {
+        return false;
+    }
+    return (driver_status_result & DRV_STATUS_S2GB);
+}
+
+//is motor channel A connected
+bool TMC21X::isOpenLoadA(void)
+{
+    if (!this->started) {
+        return false;
+    }
+    return (driver_status_result & DRV_STATUS_OLA);
+}
+
+//is motor channel B connected
+bool TMC21X::isOpenLoadB(void)
+{
+    if (!this->started) {
+        return false;
+    }
+    return (driver_status_result & DRV_STATUS_OLB);
+}
+
+//is chopper inactive since 2^20 clock cycles - defaults to ~0,08s
+bool TMC21X::isStandStill(void)
+{
+    if (!this->started) {
+        return false;
+    }
+    return (driver_status_result & DRV_STATUS_STST);
+}
+
+//is chopper inactive since 2^20 clock cycles - defaults to ~0,08s
+bool TMC21X::isStallGuardReached(void)
+{
+    if (!this->started) {
+        return false;
+    }
+    return (driver_status_result & DRV_STATUS_STALLGUARD);
+}
+
+void TMC21X::setEnabled(bool enabled)
+{
+    //delete the t_off in the chopper config to get sure
+    chopconf_register_value &= ~(CHOPCONF_TOFF);
+    if (enabled) {
+        //and set the t_off time
+        chopconf_register_value |= this->constant_off_time;
+    }
+    //if not enabled we don't have to do anything since we already delete t_off from the register
+    if (started) {
+        send2130(WRITE|CHOPCONF_REGISTER, chopconf_register_value);
+    }
+}
+
+bool TMC21X::isEnabled()
+{
+    if (chopconf_register_value & CHOPCONF_TOFF) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+/*
+ * reads a value from the TMC21X status register. The value is not obtained directly but can then
+ * be read by the various status routines.
+ *
+ */
+int TMC21X::readStatus(bool microsteps)
+{
+    uint32_t response;
+    if(microsteps) {
+        //we need to read access twice to obtain the actual read access response
+        send2130(READ|MSCNT_REGISTER,DEFAULT_DATA);
+        response=send2130(READ|MSCNT_REGISTER,DEFAULT_DATA);
+    } else {
+        //we need to read access twice to obtain the actual read access response
+        send2130(READ|DRV_STATUS_REGISTER,DEFAULT_DATA);
+        response=send2130(READ|DRV_STATUS_REGISTER,DEFAULT_DATA);
+    }
+    return response;
+}
+
+void TMC21X::dumpStatus(StreamOutput *stream, bool readable)
+{
+    if (readable) {
+        stream->printf("designator %c, Chip type TMC21X\n", designator);
+
+        check_error_status_bits(stream);
+
+        if (this->isStallGuardReached()) {
+            stream->printf("INFO: Stall Guard level reached!\n");
+        }
+
+        if (this->isStandStill()) {
+            stream->printf("INFO: Motor is standing still.\n");
+        }
+
+        int value = readStatus(true);
+        stream->printf("Microstep position phase A: %d\n", value);
+
+        value = getCurrentStallGuardReading();
+        stream->printf("Stall Guard value: %d\n", value);
+
+        stream->printf("Current setting: %dmA\n", getCurrent());
+        stream->printf("Coolstep current: %dmA\n", getCoolstepCurrent());
+
+        stream->printf("Microsteps: 1/%d\n", microsteps);
+
+        stream->printf("Register dump:\n");
+        stream->printf(" gconf register: %08lX(%ld)\n", gconf_register_value, gconf_register_value);
+        stream->printf(" ihold_irun register: %08lX(%ld)\n", ihold_irun_register_value, ihold_irun_register_value);
+        stream->printf(" xdirect register: %08lX(%ld)\n", xdirect_register_value, xdirect_register_value);
+        stream->printf(" chopconf register: %08lX(%ld)\n", chopconf_register_value, chopconf_register_value);
+        stream->printf(" coolconf register: %08lX(%ld)\n", coolconf_register_value, coolconf_register_value);
+        stream->printf(" motor_driver_control.xxx.reg %05lX,%05lX,%05lX,%05lX,%05lX\n", gconf_register_value, ihold_irun_register_value, xdirect_register_value, chopconf_register_value, coolconf_register_value);
+
+    } else {
+        // TODO hardcoded for X need to select ABC as needed
+        bool moving = THEROBOT->actuators[0]->is_moving();
+        // dump out in the format that the processing script needs
+        if (moving) {
+            stream->printf("#sg%d,p%lu,k%u,r,", getCurrentStallGuardReading(), THEROBOT->actuators[0]->get_current_step(), getCoolstepCurrent());
+        } else {
+            readStatus(false); // get the status bits
+            stream->printf("#s,");
+        }
+        stream->printf("d%d,", THEROBOT->actuators[0]->which_direction() ? -1 : 1);
+        stream->printf("c%u,m%d,", getCurrent(), getMicrosteps());
+        // stream->printf('S');
+        // stream->printf(tmc21XStepper.getSpeed(), DEC);
+        stream->printf("t%d,f%d,", getStallGuardThreshold(), getStallGuardFilter());
+
+        //print out the general cool step config
+        if (isCoolStepEnabled()) stream->printf("Ke+,");
+        else stream->printf("Ke-,");
+
+        stream->printf("Kl%u,Ku%u,Kn%u,Ki%u,Km%u,",
+                       getCoolStepLowerSgThreshold(), getCoolStepUpperSgThreshold(), getCoolStepNumberOfSGReadings(), getCoolStepCurrentIncrementSize(), getCoolStepLowerCurrentLimit());
+
+        //detect the winding status
+        if (isOpenLoadA()) {
+            stream->printf("ao,");
+        } else if(isShortToGroundA()) {
+            stream->printf("ag,");
+        } else {
+            stream->printf("a-,");
+        }
+        //detect the winding status
+        if (isOpenLoadB()) {
+            stream->printf("bo,");
+        } else if(isShortToGroundB()) {
+            stream->printf("bg,");
+        } else {
+            stream->printf("b-,");
+        }
+
+        char temperature = getOverTemperature();
+        if (temperature == 0) {
+            stream->printf("x-,");
+        } else if (temperature == TMC21X_OVERTEMPERATURE_PREWARNING) {
+            stream->printf("xw,");
+        } else {
+            stream->printf("xe,");
+        }
+
+        if (isEnabled()) {
+            stream->printf("e1,");
+        } else {
+            stream->printf("e0,");
+        }
+
+        //write out the current chopper config
+        stream->printf("Cm%d,", (chopconf_register_value & CHOPCONF_CHM) != 0);
+        stream->printf("Co%d,Cb%d,", constant_off_time, blank_time);
+        if ((chopconf_register_value & CHOPCONF_CHM) == 0) {
+            stream->printf("Cs%d,Ce%d,Cd%d,", h_start, h_end, h_decrement);
+        }
+        stream->printf("\n");
+    }
+}
+
+// check error bits and report, only report once
+bool TMC21X::check_error_status_bits(StreamOutput *stream)
+{
+    bool error= false;
+    readStatus(false); // get the status bits
+
+    if (this->getOverTemperature()&TMC21X_OVERTEMPERATURE_PREWARNING) {
+        if(!error_reported.test(0)) stream->printf("%c - WARNING: Overtemperature Prewarning!\n", designator);
+        error_reported.set(0);
+    }else{
+        error_reported.reset(0);
+    }
+
+    if (this->getOverTemperature()&TMC21X_OVERTEMPERATURE_SHUTDOWN) {
+        if(!error_reported.test(1)) stream->printf("%c - ERROR: Overtemperature Shutdown!\n", designator);
+        error=true;
+        error_reported.set(1);
+    }else{
+        error_reported.reset(1);
+    }
+
+    if (this->isShortToGroundA()) {
+        if(!error_reported.test(2)) stream->printf("%c - ERROR: SHORT to ground on channel A!\n", designator);
+        error=true;
+        error_reported.set(2);
+    }else{
+        error_reported.reset(2);
+    }
+
+    if (this->isShortToGroundB()) {
+        if(!error_reported.test(3)) stream->printf("%c - ERROR: SHORT to ground on channel B!\n", designator);
+        error=true;
+        error_reported.set(3);
+    }else{
+        error_reported.reset(3);
+    }
+
+    // these seem to be triggered when moving so ignore them for now
+    if (this->isOpenLoadA()) {
+        if(!error_reported.test(4)) stream->printf("%c - ERROR: Channel A seems to be unconnected!\n", designator);
+        error=true;
+        error_reported.set(4);
+    }else{
+        error_reported.reset(4);
+    }
+
+    if (this->isOpenLoadB()) {
+        if(!error_reported.test(5)) stream->printf("%c - ERROR: Channel B seems to be unconnected!\n", designator);
+        error=true;
+        error_reported.set(5);
+    }else{
+        error_reported.reset(5);
+    }
+
+    // if(error) {
+    //     stream->printf("%08X\n", driver_status_result);
+    // }
+    return error;
+}
+
+bool TMC21X::checkAlarm()
+{
+    return check_error_status_bits(THEKERNEL->streams);
+}
+
+// sets a raw register to the value specified, for advanced settings
+// register 255 writes them, 0 displays what registers are mapped to what
+// FIXME status registers not reading back correctly, check docs
+bool TMC21X::setRawRegister(StreamOutput *stream, uint32_t reg, uint32_t val)
+{
+    switch(reg) {
+        case 255:
+            send2130(WRITE|GCONF_REGISTER, this->gconf_register_value);
+            send2130(WRITE|IHOLD_IRUN_REGISTER, this->ihold_irun_register_value);
+            send2130(WRITE|XDIRECT_REGISTER, this->xdirect_register_value);
+            send2130(WRITE|CHOPCONF_REGISTER, this->chopconf_register_value);
+            send2130(WRITE|COOLCONF_REGISTER, this->coolconf_register_value);
+            stream->printf("Registers written\n");
+            break;
+
+
+        case 1: this->gconf_register_value = val; stream->printf("gconf register set to %08lX\n", val); break;
+        case 2: this->ihold_irun_register_value = val; stream->printf("ihold irun config register set to %08lX\n", val); break;
+        case 3: this->xdirect_register_value = val; stream->printf("xdirect register set to %08lX\n", val); break;
+        case 4: this->chopconf_register_value = val; stream->printf("chopconf register set to %08lX\n", val); break;
+        case 5: this->coolconf_register_value = val; stream->printf("coolconf register set to %08lX\n", val); break;
+
+        default:
+            stream->printf("1: gconf register\n");
+            stream->printf("2: ihold irun register\n");
+            stream->printf("3: xdirect register\n");
+            stream->printf("4: chopconf register\n");
+            stream->printf("5: coolconf register\n");
+            stream->printf("255: update all registers\n");
+            return false;
+    }
+    return true;
 }
 
 /*
  * send register settings to the stepper driver via SPI
  * returns the current status 40 bit datagram, first 8 bits is the status, the last 32 bits are the register contents
  */
-void TMC21X::send2130(uint8_t reg, uint32_t datagram) //TODO Converted, needs testing
+uint32_t TMC21X::send2130(uint8_t reg, uint32_t datagram) //TODO Converted, needs testing
 {
-    uint8_t buf[5];
-
-    //Note: SPI write first to last //TODO check that this is actually working as may have just swapped bytes and not the bit order
-    buf[0] = (uint8_t)(reg);
-    buf[1] = (uint8_t)(datagram >> 24);
-    buf[2] = (uint8_t)(datagram >> 16);
-    buf[3] = (uint8_t)(datagram >> 8);
-    buf[4] = (uint8_t)(datagram >> 0);
-
+    uint8_t buf[] {(uint8_t)(reg), (uint8_t)(datagram >> 24), (uint8_t)(datagram >> 16), (uint8_t)(datagram >> 8), (uint8_t)(datagram >> 0)};
     uint8_t rbuf[5];
 
     //write/read the values
     spi(buf, 5, rbuf);
 
+    // construct reply
+    spi_status_result = rbuf[0];
+    uint32_t i_datagram = ((rbuf[1] << 24) | (rbuf[2] << 16) | (rbuf[3] << 8) | (rbuf[4] << 0));
+
+
     //print sent and received bytes
     THEKERNEL->streams->printf("sent: %02X, %02X, %02X, %02X, %02X received: %02X, %02X, %02X, %02X, %02X \n", buf[4], buf[3], buf[2], buf[1], buf[0], rbuf[4], rbuf[3], rbuf[2], rbuf[1], rbuf[0]);
+
+    return i_datagram;
 }
+
+#define HAS(X) (options.find(X) != options.end())
+#define GET(X) (options.at(X))
+bool TMC21X::set_options(const options_t& options)
+{
+    bool set = false;
+    if(HAS('O') || HAS('Q')) {
+        // void TMC21X::setStallGuardThreshold(int8_t stall_guard_threshold, int8_t stall_guard_filter_enabled)
+        int8_t o = HAS('O') ? GET('O') : getStallGuardThreshold();
+        int8_t q = HAS('Q') ? GET('Q') : getStallGuardFilter();
+        setStallGuardThreshold(o, q);
+        set = true;
+    }
+
+    if(HAS('H') && HAS('I') && HAS('J') && HAS('K') && HAS('L')) {
+        //void TMC21X::setCoolStepConfiguration(unsigned int lower_SG_threshold, unsigned int SG_hysteresis, uint8_t current_decrement_step_size, uint8_t current_increment_step_size, uint8_t lower_current_limit)
+        setCoolStepConfiguration(GET('H'), GET('I'), GET('J'), GET('K'), GET('L'));
+        set = true;
+    }
+
+    if(HAS('S')) {
+        uint32_t s = GET('S');
+        if(s == 0 && HAS('U') && HAS('V') && HAS('W') && HAS('X') && HAS('Y')) {
+            //void TMC21X::setConstantOffTimeChopper(int8_t constant_off_time, int8_t blank_time, int8_t fast_decay_time_setting, int8_t sine_wave_offset, uint8_t use_current_comparator)
+            setConstantOffTimeChopper(GET('U'), GET('V'), GET('W'), GET('X'), GET('Y'));
+            set = true;
+
+        } else if(s == 1 && HAS('U') && HAS('V') && HAS('W') && HAS('X') && HAS('Y')) {
+            //void TMC21X::setSpreadCycleChopper(int8_t constant_off_time, int8_t blank_time, int8_t hysteresis_start, int8_t hysteresis_end, int8_t hysteresis_decrement);
+            setSpreadCycleChopper(GET('U'), GET('V'), GET('W'), GET('X'), GET('Y'));
+            set = true;
+
+        } else if(s == 2 && HAS('Z')) {
+            setRandomOffTime(GET('Z'));
+            set = true;
+
+        } else if(s == 3 && HAS('Z')) {
+            setDoubleEdge(GET('Z'));
+            set = true;
+
+        } else if(s == 4 && HAS('Z')) {
+            setStepInterpolation(GET('Z'));
+            set = true;
+
+        } else if(s == 5 && HAS('Z')) {
+            setCoolStepEnabled(GET('Z') == 1);
+            set = true;
+        }
+    }
+
+    return set;
+}
+
