@@ -8,8 +8,8 @@ opendir(DIR, ".");
 @files =  grep { !/^\./ && !/(CVS|~)/ } readdir(DIR);
 closedir(DIR);
 
-foreach $file (@files) {  
-   
+foreach $file (@files) {
+
     if(-d $file && $file !~ /^\./) {
 	print "Processing directory $file\n";
 	opendir(DIR, $file);
@@ -23,9 +23,9 @@ foreach $file (@files) {
 
 foreach $file (@files) {
     if(-f $file) {
-	
+
 	print "Adding file $file\n";
-	
+
 	open(FILE, $file) || die "Could not open file $file\n";
 
 	$file =~ s-^-/-;
@@ -39,9 +39,9 @@ foreach $file (@files) {
 	    printf(OUTPUT "%#02x, ", unpack("C", substr($file, $j, 1)));
 	}
 	printf(OUTPUT "0,\n");
-	
-	
-	$i = 0;        
+
+
+	$i = 0;
 	while(read(FILE, $data, 1)) {
 	    if($i == 0) {
 		print(OUTPUT "\t");
@@ -71,7 +71,7 @@ for($i = 0; $i < @fvars; $i++) {
     }
     print(OUTPUT "const struct httpd_fsdata_file file".$fvar."[] = {{$prevfile, data$fvar, ");
     print(OUTPUT "data$fvar + ". (length($file) + 1) .", ");
-    print(OUTPUT "sizeof(data$fvar) - ". (length($file) + 1) ."}};\n\n");
+    print(OUTPUT "sizeof(data$fvar) - ". (length($file) + 2) ."}};\n\n"); # don't include the terminating nul
 }
 
 print(OUTPUT "#define HTTPD_FS_ROOT file$fvars[$i - 1]\n\n");

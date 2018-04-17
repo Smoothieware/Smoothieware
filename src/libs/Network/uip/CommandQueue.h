@@ -6,7 +6,7 @@
 #include "fifo.h"
 #include <string>
 
-#include "StreamOutput.h"
+class StreamOutput;
 
 class CommandQueue
 {

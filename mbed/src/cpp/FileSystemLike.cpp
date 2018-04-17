@@ -47,6 +47,7 @@ public:
 
         /* Setup cur entry and return a pointer to it */
         std::strncpy(cur_entry.d_name, ptr->getName(), NAME_MAX);
+        cur_entry.d_isdir= true; // always a directory at root level
         return &cur_entry;
     }
 

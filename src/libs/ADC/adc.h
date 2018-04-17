@@ -5,12 +5,13 @@
 
 #ifndef MBED_ADC_H
 #define MBED_ADC_H
- 
+
 #include "PinNames.h" // mbed.h lib
 #define XTAL_FREQ       12000000
 #define MAX_ADC_CLOCK   13000000
 #define CLKS_PER_SAMPLE 64
 
+namespace mbed {
 class ADC {
 public:
 
@@ -54,16 +55,16 @@ public:
     1 - Falling edge
     */
     void startmode(int mode, int edge);
-    
+
     //Return startmode state according to mode_edge=0: mode and mode_edge=1: edge
     int startmode(int mode_edge);
-    
+
     //Start ADC conversion
     void start(void);
 
     //Set interrupt enable/disable for pin to state
     void interrupt_state(PinName pin, int state);
-    
+
     //Return enable/disable state of interrupt for pin
     int interrupt_state(PinName pin);
 
@@ -87,7 +88,7 @@ public:
 
     //Set ADC offset to a value 0-7
     void offset(int offset);
-    
+
     //Return current ADC offset
     int offset(void);
 
@@ -96,13 +97,13 @@ public:
 
     //Return DONE flag of ADC on pin
     int done(PinName pin);
-    
+
     //Return OVERRUN flag of ADC on pin
     int overrun(PinName pin);
 
     //Return actual ADC clock
     int actual_adc_clock(void);
-    
+
     //Return actual maximum sample rate
     int actual_sample_rate(void);
 
@@ -112,20 +113,21 @@ public:
     //Return pin number of ADC channel
     int channel_to_pin_number(int chan);
 
+    int _pin_to_channel(PinName pin);
 
 private:
-    int _pin_to_channel(PinName pin);
     uint32_t _data_of_pin(PinName pin);
 
     int _adc_clk_freq;
     void adcisr(void);
     static void _adcisr(void);
     static ADC *instance;
-    
+
     uint32_t _adc_data[8];
     void(*_adc_isr[8])(uint32_t value);
     void(*_adc_g_isr)(int chan, uint32_t value);
     void(*_adc_m_isr)(void);
 };
+}
 
 #endif

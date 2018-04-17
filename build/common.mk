@@ -77,23 +77,55 @@ OUTDIR=../$(DEVICE)
 
 # List of sources to be compiled/assembled
 CSRCS1 = $(wildcard $(SRC)/*.c $(SRC)/*/*.c $(SRC)/*/*/*.c $(SRC)/*/*/*/*.c $(SRC)/*/*/*/*/*.c $(SRC)/*/*/*/*/*/*.c)
+# Totally exclude network if NONETWORK is defined
 ifeq "$(NONETWORK)" "1"
-CSRCS = $(filter-out $(SRC)/libs/Network/%,$(CSRCS1))
+CSRCS2 = $(filter-out $(SRC)/libs/Network/%,$(CSRCS1))
 DEFINES += -DNONETWORK
 else
-CSRCS = $(CSRCS1)
+CSRCS2 = $(CSRCS1)
+endif
+
+# do not compile the src/testframework as that can only be done with rake
+CSRCS = $(filter-out $(SRC)/testframework/%,$(CSRCS2))
+
+ifeq "$(DISABLEMSD)" "1"
+DEFINES += -DDISABLEMSD
 endif
 
 ASRCS =  $(wildcard $(SRC)/*.S $(SRC)/*/*.S $(SRC)/*/*/*.S $(SRC)/*/*/*/*.S $(SRC)/*/*/*/*/*.S)
 ifneq "$(OS)" "Windows_NT"
 ASRCS +=  $(wildcard $(SRC)/*.s $(SRC)/*/*.s $(SRC)/*/*/*.s $(SRC)/*/*/*/*.s $(SRC)/*/*/*/*/*.s)
 endif
+
 CPPSRCS1 = $(wildcard $(SRC)/*.cpp $(SRC)/*/*.cpp $(SRC)/*/*/*.cpp $(SRC)/*/*/*/*.cpp $(SRC)/*/*/*/*/*.cpp $(SRC)/*/*/*/*/*/*.cpp)
 ifeq "$(NONETWORK)" "1"
-CPPSRCS = $(filter-out $(SRC)/libs/Network/%,$(CPPSRCS1))
+	CPPSRCS2 = $(filter-out $(SRC)/libs/Network/%,$(CPPSRCS1))
 else
-CPPSRCS = $(CPPSRCS1)
+	ifneq "$(PLAN9)" "1"
+		DEFINES += -DNOPLAN9
+		CPPSRCS2 = $(filter-out $(SRC)/libs/Network/uip/plan9/%,$(CPPSRCS1))
+	else
+		CPPSRCS2 = $(CPPSRCS1)
+	endif
 endif
+
+# CNC build
+ifeq "$(CNC)" "1"
+	CPPSRCS21 = $(filter-out $(SRC)/modules/utils/panel/screens/3dprinter/%,$(CPPSRCS2))
+	DEFINES += -DCNC
+else
+	CPPSRCS21 = $(filter-out $(SRC)/modules/utils/panel/screens/cnc/%,$(CPPSRCS2))
+endif
+
+# Totally exclude any modules listed in EXCLUDE_MODULES
+# uppercase function
+uc = $(subst a,A,$(subst b,B,$(subst c,C,$(subst d,D,$(subst e,E,$(subst f,F,$(subst g,G,$(subst h,H,$(subst i,I,$(subst j,J,$(subst k,K,$(subst l,L,$(subst m,M,$(subst n,N,$(subst o,O,$(subst p,P,$(subst q,Q,$(subst r,R,$(subst s,S,$(subst t,T,$(subst u,U,$(subst v,V,$(subst w,W,$(subst x,X,$(subst y,Y,$(subst z,Z,$1))))))))))))))))))))))))))
+EXL = $(patsubst %,$(SRC)/modules/%/%,$(EXCLUDED_MODULES))
+CPPSRCS3 = $(filter-out $(EXL),$(CPPSRCS21))
+DEFINES += $(call uc, $(subst /,_,$(patsubst %,-DNO_%,$(EXCLUDED_MODULES))))
+
+# do not compile the src/testframework as that can only be done with rake
+CPPSRCS = $(filter-out $(SRC)/testframework/%,$(CPPSRCS3))
 
 # List of the objects files to be compiled/assembled
 OBJECTS = $(patsubst %.c,$(OUTDIR)/%.o,$(CSRCS)) $(patsubst %.s,$(OUTDIR)/%.o,$(patsubst %.S,$(OUTDIR)/%.o,$(ASRCS))) $(patsubst %.cpp,$(OUTDIR)/%.o,$(CPPSRCS))
@@ -114,7 +146,7 @@ MBED_DIR = $(BUILD_DIR)/../mbed/drop
 MRI_DIR  = $(BUILD_DIR)/../mri
 
 # Include path which points to external library headers and to subdirectories of this project which contain headers.
-SUBDIRS = $(wildcard $(SRC)/* $(SRC)/*/* $(SRC)/*/*/* $(SRC)/*/*/*/* $(SRC)/*/*/*/*/*)
+SUBDIRS = $(wildcard $(SRC)/* $(SRC)/*/* $(SRC)/*/*/* $(SRC)/*/*/*/* $(SRC)/*/*/*/*/* $(SRC)/*/*/*/*/*/*)
 PROJINCS = $(sort $(dir $(SUBDIRS)))
 INCDIRS += $(SRC) $(PROJINCS) $(MRI_DIR) $(MBED_DIR) $(MBED_DIR)/$(DEVICE)
 
@@ -130,7 +162,8 @@ endif
 
 # Libraries to be linked into final binary
 MBED_LIBS = $(MBED_DIR)/$(DEVICE)/GCC_ARM/libmbed.a
-SYS_LIBS = -lstdc++_s -lsupc++_s -lm -lgcc -lc_s -lgcc -lc_s -lnosys
+#SYS_LIBS = -lstdc++_s -lsupc++_s -lm -lgcc -lc_s -lgcc -lc_s -lnosys
+SYS_LIBS = -specs=nano.specs -lstdc++ -lsupc++ -lm -lgcc -lc -lnosys
 LIBS = $(LIBS_PREFIX)
 
 ifeq "$(MRI_ENABLE)" "1"
@@ -250,7 +283,7 @@ size: $(OUTDIR)/$(PROJECT).elf
 
 clean:
 	@echo Cleaning up all build generated files
-	$(Q) $(REMOVE_DIR) $(OUTDIR) $(QUIET)
+	$(Q) $(REMOVE_DIR) $(call convert-slash,$(OUTDIR)) $(QUIET)
 
 -include $(DEPFILES)
 

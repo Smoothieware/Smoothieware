@@ -6,24 +6,21 @@
 */
 
 
-#ifndef PLAYER_H
-#define PLAYER_H
+#pragma once
 
-#include "libs/Kernel.h"
-#include "libs/nuts_bolts.h"
-#include "libs/utils.h"
-#include "libs/StreamOutput.h"
+#include "Module.h"
 
-#define play_command_checksum           CHECKSUM("play")
-#define progress_command_checksum       CHECKSUM("progress")
-#define abort_command_checksum          CHECKSUM("abort")
-#define cd_command_checksum             CHECKSUM("cd")
-#define on_boot_gcode_checksum          CHECKSUM("on_boot_gcode")
-#define on_boot_gcode_enable_checksum   CHECKSUM("on_boot_gcode_enable")
+#include <stdio.h>
+#include <string>
+#include <map>
+#include <vector>
+using std::string;
+
+class StreamOutput;
 
 class Player : public Module {
     public:
-        Player(){}
+        Player();
 
         void on_module_loaded();
         void on_console_line_received( void* argument );
@@ -32,25 +29,38 @@ class Player : public Module {
         void on_get_public_data(void* argument);
         void on_set_public_data(void* argument);
         void on_gcode_received(void *argument);
-        string absolute_from_relative( string path );
-        void cd_command(   string parameters, StreamOutput* stream );
+        void on_halt(void *argument);
+
+    private:
         void play_command( string parameters, StreamOutput* stream );
         void progress_command( string parameters, StreamOutput* stream );
         void abort_command( string parameters, StreamOutput* stream );
+        void suspend_command( string parameters, StreamOutput* stream );
+        void resume_command( string parameters, StreamOutput* stream );
+        string extract_options(string& args);
+        void suspend_part2();
 
-    private:
-        string current_path;
         string filename;
-
-        bool on_boot_gcode_enable;
-        bool booted;
+        string after_suspend_gcode;
+        string before_resume_gcode;
         string on_boot_gcode;
-        bool playing_file;
         StreamOutput* current_stream;
         StreamOutput* reply_stream;
-        FILE* current_file_handler;
-        unsigned long file_size, played_cnt;
-        unsigned long elapsed_secs;
-};
 
-#endif // PLAYER_H
+        FILE* current_file_handler;
+        long file_size;
+        unsigned long played_cnt;
+        unsigned long elapsed_secs;
+        float saved_position[3]; // only saves XYZ
+        std::map<uint16_t, float> saved_temperatures;
+        struct {
+            bool on_boot_gcode_enable:1;
+            bool booted:1;
+            bool playing_file:1;
+            bool suspended:1;
+            bool was_playing_file:1;
+            bool leave_heaters_on:1;
+            bool override_leave_heaters_on:1;
+            uint8_t suspend_loops:4;
+        };
+};

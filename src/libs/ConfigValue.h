@@ -8,114 +8,40 @@
 #ifndef CONFIGVALUE_H
 #define CONFIGVALUE_H
 
-#include "libs/Kernel.h"
-#include "libs/utils.h"
-#include "libs/Pin.h"
-#include "Pwm.h"
-
-
-#define error(...) (fprintf(stderr, __VA_ARGS__), exit(1))
-
-using namespace std;
-#include <vector>
 #include <string>
-#include <stdio.h>
-
+using std::string;
 
 class ConfigValue{
     public:
-        ConfigValue(){
-            this->found = false;
-            this->default_set = false;
-            this->check_sums[0] = 0x0000;
-            this->check_sums[1] = 0x0000;
-            this->check_sums[2] = 0x0000;
-        };
+        ConfigValue();
+        ConfigValue(uint16_t *check_sums);
+        ConfigValue(const ConfigValue& to_copy);
+        ConfigValue& operator= (const ConfigValue& to_copy);
+        void clear();
+        ConfigValue* required();
+        float as_number();
+        int as_int();
+        bool as_bool();
+        string as_string();
 
-        ConfigValue* required(){
-            if( this->found == true ){
-                return this;
-            }else{
-                error("could not find config setting, please see http://smoothieware.org/configuring-smoothie\r\n");
-            }
-        }
+        ConfigValue* by_default(float val);
+        ConfigValue* by_default(string val);
+        ConfigValue* by_default(int val);
+        bool is_inverted();
 
-        float as_number(){
-            if( this->found == false && this->default_set == true ){
-                return this->default_double;
-            }else{
-                char* endptr = NULL;
-                float result = strtof(remove_non_number(this->value).c_str(), &endptr);
-                if( endptr <= remove_non_number(this->value).c_str() ){
-                    error("config setting with value '%s' and checksums[%u,%u,%u] is not a valid number, please see http://smoothieware.org/configuring-smoothie\r\n", this->value.c_str(), this->check_sums[0], this->check_sums[1], this->check_sums[2] );
-                }
-                return result;
-            }
-        }
 
-        int as_int()
-        {
-            if( this->found == false && this->default_set == true ){
-                return this->default_int;
-            }else{
-                char* endptr = NULL;
-                int result = strtol(remove_non_number(this->value).c_str(), &endptr, 10);
-                if( endptr <= remove_non_number(this->value).c_str() ){
-                    error("config setting with value '%s' and checksums[%u,%u,%u] is not a valid number, please see http://smoothieware.org/configuring-smoothie\r\n", this->value.c_str(), this->check_sums[0], this->check_sums[1], this->check_sums[2] );
-                }
-                return result;
-            }
-        }
+        friend class ConfigCache;
+        friend class Config;
+        friend class ConfigSource;
+        friend class Configurator;
+        friend class FileConfigSource;
 
-        std::string as_string(){
-            return this->value;
-        }
-
-        bool as_bool(){
-            if( this->found == false && this->default_set == true ){
-                return this->default_double;
-            }else{
-                if( this->value.find_first_of("ty1") != string::npos ){
-                    return true;
-                }else{
-                    return false;
-                }
-            }
-        }
-
-        ConfigValue* by_default(int val)
-        {
-            this->default_set = true;
-            this->default_int = val;
-            this->default_double = val;
-            return this;
-        }
-
-        ConfigValue* by_default(float val){
-            this->default_set = true;
-            this->default_double = val;
-            return this;
-        }
-
-        ConfigValue* by_default(std::string val){
-            if( this->found ){ return this; }
-            this->default_set = true;
-            this->value = val;
-            return this;
-        }
-
-        bool has_characters( string mask ){
-            if( this->value.find_first_of(mask) != string::npos ){ return true; }else{ return false; }
-        }
-
-        bool is_inverted(){
-            return this->has_characters(string("!"));
-        }
-
+    private:
+        bool has_characters( const char* mask );
+        string value;
         int default_int;
         float default_double;
         uint16_t check_sums[3];
-        string value;
         bool found;
         bool default_set;
 };

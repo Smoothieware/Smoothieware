@@ -45,7 +45,7 @@ struct httpd_state {
   struct pt outputpt, inputpt;
   char inputbuf[100];
   char filename[60];
-  char upload_name[32];
+  char upload_name[60];
   char method;
   char state;
   struct httpd_fs_file file;

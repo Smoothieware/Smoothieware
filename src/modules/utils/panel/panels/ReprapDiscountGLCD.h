@@ -8,9 +8,9 @@
 #define RRDGLCD_H
 
 #include "LcdBase.h"
+#include "Pin.h"
 
-#include "libs/Config.h"
-#include "rrdglcd/RrdGlcd.h"
+class RrdGlcd;
 
 class ReprapDiscountGLCD : public LcdBase {
     public:
@@ -46,6 +46,7 @@ class ReprapDiscountGLCD : public LcdBase {
         Pin encoder_b_pin;
         Pin click_pin;
         Pin pause_pin;
+        Pin back_pin;
         Pin buzz_pin;
 };
 

@@ -7,44 +7,59 @@
 
 
 
-#ifndef STEPTICKER_H
-#define STEPTICKER_H
+#pragma once
 
-using namespace std;
-#include <vector>
-#include "libs/nuts_bolts.h"
-#include "libs/Module.h"
-#include "libs/Kernel.h"
-#include "libs/StepperMotor.h"
+#include <stdint.h>
+#include <array>
+#include <bitset>
+#include <functional>
+#include <atomic>
+
+#include "ActuatorCoordinates.h"
+#include "TSRingBuffer.h"
+
+class StepperMotor;
+class Block;
+
+// handle 2.62 Fixed point
+#define STEPTICKER_FPSCALE (1LL<<62)
+#define STEPTICKER_FROMFP(x) ((float)(x)/STEPTICKER_FPSCALE)
 
 class StepTicker{
     public:
         StepTicker();
+        ~StepTicker();
         void set_frequency( float frequency );
-        void tick();
-        void signal_moves_finished();
-        StepperMotor* add_stepper_motor(StepperMotor* stepper_motor);
-        void set_reset_delay( float seconds );
-        void reset_tick();
-        void add_motor_to_active_list(StepperMotor* motor);
-        void remove_motor_from_active_list(StepperMotor* motor);
+        void set_unstep_time( float microseconds );
+        int register_motor(StepperMotor* motor);
+        float get_frequency() const { return frequency; }
+        void unstep_tick();
+        const Block *get_current_block() const { return current_block; }
+
+        void step_tick (void);
+        void handle_finish (void);
+        void start();
+
+        // whatever setup the block should register this to know when it is done
+        std::function<void()> finished_fnc{nullptr};
+
+        static StepTicker *getInstance() { return instance; }
+
+    private:
+        static StepTicker *instance;
+
+        bool start_next_block();
 
         float frequency;
-        vector<StepperMotor*> stepper_motors;
-        uint32_t delay;
         uint32_t period;
-        uint32_t debug;
-        uint32_t last_duration;
-        bool has_axes;
+        std::array<StepperMotor*, k_max_actuators> motor;
+        std::bitset<k_max_actuators> unstep;
 
-        bool moves_finished;
-        bool reset_step_pins;
+        Block *current_block;
+        uint32_t current_tick{0};
 
-        StepperMotor* active_motors[12];
-        uint32_t active_motor_bm;
-
+        struct {
+            volatile bool running:1;
+            uint8_t num_motors:4;
+        };
 };
-
-
-
-#endif

@@ -5,30 +5,31 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef GCODE_DISPATCH_H
-#define GCODE_DISPATCH_H
+#pragma once
 
-#include <string>
-using std::string;
 #include "libs/Module.h"
-#include "libs/Kernel.h"
-#include "utils/Gcode.h"
 
-#include "libs/StreamOutput.h"
-#define return_error_on_unhandled_gcode_checksum    CHECKSUM("return_error_on_unhandled_gcode")
+#include <stdio.h>
+#include <string>
 
-class GcodeDispatch : public Module {
-    public:
-        GcodeDispatch();
+class StreamOutput;
 
-        virtual void on_module_loaded();
-        virtual void on_console_line_received(void* line);
-        bool return_error_on_unhandled_gcode;
-    private:
-        int currentline;
-        bool uploading;
-        string upload_filename;
-        FILE *upload_fd;
+class GcodeDispatch : public Module
+{
+public:
+    GcodeDispatch();
+
+    virtual void on_module_loaded();
+    virtual void on_console_line_received(void *line);
+
+    uint8_t get_modal_command() const { return modal_group_1<4 ? modal_group_1 : 0; }
+private:
+    int currentline;
+    std::string upload_filename;
+    FILE *upload_fd;
+    StreamOutput* upload_stream{nullptr};
+    uint8_t modal_group_1;
+    struct {
+        bool uploading: 1;
+    };
 };
-
-#endif

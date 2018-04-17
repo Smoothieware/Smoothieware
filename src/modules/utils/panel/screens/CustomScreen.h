@@ -10,7 +10,6 @@
 
 #include "PanelScreen.h"
 
-#include <string>
 #include <vector>
 #include <tuple>
 
@@ -21,13 +20,11 @@ public:
 
     void on_refresh();
     void on_enter();
-    void on_main_loop();
     void display_menu_line(uint16_t line);
     void clicked_menu_entry(uint16_t line);
     int idle_timeout_secs() { return 60; }
 
 private:
-    std::string command;
     std::vector<std::tuple<const char*,const char*> > menu_items;
 };
 

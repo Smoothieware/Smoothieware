@@ -11,40 +11,39 @@
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
 #include "libs/SerialMessage.h"
-#include <string>
-#include <vector>
+#include "Gcode.h"
+#include "LcdBase.h"
+#include "libs/StreamOutput.h"
+#include "Robot.h"
 
 using namespace std;
 
+// static as it is shared by all screens
+std::deque<std::string> PanelScreen::command_queue;
+
 PanelScreen::PanelScreen() {}
+PanelScreen::~PanelScreen() {}
 
 void PanelScreen::on_refresh() {}
-void PanelScreen::on_main_loop() {}
-
-PanelScreen *PanelScreen::set_panel(Panel *parent)
-{
-    this->panel = parent;
-    return this;
-}
 
 void PanelScreen::on_enter() {}
 
 void PanelScreen::refresh_menu(bool clear)
 {
-    if (clear) this->panel->lcd->clear();
-    for (uint16_t i = this->panel->menu_start_line; i < this->panel->menu_start_line + min( this->panel->menu_rows, this->panel->panel_lines ); i++ ) {
-        this->panel->lcd->setCursor(2, i - this->panel->menu_start_line );
+    if (clear) THEPANEL->lcd->clear();
+    for (uint16_t i = THEPANEL->menu_start_line; i < THEPANEL->menu_start_line + min( THEPANEL->menu_rows, THEPANEL->panel_lines ); i++ ) {
+        THEPANEL->lcd->setCursor(2, i - THEPANEL->menu_start_line );
         this->display_menu_line(i);
     }
-    this->panel->lcd->setCursor(0, this->panel->menu_current_line - this->panel->menu_start_line );
-    this->panel->lcd->printf(">");
+    THEPANEL->lcd->setCursor(0, THEPANEL->menu_current_line - THEPANEL->menu_start_line );
+    THEPANEL->lcd->printf(">");
 }
 
 void PanelScreen::refresh_screen(bool clear)
 {
-    if (clear) this->panel->lcd->clear();
-    for (uint16_t i = this->panel->menu_start_line; i < this->panel->menu_start_line + min( this->panel->menu_rows, this->panel->panel_lines ); i++ ) {
-        this->panel->lcd->setCursor(0, i - this->panel->menu_start_line );
+    if (clear) THEPANEL->lcd->clear();
+    for (uint16_t i = THEPANEL->menu_start_line; i < THEPANEL->menu_start_line + min( THEPANEL->menu_rows, THEPANEL->panel_lines ); i++ ) {
+        THEPANEL->lcd->setCursor(0, i - THEPANEL->menu_start_line );
         this->display_menu_line(i);
     }
 }
@@ -52,7 +51,6 @@ void PanelScreen::refresh_screen(bool clear)
 PanelScreen *PanelScreen::set_parent(PanelScreen *passed_parent)
 {
     this->parent = passed_parent;
-    this->set_panel( passed_parent->panel );
     return this;
 }
 
@@ -63,27 +61,51 @@ void PanelScreen::send_gcode(std::string g)
     THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcode );
 }
 
-// Helper to send commands, must be called from mainloop
-// may contain multipe commands separated by \n
+void PanelScreen::send_gcode(const char *gm_code, char parameter, float value)
+{
+    char buf[132];
+    int n = snprintf(buf, sizeof(buf), "%s %c%f", gm_code, parameter, value);
+    string g(buf, n);
+    send_gcode(g);
+}
+
+// Helper to send commands, may be called from on_idle will delegate all commands to on_main_loop
+// may contain multiple commands separated by \n
 void PanelScreen::send_command(const char *gcstr)
 {
     string cmd(gcstr);
-    vector<string> q;
     while (cmd.size() > 0) {
         size_t b = cmd.find_first_of("\n");
         if ( b == string::npos ) {
-            q.push_back(cmd);
+            command_queue.push_back(cmd);
             break;
         }
-        q.push_back(cmd.substr( 0, b ));
+        command_queue.push_back(cmd.substr( 0, b ));
         cmd = cmd.substr(b + 1);
     }
+}
 
-    // for each command send it
-    for (std::vector<string>::iterator i = q.begin(); i != q.end(); ++i) {
+void PanelScreen::get_current_pos(float *cp)
+{
+    Robot::wcs_t mpos= THEROBOT->get_axis_position();
+    Robot::wcs_t pos= THEROBOT->mcs2wcs(mpos);
+    cp[0]= THEROBOT->from_millimeters(std::get<X_AXIS>(pos));
+    cp[1]= THEROBOT->from_millimeters(std::get<Y_AXIS>(pos));
+    cp[2]= THEROBOT->from_millimeters(std::get<Z_AXIS>(pos));
+}
+
+void PanelScreen::on_main_loop()
+{
+    // for each command in queue send it
+    while(command_queue.size() > 0) {
         struct SerialMessage message;
-        message.message = *i;
+        message.message = command_queue.front();
+        command_queue.pop_front();
         message.stream = &(StreamOutput::NullStream);
         THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
+        if(THEKERNEL->is_halted()) {
+            command_queue.clear();
+            break;
+        }
     }
 }

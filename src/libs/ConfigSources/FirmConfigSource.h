@@ -8,23 +8,27 @@
 #ifndef FIRMCONFIGSOURCE_H
 #define FIRMCONFIGSOURCE_H
 
-#include "ConfigValue.h"
 #include "ConfigSource.h"
-#include "ConfigCache.h"
+#include "checksumm.h"
+
+class ConfigCache;
 
 using namespace std;
 #include <string>
 
-#define FIRM_CONFIGSOURCE_CHECKSUM    CHECKSUM("firm")
+class FirmConfigSource : public ConfigSource
+{
+public:
+    FirmConfigSource(const char *name);
+    FirmConfigSource(const char* name, const char *start, const char *end);
 
-class FirmConfigSource : public ConfigSource {
-    public:
-        FirmConfigSource(uint16_t name_checksum = FIRM_CONFIGSOURCE_CHECKSUM);
-        void transfer_values_to_cache( ConfigCache* cache );
-        bool is_named( uint16_t check_sum );
-        void write( string setting, string value );
-        string read( uint16_t check_sums[3] );
+    void transfer_values_to_cache( ConfigCache *cache );
+    bool is_named( uint16_t check_sum );
+    bool write( string setting, string value );
+    string read( uint16_t check_sums[3] );
 
+private:
+    const char *start, *end;
 };
 
 

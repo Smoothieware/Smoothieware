@@ -28,7 +28,7 @@ public:
     *@param cd Smoothie Pin for cs
     *@return none
     */
-    RrdGlcd (PinName mosi, PinName sclk, Pin cs);
+    RrdGlcd (int spi_channel, Pin cs);
 
     virtual ~RrdGlcd();
 

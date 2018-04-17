@@ -4,156 +4,120 @@
       Smoothie is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
-#include "mri.h"
-#include "libs/Kernel.h"
 #include "StepperMotor.h"
+
+#include "Kernel.h"
 #include "MRI_Hooks.h"
+#include "StepTicker.h"
 
-// A StepperMotor represents an actual stepper motor. It is used to generate steps that move the actual motor at a given speed
-// TODO : Abstract this into Actuator
+#include <math.h>
+#include "mbed.h"
 
-StepperMotor::StepperMotor(){
-    this->moving = false;
-    this->paused = false;
-    this->fx_counter = 0;
-    this->stepped = 0;
-    this->fx_ticks_per_step = 0;
-    this->steps_to_move = 0;
-    this->remove_from_active_list_next_reset = false;
-    this->is_move_finished = false;
-    this->signal_step = false;
-    this->step_signal_hook = new Hook();
-}
-
-StepperMotor::StepperMotor(Pin* step, Pin* dir, Pin* en) : step_pin(step), dir_pin(dir), en_pin(en) {
-    this->moving = false;
-    this->paused = false;
-    this->fx_counter = 0;
-    this->stepped = 0;
-    this->fx_ticks_per_step = 0;
-    this->steps_to_move = 0;
-    this->remove_from_active_list_next_reset = false;
-    this->is_move_finished = false;
-    this->signal_step = false;
-    this->step_signal_hook = new Hook();
-
-    set_high_on_debug(en->port_number, en->pin);
-}
-
-// This is called ( see the .h file, we had to put a part of things there for obscure inline reasons ) when a step has to be generated
-// we also here check if the move is finished etc ...
-void StepperMotor::step(){
-
-    // output to pins 37t
-    this->step_pin->set( 1                   );
-    this->step_ticker->reset_step_pins = true;
-
-    // move counter back 11t
-    this->fx_counter -= this->fx_ticks_per_step;
-
-    // we have moved a step 9t
-    this->stepped++;
-
-    // Do we need to signal this step
-    if( this->stepped == this->signal_step_number && this->signal_step ){
-        this->step_signal_hook->call();
+StepperMotor::StepperMotor(Pin &step, Pin &dir, Pin &en) : step_pin(step), dir_pin(dir), en_pin(en)
+{
+    if(en.connected()) {
+        set_high_on_debug(en.port_number, en.pin);
     }
 
-    // Is this move finished ?
-    if( this->stepped == this->steps_to_move ){
-        // Mark it as finished, then StepTicker will call signal_mode_finished() 
-        // This is so we don't call that before all the steps have been generated for this tick()
-        this->is_move_finished = true;
-        this->step_ticker->moves_finished = true;
-    }
+    steps_per_mm         = 1.0F;
+    max_rate             = 50.0F;
 
+    last_milestone_steps = 0;
+    last_milestone_mm    = 0.0F;
+    current_position_steps= 0;
+    moving= false;
+    acceleration= NAN;
+    selected= true;
+    extruder= false;
+
+    enable(false);
+    unstep(); // initialize step pin
+    set_direction(false); // initialize dir pin
+
+    this->register_for_event(ON_HALT);
+    this->register_for_event(ON_ENABLE);
 }
 
-
-// If the move is finished, the StepTicker will call this ( because we asked it to in tick() )
-void StepperMotor::signal_move_finished(){
-
-            // work is done ! 8t
-            this->moving = false;
-            this->steps_to_move = 0;
-
-            // signal it to whatever cares 41t 411t
-            this->end_hook->call();
-
-            // We only need to do this if we were not instructed to move
-            if( this->moving == false ){
-                this->update_exit_tick();
-            }
-
-            this->is_move_finished = false;
+StepperMotor::~StepperMotor()
+{
+    THEKERNEL->unregister_for_event(ON_HALT, this);
+    THEKERNEL->unregister_for_event(ON_ENABLE, this);
 }
 
-// This is just a way not to check for ( !this->moving || this->paused || this->fx_ticks_per_step == 0 ) at every tick()
-inline void StepperMotor::update_exit_tick(){
-    if( !this->moving || this->paused || this->steps_to_move == 0 ){
-        // We must exit tick() after setting the pins, no bresenham is done
-        //this->remove_from_active_list_next_reset = true;
-        this->step_ticker->remove_motor_from_active_list(this);
-    }else{
-        // We must do the bresenham in tick()
-        // We have to do this or there could be a bug where the removal still happens when it doesn't need to
-        this->step_ticker->add_motor_to_active_list(this);
+void StepperMotor::on_halt(void *argument)
+{
+    if(argument == nullptr) {
+        enable(false);
+        moving= false;
     }
 }
 
+void StepperMotor::on_enable(void *argument)
+{
+    // argument is a uin32_t where bit0 is on or off, and bit 1:X, 2:Y, 3:Z, 4:A, 5:B, 6:C etc
+    // for now if bit0 is 1 we turn all on, if 0 we turn all off otherwise we turn selected axis off
+    uint32_t bm= (uint32_t)argument;
+    if(bm == 0x01) {
+        enable(true);
 
-
-// Instruct the StepperMotor to move a certain number of steps
-void StepperMotor::move( bool direction, unsigned int steps ){
-    // We do not set the direction directly, we will set the pin just before the step pin on the next tick
-    this->dir_pin->set(direction);
-
-    // How many steps we have to move until the move is done
-    this->steps_to_move = steps;
-
-    // Zero our tool counters
-    this->fx_counter = 0;      // Bresenheim counter
-    this->stepped = 0;
-
-    // Do not signal steps until we get instructed to
-    this->signal_step = false;
-
-    // Starting now we are moving
-    if( steps > 0 ){
-        this->moving = true;
-    }else{
-        this->moving = false;
+    }else if(bm == 0 || ((bm&0x01) == 0 && ((bm&(0x02<<motor_id)) != 0)) ) {
+        enable(false);
     }
-    this->update_exit_tick();
-
 }
 
-// Set the speed at which this steper moves
-void StepperMotor::set_speed( float speed ){
-
-    if (speed < 20.0)
-        speed = 20.0;
-
-    // How many steps we must output per second
-    this->steps_per_second = speed;
-
-    // How many ticks ( base steps ) between each actual step at this speed, in fixed point 64
-    float ticks_per_step = (float)( (float)this->step_ticker->frequency / speed );
-    float double_fx_ticks_per_step = (float)(1<<8) * ( (float)(1<<8) * ticks_per_step ); // 8x8 because we had to do 16x16 because 32 did not work
-    this->fx_ticks_per_step = (uint32_t)( floor(double_fx_ticks_per_step) );
-
+void StepperMotor::change_steps_per_mm(float new_steps)
+{
+    steps_per_mm = new_steps;
+    last_milestone_steps = lroundf(last_milestone_mm * steps_per_mm);
+    current_position_steps = last_milestone_steps;
 }
 
-// Pause this stepper motor
-void StepperMotor::pause(){
-    this->paused = true;
-    this->update_exit_tick();
+void StepperMotor::change_last_milestone(float new_milestone)
+{
+    last_milestone_mm = new_milestone;
+    last_milestone_steps = lroundf(last_milestone_mm * steps_per_mm);
+    current_position_steps = last_milestone_steps;
 }
 
-// Unpause this stepper motor
-void StepperMotor::unpause(){
-    this->paused = false;
-    this->update_exit_tick();
+void StepperMotor::set_last_milestones(float mm, int32_t steps)
+{
+    last_milestone_mm= mm;
+    last_milestone_steps= steps;
+    current_position_steps= last_milestone_steps;
 }
 
+void StepperMotor::update_last_milestones(float mm, int32_t steps)
+{
+    last_milestone_steps += steps;
+    last_milestone_mm = mm;
+}
 
+int32_t StepperMotor::steps_to_target(float target)
+{
+    int32_t target_steps = lroundf(target * steps_per_mm);
+    return target_steps - last_milestone_steps;
+}
+
+// Does a manual step pulse, used for direct encoder control of a stepper
+// NOTE this is experimental and may change and/or be reomved in the future, it is an unsupported feature.
+// use at your own risk
+void StepperMotor::manual_step(bool dir)
+{
+    if(!is_enabled()) enable(true);
+
+    // set direction if needed
+    if(this->direction != dir) {
+        this->direction= dir;
+        this->dir_pin.set(dir);
+        wait_us(1);
+    }
+
+    // pulse step pin
+    this->step_pin.set(1);
+    wait_us(3);
+    this->step_pin.set(0);
+
+
+    // keep track of actuators actual position in steps
+    this->current_position_steps += (dir ? -1 : 1);
+}

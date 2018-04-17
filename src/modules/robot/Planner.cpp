@@ -6,7 +6,6 @@
 */
 
 using namespace std;
-#include <vector>
 
 #include "mri.h"
 #include "nuts_bolts.h"
@@ -17,82 +16,116 @@ using namespace std;
 #include "Block.h"
 #include "Planner.h"
 #include "Conveyor.h"
+#include "StepperMotor.h"
+#include "Config.h"
+#include "checksumm.h"
+#include "Robot.h"
+#include "ConfigValue.h"
 
-#define acceleration_checksum          CHECKSUM("acceleration")
-#define max_jerk_checksum              CHECKSUM("max_jerk")
+#include <math.h>
+#include <algorithm>
+
 #define junction_deviation_checksum    CHECKSUM("junction_deviation")
+#define z_junction_deviation_checksum  CHECKSUM("z_junction_deviation")
 #define minimum_planner_speed_checksum CHECKSUM("minimum_planner_speed")
 
 // The Planner does the acceleration math for the queue of Blocks ( movements ).
 // It makes sure the speed stays within the configured constraints ( acceleration, junction_deviation, etc )
 // It goes over the list in both direction, every time a block is added, re-doing the math to make sure everything is optimal
 
-Planner::Planner(){
-    clear_vector(this->position);
-    clear_vector_float(this->previous_unit_vec);
-    this->has_deleted_block = false;
-}
-
-void Planner::on_module_loaded(){
-    register_for_event(ON_CONFIG_RELOAD);
-    this->on_config_reload(this);
+Planner::Planner()
+{
+    memset(this->previous_unit_vec, 0, sizeof this->previous_unit_vec);
+    config_load();
 }
 
 // Configure acceleration
-void Planner::on_config_reload(void* argument){
-    this->acceleration =       THEKERNEL->config->value(acceleration_checksum       )->by_default(100  )->as_number() * 60 * 60; // Acceleration is in mm/minute^2, see https://github.com/grbl/grbl/commit/9141ad282540eaa50a41283685f901f29c24ddbd#planner.c
-    this->junction_deviation = THEKERNEL->config->value(junction_deviation_checksum )->by_default(0.05f)->as_number();
-    this->minimum_planner_speed = THEKERNEL->config->value(minimum_planner_speed_checksum )->by_default(0.0f)->as_number();
+void Planner::config_load()
+{
+    this->junction_deviation = THEKERNEL->config->value(junction_deviation_checksum)->by_default(0.05F)->as_number();
+    this->z_junction_deviation = THEKERNEL->config->value(z_junction_deviation_checksum)->by_default(NAN)->as_number(); // disabled by default
+    this->minimum_planner_speed = THEKERNEL->config->value(minimum_planner_speed_checksum)->by_default(0.0f)->as_number();
 }
 
 
 // Append a block to the queue, compute it's speed factors
-void Planner::append_block( int target[], float feed_rate, float distance, float deltas[] ){
-
+bool Planner::append_block( ActuatorCoordinates &actuator_pos, uint8_t n_motors, float rate_mm_s, float distance, float *unit_vec, float acceleration, float s_value, bool g123)
+{
     // Create ( recycle ) a new block
-    Block* block = THEKERNEL->conveyor->queue.head_ref();
+    Block* block = THECONVEYOR->queue.head_ref();
 
     // Direction bits
-    block->direction_bits = 0;
-    for( int stepper=ALPHA_STEPPER; stepper<=GAMMA_STEPPER; stepper++){
-        if( target[stepper] < position[stepper] ){ block->direction_bits |= (1<<stepper); }
+    bool has_steps = false;
+    for (size_t i = 0; i < n_motors; i++) {
+        int32_t steps = THEROBOT->actuators[i]->steps_to_target(actuator_pos[i]);
+        // Update current position
+        if(steps != 0) {
+            THEROBOT->actuators[i]->update_last_milestones(actuator_pos[i], steps);
+            has_steps = true;
+        }
+
+        // find direction
+        block->direction_bits[i] = (steps < 0) ? 1 : 0;
+        // save actual steps in block
+        block->steps[i] = labs(steps);
     }
 
-    // Number of steps for each stepper
-    for( int stepper=ALPHA_STEPPER; stepper<=GAMMA_STEPPER; stepper++){ block->steps[stepper] = labs(target[stepper] - this->position[stepper]); }
+    // sometimes even though there is a detectable movement it turns out there are no steps to be had from such a small move
+    if(!has_steps) {
+        block->clear();
+        return false;
+    }
+
+    // info needed by laser
+    block->s_value = roundf(s_value*(1<<11)); // 1.11 fixed point
+    block->is_g123 = g123;
+
+    // use default JD
+    float junction_deviation = this->junction_deviation;
+
+    // use either regular junction deviation or z specific and see if a primary axis move
+    block->primary_axis = true;
+    if(block->steps[ALPHA_STEPPER] == 0 && block->steps[BETA_STEPPER] == 0) {
+        if(block->steps[GAMMA_STEPPER] != 0) {
+            // z only move
+            if(!isnan(this->z_junction_deviation)) junction_deviation = this->z_junction_deviation;
+
+        } else {
+            // is not a primary axis move
+            block->primary_axis= false;
+            #if N_PRIMARY_AXIS > 3
+                for (int i = 3; i < N_PRIMARY_AXIS; ++i) {
+                    if(block->steps[i] != 0){
+                        block->primary_axis= true;
+                        break;
+                    }
+                }
+            #endif
+
+        }
+    }
+
+    block->acceleration = acceleration; // save in block
 
     // Max number of steps, for all axes
-    block->steps_event_count = max( block->steps[ALPHA_STEPPER], max( block->steps[BETA_STEPPER], block->steps[GAMMA_STEPPER] ) );
+    auto mi = std::max_element(block->steps.begin(), block->steps.end());
+    block->steps_event_count = *mi;
 
     block->millimeters = distance;
-    float inverse_millimeters = 0.0F;
-    if( distance > 0 ){ inverse_millimeters = 1.0F/distance; }
 
-    // Calculate speed in mm/minute for each axis. No divide by zero due to previous checks.
-    // NOTE: Minimum stepper speed is limited by MINIMUM_STEPS_PER_MINUTE in stepper.c
-    float inverse_minute = feed_rate * inverse_millimeters;
-    if( distance > 0 ){
-        block->nominal_speed = block->millimeters * inverse_minute;           // (mm/min) Always > 0
-        block->nominal_rate = ceil(block->steps_event_count * inverse_minute); // (step/min) Always > 0
-    }else{
-        block->nominal_speed = 0;
-        block->nominal_rate = 0;
+    // Calculate speed in mm/sec for each axis. No divide by zero due to previous checks.
+    if( distance > 0.0F ) {
+        block->nominal_speed = rate_mm_s;           // (mm/s) Always > 0
+        block->nominal_rate = block->steps_event_count * rate_mm_s / distance; // (step/s) Always > 0
+    } else {
+        block->nominal_speed = 0.0F;
+        block->nominal_rate  = 0;
     }
 
     // Compute the acceleration rate for the trapezoid generator. Depending on the slope of the line
     // average travel per step event changes. For a line along one axis the travel per step event
     // is equal to the travel/step in the particular axis. For a 45 degree line the steppers of both
     // axes might step for every step event. Travel per step event is then sqrt(travel_x^2+travel_y^2).
-    // To generate trapezoids with contant acceleration between blocks the rate_delta must be computed
-    // specifically for each line to compensate for this phenomenon:
-    // Convert universal acceleration for direction-dependent stepper rate change parameter
-    block->rate_delta = (float)( ( block->steps_event_count*inverse_millimeters * this->acceleration ) / ( THEKERNEL->stepper->acceleration_ticks_per_second * 60 ) ); // (step/min/acceleration_tick)
-
-    // Compute path unit vector
-    float unit_vec[3];
-    unit_vec[X_AXIS] = deltas[X_AXIS]*inverse_millimeters;
-    unit_vec[Y_AXIS] = deltas[Y_AXIS]*inverse_millimeters;
-    unit_vec[Z_AXIS] = deltas[Z_AXIS]*inverse_millimeters;
 
     // Compute maximum allowable entry speed at junction by centripetal acceleration approximation.
     // Let a circle be tangent to both previous and current path line segments, where the junction
@@ -103,27 +136,36 @@ void Planner::append_block( int target[], float feed_rate, float distance, float
     // path width or max_jerk in the previous grbl version. This approach does not actually deviate
     // from path, but used as a robust way to compute cornering speeds, as it takes into account the
     // nonlinearities of both the junction angle and junction velocity.
+
+    // NOTE however it does not take into account independent axis, in most cartesian X and Y and Z are totally independent
+    // and this allows one to stop with little to no decleration in many cases. This is particualrly bad on leadscrew based systems that will skip steps.
     float vmax_junction = minimum_planner_speed; // Set default max junction speed
 
-    if (!THEKERNEL->conveyor->queue.is_empty())
-    {
-        float previous_nominal_speed = THEKERNEL->conveyor->queue.item_ref(THEKERNEL->conveyor->queue.prev(THEKERNEL->conveyor->queue.head_i))->nominal_speed;
+    // if unit_vec was null then it was not a primary axis move so we skip the junction deviation stuff
+    if (unit_vec != nullptr && !THECONVEYOR->is_queue_empty()) {
+        Block *prev_block = THECONVEYOR->queue.item_ref(THECONVEYOR->queue.prev(THECONVEYOR->queue.head_i));
+        float previous_nominal_speed = prev_block->primary_axis ? prev_block->nominal_speed : 0;
 
-        if (previous_nominal_speed > 0.0F) {
+        if (junction_deviation > 0.0F && previous_nominal_speed > 0.0F) {
             // Compute cosine of angle between previous and current path. (prev_unit_vec is negative)
             // NOTE: Max junction velocity is computed without sin() or acos() by trig half angle identity.
             float cos_theta = - this->previous_unit_vec[X_AXIS] * unit_vec[X_AXIS]
-                                - this->previous_unit_vec[Y_AXIS] * unit_vec[Y_AXIS]
-                                - this->previous_unit_vec[Z_AXIS] * unit_vec[Z_AXIS] ;
+                              - this->previous_unit_vec[Y_AXIS] * unit_vec[Y_AXIS]
+                              - this->previous_unit_vec[Z_AXIS] * unit_vec[Z_AXIS];
+            #if N_PRIMARY_AXIS > 3
+                for (int i = 3; i < N_PRIMARY_AXIS; ++i) {
+                    cos_theta -= this->previous_unit_vec[i] * unit_vec[i];
+                }
+            #endif
 
             // Skip and use default max junction speed for 0 degree acute junction.
-            if (cos_theta < 0.95F) {
-                vmax_junction = min(previous_nominal_speed, block->nominal_speed);
+            if (cos_theta <= 0.9999F) {
+                vmax_junction = std::min(previous_nominal_speed, block->nominal_speed);
                 // Skip and avoid divide by zero for straight junctions at 180 degrees. Limit to min() of nominal speeds.
-                if (cos_theta > -0.95F) {
+                if (cos_theta >= -0.9999F) {
                     // Compute maximum junction velocity based on maximum acceleration and junction deviation
                     float sin_theta_d2 = sqrtf(0.5F * (1.0F - cos_theta)); // Trig half angle identity. Always positive.
-                    vmax_junction = min(vmax_junction, sqrtf(this->acceleration * this->junction_deviation * sin_theta_d2 / (1.0F - sin_theta_d2)));
+                    vmax_junction = std::min(vmax_junction, sqrtf(acceleration * junction_deviation * sin_theta_d2 / (1.0F - sin_theta_d2)));
                 }
             }
         }
@@ -131,8 +173,8 @@ void Planner::append_block( int target[], float feed_rate, float distance, float
     block->max_entry_speed = vmax_junction;
 
     // Initialize block entry speed. Compute based on deceleration to user-defined minimum_planner_speed.
-    float v_allowable = this->max_allowable_speed(-this->acceleration,minimum_planner_speed,block->millimeters); //TODO: Get from config
-    block->entry_speed = min(vmax_junction, v_allowable);
+    float v_allowable = max_allowable_speed(-acceleration, minimum_planner_speed, block->millimeters);
+    block->entry_speed = std::min(vmax_junction, v_allowable);
 
     // Initialize planner efficiency flags
     // Set flag if block will always reach maximum junction speed regardless of entry/exit speeds.
@@ -149,10 +191,11 @@ void Planner::append_block( int target[], float feed_rate, float distance, float
     block->recalculate_flag = true;
 
     // Update previous path unit_vector and nominal speed
-    memcpy(this->previous_unit_vec, unit_vec, sizeof(unit_vec)); // previous_unit_vec[] = unit_vec[]
-
-    // Update current position
-    memcpy(this->position, target, sizeof(int)*3);
+    if(unit_vec != nullptr) {
+        memcpy(previous_unit_vec, unit_vec, sizeof(previous_unit_vec)); // previous_unit_vec[] = unit_vec[]
+    } else {
+        memset(previous_unit_vec, 0, sizeof(previous_unit_vec));
+    }
 
     // Math-heavy re-computing of the whole queue to take the new
     this->recalculate();
@@ -160,29 +203,14 @@ void Planner::append_block( int target[], float feed_rate, float distance, float
     // The block can now be used
     block->ready();
 
-    THEKERNEL->conveyor->queue_head_block();
+    THECONVEYOR->queue_head_block();
+
+    return true;
 }
 
-
-// Recalculates the motion plan according to the following algorithm:
-//
-// 1. Go over every block in reverse order and calculate a junction speed reduction (i.e. block_t.entry_factor)
-// so that:
-//   a. The junction jerk is within the set limit
-//   b. No speed reduction within one block requires faster deceleration than the one, true constant
-//      acceleration.
-// 2. Go over every block in chronological order and dial down junction speed reduction values if
-//   a. The speed increase within one block would require faster accelleration than the one, true
-//      constant acceleration.
-//
-// When these stages are complete all blocks have an entry_factor that will allow all speed changes to
-// be performed using only the one, true constant acceleration, and where no junction jerk is jerkier than
-// the set limit. Finally it will:
-//
-// 3. Recalculate trapezoids for all blocks.
-//
-void Planner::recalculate() {
-    Conveyor::Queue_t &queue = THEKERNEL->conveyor->queue;
+void Planner::recalculate()
+{
+    Conveyor::Queue_t &queue = THECONVEYOR->queue;
 
     unsigned int block_index;
 
@@ -225,10 +253,8 @@ void Planner::recalculate() {
     block_index = queue.head_i;
     current     = queue.item_ref(block_index);
 
-    if (!queue.is_empty())
-    {
-        while ((block_index != queue.tail_i) && current->recalculate_flag)
-        {
+    if (!queue.is_empty()) {
+        while ((block_index != queue.tail_i) && current->recalculate_flag) {
             entry_speed = current->reverse_pass(entry_speed);
 
             block_index = queue.prev(block_index);
@@ -239,15 +265,14 @@ void Planner::recalculate() {
          * Step 2:
          * now current points to either tail or first non-recalculate block
          * and has not had its reverse_pass called
-         * or its calc trap
+         * or its calculate_trapezoid
          * entry_speed is set to the *exit* speed of current.
          * each block from current to head has its entry speed set to its max entry speed- limited by decel or nominal_rate
          */
 
         float exit_speed = current->max_exit_speed();
 
-        while (block_index != queue.head_i)
-        {
+        while (block_index != queue.head_i) {
             previous    = current;
             block_index = queue.next(block_index);
             current     = queue.item_ref(block_index);
@@ -273,10 +298,10 @@ void Planner::recalculate() {
 
 // Calculates the maximum allowable speed at this point when you must be able to reach target_velocity using the
 // acceleration within the allotted distance.
-float Planner::max_allowable_speed(float acceleration, float target_velocity, float distance) {
-  return(
-    sqrtf(target_velocity*target_velocity-2.0F*acceleration*distance)  //Was acceleration*60*60*distance, in case this breaks, but here we prefer to use seconds instead of minutes
-  );
+float Planner::max_allowable_speed(float acceleration, float target_velocity, float distance)
+{
+    // Was acceleration*60*60*distance, in case this breaks, but here we prefer to use seconds instead of minutes
+    return(sqrtf(target_velocity * target_velocity - 2.0F * acceleration * distance));
 }
 
 

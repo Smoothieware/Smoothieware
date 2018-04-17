@@ -19,9 +19,13 @@ THE SOFTWARE.
 
 #ifndef AJK_FPOINTER_H
 #define AJK_FPOINTER_H
+
 #ifndef NULL
 #define NULL 0
 #endif
+
+#include <cstdint>
+
 namespace AjK {
 
 class FPointerDummy;

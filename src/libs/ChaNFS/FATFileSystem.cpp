@@ -54,7 +54,7 @@ FATFileSystem::FATFileSystem(const char* n) : FileSystemLike(n) {
     }
     error("Couldn't create %s in FATFileSystem::FATFileSystem\n",n);
 }
-    
+
 FATFileSystem::~FATFileSystem() {
     for(int i=0; i<_DRIVES; i++) {
         if(_ffs[i] == this) {
@@ -63,7 +63,7 @@ FATFileSystem::~FATFileSystem() {
         }
     }
 }
-    
+
 FileHandle *FATFileSystem::open(const char* name, int flags) {
     FFSDEBUG("open(%s) on filesystem [%s], drv [%d]\n", name, _name, _fsid);
     char n[64];
@@ -97,11 +97,20 @@ FileHandle *FATFileSystem::open(const char* name, int flags) {
     }
     return new FATFileHandle(fh);
 }
-    
+
 int FATFileSystem::remove(const char *filename) {
     FRESULT res = f_unlink(filename);
     if(res) {
         FFSDEBUG("f_unlink() failed (%d, %s)\n", res, FR_ERRORS[res]);
+        return -1;
+    }
+    return 0;
+}
+
+int FATFileSystem::rename(const char *filename1, const char *filename2) {
+    FRESULT res = f_rename(filename1, filename2);
+    if(res) {
+        FFSDEBUG("f_rename() failed (%d, %s)\n", res, FR_ERRORS[res]);
         return -1;
     }
     return 0;
@@ -118,8 +127,10 @@ int FATFileSystem::format() {
 }
 
 DirHandle *FATFileSystem::opendir(const char *name) {
+    char n[64];
+    sprintf(n, "%d:/%s", _fsid, name);
     DIR_t dir;
-    FRESULT res = f_opendir(&dir, name);
+    FRESULT res = f_opendir(&dir, n);
     if(res != 0) {
         return NULL;
     }

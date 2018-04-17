@@ -152,7 +152,7 @@ struct uip_eth_addr uip_ethaddr = {{0, 0, 0, 0, 0, 0}};
 #endif
 
 #ifndef UIP_CONF_EXTERNAL_BUFFER
-u8_t uip_buf[UIP_BUFSIZE + 2] __attribute__ ((section ("AHBSRAM1")));   /* The packet buffer that contains
+u8_t uip_buf[UIP_BUFSIZE + 4] __attribute__ ((section ("AHBSRAM1")));   /* The packet buffer that contains
                     incoming packets. */
 #endif /* UIP_CONF_EXTERNAL_BUFFER */
 

@@ -8,29 +8,26 @@
 #include <stdint.h>
 
 #include "Module.h"
-#include "TemperatureControl.h"
-#include "StreamOutput.h"
+
+class TemperatureControl;
 
 class PID_Autotuner : public Module
 {
 public:
     PID_Autotuner();
-    void     begin(TemperatureControl *, float, StreamOutput *, int cycles = 8);
-    void     abort();
 
-    void     on_module_loaded(void);
+    void on_module_loaded(void);
     uint32_t on_tick(uint32_t);
-    void     on_idle(void *);
-    void     on_gcode_received(void *);
+    void on_idle(void *);
+    void on_gcode_received(void *);
 
 private:
+    void begin(float, int );
+    void abort();
     void finishUp();
 
-    TemperatureControl *t;
+    TemperatureControl *temp_control;
     float target_temperature;
-    StreamOutput *s;
-
-    volatile bool tick;
 
     float *peaks;
     int requested_cycles;
@@ -42,11 +39,15 @@ private:
     int peakType;
     float *lastInputs;
     int peakCount;
-    bool justchanged;
     float absMax, absMin;
     float oStep;
     int output;
-    unsigned long tickCnt;
+    volatile unsigned long tickCnt;
+    struct {
+        bool justchanged:1;
+        volatile bool tick:1;
+        bool firstPeak:1;
+    };
 };
 
 #endif /* _PID_AUTOTUNE_H */

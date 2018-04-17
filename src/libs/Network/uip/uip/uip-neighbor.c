@@ -62,7 +62,7 @@ struct neighbor_entry {
   struct uip_neighbor_addr addr;
   u8_t time;
 };
-static struct neighbor_entry entries[ENTRIES];
+static struct neighbor_entry entries[ENTRIES] __attribute__ ((section ("AHBSRAM1")));
 
 /*---------------------------------------------------------------------------*/
 void

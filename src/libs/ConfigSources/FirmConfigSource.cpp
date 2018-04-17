@@ -10,7 +10,7 @@
 #include "FirmConfigSource.h"
 #include "ConfigCache.h"
 #include <malloc.h>
-
+#include "utils.h"
 
 using namespace std;
 #include <string>
@@ -20,18 +20,33 @@ using namespace std;
 extern char _binary_config_default_start;
 extern char _binary_config_default_end;
 
+FirmConfigSource::FirmConfigSource(const char* name){
+    this->name_checksum = get_checksum(name);
+    this->start= &_binary_config_default_start;
+    this->end= &_binary_config_default_end;
+}
 
-FirmConfigSource::FirmConfigSource(uint16_t name_checksum){
-    this->name_checksum = name_checksum;
+FirmConfigSource::FirmConfigSource(const char* name, const char *start, const char *end){
+    this->name_checksum = get_checksum(name);
+    this->start= start;
+    this->end= end;
 }
 
 // Transfer all values found in the file to the passed cache
 void FirmConfigSource::transfer_values_to_cache( ConfigCache* cache ){
 
-    char* p = &_binary_config_default_start;
+    const char* p = this->start;
     // For each line
-    while( p != &_binary_config_default_end ){
-        process_char_from_ascii_config(*p++, cache);
+    while( p < this->end ){
+        // find eol
+        const char *eol= p;
+        while(eol < this->end) {
+            if(*eol++ == '\n') break;
+        }
+        string line(p, eol-p);
+        //printf("firm: processing %s\n", line.c_str());
+        p= eol;
+        process_line_from_ascii_config(line, cache);
     }
 }
 
@@ -41,8 +56,9 @@ bool FirmConfigSource::is_named( uint16_t check_sum ){
 }
 
 // Write a config setting to the file *** FirmConfigSource is read only ***
-void FirmConfigSource::write( string setting, string value ){
+bool FirmConfigSource::write( string setting, string value ){
     //THEKERNEL->streams->printf("ERROR: FirmConfigSource is read only\r\n");
+    return false;
 }
 
 // Return the value for a specific checksum
@@ -50,12 +66,18 @@ string FirmConfigSource::read( uint16_t check_sums[3] ){
 
     string value = "";
 
-    char* p = &_binary_config_default_start;
+    const char* p = this->start;
     // For each line
-    while( p != &_binary_config_default_end ){
-        value = process_char_from_ascii_config(*p++, check_sums);
-        if (value.length())
-            return value;
+    while( p < this->end ){
+        // find eol
+        const char *eol= p;
+        while(eol < this->end) {
+            if(*eol++ == '\n') break;
+        }
+        string line(p, eol-p);
+        p= eol;
+        value = process_line_from_ascii_config(line, check_sums);
+        if(!value.empty()) return value;
     }
 
     return value;

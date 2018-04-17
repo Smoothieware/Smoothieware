@@ -2,7 +2,8 @@
 #define _FILESTREAM_H_
 
 #include "StreamOutput.h"
-#include "stdlib.h"
+#include <stdlib.h>
+#include <stdio.h>
 
 class FileStream : public StreamOutput {
     public:

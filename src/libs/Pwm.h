@@ -17,8 +17,10 @@ public:
     int      max_pwm(void);
 
     void     pwm(int);
+    int      get_pwm() const { return _pwm; }
     void     set(bool);
 
+private:
     int  _max;
     int  _pwm;
     int  _sd_accumulator;

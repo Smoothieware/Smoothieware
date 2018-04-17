@@ -1,0 +1,8 @@
+# if regular build the modules to exclude from the build
+NONETWORK = true
+EXCLUDE_MODULES = %w(tools/touchprobe tools/laser tools/temperaturecontrol tools/extruder)
+
+# if test framework build the modules to include in the test...
+# here we enable unit tests for tools/temperatureswitch module and any unit tests in /src/testframework/unittests/tools/temperatureswitch/
+# and any unittests in the src/testframework/unittests/libs folder
+TESTMODULES= %w(tools/temperatureswitch libs)

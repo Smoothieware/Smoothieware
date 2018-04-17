@@ -34,3 +34,9 @@ int SDFAT::disk_sectors()
 {
     return d->disk_sectors();
 }
+int SDFAT::remount() {
+    f_mount(_fsid, NULL);
+    f_mount(_fsid, &_fs);
+    
+	return 0;
+}

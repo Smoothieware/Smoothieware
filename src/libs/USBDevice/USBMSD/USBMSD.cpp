@@ -84,7 +84,7 @@ USBMSD::USBMSD(USB *u, MSD_Disk *d) {
     this->usb = u;
     this->disk = d;
 
-    MSC_Interface = {
+    usbdesc_interface i = {
         DL_INTERFACE,           // bLength
         DT_INTERFACE,           // bDescType
         0,                      // bInterfaceNumber - filled out by USB during attach()
@@ -97,8 +97,9 @@ USBMSD::USBMSD(USB *u, MSD_Disk *d) {
         0, 0, 0,                // dummy padding
         this,                   // callback
     };
+    memcpy(&MSC_Interface, &i, sizeof(MSC_Interface));
 
-    MSC_BulkIn = {
+    usbdesc_endpoint j = {
         DL_ENDPOINT,            // bLength
         DT_ENDPOINT,            // bDescType
         EP_DIR_IN,              // bEndpointAddress - we provide direction, index is filled out by USB during attach()
@@ -108,7 +109,9 @@ USBMSD::USBMSD(USB *u, MSD_Disk *d) {
         0,                      // dummy padding
         this,                   // endpoint callback
     };
-    MSC_BulkOut = {
+    memcpy(&MSC_BulkIn, &j, sizeof(MSC_BulkIn));
+
+    usbdesc_endpoint k = {
         DL_ENDPOINT,            // bLength
         DT_ENDPOINT,            // bDescType
         EP_DIR_OUT,             // bEndpointAddress - we provide direction, index is filled out by USB during attach()
@@ -118,6 +121,7 @@ USBMSD::USBMSD(USB *u, MSD_Disk *d) {
         0,                      // dummy padding
         this,                   // endpoint callback
     };
+    memcpy(&MSC_BulkOut, &k, sizeof(MSC_BulkOut));
 
     // because gcc-4.6 won't let us simply do MSC_Description = usbstring("Smoothie MSD")
     usbdesc_string_l(13) us = usbstring("Smoothie MSD");

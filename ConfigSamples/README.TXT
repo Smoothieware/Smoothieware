@@ -6,10 +6,18 @@ Smoothie enabled hardware.
 
 The full configs found in the ConfigSamples director include:
 * Smoothieboard - This directory contains a sample configuration for the
-  most recent Smoothieboard.
-  
-* Smoothieboard.Rostock - This directory contains a sample config for a
-  Rostock or Kossel style bot using the most recent Smoothieboard.
+  most recent Smoothieboard. http://smoothieware.org/smoothieboard
+
+* Smoothieboard.delta - This directory contains a sample config for a
+  Rostock or Kossel style linear delta bot using the most recent Smoothieboard.
+
+* rotary.delta - This directory contains a sample config for a
+  rotary delta bot (like the firepick)
+
+* AzteegX5Mini - This directory contains a sample config file for using
+  the Azteeg X5 Mini. NOTE there is a version2 specific example.
+
+* Snippets - these are snippets of config that can be included in the main config or copy pasted.
 
 There are also example config fragments to be be found in the rest of the docs.
 

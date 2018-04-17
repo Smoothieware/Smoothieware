@@ -5,76 +5,78 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef BLOCK_H
-#define BLOCK_H
-#include "libs/Module.h"
-#include "libs/Kernel.h"
-using namespace std;
-#include <string>
-#include <vector>
+#pragma once
 
-#include "../communication/utils/Gcode.h"
-#include "Planner.h"
-class Planner;
-class Conveyor;
-
-float max_allowable_speed( float acceleration, float target_velocity, float distance);
+#include <bitset>
+#include "ActuatorCoordinates.h"
 
 class Block {
     public:
         Block();
+
+        static void init(uint8_t);
+
         void calculate_trapezoid( float entry_speed, float exit_speed );
-        float estimate_acceleration_distance( float initial_rate, float target_rate, float acceleration );
-        float intersection_distance(float initial_rate, float final_rate, float acceleration, float distance);
-        float get_duration_left(unsigned int already_taken_steps);
 
         float reverse_pass(float exit_speed);
         float forward_pass(float next_entry_speed);
-
         float max_exit_speed();
-
-        void debug();
-
-        void append_gcode(Gcode* gcode);
-
-        void take();
-        void release();
-
-        void ready();
-
+        void debug() const;
+        void ready() { is_ready= true; }
         void clear();
+        float get_trapezoid_rate(int i) const;
 
-        void begin();
+    private:
+        float max_allowable_speed( float acceleration, float target_velocity, float distance);
+        void prepare(float acceleration_in_steps, float deceleration_in_steps);
 
-        //vector<std::string> commands;
-        //vector<float> travel_distances;
-        vector<Gcode> gcodes;
+        static double fp_scale; // optimize to store this as it does not change
 
-        unsigned int   steps[3];           // Number of steps for each axis for this block
-        unsigned int   steps_event_count;  // Steps for the longest axis
-        unsigned int   nominal_rate;       // Nominal rate in steps per minute
-        float          nominal_speed;      // Nominal speed in mm per minute
-        float          millimeters;        // Distance for this move
-        float          entry_speed;
-        float          exit_speed;
-        float          rate_delta;         // Nomber of steps to add to the speed for each acceleration tick
-        unsigned int   initial_rate;       // Initial speed in steps per minute
-        unsigned int   final_rate;         // Final speed in steps per minute
-        unsigned int   accelerate_until;   // Stop accelerating after this number of steps
-        unsigned int   decelerate_after;   // Start decelerating after this number of steps
-        unsigned int   direction_bits;     // Direction for each axis in bit form, relative to the direction port's mask
-
-
-        bool recalculate_flag;             // Planner flag to recalculate trapezoids on entry junction
-        bool nominal_length_flag;          // Planner flag for nominal speed always reached
+    public:
+        std::array<uint32_t, k_max_actuators> steps; // Number of steps for each axis for this block
+        uint32_t steps_event_count;  // Steps for the longest axis
+        float nominal_rate;       // Nominal rate in steps per second
+        float nominal_speed;      // Nominal speed in mm per second
+        float millimeters;        // Distance for this move
+        float entry_speed;
+        float exit_speed;
+        float acceleration;       // the acceleration for this block
+        float initial_rate;       // Initial rate in steps per second
+        float maximum_rate;
 
         float max_entry_speed;
 
-        bool is_ready;
+        // this is tick info needed for this block. applies to all motors
+        uint32_t accelerate_until;
+        uint32_t decelerate_after;
+        uint32_t total_move_ticks;
+        std::bitset<k_max_actuators> direction_bits;     // Direction for each axis in bit form, relative to the direction port's mask
 
-        short times_taken;    // A block can be "taken" by any number of modules, and the next block is not moved to until all the modules have "released" it. This value serves as a tracker.
+        // this is the data needed to determine when each motor needs to be issued a step
+        using tickinfo_t= struct {
+            int64_t steps_per_tick; // 2.62 fixed point
+            int64_t counter; // 2.62 fixed point
+            int64_t acceleration_change; // 2.62 fixed point signed
+            int64_t deceleration_change; // 2.62 fixed point
+            int64_t plateau_rate; // 2.62 fixed point
+            uint32_t steps_to_move;
+            uint32_t step_count;
+            uint32_t next_accel_event;
+        };
 
+        // need info for each active motor
+        tickinfo_t *tick_info;
+
+        static uint8_t n_actuators;
+
+        struct {
+            bool recalculate_flag:1;             // Planner flag to recalculate trapezoids on entry junction
+            bool nominal_length_flag:1;          // Planner flag for nominal speed always reached
+            bool is_ready:1;
+            bool primary_axis:1;                 // set if this move is a primary axis
+            bool is_g123:1;                      // set if this is a G1, G2 or G3
+            volatile bool is_ticking:1;          // set when this block is being actively ticked by the stepticker
+            volatile bool locked:1;              // set to true when the critical data is being updated, stepticker will have to skip if this is set
+            uint16_t s_value:12;                 // for laser 1.11 Fixed point
+        };
 };
-
-
-#endif

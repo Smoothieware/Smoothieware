@@ -12,54 +12,95 @@
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
 #include "Button.h"
+#include "libs/USBDevice/USBMSD/SDCard.h"
+#include "libs/SDFAT.h"
 
 #include "modules/utils/player/PlayerPublicAccess.h"
-#include "screens/CustomScreen.h"
-#include "screens/MainMenuScreen.h"
+#include "CustomScreen.h"
+#include "MainMenuScreen.h"
+#include "SlowTicker.h"
+#include "Gcode.h"
+#include "TemperatureControlPublicAccess.h"
+#include "ModifyValuesScreen.h"
+#include "PublicDataRequest.h"
+#include "PublicData.h"
+#include "StreamOutputPool.h"
+#include "platform_memory.h"
 
-#include "panels/I2CLCD.h"
-#include "panels/VikiLCD.h"
-#include "panels/Smoothiepanel.h"
 #include "panels/ReprapDiscountGLCD.h"
 #include "panels/ST7565.h"
+#include "panels/UniversalAdapter.h"
+
 #include "version.h"
+#include "checksumm.h"
+#include "ConfigValue.h"
+#include "Config.h"
+#include "TemperatureControlPool.h"
+
+// for parse_pins in mbed
+#include "pinmap.h"
 
 #define panel_checksum             CHECKSUM("panel")
 #define enable_checksum            CHECKSUM("enable")
 #define lcd_checksum               CHECKSUM("lcd")
-#define i2c_lcd_checksum           CHECKSUM("i2c_lcd")
-#define viki_lcd_checksum          CHECKSUM("viki_lcd")
-#define smoothiepanel_checksum     CHECKSUM("smoothiepanel")
-#define panelolu2_checksum         CHECKSUM("panelolu2")
 #define rrd_glcd_checksum          CHECKSUM("reprap_discount_glcd")
 #define st7565_glcd_checksum       CHECKSUM("st7565_glcd")
+#define ssd1306_oled_checksum      CHECKSUM("ssd1306_oled")
+#define viki2_checksum             CHECKSUM("viki2")
+#define mini_viki2_checksum        CHECKSUM("mini_viki2")
+#define universal_adapter_checksum CHECKSUM("universal_adapter")
 
 #define menu_offset_checksum        CHECKSUM("menu_offset")
 #define encoder_resolution_checksum CHECKSUM("encoder_resolution")
 #define jog_x_feedrate_checksum     CHECKSUM("alpha_jog_feedrate")
 #define jog_y_feedrate_checksum     CHECKSUM("beta_jog_feedrate")
 #define jog_z_feedrate_checksum     CHECKSUM("gamma_jog_feedrate")
+#define	longpress_delay_checksum	CHECKSUM("longpress_delay")
 
-#define hotend_temp_checksum CHECKSUM("hotend_temperature")
-#define bed_temp_checksum    CHECKSUM("bed_temperature")
+#define ext_sd_checksum            CHECKSUM("external_sd")
+#define sdcd_pin_checksum          CHECKSUM("sdcd_pin")
+#define spi_channel_checksum       CHECKSUM("spi_channel")
+#define spi_cs_pin_checksum        CHECKSUM("spi_cs_pin")
+
+#define hotend_temp_checksum       CHECKSUM("hotend_temperature")
+#define bed_temp_checksum          CHECKSUM("bed_temperature")
+#define panel_display_message_checksum CHECKSUM("display_message")
+#define laser_checksum             CHECKSUM("laser")
+#define display_extruder_checksum  CHECKSUM("display_extruder")
+
+Panel* Panel::instance= nullptr;
+
+#define MENU_MODE                  0
+#define CONTROL_MODE               1
+#define DIRECT_ENCODER_MODE        2
+#define NOP_MODE                   3
 
 Panel::Panel()
 {
+    instance= this;
     this->counter_changed = false;
     this->click_changed = false;
     this->refresh_flag = false;
     this->enter_menu_mode();
     this->lcd = NULL;
     this->do_buttons = false;
+    this->do_encoder = false;
     this->idle_time = 0;
     this->start_up = true;
     this->current_screen = NULL;
+    this->sd= nullptr;
+    this->extmounter= nullptr;
+    this->external_sd_enable= false;
+    this->in_idle= false;
+    this->display_extruder= false;
     strcpy(this->playing_file, "Playing file");
 }
 
 Panel::~Panel()
 {
     delete this->lcd;
+    delete this->extmounter;
+    delete this->sd;
 }
 
 void Panel::on_module_loaded()
@@ -72,29 +113,41 @@ void Panel::on_module_loaded()
 
     // Initialise the LCD, see which LCD to use
     if (this->lcd != NULL) delete this->lcd;
-    int lcd_cksm = get_checksum(THEKERNEL->config->value(panel_checksum, lcd_checksum)->by_default("i2c")->as_string());
+    int lcd_cksm = get_checksum(THEKERNEL->config->value(panel_checksum, lcd_checksum)->by_default("reprap_discount_glcd")->as_string());
 
     // Note checksums are not const expressions when in debug mode, so don't use switch
-    if (lcd_cksm == i2c_lcd_checksum) {
-        this->lcd = new I2CLCD();
-    } else if (lcd_cksm == viki_lcd_checksum) {
-        this->lcd = new VikiLCD();
-        this->lcd->set_variant(0);
-    } else if (lcd_cksm == panelolu2_checksum) {
-        this->lcd = new VikiLCD();
-        this->lcd->set_variant(1);
-    } else if (lcd_cksm == smoothiepanel_checksum) {
-        this->lcd = new Smoothiepanel();
-    } else if (lcd_cksm == rrd_glcd_checksum) {
+    if (lcd_cksm == rrd_glcd_checksum) {
         this->lcd = new ReprapDiscountGLCD();
     } else if (lcd_cksm == st7565_glcd_checksum) {
         this->lcd = new ST7565();
+    } else if (lcd_cksm == viki2_checksum) {
+        this->lcd = new ST7565(1); // variant 1
+    } else if (lcd_cksm == mini_viki2_checksum) {
+        this->lcd = new ST7565(2); // variant 2
+    } else if (lcd_cksm == ssd1306_oled_checksum) {
+        this->lcd = new ST7565(3); // variant 3
+    } else if (lcd_cksm == universal_adapter_checksum) {
+        this->lcd = new UniversalAdapter();
     } else {
-        // no lcd type defined
+        // no known lcd type defined
+        delete this;
         return;
     }
 
-    this->custom_screen= new CustomScreen(); // this needs to be called here as it needs the config cache loaded
+    // external sd
+    if(THEKERNEL->config->value( panel_checksum, ext_sd_checksum )->by_default(false)->as_bool()) {
+        this->external_sd_enable= true;
+        // external sdcard detect
+        this->sdcd_pin.from_string(THEKERNEL->config->value( panel_checksum, ext_sd_checksum, sdcd_pin_checksum )->by_default("nc")->as_string())->as_input();
+        this->extsd_spi_channel = THEKERNEL->config->value(panel_checksum, ext_sd_checksum, spi_channel_checksum)->by_default(0)->as_number();
+        string s= THEKERNEL->config->value( panel_checksum, ext_sd_checksum, spi_cs_pin_checksum)->by_default("2.8")->as_string();
+        s= "P" + s; // Pinnames need to be Px_x
+        this->extsd_spi_cs= parse_pins(s.c_str());
+        this->register_for_event(ON_SECOND_TICK);
+    }
+
+    // these need to be called here as they need the config cache loaded as they enumerate modules
+    this->custom_screen= new CustomScreen();
 
     // some panels may need access to this global info
     this->lcd->setPanel(this);
@@ -123,15 +176,32 @@ void Panel::on_module_loaded()
     this->down_button.up_attach(  this, &Panel::on_down );
     this->click_button.up_attach( this, &Panel::on_select );
     this->back_button.up_attach(  this, &Panel::on_back );
-    this->pause_button.up_attach( this, &Panel::on_pause );
 
-    THEKERNEL->slow_ticker->attach( 100,  this, &Panel::button_tick );
-    THEKERNEL->slow_ticker->attach( 1000, this, &Panel::encoder_check );
+
+    //setting longpress_delay
+    int longpress_delay =  THEKERNEL->config->value( panel_checksum, longpress_delay_checksum )->by_default(0)->as_number();
+    this->up_button.set_longpress_delay(longpress_delay);
+    this->down_button.set_longpress_delay(longpress_delay);
+//    this->click_button.set_longpress_delay(longpress_delay);
+//    this->back_button.set_longpress_delay(longpress_delay);
+//    this->pause_button.set_longpress_delay(longpress_delay);
+
+    THEKERNEL->slow_ticker->attach( 50,  this, &Panel::button_tick );
+    if(lcd->encoderReturnsDelta()) {
+        // panel handles encoder pins and returns a delta
+        THEKERNEL->slow_ticker->attach( 10, this, &Panel::encoder_tick );
+    }else{
+        // read encoder pins
+        THEKERNEL->slow_ticker->attach( 1000, this, &Panel::encoder_check );
+    }
+
+    // configure display options.
+    this->display_extruder = THEKERNEL->config->value( panel_checksum, display_extruder_checksum )->by_default(false)->as_bool();
 
     // Register for events
     this->register_for_event(ON_IDLE);
     this->register_for_event(ON_MAIN_LOOP);
-    this->register_for_event(ON_GCODE_RECEIVED);
+    this->register_for_event(ON_SET_PUBLIC_DATA);
 
     // Refresh timer
     THEKERNEL->slow_ticker->attach( 20, this, &Panel::refresh_tick );
@@ -140,7 +210,12 @@ void Panel::on_module_loaded()
 // Enter a screen, we only care about it now
 void Panel::enter_screen(PanelScreen *screen)
 {
-    screen->panel = this;
+    if(this->current_screen != nullptr)
+        this->current_screen->on_exit();
+
+    if(screen == nullptr) {
+        screen= top_screen;
+    }
     this->current_screen = screen;
     this->reset_counter();
     this->current_screen->on_enter();
@@ -162,20 +237,34 @@ uint32_t Panel::refresh_tick(uint32_t dummy)
     return 0;
 }
 
-// Encoder pins changed in interrupt
+// Encoder pins changed in interrupt or call from on_idle
 uint32_t Panel::encoder_check(uint32_t dummy)
 {
-    // TODO if encoder reads go through i2c like on smoothie panel this needs to be
-    // optionally done in idle loop, however when reading encoder directly it needs to be done
-    // frequently, smoothie panel will return an actual delta count so won't miss any if polled slowly
-    // NOTE this code will not work if change is not -1,0,-1 anything greater (as in above case) will not work properly
-    static int encoder_counter = 0;
-    int change = lcd->readEncoderDelta();
-    encoder_counter += change;
+    // if encoder reads go through SPI like on universal panel adapter this needs to be
+    // done in idle loop, this is indicated by lcd->encoderReturnsDelta()
+    // however when reading encoder directly it needs to be done
+    // frequently, universal panel adapter will return an actual delta count so won't miss any if polled slowly
+    // NOTE FIXME (WHY is it in menu only?) this code will not work if change is not 1,0,-1 anything greater (as in above case) will not work properly
+    static int encoder_counter = 0; // keeps track of absolute encoder position
+    static int last_encoder_click= 0; // last readfing of divided encoder count
 
-    if ( change != 0 && encoder_counter % this->encoder_click_resolution == 0 ) {
+    int change = lcd->readEncoderDelta();
+
+    if(mode == DIRECT_ENCODER_MODE) {
+        if(change != 0 && encoder_cb_fnc) {
+            encoder_cb_fnc(change);
+        }
+        return 0;
+    }
+
+    encoder_counter += change;
+    int clicks= encoder_counter/this->encoder_click_resolution;
+    int delta= clicks - last_encoder_click; // the number of clicks this time
+    last_encoder_click= clicks;
+
+    if ( delta != 0 ) {
         this->counter_changed = true;
-        (*this->counter) += change;
+        (*this->counter) += delta;
         this->idle_time = 0;
     }
     return 0;
@@ -188,15 +277,34 @@ uint32_t Panel::button_tick(uint32_t dummy)
     return 0;
 }
 
-void Panel::on_gcode_received(void *argument)
+// Read and update encoder from a slow source
+uint32_t Panel::encoder_tick(uint32_t dummy)
 {
-    Gcode *gcode = static_cast<Gcode *>(argument);
-    if ( gcode->has_m) {
-        if ( gcode->m == 117 ) { // set LCD message
-            this->message = get_arguments(gcode->command);
-            if (this->message.size() > 20) this->message = this->message.substr(0, 20);
-            gcode->mark_as_taken();
-        }
+    this->do_encoder = true;
+    return 0;
+}
+
+// special mode where all encoder ticks are sent to the given function
+bool Panel::enter_direct_encoder_mode(encoder_cb_t fnc)
+{
+    encoder_cb_fnc= fnc;
+    this->mode= DIRECT_ENCODER_MODE;
+    return true;
+}
+
+void Panel::on_set_public_data(void *argument)
+{
+     PublicDataRequest *pdr = static_cast<PublicDataRequest *>(argument);
+
+    if(!pdr->starts_with(panel_checksum)) return;
+
+    if(!pdr->second_element_is(panel_display_message_checksum)) return;
+
+    string *s = static_cast<string *>(pdr->get_data_ptr());
+    if (s->size() > 20) {
+        this->message = s->substr(0, 20);
+    } else {
+        this->message= *s;
     }
 }
 
@@ -225,9 +333,17 @@ static const uint8_t ohw_logo_antipixel_bits[] = {
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
 };
 
+void Panel::on_idle(void *argument)
+{
+    // avoid recursion if any screens end up calling ON_IDLE
+    if(in_idle) return;
+    in_idle= true;
+    idle_processing();
+    in_idle= false;
+}
 // On idle things, we don't want to do shit in interrupts
 // don't queue gcodes in this
-void Panel::on_idle(void *argument)
+void Panel::idle_processing()
 {
     if (this->start_up) {
         this->lcd->init();
@@ -249,8 +365,12 @@ void Panel::on_idle(void *argument)
 
         // Default top screen
         this->top_screen= new MainMenuScreen();
-        this->top_screen->set_panel(this);
         this->custom_screen->set_parent(this->top_screen);
+
+        // see if laser module is enabled
+        void *dummy;
+        this->laser_enabled= PublicData::get_value(laser_checksum, (void *)&dummy);
+
         this->start_up = false;
         return;
     }
@@ -272,8 +392,13 @@ void Panel::on_idle(void *argument)
         return;
     }
 
+    if(this->do_encoder) {
+        this->do_encoder= false;
+        encoder_check(0);
+    }
+
     if (this->do_buttons) {
-        // we don't want to do I2C in interrupt mode
+        // we don't want to do SPI in interrupt mode
         this->do_buttons = false;
 
         // read the actual buttons
@@ -292,17 +417,17 @@ void Panel::on_idle(void *argument)
         this->down_button.check_signal(but & BUTTON_DOWN);
         this->back_button.check_signal(but & BUTTON_LEFT);
         this->click_button.check_signal(but & BUTTON_SELECT);
-        this->pause_button.check_signal(but & BUTTON_PAUSE);
     }
 
-    // If we are in menu mode and the position has changed
-    if ( this->mode == MENU_MODE && this->counter_change() ) {
-        this->menu_update();
-    }
-
-    // If we are in control mode
-    if ( this->mode == CONTROL_MODE && this->counter_change() ) {
-        this->control_value_update();
+    if(this->counter_change()) {
+        switch(this->mode) {
+            case MENU_MODE: // If we are in menu mode and the position has changed
+                this->menu_update();
+                break;
+            case CONTROL_MODE: // If we are in control mode
+                this->control_value_update();
+                break;
+        }
     }
 
     // If we must refresh
@@ -353,18 +478,6 @@ uint32_t Panel::on_select(uint32_t dummy)
     return 0;
 }
 
-uint32_t Panel::on_pause(uint32_t dummy)
-{
-    if (!paused) {
-        THEKERNEL->pauser->take();
-        paused = true;
-    } else {
-        THEKERNEL->pauser->release();
-        paused = false;
-    }
-    return 0;
-}
-
 bool Panel::counter_change()
 {
     if ( this->counter_changed ) {
@@ -384,13 +497,18 @@ bool Panel::click()
     }
 }
 
+void Panel::enter_nop_mode()
+{
+    this->mode = NOP_MODE;
+}
 
 // Enter menu mode
-void Panel::enter_menu_mode()
+void Panel::enter_menu_mode(bool force)
 {
     this->mode = MENU_MODE;
     this->counter = &this->menu_selected_line;
-    this->menu_changed = false;
+    this->menu_changed = force;
+    encoder_cb_fnc= nullptr;
 }
 
 void Panel::setup_menu(uint16_t rows)
@@ -488,6 +606,7 @@ bool Panel::enter_control_mode(float passed_normal_increment, float passed_press
     this->counter = &this->control_normal_counter;
     this->control_normal_counter = 0;
     this->control_base_value = 0;
+    encoder_cb_fnc= nullptr;
     return true;
 }
 
@@ -511,13 +630,31 @@ bool Panel::is_playing() const
 {
     void *returned_data;
 
-    bool ok = THEKERNEL->public_data->get_value( player_checksum, is_playing_checksum, &returned_data );
+    bool ok = PublicData::get_value( player_checksum, is_playing_checksum, &returned_data );
     if (ok) {
         bool b = *static_cast<bool *>(returned_data);
         return b;
     }
     return false;
 }
+
+bool Panel::is_suspended() const
+{
+    void *returned_data;
+
+    bool ok = PublicData::get_value( player_checksum, is_suspended_checksum, &returned_data );
+    if (ok) {
+        bool b = *static_cast<bool *>(returned_data);
+        return b;
+    }
+    return false;
+}
+
+bool Panel::is_extruder_display_enabled(void)
+{
+    return this->display_extruder;
+}
+
 
 void  Panel::set_playing_file(string f)
 {
@@ -526,4 +663,61 @@ void  Panel::set_playing_file(string f)
     if (n == string::npos) n = 0;
     strncpy(playing_file, f.substr(n + 1, 19).c_str(), sizeof(playing_file));
     playing_file[sizeof(playing_file) - 1] = 0;
+}
+
+bool Panel::mount_external_sd(bool on)
+{
+    // now setup the external sdcard if we have one and mount it
+    if(on) {
+        if(this->sd == nullptr) {
+            PinName mosi, miso, sclk, cs= this->extsd_spi_cs;
+            if(extsd_spi_channel == 0) {
+                mosi = P0_18; miso = P0_17; sclk = P0_15;
+            } else if(extsd_spi_channel == 1) {
+                mosi = P0_9; miso = P0_8; sclk = P0_7;
+            } else{
+                this->external_sd_enable= false;
+                THEKERNEL->streams->printf("Bad SPI channel for external SDCard\n");
+                return false;
+            }
+            size_t n= sizeof(SDCard);
+            void *v = AHB0.alloc(n);
+            memset(v, 0, n); // clear the allocated memory
+            this->sd= new(v) SDCard(mosi, miso, sclk, cs); // allocate object using zeroed memory
+        }
+        delete this->extmounter; // if it was not unmounted before
+        size_t n= sizeof(SDFAT);
+        void *v = AHB0.alloc(n);
+        memset(v, 0, n); // clear the allocated memory
+        this->extmounter= new(v) SDFAT("ext", this->sd); // use cleared allocated memory
+        this->sd->disk_initialize(); // first one seems to fail, but works next time
+        THEKERNEL->streams->printf("External SDcard mounted as /ext\n");
+    }else{
+        delete this->extmounter;
+        this->extmounter= nullptr;
+        THEKERNEL->streams->printf("External SDcard unmounted\n");
+    }
+    return true;
+}
+
+void Panel::on_second_tick(void *arg)
+{
+    if(!this->external_sd_enable || this->start_up) return;
+
+    // sd insert detect, mount sdcard if inserted, unmount if removed
+    if(this->sdcd_pin.connected()) {
+        if(this->extmounter == nullptr && this->sdcd_pin.get()) {
+            mount_external_sd(true);
+            // go to the play screen and the /ext directory
+            // TODO we don't want to do this if we just booted and card was already in
+            THEKERNEL->current_path= "/ext";
+            MainMenuScreen *mms= static_cast<MainMenuScreen*>(this->top_screen);
+            THEPANEL->enter_screen(mms->file_screen);
+
+        }else if(this->extmounter != nullptr && !this->sdcd_pin.get()){
+            mount_external_sd(false);
+        }
+    }else{
+        // TODO for panels with no sd card detect we need to poll to see if card is inserted - or not
+    }
 }

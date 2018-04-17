@@ -8,22 +8,9 @@
 #ifndef SWITCHPOOL_H
 #define SWITCHPOOL_H
 
-#include "Switch.h"
-#include <math.h>
-using namespace std;
-#include <vector>
-
-#define enable_checksum            CHECKSUM("enable")
-
-class SwitchPool : public Module {
+class SwitchPool{
     public:
-        SwitchPool();
-
-        void on_module_loaded();
-
-        vector<Switch*> controllers;
+        void load_tools();
 };
-
-
 
 #endif // SWITCHPOOL_H

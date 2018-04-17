@@ -10,10 +10,6 @@
 
 #include "PanelScreen.h"
 
-#define NULL_CONTROL_MODE        0
-#define AXIS_CONTROL_MODE        1
-#define INCREMENT_SELECTION_MODE 2
-
 class ControlScreen : public PanelScreen
 {
 public:
@@ -30,12 +26,11 @@ private:
     void display_axis_line(char axis);
     void enter_axis_control(char axis);
     void enter_menu_control();
-    void get_current_pos(float *p);
     void set_current_pos(char axis, float p);
     char control_mode;
     char controlled_axis;
-    float pos[3];
     bool pos_changed;
+    float pos[3];
     float jog_increment;
 };
 

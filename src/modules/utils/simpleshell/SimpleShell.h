@@ -5,14 +5,15 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
+#pragma once
 
-#ifndef simpleshell_h
-#define simpleshell_h
+#include "Module.h"
 
-#include "libs/Kernel.h"
-#include "libs/nuts_bolts.h"
-#include "libs/utils.h"
-#include "libs/StreamOutput.h"
+#include <functional>
+#include <string>
+using std::string;
+
+class StreamOutput;
 
 class SimpleShell : public Module
 {
@@ -23,41 +24,49 @@ public:
     void on_console_line_received( void *argument );
     void on_gcode_received(void *argument);
     void on_second_tick(void *);
+    static bool parse_command(const char *cmd, string args, StreamOutput *stream);
+    static void print_mem(StreamOutput *stream) { mem_command("", stream); }
+    static void version_command(string parameters, StreamOutput *stream );
 
 private:
-    string absolute_from_relative( string path );
-    void ls_command(string parameters, StreamOutput *stream );
-    void cd_command(string parameters, StreamOutput *stream );
-    void delete_file_command(string parameters, StreamOutput *stream );
-    void pwd_command(string parameters, StreamOutput *stream );
-    void cat_command(string parameters, StreamOutput *stream );
-    void rm_command(string parameters, StreamOutput *stream );
-    void break_command(string parameters, StreamOutput *stream );
-    void reset_command(string parameters, StreamOutput *stream );
-    void dfu_command(string parameters, StreamOutput *stream );
-    void help_command(string parameters, StreamOutput *stream );
-    void version_command(string parameters, StreamOutput *stream );
-    void get_command(string parameters, StreamOutput *stream );
-    void set_temp_command(string parameters, StreamOutput *stream );
-    void mem_command(string parameters, StreamOutput *stream );
+    static void ls_command(string parameters, StreamOutput *stream );
+    static void cd_command(string parameters, StreamOutput *stream );
+    static void delete_file_command(string parameters, StreamOutput *stream );
+    static void pwd_command(string parameters, StreamOutput *stream );
+    static void cat_command(string parameters, StreamOutput *stream );
+    static void rm_command(string parameters, StreamOutput *stream );
+    static void mv_command(string parameters, StreamOutput *stream );
+    static void mkdir_command(string parameters, StreamOutput *stream );
+    static void upload_command(string parameters, StreamOutput *stream );
+    static void break_command(string parameters, StreamOutput *stream );
+    static void reset_command(string parameters, StreamOutput *stream );
+    static void dfu_command(string parameters, StreamOutput *stream );
+    static void help_command(string parameters, StreamOutput *stream );
+    static void get_command(string parameters, StreamOutput *stream );
+    static void set_temp_command(string parameters, StreamOutput *stream );
+    static void calc_thermistor_command( string parameters, StreamOutput *stream);
+    static void print_thermistors_command( string parameters, StreamOutput *stream);
+    static void md5sum_command( string parameters, StreamOutput *stream);
+    static void grblDP_command( string parameters, StreamOutput *stream);
 
-    void net_command( string parameters, StreamOutput *stream);
+    static void switch_command(string parameters, StreamOutput *stream );
+    static void mem_command(string parameters, StreamOutput *stream );
 
-    void load_command( string parameters, StreamOutput *stream);
-    void save_command( string parameters, StreamOutput *stream);
+    static void net_command( string parameters, StreamOutput *stream);
 
-    bool parse_command(unsigned short cs, string args, StreamOutput *stream);
+    static void load_command( string parameters, StreamOutput *stream);
+    static void save_command( string parameters, StreamOutput *stream);
 
-    typedef void (SimpleShell::*PFUNC)(string parameters, StreamOutput *stream);
+    static void remount_command( string parameters, StreamOutput *stream);
+
+    static void test_command( string parameters, StreamOutput *stream);
+
+    typedef void (*PFUNC)(string parameters, StreamOutput *stream);
     typedef struct {
-        unsigned short command_cs;
-        PFUNC pfunc;
-    } ptentry_t;
+        const char *command;
+        const PFUNC func;
+    } const ptentry_t;
 
-    static ptentry_t commands_table[];
-    string current_path;
-    int reset_delay_secs;
+    static const ptentry_t commands_table[];
+    static int reset_delay_secs;
 };
-
-
-#endif

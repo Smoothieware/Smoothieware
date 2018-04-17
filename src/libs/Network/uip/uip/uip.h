@@ -428,9 +428,9 @@ void uip_setipid(u16_t id);
  */
 
 #ifdef __cplusplus
-extern "C" u8_t uip_buf[UIP_BUFSIZE+2];
+extern "C" u8_t uip_buf[UIP_BUFSIZE+4];
 #else
-extern u8_t uip_buf[UIP_BUFSIZE+2];
+extern u8_t uip_buf[UIP_BUFSIZE+4];
 #endif
 
 #ifdef __cplusplus

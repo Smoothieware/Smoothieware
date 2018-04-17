@@ -1,5 +1,5 @@
-#ifndef HBOTSOLUTION_H
-#define HBOTSOLUTION_H
+#pragma once
+
 #include "libs/Module.h"
 #include "libs/Kernel.h"
 #include "BaseSolution.h"
@@ -7,29 +7,10 @@
 
 #include "libs/Config.h"
 
-#define alpha_steps_per_mm_checksum CHECKSUM("alpha_steps_per_mm")
-#define beta_steps_per_mm_checksum  CHECKSUM("beta_steps_per_mm")
-#define gamma_steps_per_mm_checksum CHECKSUM("gamma_steps_per_mm")
-
 class HBotSolution : public BaseSolution {
     public:
-        HBotSolution(Config* passed_config);
-        void millimeters_to_steps( float millimeters[], int steps[] );
-        void steps_to_millimeters( int steps[], float millimeters[] );
-
-        void set_steps_per_millimeter( float steps[] );
-        void get_steps_per_millimeter( float steps[] );
-
-        Config* config;
-        float alpha_steps_per_mm;
-        float beta_steps_per_mm;
-        float gamma_steps_per_mm;
+        HBotSolution();
+        HBotSolution(Config*){};
+        void cartesian_to_actuator(const float[], ActuatorCoordinates &) const override;
+        void actuator_to_cartesian(const ActuatorCoordinates &, float[]) const override;
 };
-
-
-
-
-
-
-#endif // HBOTSOLUTION_H
-

@@ -14,8 +14,18 @@
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
 #include <string>
-#include "modules/robot/RobotPublicAccess.h"
+#include "Robot.h"
+#include "PublicData.h"
+#include "checksumm.h"
+#include "LcdBase.h"
+
+#include <math.h>
+#include <stdio.h>
+
 using namespace std;
+
+#define NULL_CONTROL_MODE        0
+#define AXIS_CONTROL_MODE        1
 
 ControlScreen::ControlScreen()
 {
@@ -24,9 +34,9 @@ ControlScreen::ControlScreen()
 
 void ControlScreen::on_enter()
 {
-    this->panel->enter_menu_mode();
-    this->panel->setup_menu(4);
-    get_current_pos(this->pos);
+    THEPANEL->enter_menu_mode();
+    THEPANEL->setup_menu(4);
+    get_current_pos(this->pos); // gets current WCS
     this->refresh_menu();
     this->pos_changed = false;
 }
@@ -34,26 +44,26 @@ void ControlScreen::on_enter()
 // called in on_idle()
 void ControlScreen::on_refresh()
 {
-    if ( this->panel->menu_change() ) {
+    if ( THEPANEL->menu_change() ) {
         this->refresh_menu();
     }
 
     if (this->control_mode == AXIS_CONTROL_MODE) {
 
-        if ( this->panel->click() ) {
+        if ( THEPANEL->click() ) {
             this->enter_menu_control();
             this->refresh_menu();
 
-        } else if (this->panel->control_value_change()) {
-            this->pos[this->controlled_axis - 'X'] = this->panel->get_control_value();
-            this->panel->lcd->setCursor(0, 2);
+        } else if (THEPANEL->control_value_change()) {
+            this->pos[this->controlled_axis - 'X'] = THEPANEL->get_control_value();
+            THEPANEL->lcd->setCursor(0, 2);
             this->display_axis_line(this->controlled_axis);
             this->pos_changed = true; // make the gcode in main_loop
         }
 
     } else {
-        if ( this->panel->click() ) {
-            this->clicked_menu_entry(this->panel->get_menu_current_line());
+        if ( THEPANEL->click() ) {
+            this->clicked_menu_entry(THEPANEL->get_menu_current_line());
         }
     }
 }
@@ -72,7 +82,7 @@ void ControlScreen::display_menu_line(uint16_t line)
 {
     // in menu mode
     switch ( line ) {
-        case 0: this->panel->lcd->printf("Back");  break;
+        case 0: THEPANEL->lcd->printf("Back");  break;
         case 1: this->display_axis_line('X'); break;
         case 2: this->display_axis_line('Y'); break;
         case 3: this->display_axis_line('Z'); break;
@@ -81,14 +91,14 @@ void ControlScreen::display_menu_line(uint16_t line)
 
 void ControlScreen::display_axis_line(char axis)
 {
-    this->panel->lcd->printf("Move %c    %8.3f", axis, this->pos[axis - 'X']);
+    THEPANEL->lcd->printf("Move %c    %8.3f", axis, this->pos[axis - 'X']);
 }
 
 
 void ControlScreen::clicked_menu_entry(uint16_t line)
 {
     switch ( line ) {
-        case 0: this->panel->enter_screen(this->parent   ); break;
+        case 0: THEPANEL->enter_screen(this->parent   ); break;
         case 1: this->enter_axis_control('X'); break;
         case 2: this->enter_axis_control('Y'); break;
         case 3: this->enter_axis_control('Z'); break;
@@ -99,37 +109,31 @@ void ControlScreen::enter_axis_control(char axis)
 {
     this->control_mode = AXIS_CONTROL_MODE;
     this->controlled_axis = axis;
-    this->panel->enter_control_mode(this->jog_increment, this->jog_increment / 10);
-    this->panel->set_control_value(this->pos[axis - 'X']);
-    this->panel->lcd->clear();
-    this->panel->lcd->setCursor(0, 2);
+    THEPANEL->enter_control_mode(this->jog_increment, this->jog_increment / 10);
+    THEPANEL->set_control_value(this->pos[axis - 'X']);
+    THEPANEL->lcd->clear();
+    THEPANEL->lcd->setCursor(0, 0);
+    THEPANEL->lcd->printf("Jog %6.3f", jog_increment);
+
+    THEPANEL->lcd->setCursor(0, 2);
     this->display_axis_line(this->controlled_axis);
 }
 
 void ControlScreen::enter_menu_control()
 {
     this->control_mode = NULL_CONTROL_MODE;
-    this->panel->enter_menu_mode();
-}
-
-void ControlScreen::get_current_pos(float *cp)
-{
-    void *returned_data;
-
-    bool ok = THEKERNEL->public_data->get_value( robot_checksum, current_position_checksum, &returned_data );
-    if (ok) {
-        float *p = static_cast<float *>(returned_data);
-        cp[0] = p[0];
-        cp[1] = p[1];
-        cp[2] = p[2];
-    }
+    THEPANEL->enter_menu_mode();
 }
 
 void ControlScreen::set_current_pos(char axis, float p)
 {
-    // change pos by issuing a G0 Xnnn
+    // change pos by issuing a G0 Xnnn in absolute mode
     char buf[32];
-    int n = snprintf(buf, sizeof(buf), "G0 %c%f F%d", axis, p, (int)round(panel->get_jogging_speed(axis)));
+    // make sure we are in absolute mode
+    THEROBOT->push_state();
+    THEROBOT->absolute_mode= true;
+    int n = snprintf(buf, sizeof(buf), "G0 %c%f F%d", axis, p, (int)round(THEROBOT->from_millimeters(THEPANEL->get_jogging_speed(axis))));
     string g(buf, n);
     send_gcode(g);
+    THEROBOT->pop_state();
 }

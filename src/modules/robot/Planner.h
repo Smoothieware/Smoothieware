@@ -8,32 +8,25 @@
 #ifndef PLANNER_H
 #define PLANNER_H
 
-#include <vector>
-#include "libs/RingBuffer.h"
-#include "../communication/utils/Gcode.h"
-#include "Block.h"
+#include "ActuatorCoordinates.h"
+class Block;
 
-using namespace std;
+class Planner
+{
+public:
+    Planner();
+    float max_allowable_speed( float acceleration, float target_velocity, float distance);
 
-class Planner : public Module {
-    public:
-        Planner();
-        void append_block( int target[], float feed_rate, float distance, float deltas[] );
-        float max_allowable_speed( float acceleration, float target_velocity, float distance);
-        void recalculate();
-        Block* get_current_block();
-        void cleanup_queue();
-        void on_module_loaded();
-        void on_config_reload(void* argument);
+    friend class Robot; // for acceleration, junction deviation, minimum_planner_speed
 
-        int position[3];              // Current position, in steps
-        float previous_unit_vec[3];
-        Block last_deleted_block;     // Item -1 in the queue, TODO: Grbl does not need this, but Smoothie won't work without it, we are probably doing something wrong
-        bool has_deleted_block;       // Flag for above value
-
-        float acceleration;          // Setting
-        float junction_deviation;    // Setting
-        float minimum_planner_speed; // Setting
+private:
+    bool append_block(ActuatorCoordinates &target, uint8_t n_motors, float rate_mm_s, float distance, float unit_vec[], float accleration, float s_value, bool g123);
+    void recalculate();
+    void config_load();
+    float previous_unit_vec[N_PRIMARY_AXIS];
+    float junction_deviation;    // Setting
+    float z_junction_deviation;  // Setting
+    float minimum_planner_speed; // Setting
 };
 
 
