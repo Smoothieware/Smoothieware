@@ -24,7 +24,6 @@
 #include "StepperMotor.h"
 
 #include <functional>
-#include <vector>
 
 #include "mbed.h"
 

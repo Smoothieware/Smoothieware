@@ -6,7 +6,6 @@
 */
 
 using namespace std;
-#include <vector>
 
 #include "mri.h"
 #include "nuts_bolts.h"
