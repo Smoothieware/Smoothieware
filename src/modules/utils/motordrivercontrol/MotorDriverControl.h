@@ -46,7 +46,7 @@ class MotorDriverControl : public Module {
         enum CHIP_TYPE {
             DRV8711,
             TMC2660,
-            TMC2130,
+            TMC2130
         };
         CHIP_TYPE chip;
 

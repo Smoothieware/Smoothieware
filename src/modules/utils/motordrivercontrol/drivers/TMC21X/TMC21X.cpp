@@ -647,39 +647,6 @@ TMC21X::TMC21X(std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi, char d) 
  */
 void TMC21X::init(uint16_t cs)
 {
-    //Reference
-//    this->send2130(0x80,0x00000001UL); //voltage on AIN is current reference
-//    this->send2130(0x90,0x00001010UL); //IHOLD=0x10, IRUN=0x10
-//    this->send2130(0xEC,0x00008008UL); //native 256 microsteps, MRES=0, TBL=1=24, TOFF=8
-
-    //Initialization example
-//    this->send2130(0xEC,0x000100C3ul);    //CHOPCONF: TOFF=3, HSTRT=4, HEND=1, TBL=2, CHM=0 (spreadCycle)
-//    this->send2130(0x90,0x00061F0Aul);    //IHOLD_IRUN: IHOLD=10, IRUN=31 (max. current), IHOLDDELAY=6
-//    this->send2130(0x91,0x0000000Aul);    //TPOWERDOWN=10: Delay before power down in stand still
-//    this->send2130(0x80,0x00000004ul);    //EN_PWM_MODE=1 enables stealthChop (with default PWM_CONF)
-//    this->send2130(0x93,0x000001F4ul);    //TPWM_THRS=500 yields a switching velocity about 35000 = ca. 30RPM
-//    this->send2130(0xF0,0x000401C8ul);    //PWM_CONF: AUTO=1, 2/1024 Fclk, Switch amplitude limit=200, Grad=1
-
-    //Other example
-    //send2130(0x6F,0x00000000);
-    //send2130(0x6F,0x00000000);
-    //send2130(0xEC,0x00ABCDEF);
-    //send2130(0xEC,0x00123456);
-
-    //All read status
-//    send2130(0x00,0x00000000);
-//    send2130(0x01,0x00000000);
-//    send2130(0x04,0x00000000);
-//    send2130(0x12,0x00000000);
-//    send2130(0x2D,0x00000000);
-//    send2130(0x6A,0x00000000);
-//    send2130(0x6B,0x00000000);
-//    send2130(0x6C,0x00000000);
-//    send2130(0x6F,0x00000000);
-//    send2130(0x71,0x00000000);
-//    send2130(0x73,0x00000000);
-//    send2130(0x6F,0x00000000);
-
     // read chip specific config entries
     this->resistor= THEKERNEL->config->value(motor_driver_control_checksum, cs, sense_resistor_checksum)->by_default(50)->as_number(); // in milliohms
 
@@ -879,7 +846,7 @@ void TMC21X::setConstantOffTimeChopper(int8_t constant_off_time, int8_t blank_ti
     chopconf_register_value |= constant_off_time;
     //set the fast decay time
     //set msb
-    chopconf_register_value |= (((unsigned long)(fast_decay_time_setting & 0x8)) << CHOPCONF_FD3_SHIFT);
+    chopconf_register_value |= (((unsigned long)(fast_decay_time_setting >> 3)) << CHOPCONF_FD3_SHIFT);
     //other bits
     chopconf_register_value |= (((unsigned long)(fast_decay_time_setting & 0x7)) << CHOPCONF_HSTRT_SHIFT);
     //set the sine wave offset
@@ -1020,7 +987,6 @@ void TMC21X::setCurrent(unsigned int current)
     //for vsense = 0,32V (VSENSE not set)
     //or vsense = 0,18V (VSENSE set)
     current_scaling = (uint8_t)(((resistor_value + 20) * mASetting * 32.0F / (0.32F * 1000.0F * 1000.0F)) - 0.5F); //theoretically - 1.0 for better rounding it is 0.5
-
     //check if the current scaling is too low
     if (current_scaling < 16) {
         //set the csense bit to get a use half the sense voltage (to support lower motor currents)
@@ -1240,7 +1206,7 @@ bool TMC21X::isStallGuardOverThreshold(void)
 
 /*
  returns if there is any over temperature condition:
- OVER_TEMPERATURE_PREWARING if pre warning level has been reached
+ OVER_TEMPERATURE_PREWARNING if pre warning level has been reached
  OVER_TEMPERATURE_SHUTDOWN if the temperature is so hot that the driver is shut down
  Any of those levels are not too good.
 */
@@ -1346,11 +1312,11 @@ int TMC21X::readStatus(bool microsteps)
     if(microsteps) {
         //we need to read access twice to obtain the actual read access response
         send2130(READ|MSCNT_REGISTER,DEFAULT_DATA);
-        response=send2130(READ|MSCNT_REGISTER,DEFAULT_DATA);
+        response = send2130(READ|MSCNT_REGISTER,DEFAULT_DATA);
     } else {
         //we need to read access twice to obtain the actual read access response
         send2130(READ|DRV_STATUS_REGISTER,DEFAULT_DATA);
-        response=send2130(READ|DRV_STATUS_REGISTER,DEFAULT_DATA);
+        response = send2130(READ|DRV_STATUS_REGISTER,DEFAULT_DATA);
     }
     return response;
 }
@@ -1555,9 +1521,9 @@ bool TMC21X::setRawRegister(StreamOutput *stream, uint32_t reg, uint32_t val)
 
 /*
  * send register settings to the stepper driver via SPI
- * returns the current status 40 bit datagram, first 8 bits is the status, the last 32 bits are the register contents
+ * returns the current status 40 bit datagram, first 8 bits is the SPI status, the last 32 bits are the register contents
  */
-uint32_t TMC21X::send2130(uint8_t reg, uint32_t datagram) //TODO Converted, needs testing
+uint32_t TMC21X::send2130(uint8_t reg, uint32_t datagram)
 {
     uint8_t buf[] {(uint8_t)(reg), (uint8_t)(datagram >> 24), (uint8_t)(datagram >> 16), (uint8_t)(datagram >> 8), (uint8_t)(datagram >> 0)};
     uint8_t rbuf[5];
