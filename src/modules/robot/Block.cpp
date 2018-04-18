@@ -22,7 +22,6 @@
 #include <inttypes.h>
 
 using std::string;
-#include <vector>
 
 #define STEP_TICKER_FREQUENCY THEKERNEL->step_ticker->get_frequency()
 

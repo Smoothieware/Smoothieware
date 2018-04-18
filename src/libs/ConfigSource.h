@@ -8,8 +8,6 @@
 #ifndef CONFIGSOURCE_H
 #define CONFIGSOURCE_H
 
-using namespace std;
-#include <vector>
 #include <string>
 
 class ConfigValue;
@@ -23,16 +21,16 @@ class ConfigSource {
         // Read each value, and append it as a ConfigValue to the config_cache we were passed
         virtual void transfer_values_to_cache( ConfigCache* ) = 0;
         virtual bool is_named( uint16_t check_sum ) = 0;
-        virtual bool write( string setting, string value ) = 0;
-        virtual string read( uint16_t check_sums[3] ) = 0;
+        virtual bool write( std::string setting, std::string value ) = 0;
+        virtual std::string read( uint16_t check_sums[3] ) = 0;
 
     protected:
-        virtual ConfigValue* process_line_from_ascii_config(const string& line, ConfigCache* cache);
-        virtual string process_line_from_ascii_config(const string& line, uint16_t line_checksums[3]);
+        virtual ConfigValue* process_line_from_ascii_config(const std::string& line, ConfigCache* cache);
+        virtual std::string process_line_from_ascii_config(const std::string& line, uint16_t line_checksums[3]);
         uint16_t name_checksum;
 
     private:
-        ConfigValue* process_line(const string &buffer);
+        ConfigValue* process_line(const std::string &buffer);
 };
 
 

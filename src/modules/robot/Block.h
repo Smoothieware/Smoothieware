@@ -7,7 +7,6 @@
 
 #pragma once
 
-#include <vector>
 #include <bitset>
 #include "ActuatorCoordinates.h"
 

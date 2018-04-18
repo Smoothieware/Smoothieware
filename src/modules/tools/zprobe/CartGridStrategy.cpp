@@ -356,7 +356,7 @@ bool CartGridStrategy::handleGcode(Gcode *gcode)
             int n = gcode->has_letter('I') ? gcode->get_value('I') : configured_grid_x_size;
             int m = gcode->has_letter('J') ? gcode->get_value('J') : configured_grid_y_size;
 
-            float _x_size = this->x_size, _y_size = this->x_size;
+            float _x_size = this->x_size, _y_size = this->y_size;
             float _x_start = this->x_start, _y_start = this->y_start;
 
             if(only_by_two_corners){

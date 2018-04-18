@@ -136,6 +136,7 @@ class Robot : public Module {
         float seconds_per_minute;                            // for realtime speed change
         float default_acceleration;                          // the defualt accleration if not set for each axis
         float s_value;                                       // modal S value
+        float arc_milestone[3];                              // used as start of an arc command
 
         // Number of arc generation iterations by small angle approximation before exact arc trajectory
         // correction. This parameter may be decreased if there are issues with the accuracy of the arc

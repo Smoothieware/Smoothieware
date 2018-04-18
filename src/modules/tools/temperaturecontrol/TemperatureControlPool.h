@@ -8,8 +8,6 @@
 #ifndef TEMPERATURECONTROLPOOL_H
 #define TEMPERATURECONTROLPOOL_H
 
-#include <vector>
-
 class TemperatureControlPool {
     public:
         void load_tools();
