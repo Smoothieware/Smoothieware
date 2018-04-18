@@ -77,8 +77,7 @@
 #define  dir_pin_checksum                    CHEKCSUM("dir_pin")
 #define  en_pin_checksum                     CHECKSUM("en_pin")
 
-#define  steps_per_mm_checksum               CHECKSUM("steps_per_mm")
-#define  max_rate_checksum                   CHECKSUM("max_rate")
+#define  max_speed_checksum                  CHECKSUM("max_speed")
 #define  acceleration_checksum               CHECKSUM("acceleration")
 #define  z_acceleration_checksum             CHECKSUM("z_acceleration")
 
@@ -188,6 +187,7 @@ void Robot::load_config()
     this->max_speeds[X_AXIS]  = THEKERNEL->config->value(x_axis_max_speed_checksum    )->by_default(60000.0F)->as_number() / 60.0F;
     this->max_speeds[Y_AXIS]  = THEKERNEL->config->value(y_axis_max_speed_checksum    )->by_default(60000.0F)->as_number() / 60.0F;
     this->max_speeds[Z_AXIS]  = THEKERNEL->config->value(z_axis_max_speed_checksum    )->by_default(  300.0F)->as_number() / 60.0F;
+    this->max_speed           = THEKERNEL->config->value(max_speed_checksum           )->by_default(  -60.0F)->as_number() / 60.0F;
 
     this->segment_z_moves     = THEKERNEL->config->value(segment_z_moves_checksum     )->by_default(true)->as_bool();
     this->save_g92            = THEKERNEL->config->value(save_g92_checksum            )->by_default(false)->as_bool();
@@ -675,6 +675,8 @@ void Robot::on_gcode_received(void *argument)
                                 if(actuators[i]->is_extruder()) continue; //extruders handle this themselves
                                 gcode->stream->printf(" %c: %g ", 'A' + i - A_AXIS, actuators[i]->get_max_rate());
                             }
+                        }else{
+                            gcode->stream->printf(" S: %g ", this->max_speed);
                         }
 
                         gcode->add_nl = true;
@@ -698,6 +700,9 @@ void Robot::on_gcode_received(void *argument)
                                     actuators[i]->set_max_rate(v);
                                 }
                             }
+
+                        }else{
+                            if(gcode->has_letter('S')) max_speed= gcode->get_value('S');
                         }
 
 
@@ -820,7 +825,7 @@ void Robot::on_gcode_received(void *argument)
 
                 gcode->stream->printf(";X- Junction Deviation, Z- Z junction deviation, S - Minimum Planner speed mm/sec:\nM205 X%1.5f Z%1.5f S%1.5f\n", THEKERNEL->planner->junction_deviation, isnan(THEKERNEL->planner->z_junction_deviation)?-1:THEKERNEL->planner->z_junction_deviation, THEKERNEL->planner->minimum_planner_speed);
 
-                gcode->stream->printf(";Max cartesian feedrates in mm/sec:\nM203 X%1.5f Y%1.5f Z%1.5f\n", this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS]);
+                gcode->stream->printf(";Max cartesian feedrates in mm/sec:\nM203 X%1.5f Y%1.5f Z%1.5f S%1.5f\n", this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS], this->max_speed);
 
                 gcode->stream->printf(";Max actuator feedrates in mm/sec:\nM203.1 ");
                 for (int i = 0; i < n_motors; ++i) {
@@ -1225,7 +1230,6 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     // as the last milestone won't be updated we do not actually lose any moves as they will be accounted for in the next move
     if(!auxilliary_move && distance < 0.00001F) return false;
 
-
     if(!auxilliary_move) {
          for (size_t i = X_AXIS; i < N_PRIMARY_AXIS; i++) {
             // find distance unit vector for primary axis only
@@ -1238,6 +1242,10 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
                 if (axis_speed > max_speeds[i])
                     rate_mm_s *= ( max_speeds[i] / axis_speed );
             }
+        }
+
+        if(this->max_speed > 0 && rate_mm_s > this->max_speed) {
+            rate_mm_s= this->max_speed;
         }
     }
 
