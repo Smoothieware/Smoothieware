@@ -59,6 +59,13 @@ for line in f:
         okcnt += rep.count("ok")
         if verbose: print("SND " + str(linecnt) + ": " + line.strip() + " - " + str(okcnt))
         if args.log: outlog.write("SND " + str(linecnt) + ": " + line.strip() + " - " + str(okcnt) + "\n" )
+print("Waiting for complete...")
+
+while okcnt < linecnt:
+    rep= tn.read_some()
+    okcnt += rep.count("ok")
+    if verbose: print(str(linecnt) + " - " + str(okcnt) )
+    if args.log: outlog.write(str(linecnt) + " - " + str(okcnt) + "\n" )
 
 
 if args.log: outlog.close()
