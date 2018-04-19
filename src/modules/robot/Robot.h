@@ -145,6 +145,7 @@ class Robot : public Module {
         // computational efficiency of generating arcs.
         int arc_correction;                                  // Setting : how often to rectify arc computation
         float max_speeds[3];                                 // Setting : max allowable speed in mm/s for each axis
+        float max_speed;                                     // Setting : maximum feedrate in mm/s as specified by F parameter
 
         float soft_endstop_min[3], soft_endstop_max[3];
 

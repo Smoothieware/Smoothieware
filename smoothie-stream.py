@@ -53,7 +53,7 @@ for line in f:
         line = re.sub("[ ]*;.*", '', line) # remove everything after ;
         line = line.strip() #send only the bare necessity.
     if len(line) > 0:
-        tn.write(line)
+        tn.write(line + "\n")
         linecnt+=1
         rep= tn.read_eager()
         okcnt += rep.count("ok")
