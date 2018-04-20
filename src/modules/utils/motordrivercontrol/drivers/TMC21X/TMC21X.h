@@ -61,10 +61,10 @@ public:
     /*!
      * \brief configures the TMC21X stepper driver. Before you called this function the stepper driver is in nonfunctional mode.
      *
-     * \param rms_current the maximum current to provide to the motor in mA (!). A value of 200 would send up to 200mA to the motor
-     * \param resistor the current sense resistor in milli Ohm, defaults to ,15 Ohm ( or 150 milli Ohm) as in the TMC260 Arduino Shield
+     * \param rms_current the maximum current to provide to the motor in mA, default to 1000 mA
+     * \param resistor the current sense resistor in milli Ohm, default to 50 milli Ohm
 
-     * This routine configures the TMC26X stepper driver for the given values via SPI.
+     * This routine configures the TMC21X stepper driver for the given values via SPI.
      * Most member functions are non functional if the driver has not been started.
      * Therefore it is best to call this in your Arduino setup() function.
      */
@@ -146,7 +146,7 @@ public:
      * \param value 0 for off, -1 for on
      *
      * In a constant off time chopper scheme both coil choppers run freely, i.e. are not synchronized.
-     * The frequency of each chopper mainly depends on the coil current and the position dependant motor coil inductivity,
+     * The frequency of each chopper mainly depends on the coil current and the position dependent motor coil inductivity,
      * thus it depends on the microstep position. With some motors a slightly audible beat can occur between the chopper
      * frequencies, especially when they are near to each other. This typically occurs at a few microstep positions within
      * each quarter wave.
@@ -182,7 +182,7 @@ public:
      *
      * The StallGuard threshold is used to optimize the StallGuard reading to sensible values. It should be at 0 at
      * the maximum allowable load on the motor (but not before). = is a good starting point (and the default)
-     * If you get Stall Gaurd readings of 0 without any load or with too little load increase the value.
+     * If you get Stall Guard readings of 0 without any load or with too little load increase the value.
      * If you get readings of 1023 even with load decrease the setting.
      *
      * If you switch on the filter the StallGuard reading is only updated each 4th full step to reduce the noise in the
@@ -205,7 +205,7 @@ public:
     int8_t getStallGuardFilter(void);
 
     /*!
-     * \brief This method configures the CoolStep smart energy operation. You must have a proper StallGuard configuration for the motor situation (current, voltage, speed) in rder to use this feature.
+     * \brief This method configures the CoolStep smart energy operation. You must have a proper StallGuard configuration for the motor situation (current, voltage, speed) in order to use this feature.
      * \param lower_SG_threshold Sets the lower threshold for stallGuard2TM reading. Below this value, the motor current becomes increased. Allowed values are 0...480
      * \param SG_hysteresis Sets the distance between the lower and the upper threshold for stallGuard2TM reading. Above the upper threshold (which is lower_SG_threshold+SG_hysteresis+1) the motor current becomes decreased. Allowed values are 0...480
      * \param current_decrement_step_size Sets the current decrement steps. If the StallGuard value is above the threshold the current gets decremented by this step size. 0...32
@@ -216,9 +216,9 @@ public:
      * You configure the CoolStep current regulator by defining upper and lower bounds of StallGuard readouts. If the readout is above the
      * limit the current gets increased, below the limit the current gets decreased.
      * You can specify the upper an lower threshold of the StallGuard readout in order to adjust the current. You can also set the number of
-     * StallGuard readings neccessary above or below the limit to get a more stable current adjustement.
-     * The current adjustement itself is configured by the number of steps the current gests in- or decreased and the absolut minimum current
-     * (1/2 or 1/4th otf the configured current).
+     * StallGuard readings necessary above or below the limit to get a more stable current adjustment.
+     * The current adjustment itself is configured by the number of steps the current gets in- or decreased and the absolute minimum current
+     * (1/2 or 1/4th of the configured current).
      * \sa COOL_STEP_HALF_CS_LIMIT, COOL_STEP_QUARTER_CS_LIMIT
      */
     void setCoolStepConfiguration(unsigned int lower_SG_threshold, unsigned int SG_hysteresis, uint8_t current_decrement_step_size,
@@ -251,7 +251,7 @@ public:
     unsigned int getCoolStepUpperSgThreshold();
 
     /*!
-     * \brief returns the number of StallGuard readings befor CoolStep adjusts the motor current.
+     * \brief returns the number of StallGuard readings before CoolStep adjusts the motor current.
      * \sa setCoolStepConfiguration()
      */
     uint8_t getCoolStepNumberOfSGReadings();
@@ -294,7 +294,7 @@ public:
     /*!
      * \brief Reads the current current setting value and recalculates the absolute current in mA (1A would be 1000).
      * This method calculates the currently used current setting (either by setting or by CoolStep) and reconstructs
-     * the current in mA by usinge the VSENSE and resistor value. This method uses floating point math - so it
+     * the current in mA by using the VSENSE and resistor value. This method uses floating point math - so it
      * may not be the fastest.
      * \sa getCurrentCSReading(), getResistor(), isCurrentScalingHalfed(), getCurrent()
      */
@@ -312,7 +312,7 @@ public:
 
     /*!
      * \brief Return over temperature status of the last status readout
-     * return 0 is everything is OK, TMC26X_OVERTEMPERATURE_PREWARING if status is reached, TMC26X_OVERTEMPERATURE_SHUTDOWN is the chip is shutdown, -1 if the status is unknown.
+     * return 0 is everything is OK, TMC21X_OVERTEMPERATURE_PREWARNING if status is reached, TMC21X_OVERTEMPERATURE_SHUTDOWN is the chip is shutdown, -1 if the status is unknown.
      * Keep in mind that this method does not enforce a readout but uses the value of the last status readout.
      * You may want to use getMotorPosition() or getCurrentStallGuardReading() to enforce an updated status readout.
      */
@@ -335,7 +335,7 @@ public:
      */
     bool isShortToGroundB(void);
     /*!
-     * \brief iIs motor channel A connected according to the last statu readout.
+     * \brief iIs motor channel A connected according to the last status readout.
      * \return true is yes, false if not.
      * Keep in mind that this method does not enforce a readout but uses the value of the last status readout.
      * You may want to use getMotorPosition() or getCurrentStallGuardReading() to enforce an updated status readout.
@@ -343,7 +343,7 @@ public:
     bool isOpenLoadA(void);
 
     /*!
-     * \brief iIs motor channel A connected according to the last statu readout.
+     * \brief iIs motor channel A connected according to the last status readout.
      * \return true is yes, false if not.
      * Keep in mind that this method does not enforce a readout but uses the value of the last status readout.
      * You may want to use getMotorPosition() or getCurrentStallGuardReading() to enforce an updated status readout.
@@ -387,13 +387,13 @@ public:
     /*!
      * \brief Manually read out the status register
      * This function sends a byte to the motor driver in order to get the current readout. The parameter read_value
-     * seletcs which value will get returned. If the read_vlaue changes in respect to the previous readout this method
-     * automatically send two bytes to the motor: one to set the redout and one to get the actual readout. So this method
+     * selects which value will get returned. If the read_vlaue changes in respect to the previous readout this method
+     * automatically send two bytes to the motor: one to set the readout and one to get the actual readout. So this method
      * may take time to send and read one or two bits - depending on the previous readout.
-     * \param read_value selects which value to read out (0..3). You can use the defines TMC26X_READOUT_POSITION, TMC_262_READOUT_STALLGUARD, or TMC_262_READOUT_CURRENT
-     * \sa TMC26X_READOUT_POSITION, TMC_262_READOUT_STALLGUARD, TMC_262_READOUT_CURRENT
+     * \param read_value selects which value to read out (0..3). You can use the defines TMC21X_READOUT_POSITION, TMC21X_READOUT_STALLGUARD_CURRENT
+     * \sa TMC21X_READOUT_POSITION, TMC21X_READOUT_STALLGUARD_CURRENT
      */
-    int readStatus(bool microsteps);
+    uint32_t readStatus(int8_t read_value);
 
     /*!
      * \brief Prints out all the information that can be found in the last status read out - it does not force a status readout.
@@ -423,10 +423,8 @@ private:
     uint32_t chopconf_register_value;
     uint32_t coolconf_register_value;
 
-    //the driver status result
+    //SPI status result transferred with each datagram read back
     uint8_t spi_status_result;
-    uint32_t driver_status_result;
-    uint32_t mscnt_result;
 
     //status values
     int microsteps; //the current number of micro steps
@@ -446,5 +444,6 @@ private:
 
     uint8_t cool_step_lower_threshold; // we need to remember the threshold to enable and disable the CoolStep feature
     char designator;
+
 };
 

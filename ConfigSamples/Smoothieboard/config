@@ -110,15 +110,15 @@ laser_module_pwm_pin                          2.5             # This pin will be
 #laser_module_pwm_period                      20              # This sets the pwm frequency as the period in microseconds
 
 ## Motor driver configuration
-motor_driver_control.driver.enable           true
-motor_driver_control.driver.axis               X
-motor_driver_control.driver.designator         T    
+motor_driver_control.driver.enable           false
+motor_driver_control.driver.axis             X
+motor_driver_control.driver.designator       T    
 motor_driver_control.driver.chip             TMC2130
 motor_driver_control.driver.spi_channel      0
 motor_driver_control.driver.spi_cs_pin       0.16
-#motor_driver_control.driver.current          1000
-#motor_driver_control.driver.sense_resistor   150
-#motor_driver_control.driver.microsteps       16
+#motor_driver_control.driver.current         1000
+#motor_driver_control.driver.sense_resistor  50
+#motor_driver_control.driver.microsteps      16
 
 ## Temperature control configuration
 # See http://smoothieware.org/temperaturecontrol
@@ -351,7 +351,7 @@ kill_button_enable                           true             # Set to true to e
 kill_button_pin                              2.12             # Kill button pin. default is same as pause button 2.12 (2.11 is another good choice)
 
 #msd_disable                                 false            # Disable the MSD (USB SDCARD), see http://smoothieware.org/troubleshooting#disable-msd
-dfu_enable                                   true             # For linux developers, set to true to enable DFU
+#dfu_enable                                  false            # For linux developers, set to true to enable DFU
 
 # Only needed on a smoothieboard
 # See http://smoothieware.org/currentcontrol

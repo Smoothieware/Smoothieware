@@ -361,6 +361,7 @@ void MotorDriverControl::initialize_chip(uint16_t cs)
         set_current(current);
         set_microstep(microsteps);
         //set_decay_mode(decay_mode);
+        
     }else if(chip == TMC2130){
         tmc21x->init(cs);
         set_current(current);
