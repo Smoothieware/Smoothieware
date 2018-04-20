@@ -109,17 +109,6 @@ laser_module_pwm_pin                          2.5             # This pin will be
                                                               # the maximum and minimum power levels specified above
 #laser_module_pwm_period                      20              # This sets the pwm frequency as the period in microseconds
 
-## Motor driver configuration
-motor_driver_control.driver.enable           false
-motor_driver_control.driver.axis             X
-motor_driver_control.driver.designator       T    
-motor_driver_control.driver.chip             TMC2130
-motor_driver_control.driver.spi_channel      0
-motor_driver_control.driver.spi_cs_pin       0.16
-#motor_driver_control.driver.current         1000
-#motor_driver_control.driver.sense_resistor  50
-#motor_driver_control.driver.microsteps      16
-
 ## Temperature control configuration
 # See http://smoothieware.org/temperaturecontrol
 
