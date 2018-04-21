@@ -194,7 +194,7 @@ gamma_homing_retract_mm                      1                # "
 zprobe.enable                                false           # set to true to enable a zprobe
 zprobe.probe_pin                             1.29!^          # pin probe is attached to if NC remove the !
 zprobe.slow_feedrate                         5               # mm/sec probe feed rate
-#zprobe.debounce_count                       100             # set if noisy
+#zprobe.debounce_ms                          1               # set if noisy
 zprobe.fast_feedrate                         100             # move feedrate mm/sec
 zprobe.probe_height                          5               # how much above bed to start probe
 
