@@ -336,7 +336,7 @@ void ZProbe::on_gcode_received(void *argument)
             return;
         }
 
-        if (((gcode->subcode == 4 || gcode->subcode == 5) && (!this->pin.get())) || ((gcode->subcode == 2 || gcode->subcode == 3) && (this->pin.get()))){
+        if(this->pin.get() ^ (gcode->subcode >= 4)) {
             gcode->stream->printf("error:ZProbe triggered before move, aborting command.\n");
             return;
         }
