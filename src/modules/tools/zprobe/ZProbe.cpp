@@ -325,8 +325,8 @@ void ZProbe::on_gcode_received(void *argument)
 
     } else if(gcode->has_g && gcode->g == 38 ) { // G38.2 Straight Probe with error, G38.3 straight probe without error
         // linuxcnc/grbl style probe http://www.linuxcnc.org/docs/2.5/html/gcode/gcode.html#sec:G38-probe
-        if(gcode->subcode != 2 && gcode->subcode != 3) {
-            gcode->stream->printf("error:Only G38.2 and G38.3 are supported\n");
+        if(gcode->subcode < 2 || gcode->subcode > 5) {
+            gcode->stream->printf("error:Only G38.2, G38.3, G38.4, and G38.5 are supported\n");
             return;
         }
 
@@ -336,9 +336,16 @@ void ZProbe::on_gcode_received(void *argument)
             return;
         }
 
-        if(this->pin.get()) {
-            gcode->stream->printf("error:ZProbe triggered before move, aborting command.\n");
-            return;
+        if(gcode->subcode == 4 || gcode->subcode == 5) {
+            if(!this->pin.get()) {
+                gcode->stream->printf("error:ZProbe triggered before move, aborting command.\n");
+                return;
+            }
+        } else {
+            if(this->pin.get()) {
+                gcode->stream->printf("error:ZProbe triggered before move, aborting command.\n");
+                return;
+            }
         }
 
         // first wait for all moves to finish
@@ -362,7 +369,17 @@ void ZProbe::on_gcode_received(void *argument)
             return;
         }
 
+        if(gcode->subcode == 4 || gcode->subcode == 5) {
+            gcode->stream->printf("Inverting pin\n");
+            pin.set_inverting(pin.is_inverting() != 1);
+        }
+
         probe_XYZ(gcode, x, y, z);
+
+        if(gcode->subcode == 4 || gcode->subcode == 5) {
+            gcode->stream->printf("Inverting pin back\n");
+            pin.set_inverting(pin.is_inverting() != 1);
+        }
 
         return;
 
@@ -438,8 +455,8 @@ void ZProbe::probe_XYZ(Gcode *gcode, float x, float y, float z)
     gcode->stream->printf("[PRB:%1.3f,%1.3f,%1.3f:%d]\n", THEKERNEL->robot->from_millimeters(pos[X_AXIS]), THEKERNEL->robot->from_millimeters(pos[Y_AXIS]), THEKERNEL->robot->from_millimeters(pos[Z_AXIS]), probeok);
     THEROBOT->set_last_probe_position(std::make_tuple(pos[X_AXIS], pos[Y_AXIS], pos[Z_AXIS], probeok));
 
-    if(probeok == 0 && gcode->subcode == 2) {
-        // issue error if probe was not triggered and subcode == 2
+    if(probeok == 0 && (gcode->subcode == 2 || gcode->subcode == 4)) {
+        // issue error if probe was not triggered and subcode is 2 or 4
         gcode->stream->printf("ALARM: Probe fail\n");
         THEKERNEL->call_event(ON_HALT, nullptr);
     }
