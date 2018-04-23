@@ -365,9 +365,8 @@ void ZProbe::on_gcode_received(void *argument)
 
         if(gcode->subcode == 4 || gcode->subcode == 5) {
             invert_probe = true;
-        } else {
-            invert_probe = false;   // not sure this is needed since it is always reset to 0 below
         }
+
         probe_XYZ(gcode, x, y, z);
 
         if(gcode->subcode == 4 || gcode->subcode == 5) {
