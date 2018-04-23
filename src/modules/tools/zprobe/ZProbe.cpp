@@ -255,7 +255,8 @@ void ZProbe::on_gcode_received(void *argument)
     Gcode *gcode = static_cast<Gcode *>(argument);
 
     if( gcode->has_g && gcode->g >= 29 && gcode->g <= 32) {
-
+        
+        invert_probe = false;
         // make sure the probe is defined and not already triggered before moving motors
         if(!this->pin.connected()) {
             gcode->stream->printf("ZProbe pin not configured.\n");
