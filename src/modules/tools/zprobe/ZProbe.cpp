@@ -73,6 +73,7 @@ void ZProbe::on_module_loaded()
 
     // we read the probe in this timer
     probing= false;
+    invert_probe= false;
     THEKERNEL->slow_ticker->attach(1000, this, &ZProbe::read_probe);
 }
 
