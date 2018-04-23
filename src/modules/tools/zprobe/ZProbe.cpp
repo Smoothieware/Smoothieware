@@ -370,14 +370,12 @@ void ZProbe::on_gcode_received(void *argument)
         }
 
         if(gcode->subcode == 4 || gcode->subcode == 5) {
-            gcode->stream->printf("Inverting pin\n");
             pin.set_inverting(pin.is_inverting() != 1);
         }
 
         probe_XYZ(gcode, x, y, z);
 
         if(gcode->subcode == 4 || gcode->subcode == 5) {
-            gcode->stream->printf("Inverting pin back\n");
             pin.set_inverting(pin.is_inverting() != 1);
         }
 
