@@ -370,6 +370,8 @@ void ZProbe::on_gcode_received(void *argument)
 
         probe_XYZ(gcode, x, y, z);
 
+        invert_probe = false;
+
         return;
 
     } else if(gcode->has_m) {
