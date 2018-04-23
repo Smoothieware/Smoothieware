@@ -155,7 +155,7 @@ uint32_t ZProbe::read_probe(uint32_t dummy)
     // we check all axis as it maybe a G38.2 X10 for instance, not just a probe in Z
     if(STEPPER[X_AXIS]->is_moving() || STEPPER[Y_AXIS]->is_moving() || STEPPER[Z_AXIS]->is_moving()) {
         // if it is moving then we check the probe, and debounce it
-        if(this->pin.get()) {
+        if(this->pin.get() != invert_probe) {
             if(debounce < debounce_ms) {
                 debounce++;
             } else {
@@ -326,7 +326,7 @@ void ZProbe::on_gcode_received(void *argument)
     } else if(gcode->has_g && gcode->g == 38 ) { // G38.2 Straight Probe with error, G38.3 straight probe without error
         // linuxcnc/grbl style probe http://www.linuxcnc.org/docs/2.5/html/gcode/gcode.html#sec:G38-probe
         if(gcode->subcode < 2 || gcode->subcode > 5) {
-            gcode->stream->printf("error:Only G38.2, G38.3, G38.4, and G38.5 are supported\n");
+            gcode->stream->printf("error:Only G38.2 to G38.5 are supported\n");
             return;
         }
 
@@ -336,16 +336,9 @@ void ZProbe::on_gcode_received(void *argument)
             return;
         }
 
-        if(gcode->subcode == 4 || gcode->subcode == 5) {
-            if(!this->pin.get()) {
-                gcode->stream->printf("error:ZProbe triggered before move, aborting command.\n");
-                return;
-            }
-        } else {
-            if(this->pin.get()) {
-                gcode->stream->printf("error:ZProbe triggered before move, aborting command.\n");
-                return;
-            }
+        if (((gcode->subcode == 4 || gcode->subcode == 5) && (!this->pin.get())) || ((gcode->subcode == 2 || gcode->subcode == 3) && (this->pin.get()))){
+            gcode->stream->printf("error:ZProbe triggered before move, aborting command.\n");
+            return;
         }
 
         // first wait for all moves to finish
@@ -370,13 +363,14 @@ void ZProbe::on_gcode_received(void *argument)
         }
 
         if(gcode->subcode == 4 || gcode->subcode == 5) {
-            pin.set_inverting(pin.is_inverting() != 1);
+            invert_probe = true;
+        } else {
+            invert_probe = false;   // not sure this is needed since it is always reset to 0 below
         }
-
         probe_XYZ(gcode, x, y, z);
 
         if(gcode->subcode == 4 || gcode->subcode == 5) {
-            pin.set_inverting(pin.is_inverting() != 1);
+            invert_probe = false;
         }
 
         return;

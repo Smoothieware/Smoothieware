@@ -67,6 +67,7 @@ private:
         bool probing:1;
         bool reverse_z:1;
         bool invert_override:1;
+        bool invert_probe:1;
         volatile bool probe_detected:1;
     };
 };
