@@ -138,6 +138,7 @@ try_again:
                 currentline = nextline;
             }
 
+            bool sent_ok= false; // used for G1 optimization
             while(possible_command.size() > 0) {
                 // assumes G or M are always the first on the line
                 size_t nextcmd = possible_command.find_first_of("GM", 2);
@@ -164,7 +165,7 @@ try_again:
                             }
                             new_message.stream->printf("ok\n");
                             delete gcode;
-                            continue;
+                            return;
 
                         }else if(!is_allowed_mcode(gcode->m)) {
                             // ignore everything, return error string to host
@@ -209,6 +210,12 @@ try_again:
                             // makes it handle the parameters as a machine position
                             THEROBOT->next_command_is_MCS= true;
 
+                        } else if(gcode->g == 1) {
+                            // optimize G1 to send ok immediately (one per line) before it is planned
+                            if(!sent_ok) {
+                                sent_ok= true;
+                                new_message.stream->printf("ok\n");
+                            }
                         }
 
                         // remember last modal group 1 code
@@ -392,7 +399,7 @@ try_again:
                         new_message.stream->printf("Entering Alarm/Halt state\n");
                         THEKERNEL->call_event(ON_HALT, nullptr);
 
-                    }else{
+                    }else if(!sent_ok) {
 
                         if(gcode->add_nl)
                             new_message.stream->printf("\r\n");
