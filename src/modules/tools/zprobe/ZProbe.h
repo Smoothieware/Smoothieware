@@ -26,7 +26,7 @@ class ZProbe: public Module
 {
 
 public:
-    ZProbe() : invert_override(false) {};
+    ZProbe() : invert_override(false),invert_probe(false) {};
     virtual ~ZProbe() {};
 
     void on_module_loaded();
