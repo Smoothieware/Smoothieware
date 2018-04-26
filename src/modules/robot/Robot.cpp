@@ -54,6 +54,7 @@
 #define  z_axis_max_speed_checksum           CHECKSUM("z_axis_max_speed")
 #define  segment_z_moves_checksum            CHECKSUM("segment_z_moves")
 #define  save_g92_checksum                   CHECKSUM("save_g92")
+#define  save_g54_checksum                   CHECKSUM("save_g54")
 #define  set_g92_checksum                    CHECKSUM("set_g92")
 
 // arm solutions
@@ -191,6 +192,7 @@ void Robot::load_config()
 
     this->segment_z_moves     = THEKERNEL->config->value(segment_z_moves_checksum     )->by_default(true)->as_bool();
     this->save_g92            = THEKERNEL->config->value(save_g92_checksum            )->by_default(false)->as_bool();
+    this->save_g54            = THEKERNEL->config->value(save_g54_checksum            )->by_default(THEKERNEL->is_grbl_mode())->as_bool();
     string g92                = THEKERNEL->config->value(set_g92_checksum             )->by_default("")->as_string();
     if(!g92.empty()) {
         // optional setting for a fixed G92 offset
@@ -847,16 +849,18 @@ void Robot::on_gcode_received(void *argument)
 
                 // save wcs_offsets and current_wcs
                 // TODO this may need to be done whenever they change to be compliant
-                gcode->stream->printf(";WCS settings\n");
-                gcode->stream->printf("%s\n", wcs2gcode(current_wcs).c_str());
-                int n = 1;
-                for(auto &i : wcs_offsets) {
-                    if(i != wcs_t(0, 0, 0)) {
-                        float x, y, z;
-                        std::tie(x, y, z) = i;
-                        gcode->stream->printf("G10 L2 P%d X%f Y%f Z%f ; %s\n", n, x, y, z, wcs2gcode(n-1).c_str());
+                if(save_g54) {
+                    gcode->stream->printf(";WCS settings\n");
+                    gcode->stream->printf("%s\n", wcs2gcode(current_wcs).c_str());
+                    int n = 1;
+                    for(auto &i : wcs_offsets) {
+                        if(i != wcs_t(0, 0, 0)) {
+                            float x, y, z;
+                            std::tie(x, y, z) = i;
+                            gcode->stream->printf("G10 L2 P%d X%f Y%f Z%f ; %s\n", n, x, y, z, wcs2gcode(n-1).c_str());
+                        }
+                        ++n;
                     }
-                    ++n;
                 }
                 if(save_g92) {
                     // linuxcnc saves G92, so we do too if configured, default is to not save to maintain backward compatibility

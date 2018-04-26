@@ -73,7 +73,6 @@ void ZProbe::on_module_loaded()
 
     // we read the probe in this timer
     probing= false;
-    invert_probe= false;
     THEKERNEL->slow_ticker->attach(1000, this, &ZProbe::read_probe);
 }
 
@@ -256,7 +255,7 @@ void ZProbe::on_gcode_received(void *argument)
     Gcode *gcode = static_cast<Gcode *>(argument);
 
     if( gcode->has_g && gcode->g >= 29 && gcode->g <= 32) {
-        
+
         invert_probe = false;
         // make sure the probe is defined and not already triggered before moving motors
         if(!this->pin.connected()) {
