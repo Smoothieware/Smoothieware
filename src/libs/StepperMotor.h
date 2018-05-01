@@ -10,6 +10,8 @@
 #include "Module.h"
 #include "Pin.h"
 
+#define AXIS_EXTRUDER 255
+
 class StepperMotor  : public Module {
     public:
         StepperMotor(Pin& step, Pin& dir, Pin& en);
@@ -53,6 +55,8 @@ class StepperMotor  : public Module {
         void set_selected(bool b) { selected= b; }
         bool is_extruder() const { return extruder; }
         void set_extruder(bool b) { extruder= b; }
+        uint8_t get_axis(void) { return axis; }
+        void set_axis(uint8_t a) { axis = a; }
 
         int32_t steps_to_target(float);
 
@@ -73,6 +77,7 @@ class StepperMotor  : public Module {
         volatile int32_t current_position_steps;
         int32_t last_milestone_steps;
         float   last_milestone_mm;
+        uint8_t axis;       // which axis this motor belongs to or 255 if extruder
 
         volatile struct {
             uint8_t motor_id:8;

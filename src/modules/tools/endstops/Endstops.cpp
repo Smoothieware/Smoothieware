@@ -458,14 +458,17 @@ void Endstops::on_idle(void *argument)
     }
 
     for(auto& i : endstops) {
-        if(i->limit_enable && STEPPER[i->axis_index]->is_moving()) {
+        auto motor = THEROBOT->get_motor_for_axis(i->axis_index);
+        if(motor == NULL) continue;     // nothing for this axis... whoa
+
+        if(i->limit_enable && motor->is_moving()) {
             // check min and max endstops
             if(debounced_get(&i->pin)) {
                 // endstop triggered
                 if(!THEKERNEL->is_grbl_mode()) {
-                    THEKERNEL->streams->printf("Limit switch %c%c was hit - reset or M999 required\n", STEPPER[i->axis_index]->which_direction() ? '-' : '+', i->axis);
+                    THEKERNEL->streams->printf("Limit switch %c%c was hit - reset or M999 required\n", motor->which_direction() ? '-' : '+', i->axis);
                 }else{
-                    THEKERNEL->streams->printf("ALARM: Hard limit %c%c\n", STEPPER[i->axis_index]->which_direction() ? '-' : '+', i->axis);
+                    THEKERNEL->streams->printf("ALARM: Hard limit %c%c\n", motor->which_direction() ? '-' : '+', i->axis);
                 }
                 this->status = LIMIT_TRIGGERED;
                 i->debounce= 0;
@@ -564,21 +567,30 @@ uint32_t Endstops::read_endstops(uint32_t dummy)
         // for corexy homing in X or Y we must only check the associated endstop, works as we only home one axis at a time for corexy
         if(is_corexy && (m == X_AXIS || m == Y_AXIS) && !axis_to_home[m]) continue;
 
-        if(STEPPER[m]->is_moving()) {
+        auto motor = THEROBOT->get_motor_for_axis(m);
+        if(motor == NULL) continue;     // nothing for this axis... whoa
+
+        if(motor->is_moving()) {
             // if it is moving then we check the associated endstop, and debounce it
             if(e.pin_info->pin.get()) {
                 if(e.pin_info->debounce < debounce_ms) {
                     e.pin_info->debounce++;
 
                 } else {
+                    THEKERNEL->streams->printf("AXIS %d home clicked.\n", m);
                     if(is_corexy && (m == X_AXIS || m == Y_AXIS)) {
                         // corexy when moving in X or Y we need to stop both the X and Y motors
                         STEPPER[X_AXIS]->stop_moving();
                         STEPPER[Y_AXIS]->stop_moving();
 
                     }else{
-                        // we signal the motor to stop, which will preempt any moves on that axis
-                        STEPPER[m]->stop_moving();
+                        // we signal all motors on this axis to stop
+                        // which will preempt any moves on that axis
+                        for(auto& act : THEROBOT->actuators) {
+                            if(act->get_axis() == m) {
+                                act->stop_moving();
+                            }
+                        }
                     }
                     e.pin_info->triggered= true;
                 }
