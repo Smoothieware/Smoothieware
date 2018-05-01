@@ -121,6 +121,7 @@ void Extruder::config_load()
     stepper_motor->change_steps_per_mm(steps_per_millimeter);
     stepper_motor->set_selected(false); // not selected by default
     stepper_motor->set_extruder(true);  // indicates it is an extruder
+    stepper_motor->set_axis(AXIS_EXTRUDER); // this motor isn't associated with an axis
 }
 
 void Extruder::select()
