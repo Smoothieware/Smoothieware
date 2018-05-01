@@ -94,7 +94,7 @@ void MappableCartesianSolution::cartesian_to_actuator(const float cartesian_mm[]
 
 void MappableCartesianSolution::actuator_to_cartesian(const ActuatorCoordinates &actuator_mm, float cartesian_mm[] ) const
 {
-    cartesian_mm[X_AXIS]] = actuator_mm[axis_map[X_AXIS];
+    cartesian_mm[X_AXIS] = actuator_mm[axis_map[X_AXIS]];
     cartesian_mm[Y_AXIS] = actuator_mm[axis_map[Y_AXIS]];
     cartesian_mm[Z_AXIS] = actuator_mm[axis_map[Z_AXIS]];
 }
