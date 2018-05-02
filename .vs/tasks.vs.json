@@ -1,0 +1,39 @@
+{
+  "version": "0.2.1",
+  "outDir": "\"${workspaceRoot}\\LPC1768\"",
+  "tasks": [
+    {
+      "taskName": "makefile-build",
+      "appliesTo": "/makefile",
+      "type": "launch",
+      "contextType": "build",
+      "command": "BuildShell.cmd",
+      "args": [ "make", "all" ],
+      "envVars": {
+        "VSCMD_START_DIR": "\"${workspaceRoot}\""
+      }
+    },
+    {
+      "taskName": "makefile-clean",
+      "appliesTo": "/makefile",
+      "type": "launch",
+      "contextType": "clean",
+      "command": "BuildShell.cmd",
+      "args": [ "make", "clean" ],
+      "envVars": {
+        "VSCMD_START_DIR": "\"${workspaceRoot}\""
+      }
+    },
+    {
+      "taskName": "makefile-rebuild",
+      "appliesTo": "/makefile",
+      "type": "launch",
+      "contextType": "rebuild",
+      "command": "BuildShell.cmd",
+      "args": [ "make", "clean", "all" ],
+      "envVars": {
+        "VSCMD_START_DIR": "\"${workspaceRoot}\""
+      }
+    }
+  ]
+}
