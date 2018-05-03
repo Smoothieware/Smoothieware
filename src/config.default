@@ -116,7 +116,7 @@ zeta_steps_per_mm                            768
 
 # ENDSTOPS and HOMING
 
-endstop_debounce_ms                          1
+endstop_debounce_ms                          2
 
 # X endstop
 endstop.minx.axis                            X
