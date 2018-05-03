@@ -7,10 +7,12 @@
 
 namespace mbed {
     class SPI;
+    class Serial;
 }
 
 class DRV8711DRV;
 class TMC26X;
+class TMC22X;
 class StreamOutput;
 class Gcode;
 
@@ -38,13 +40,15 @@ class MotorDriverControl : public Module {
 
         void enable(bool on);
         int sendSPI(uint8_t *b, int cnt, uint8_t *r);
-
+        int sendUART(uint8_t *b, int cnt, uint8_t *r);
         Pin spi_cs_pin;
         mbed::SPI *spi;
+        mbed::Serial *uart;
 
         enum CHIP_TYPE {
             DRV8711,
-            TMC2660
+            TMC2660,
+            TMC2208
         };
         CHIP_TYPE chip;
 
@@ -52,6 +56,7 @@ class MotorDriverControl : public Module {
         union {
             DRV8711DRV *drv8711;
             TMC26X *tmc26x;
+            TMC22X *tmc22x;
         };
 
         //float current_factor;

@@ -13,9 +13,10 @@
 #include "Config.h"
 #include "checksumm.h"
 
-#include "mbed.h" // for SPI
+#include "mbed.h" // for SPI and UART
 
 #include "drivers/TMC26X/TMC26X.h"
+#include "drivers/TMC22X/TMC22X.h"
 #include "drivers/DRV8711/drv8711.h"
 
 #include <string>
@@ -39,6 +40,9 @@
 #define spi_channel_checksum           CHECKSUM("spi_channel")
 #define spi_cs_pin_checksum            CHECKSUM("spi_cs_pin")
 #define spi_frequency_checksum         CHECKSUM("spi_frequency")
+
+#define uart_channel_checksum          CHECKSUM("uart_channel")
+#define uart_baudrate_checksum         CHECKSUM("uart_baudrate")
 
 MotorDriverControl::MotorDriverControl(uint8_t id) : id(id)
 {
@@ -86,14 +90,6 @@ bool MotorDriverControl::config_module(uint16_t cs)
         return false; // axis is illegal
     }
 
-    spi_cs_pin.from_string(THEKERNEL->config->value( motor_driver_control_checksum, cs, spi_cs_pin_checksum)->by_default("nc")->as_string())->as_output();
-    if(!spi_cs_pin.connected()) {
-        THEKERNEL->streams->printf("MotorDriverControl %c ERROR: chip select not defined\n", axis);
-        return false; // if not defined then we can't use this instance
-    }
-    spi_cs_pin.set(1);
-
-
     str= THEKERNEL->config->value( motor_driver_control_checksum, cs, chip_checksum)->by_default("")->as_string();
     if(str.empty()) {
         THEKERNEL->streams->printf("MotorDriverControl %c ERROR: chip type not defined\n", axis);
@@ -112,34 +108,69 @@ bool MotorDriverControl::config_module(uint16_t cs)
         chip= TMC2660;
         tmc26x= new TMC26X(std::bind( &MotorDriverControl::sendSPI, this, _1, _2, _3), axis);
 
+    }else if(str == "TMC2208") {
+        chip= TMC2208;
+        tmc22x= new TMC22X(std::bind( &MotorDriverControl::sendUART, this, _1, _2, _3), axis);
+
     }else{
         THEKERNEL->streams->printf("MotorDriverControl %c ERROR: Unknown chip type: %s\n", axis, str.c_str());
         return false;
     }
 
-    // select which SPI channel to use
-    int spi_channel = THEKERNEL->config->value(motor_driver_control_checksum, cs, spi_channel_checksum)->by_default(1)->as_number();
-    int spi_frequency = THEKERNEL->config->value(motor_driver_control_checksum, cs, spi_frequency_checksum)->by_default(1000000)->as_number();
+    if(chip == TMC2208) {
+        int uart_channel = THEKERNEL->config->value(motor_driver_control_checksum, cs, uart_channel_checksum)->by_default(0)->as_number();
+        int uart_baudrate = THEKERNEL->config->value(motor_driver_control_checksum, cs, uart_baudrate_checksum)->by_default(9600)->as_number();
 
-    // select SPI channel to use
-    PinName mosi, miso, sclk;
-    if(spi_channel == 0) {
-        mosi = P0_18; miso = P0_17; sclk = P0_15;
-    } else if(spi_channel == 1) {
-        mosi = P0_9; miso = P0_8; sclk = P0_7;
+        // select UART channel to use
+        PinName txd, rxd;
+        if(uart_channel == 0) {
+            txd = P0_2; rxd= P0_3;
+        } else if(uart_channel == 1) {
+            txd = P0_15; rxd = P0_16;
+        } else {
+            THEKERNEL->streams->printf("MotorDriverControl %c ERROR: Unknown UART Channel: %d\n", axis, uart_channel);
+            return false;
+        }
+
+        this->uart = new mbed::Serial(txd, rxd);
+        this->uart->baud(uart_baudrate);
+
+        THEKERNEL->streams->printf("MotorDriverControl INFO: configured motor %c (%d): as %s\n", axis, id, chip==TMC2208?"TMC2208":"UNKNOWN");
     } else {
-        THEKERNEL->streams->printf("MotorDriverControl %c ERROR: Unknown SPI Channel: %d\n", axis, spi_channel);
-        return false;
-    }
+        spi_cs_pin.from_string(THEKERNEL->config->value( motor_driver_control_checksum, cs, spi_cs_pin_checksum)->by_default("nc")->as_string())->as_output();
+        if(!spi_cs_pin.connected()) {
+            THEKERNEL->streams->printf("MotorDriverControl %c ERROR: chip select not defined\n", axis);
+            return false; // if not defined then we can't use this instance
+        }
+        spi_cs_pin.set(1);
 
-    this->spi = new mbed::SPI(mosi, miso, sclk);
-    this->spi->frequency(spi_frequency);
-    this->spi->format(8, 3); // 8bit, mode3
+        // select which SPI channel to use
+        int spi_channel = THEKERNEL->config->value(motor_driver_control_checksum, cs, spi_channel_checksum)->by_default(1)->as_number();
+        int spi_frequency = THEKERNEL->config->value(motor_driver_control_checksum, cs, spi_frequency_checksum)->by_default(1000000)->as_number();
+
+        // select SPI channel to use
+        PinName mosi, miso, sclk;
+        if(spi_channel == 0) {
+            mosi = P0_18; miso = P0_17; sclk = P0_15;
+        } else if(spi_channel == 1) {
+            mosi = P0_9; miso = P0_8; sclk = P0_7;
+        } else {
+            THEKERNEL->streams->printf("MotorDriverControl %c ERROR: Unknown SPI Channel: %d\n", axis, spi_channel);
+            return false;
+        }
+
+        this->spi = new mbed::SPI(mosi, miso, sclk);
+        this->spi->frequency(spi_frequency);
+        this->spi->format(8, 3); // 8bit, mode3
+
+        THEKERNEL->streams->printf("MotorDriverControl INFO: configured motor %c (%d): as %s, cs: %04X\n", axis, id, chip==TMC2660?"TMC2660":chip==DRV8711?"DRV8711":"UNKNOWN", (spi_cs_pin.port_number<<8)|spi_cs_pin.pin);
+    }
 
     // set default max currents for each chip, can be overidden in config
     switch(chip) {
         case DRV8711: max_current= 4000; break;
         case TMC2660: max_current= 3000; break;
+        case TMC2208: max_current= 3000; break;
     }
 
     max_current= THEKERNEL->config->value(motor_driver_control_checksum, cs, max_current_checksum )->by_default((int)max_current)->as_number(); // in mA
@@ -149,7 +180,7 @@ bool MotorDriverControl::config_module(uint16_t cs)
     microsteps= THEKERNEL->config->value(motor_driver_control_checksum, cs, microsteps_checksum )->by_default(16)->as_number(); // 1/n
     //decay_mode= THEKERNEL->config->value(motor_driver_control_checksum, cs, decay_mode_checksum )->by_default(1)->as_number();
 
-    // setup the chip via SPI
+    // setup the chip via SPI/UART
     initialize_chip(cs);
 
     // if raw registers are defined set them 1,2,3 etc in hex
@@ -164,6 +195,7 @@ bool MotorDriverControl::config_module(uint16_t cs)
                 switch(chip) {
                     case DRV8711: drv8711->set_raw_register(&StreamOutput::NullStream, ++reg, i); break;
                     case TMC2660: tmc26x->setRawRegister(&StreamOutput::NullStream, ++reg, i); break;
+                    case TMC2208: break;
                 }
             }
 
@@ -171,6 +203,7 @@ bool MotorDriverControl::config_module(uint16_t cs)
             switch(chip) {
                 case DRV8711: drv8711->set_raw_register(&StreamOutput::NullStream, 255, 0); break;
                 case TMC2660: tmc26x->setRawRegister(&StreamOutput::NullStream, 255, 0); break;
+                case TMC2208: break;
             }
         }
 
@@ -188,8 +221,6 @@ bool MotorDriverControl::config_module(uint16_t cs)
         // enable alarm monitoring for the chip
         this->register_for_event(ON_SECOND_TICK);
     }
-
-    THEKERNEL->streams->printf("MotorDriverControl INFO: configured motor %c (%d): as %s, cs: %04X\n", axis, id, chip==TMC2660?"TMC2660":chip==DRV8711?"DRV8711":"UNKNOWN", (spi_cs_pin.port_number<<8)|spi_cs_pin.pin);
 
     return true;
 }
@@ -243,6 +274,7 @@ void MotorDriverControl::on_second_tick(void *argument)
         case TMC2660:
             alarm= tmc26x->checkAlarm();
             break;
+        case TMC2208: break;
     }
 
     if(halt_on_alarm && alarm) {
@@ -349,8 +381,13 @@ void MotorDriverControl::initialize_chip(uint16_t cs)
         set_current(current);
         set_microstep(microsteps);
         //set_decay_mode(decay_mode);
-    }
 
+    }else if(chip == TMC2208){
+        tmc22x->init(cs);
+        //set_current(current);
+        //set_microstep(microsteps);
+        //set_decay_mode(decay_mode);
+    }
 }
 
 // set current in milliamps
@@ -364,6 +401,8 @@ void MotorDriverControl::set_current(uint32_t c)
         case TMC2660:
             tmc26x->setCurrent(c);
             break;
+        case TMC2208: break;
+
     }
 }
 
@@ -380,6 +419,7 @@ uint32_t MotorDriverControl::set_microstep( uint32_t n )
             tmc26x->setMicrosteps(n);
             m= tmc26x->getMicrosteps();
             break;
+        case TMC2208: break;
     }
     return m;
 }
@@ -390,6 +430,7 @@ void MotorDriverControl::set_decay_mode( uint8_t dm )
     switch(chip) {
         case DRV8711: break;
         case TMC2660: break;
+        case TMC2208: break;
     }
 }
 
@@ -403,6 +444,7 @@ void MotorDriverControl::enable(bool on)
         case TMC2660:
             tmc26x->setEnabled(on);
             break;
+        case TMC2208: break;
     }
 }
 
@@ -416,6 +458,7 @@ void MotorDriverControl::dump_status(StreamOutput *stream, bool b)
         case TMC2660:
             tmc26x->dumpStatus(stream, b);
             break;
+        case TMC2208: break;
     }
 }
 
@@ -425,6 +468,7 @@ void MotorDriverControl::set_raw_register(StreamOutput *stream, uint32_t reg, ui
     switch(chip) {
         case DRV8711: ok= drv8711->set_raw_register(stream, reg, val); break;
         case TMC2660: ok= tmc26x->setRawRegister(stream, reg, val); break;
+        case TMC2208: break;
     }
     if(ok) {
         stream->printf("register operation succeeded\n");
@@ -458,6 +502,7 @@ void MotorDriverControl::set_options(Gcode *gcode)
             // }
         }
         break;
+        case TMC2208: break;
     }
 }
 
@@ -472,3 +517,21 @@ int MotorDriverControl::sendSPI(uint8_t *b, int cnt, uint8_t *r)
     return cnt;
 }
 
+// Called by the drivers codes to send and receive UART data to/from the chip
+int MotorDriverControl::sendUART(uint8_t *b, int cnt, uint8_t *r)
+{
+    for (int i = 0; i < cnt; ++i) {
+        uart->putc(b[i]);
+        uart->getc(); //Flush write data which is received in the RX line
+    }
+    if (!(b[2] >> 7)) {
+        safe_delay_ms(2); //delay required until a reply is provided
+        while(uart->readable()) {
+            for (int i = 0; i < 8; ++i) {
+                r[i] = uart->getc();
+            }
+        }
+    }
+
+    return cnt;
+}
