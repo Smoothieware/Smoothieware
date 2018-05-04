@@ -42,17 +42,17 @@ alpha_max_rate                               60000
 y_axis_max_speed                             48000
 beta_max_rate                                48000
 
-z_axis_max_speed                             10800
-gamma_max_rate                               10800
+z_axis_max_speed                             15000
+gamma_max_rate                               15000
 
-a_axis_max_speed                             10800
-delta_max_rate                               10800
+a_axis_max_speed                             15000
+delta_max_rate                               15000
 
-b_axis_max_speed                             6000
-epsilon_max_rate                             6000
+b_axis_max_speed                             10000
+epsilon_max_rate                             10000
 
-c_axis_max_speed                             6000
-zeta_max_rate                                6000
+c_axis_max_speed                             10000
+zeta_max_rate                                10000
 
 ##################################
 ##################################
