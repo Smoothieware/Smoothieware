@@ -13,7 +13,9 @@
 #include "Config.h"
 #include "checksumm.h"
 
-#include "mbed.h" // for SPI and UART
+#include "mbed.h" // for SPI
+#include "libs/SoftSerial/SoftSerial.h" //for UART
+#include "libs/SoftSerial/BufferedSoftSerial.h" //for UART
 
 #include "drivers/TMC26X/TMC26X.h"
 #include "drivers/TMC22X/TMC22X.h"
@@ -126,13 +128,13 @@ bool MotorDriverControl::config_module(uint16_t cs)
         if(uart_channel == 0) {
             txd = P0_2; rxd= P0_3;
         } else if(uart_channel == 1) {
-            txd = P0_15; rxd = P0_16;
+            txd = P0_17; rxd = P0_18;
         } else {
             THEKERNEL->streams->printf("MotorDriverControl %c ERROR: Unknown UART Channel: %d\n", axis, uart_channel);
             return false;
         }
 
-        this->uart = new mbed::Serial(txd, rxd);
+        this->uart = new BufferedSoftSerial(txd, rxd);
         this->uart->baud(uart_baudrate);
 
         THEKERNEL->streams->printf("MotorDriverControl INFO: configured motor %c (%d): as %s\n", axis, id, chip==TMC2208?"TMC2208":"UNKNOWN");
@@ -525,7 +527,7 @@ int MotorDriverControl::sendUART(uint8_t *b, int cnt, uint8_t *r)
         uart->getc(); //Flush write data which is received in the RX line
     }
     if (!(b[2] >> 7)) {
-        safe_delay_ms(2); //delay required until a reply is provided
+        safe_delay_ms(20); //delay required until a reply is provided
         while(uart->readable()) {
             for (int i = 0; i < 8; ++i) {
                 r[i] = uart->getc();

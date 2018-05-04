@@ -7,7 +7,6 @@
 
 namespace mbed {
     class SPI;
-    class Serial;
 }
 
 class DRV8711DRV;
@@ -15,6 +14,8 @@ class TMC26X;
 class TMC22X;
 class StreamOutput;
 class Gcode;
+class SoftSerial;
+class BufferedSoftSerial;
 
 class MotorDriverControl : public Module {
     public:
@@ -43,7 +44,7 @@ class MotorDriverControl : public Module {
         int sendUART(uint8_t *b, int cnt, uint8_t *r);
         Pin spi_cs_pin;
         mbed::SPI *spi;
-        mbed::Serial *uart;
+        BufferedSoftSerial *uart;
 
         enum CHIP_TYPE {
             DRV8711,
