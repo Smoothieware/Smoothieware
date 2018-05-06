@@ -1381,11 +1381,12 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
         // as all limits are relative to the feedrate along the euclidean distance, the limits applicable to a single actuator 
         // can be multiplied by the distance travelled per actuator motion 
         float limit_factor = distance / d;
-        // NOTE that for arm_solutions other than cartesian and for secondary axes in mixed motion, the 
+        // NOTE: many times d is a part of the (XYZ) vector making up the euclidean distance, so it follows that
+        // d <= distance and limit_factor >= 1.  
+        // But for arm_solutions other than cartesian and for secondary axes (ABC) in mixed motion, the 
         // delta (d) may be larger than the euclidean distance, so the limit_factor can be smaller
-        // than 1 meaning that the actuator rate and acceleration limits apply more stringently to the 
-        // euclidean motion than to the actuator itself.
-        
+        // than 1 meaning that the actuator rate and acceleration limits apply more stringently. 
+
         // adjust rate to lowest found
         float actuator_rate = limit_factor * actuators[actuator]->get_max_rate();
         if (rate_mm_s > actuator_rate) {
