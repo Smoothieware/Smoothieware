@@ -1260,6 +1260,16 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     if (!auxilliary_move && distance < 0.00001F) {
         // we're skipping the primary actuators but there might still be secondary motion
         if (secondary_move) {
+            #ifndef ROBOT_NO_BAIL_ON_NEARZERO_XYZ
+                for (size_t i = E_AXIS; i < n_motors; i++) {
+                    if (deltas[i] != 0 && actuators[i]->is_extruder()) {
+                        // one or more of the moved secondary axes are extruders - bail anyway to prevent blobs
+                        // as the last milestone won't be updated we do not actually lose any moves as they will be accounted for in the next move
+                        return false;
+                    }
+                }
+            #endif
+
             // with near zero primary motion, we handle this as an auxiliary move
             auxilliary_move = true;
             // NOTE: the NIST RS274NGC section 2.1.2.5 rule A still applies, so we must NOT apply the feedrate 
