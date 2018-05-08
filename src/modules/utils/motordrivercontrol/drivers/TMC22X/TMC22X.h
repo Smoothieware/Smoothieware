@@ -48,7 +48,7 @@ public:
      *
      * This is the main constructor. If in doubt use this. You must provide all parameters as described below.
      *
-     * \param uart send function
+     * \param serial send function
      *
      * By default the Constant Off Time chopper is used, see TCM262Stepper.setConstantOffTimeChopper() for details.
      * This should work on most motors (YMMV). You may want to configure and use the Spread Cycle Chopper, see  setSpreadCycleChopper().
@@ -57,7 +57,7 @@ public:
      * You can select a different stepping with setMicrosteps() to aa different value.
      * \sa start(), setMicrosteps()
      */
-    TMC22X(std::function<int(uint8_t *b, int cnt, uint8_t *r)> uart, char designator);
+    TMC22X(std::function<int(uint8_t *b, int cnt, uint8_t *r)> serial, char designator);
 
     /*!
      * \brief configures the TMC22X stepper driver. Before you called this function the stepper driver is in nonfunctional mode.
@@ -80,22 +80,181 @@ public:
      * You can always check the current microstepping with getMicrosteps().
      */
 
+    /*!
+     * \brief Set the number of microsteps in 2^i values (rounded) up to 256
+     *
+     * This method set's the number of microsteps per step in 2^i interval.
+     * This means you can select 1, 2, 4, 16, 32, 64, 128 or 256 as valid microsteps.
+     * If you give any other value it will be rounded to the next smaller number (3 would give a microstepping of 2).
+     * You can always check the current microstepping with getMicrosteps().
+     */
+    void setMicrosteps(int number_of_steps);
+
+    /*!
+     * \brief returns the effective current number of microsteps selected.
+     *
+     * This function always returns the effective number of microsteps.
+     * This can be a bit different than the micro steps set in setMicrosteps() since it is rounded to 2^i.
+     *
+     * \sa setMicrosteps()
+     */
+    int getMicrosteps(void);
+
+    void setStepInterpolation(int8_t value);
+    void setDoubleEdge(int8_t value);
+
+    /*!
+     * \brief Sets and configures with spread cycle chopper.
+     * \param constant_off_time The off time setting controls the minimum chopper frequency. For most applications an off time within the range of 5μs to 20μs will fit. Setting this parameter to zero completely disables all driver transistors and the motor can free-wheel. 0: chopper off, 1:15: off time setting (1 will work with minimum blank time of 24 clocks)
+     * \param blank_time Selects the comparator blank time. This time needs to safely cover the switching event and the duration of the ringing on the sense resistor. For most low current drivers, a setting of 1 or 2 is good. For high current applications with large MOSFETs, a setting of 2 or 3 will be required. 0 (min setting) … (3) amx setting
+     * \param hysteresis_start Hysteresis start setting. Please remark, that this value is an offset to the hysteresis end value. 1 … 8
+     * \param hysteresis_end Hysteresis end setting. Sets the hysteresis end value after a number of decrements. Decrement interval time is controlled by hysteresis_decrement. The sum hysteresis_start + hysteresis_end must be <16. At a current setting CS of max. 30 (amplitude reduced to 240), the sum is not limited.
+     * \param hysteresis_decrement Hysteresis decrement setting. This setting determines the slope of the hysteresis during on time and during fast decay time. 0 (fast decrement) … 3 (slow decrement).
+     *
+     * The spreadCycle chopper scheme (pat.fil.) is a precise and simple to use chopper principle, which automatically determines
+     * the optimum fast decay portion for the motor. Anyhow, a number of settings can be made in order to optimally fit the driver
+     * to the motor.
+     * Each chopper cycle is comprised of an on-phase, a slow decay phase, a fast decay phase and a second slow decay phase.
+     * The slow decay phases limit the maximum chopper frequency and are important for low motor and driver power dissipation.
+     * The hysteresis start setting limits the chopper frequency by forcing the driver to introduce a minimum amount of
+     * current ripple into the motor coils. The motor inductivity determines the ability to follow a changing motor current.
+     * The duration of the on- and fast decay phase needs to cover at least the blank time, because the current comparator is
+     * disabled during this time.
+     *
+     * \sa setRandomOffTime() for spreading the noise over a wider spectrum
+     */
+    void setSpreadCycleChopper(int8_t constant_off_time, int8_t blank_time, int8_t hysteresis_start, int8_t hysteresis_end);
+
+    /*!
+     * \brief set the maximum motor current in mA (1000 is 1 Amp)
+     * Keep in mind this is the maximum peak Current. The RMS current will be 1/sqrt(2) smaller. The actual current can also be smaller
+     * by employing CoolStep.
+     * \param current the maximum motor current in mA
+     * \sa getCurrent(), getCurrentCurrent()
+     */
+    void setCurrent(unsigned int current);
+
+    /*!
+     * \brief readout the motor maximum current in mA (1000 is an Amp)
+     * This is the maximum current. to get the current current - which may be affected by CoolStep us getCurrentCurrent()
+     *\return the maximum motor current in milli amps
+     * \sa getCurrentCurrent()
+     */
+    unsigned int getCurrent(void);
+
+    /*!
+     *\brief a convenience method to determine if the current scaling uses 0.31V or 0.165V as reference.
+     *\return false if 0.13V is the reference voltage, true if 0.165V is used.
+     */
+    bool isCurrentScalingHalfed();
+
+    /*!
+     * \brief Reads the current current setting value as fraction of the maximum current
+     * values between 0 and 31, representing 1/32 to 32/32 (=1)
+     * Recalculates the absolute current in mA (1A would be 1000).
+     * This method calculates the currently used current setting (either by setting or by CoolStep) and reconstructs
+     * the current in mA by using the VSENSE and resistor value. This method uses floating point math - so it
+     * may not be the fastest.
+     * \sa getCurrentCSReading(), getResistor(), isCurrentScalingHalfed(), getCurrent()
+     */
+    unsigned int getCurrentCSReading(void);
+
+    /*!
+     * \brief Return over temperature status of the last status readout
+     * return 0 is everything is OK, TMC21X_OVERTEMPERATURE_PREWARNING if status is reached, TMC21X_OVERTEMPERATURE_SHUTDOWN is the chip is shutdown, -1 if the status is unknown.
+     * Keep in mind that this method does not enforce a readout but uses the value of the last status readout.
+     * You may want to use getMotorPosition() or getCurrentStallGuardReading() to enforce an updated status readout.
+     */
+    int8_t getOverTemperature(void);
+
+    /*!
+     * \brief Is motor channel A shorted to ground detected in the last status readout.
+     * \return true is yes, false if not.
+     * Keep in mind that this method does not enforce a readout but uses the value of the last status readout.
+     * You may want to use getMotorPosition() or getCurrentStallGuardReading() to enforce an updated status readout.
+     */
+    bool isShortToGroundA(void);
+
+    /*!
+     * \brief Is motor channel B shorted to ground detected in the last status readout.
+     * \return true is yes, false if not.
+     * Keep in mind that this method does not enforce a readout but uses the value of the last status readout.
+     * You may want to use getMotorPosition() or getCurrentStallGuardReading() to enforce an updated status readout.
+     */
+    bool isShortToGroundB(void);
+    /*!
+     * \brief iIs motor channel A connected according to the last status readout.
+     * \return true is yes, false if not.
+     * Keep in mind that this method does not enforce a readout but uses the value of the last status readout.
+     * You may want to use getMotorPosition() or getCurrentStallGuardReading() to enforce an updated status readout.
+     */
+    bool isOpenLoadA(void);
+
+    /*!
+     * \brief iIs motor channel A connected according to the last status readout.
+     * \return true is yes, false if not.
+     * Keep in mind that this method does not enforce a readout but uses the value of the last status readout.
+     * You may want to use getMotorPosition() or getCurrentStallGuardReading() to enforce an updated status readout.
+     */
+    bool isOpenLoadB(void);
+
+    /*!
+     * \brief Is chopper inactive since 2^20 clock cycles - defaults to ~0,08s
+     * \return true is yes, false if not.
+     * Keep in mind that this method does not enforce a readout but uses the value of the last status readout.
+     * You may want to use getMotorPosition() or getCurrentStallGuardReading() to enforce an updated status readout.
+     */
+    bool isStandStill(void);
+
+    /*!
+     *\brief enables or disables the motor driver bridges. If disabled the motor can run freely. If enabled not.
+     *\param enabled a bool value true if the motor should be enabled, false otherwise.
+     */
+    void setEnabled(bool enabled);
+
+    /*!
+     *\brief checks if the output bridges are enabled. If the bridges are not enabled the motor can run freely
+     *\return true if the bridges and by that the motor driver are enabled, false if not.
+     *\sa setEnabled()
+     */
+    bool isEnabled();
+
+    /*!
+     * \brief Manually read out the status register
+     * This function sends a byte to the motor driver in order to get the current readout. The parameter read_value
+     * selects which value will get returned. If the read_vlaue changes in respect to the previous readout this method
+     * automatically send two bytes to the motor: one to set the readout and one to get the actual readout. So this method
+     * may take time to send and read one or two bits - depending on the previous readout.
+     * \param read_value selects which value to read out (0..3). You can use the defines TMC21X_READOUT_POSITION, TMC21X_READOUT_STALLGUARD_CURRENT
+     * \sa TMC21X_READOUT_POSITION, TMC21X_READOUT_STALLGUARD_CURRENT
+     */
+    unsigned long readStatus(int8_t read_value);
+
+    /*!
+     * \brief Prints out all the information that can be found in the last status read out - it does not force a status readout.
+     * The result is printed via Serial
+     */
+    void dumpStatus(StreamOutput *stream, bool readable= true);
+    bool setRawRegister(StreamOutput *stream, uint32_t reg, uint32_t val);
+    bool checkAlarm();
+
+    using options_t= std::map<char,int>;
+
+    bool set_options(const options_t& options);
 private:
+    bool check_error_status_bits(StreamOutput *stream);
 
     // UART sender
-    inline bool send2208(uint8_t reg, uint32_t datagram);
-    std::function<int(uint8_t *b, int cnt, uint8_t *r)> uart;
+    inline uint32_t send2208(uint8_t reg, uint32_t datagram);
+    std::function<int(uint8_t *b, int cnt, uint8_t *r)> serial;
 
     unsigned int resistor{50}; // current sense resitor value in milliohm
 
     //driver control register copies to easily set & modify the registers
-    unsigned long driver_control_register_value;
-    unsigned long chopper_config_register;
-    unsigned long cool_step_register_value;
-    unsigned long stall_guard2_current_register_value;
-    unsigned long driver_configuration_register_value;
-    //the driver status result
-    unsigned long driver_status_result;
+    uint32_t gconf_register_value;
+    uint32_t ihold_irun_register_value;
+    uint32_t vactual_register_value;
+    uint32_t chopconf_register_value;
 
     //status values
     int microsteps; //the current number of micro steps
@@ -108,12 +267,9 @@ private:
         int8_t constant_off_time:5; //we need to remember this value in order to enable and disable the motor
         int8_t h_start:4;
         int8_t h_end:4;
-        int8_t h_decrement:3;
-        bool cool_step_enabled:1; //we need to remember this to configure the coolstep if it si enabled
         bool started:1; //if the stepper has been started yet
     };
 
-    uint8_t cool_step_lower_threshold; // we need to remember the threshold to enable and disable the CoolStep feature
     char designator;
 
 };

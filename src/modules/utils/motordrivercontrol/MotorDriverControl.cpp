@@ -128,14 +128,14 @@ bool MotorDriverControl::config_module(uint16_t cs)
         if(uart_channel == 0) {
             txd = P0_2; rxd= P0_3;
         } else if(uart_channel == 1) {
-            txd = P0_17; rxd = P0_18;
+            txd = P0_27; rxd = P0_28;
         } else {
             THEKERNEL->streams->printf("MotorDriverControl %c ERROR: Unknown UART Channel: %d\n", axis, uart_channel);
             return false;
         }
 
-        this->uart = new BufferedSoftSerial(txd, rxd);
-        this->uart->baud(uart_baudrate);
+        this->serial = new BufferedSoftSerial(txd, rxd);
+        this->serial->baud(uart_baudrate);
 
         THEKERNEL->streams->printf("MotorDriverControl INFO: configured motor %c (%d): as %s\n", axis, id, chip==TMC2208?"TMC2208":"UNKNOWN");
     } else {
@@ -197,7 +197,7 @@ bool MotorDriverControl::config_module(uint16_t cs)
                 switch(chip) {
                     case DRV8711: drv8711->set_raw_register(&StreamOutput::NullStream, ++reg, i); break;
                     case TMC2660: tmc26x->setRawRegister(&StreamOutput::NullStream, ++reg, i); break;
-                    case TMC2208: break;
+                    case TMC2208: tmc22x->setRawRegister(&StreamOutput::NullStream, ++reg, i); break;
                 }
             }
 
@@ -205,7 +205,7 @@ bool MotorDriverControl::config_module(uint16_t cs)
             switch(chip) {
                 case DRV8711: drv8711->set_raw_register(&StreamOutput::NullStream, 255, 0); break;
                 case TMC2660: tmc26x->setRawRegister(&StreamOutput::NullStream, 255, 0); break;
-                case TMC2208: break;
+                case TMC2208: tmc22x->setRawRegister(&StreamOutput::NullStream, 255, 0); break;
             }
         }
 
@@ -276,7 +276,10 @@ void MotorDriverControl::on_second_tick(void *argument)
         case TMC2660:
             alarm= tmc26x->checkAlarm();
             break;
+
         case TMC2208: break;
+            alarm= tmc22x->checkAlarm();
+            break;
     }
 
     if(halt_on_alarm && alarm) {
@@ -386,8 +389,8 @@ void MotorDriverControl::initialize_chip(uint16_t cs)
 
     }else if(chip == TMC2208){
         tmc22x->init(cs);
-        //set_current(current);
-        //set_microstep(microsteps);
+        set_current(current);
+        set_microstep(microsteps);
         //set_decay_mode(decay_mode);
     }
 }
@@ -403,8 +406,10 @@ void MotorDriverControl::set_current(uint32_t c)
         case TMC2660:
             tmc26x->setCurrent(c);
             break;
-        case TMC2208: break;
 
+        case TMC2208:
+            tmc22x->setCurrent(c);
+            break;
     }
 }
 
@@ -421,7 +426,11 @@ uint32_t MotorDriverControl::set_microstep( uint32_t n )
             tmc26x->setMicrosteps(n);
             m= tmc26x->getMicrosteps();
             break;
-        case TMC2208: break;
+
+        case TMC2208:
+            tmc22x->setMicrosteps(n);
+            m= tmc22x->getMicrosteps();
+            break;
     }
     return m;
 }
@@ -446,7 +455,10 @@ void MotorDriverControl::enable(bool on)
         case TMC2660:
             tmc26x->setEnabled(on);
             break;
-        case TMC2208: break;
+
+        case TMC2208:
+            tmc22x->setEnabled(on);
+            break;
     }
 }
 
@@ -460,7 +472,10 @@ void MotorDriverControl::dump_status(StreamOutput *stream, bool b)
         case TMC2660:
             tmc26x->dumpStatus(stream, b);
             break;
-        case TMC2208: break;
+
+        case TMC2208:
+            tmc22x->dumpStatus(stream, b);
+            break;
     }
 }
 
@@ -470,7 +485,7 @@ void MotorDriverControl::set_raw_register(StreamOutput *stream, uint32_t reg, ui
     switch(chip) {
         case DRV8711: ok= drv8711->set_raw_register(stream, reg, val); break;
         case TMC2660: ok= tmc26x->setRawRegister(stream, reg, val); break;
-        case TMC2208: break;
+        case TMC2208: ok= tmc22x->setRawRegister(stream, reg, val); break;
     }
     if(ok) {
         stream->printf("register operation succeeded\n");
@@ -503,8 +518,17 @@ void MotorDriverControl::set_options(Gcode *gcode)
             //     }
             // }
         }
+        case TMC2208: {
+            TMC22X::options_t options= gcode->get_args_int();
+            if(options.size() > 0) {
+                if(tmc22x->set_options(options)) {
+                    gcode->stream->printf("options set\n");
+                }else{
+                    gcode->stream->printf("failed to set any options\n");
+                }
+            }
+        }
         break;
-        case TMC2208: break;
     }
 }
 
@@ -522,17 +546,21 @@ int MotorDriverControl::sendSPI(uint8_t *b, int cnt, uint8_t *r)
 // Called by the drivers codes to send and receive UART data to/from the chip
 int MotorDriverControl::sendUART(uint8_t *b, int cnt, uint8_t *r)
 {
+    //write data
     for (int i = 0; i < cnt; ++i) {
-        uart->putc(b[i]);
-        uart->getc(); //Flush write data which is received in the RX line
+        serial->putc(b[i]);
+        serial->getc(); //Flush write data which is received in the RX line
+        safe_delay_ms(2); //safe delay for each byte
     }
+    //check if it is read command
     if (!(b[2] >> 7)) {
+        //TODO delay should not be hardcoded. With default delay, it is working for 9600 baudrate
         safe_delay_ms(20); //delay required until a reply is provided
-        while(uart->readable()) {
-            for (int i = 0; i < 8; ++i) {
-                r[i] = uart->getc();
-            }
+        for (int i = 0; i < 8; ++i) {
+            r[i] = serial->getc();
+            safe_delay_ms(2); //safe delay for each byte
         }
+
     }
 
     return cnt;
