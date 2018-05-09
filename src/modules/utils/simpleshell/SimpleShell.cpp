@@ -1121,7 +1121,7 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
         // reset the position based on current actuator position
         THEROBOT->reset_position_from_current_actuator_position();
 
-        stream->printf("done\n");
+        //stream->printf("done\n");
 
     }else {
         stream->printf("usage:\n test jog axis distance iterations [feedrate]\n");
