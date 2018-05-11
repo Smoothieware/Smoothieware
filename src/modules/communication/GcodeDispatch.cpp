@@ -468,9 +468,13 @@ try_again:
         possible_command.insert(0, buf);
         goto try_again;
 
-        // Ignore comments and blank lines
     } else if ( first_char == ';' || first_char == '(' || first_char == ' ' || first_char == '\n' || first_char == '\r' ) {
-        new_message.stream->printf("ok\r\n");
+        // Ignore comments and blank lines
+        new_message.stream->printf("ok\n");
+
+    } else {
+        // an uppercase non command word on its own (except XYZF) just returns ok, we could add an error but no hosts expect that.
+        new_message.stream->printf("ok - ignored\n");
     }
 }
 
