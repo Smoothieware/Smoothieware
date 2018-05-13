@@ -253,9 +253,11 @@ void Switch::on_gcode_received(void *argument)
             // SIGMADELTA output pin turn on (or off if S0)
             if(gcode->has_letter('S')) {
                 int v = roundf(gcode->get_value('S') * sigmadelta_pin->max_pwm() / 255.0F); // scale by max_pwm so input of 255 and max_pwm of 128 would set value to 128
-                if(v != this->sigmadelta_pin->get_pwm()){ // optimize... ignore if already set to the same pwm
-                    // drain queue
-                    THEKERNEL->conveyor->wait_for_idle();
+                THEKERNEL->conveyor->wait_for_idle();  // drain queue 
+                if (!v) {
+                    this->switch_state = false;
+                    this->sigmadelta_pin->set(false);
+                } else if(v != this->sigmadelta_pin->get_pwm()){ // optimize... ignore if already set to the same pwm           
                     this->sigmadelta_pin->pwm(v);
                     this->switch_state= (v > 0);
                 }
