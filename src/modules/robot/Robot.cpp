@@ -592,6 +592,17 @@ void Robot::on_gcode_received(void *argument)
                         actuators[selected_extruder]->change_last_milestone(get_e_scale_fnc ? e*get_e_scale_fnc() : e);
                     }
                 }
+                if(gcode->subcode == 0 && gcode->get_num_args() > 0) {
+                    for (int i = A_AXIS; i < n_motors; i++) {
+                        // ABC just need to set machine_position and compensated_machine_position if specified
+                        char axis= 'A'+i-3;
+                        if(!actuators[i]->is_extruder() && gcode->has_letter(axis)) {
+                            float ap= gcode->get_value(axis);
+                            machine_position[i]= compensated_machine_position[i]= ap;
+                            actuators[i]->change_last_milestone(ap); // this updates the last_milestone in the actuator
+                        }
+                    }
+                }
                 #endif
 
                 return;
