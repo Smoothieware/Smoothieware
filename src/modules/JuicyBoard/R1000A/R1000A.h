@@ -1,10 +1,8 @@
 #ifndef R1000A_H
 #define R1000A_H
 
-//#include "modules/JuicyBoard/R1000A_I2C/R1000A_I2C.h"
 
 #include "Pin.h"            // I/O
-//#include "I2C.h"            // mbed.h lib
 #include "Module.h"         // for registering events
 #include <string>
 using std::string;

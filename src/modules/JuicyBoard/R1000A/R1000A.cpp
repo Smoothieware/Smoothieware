@@ -1,7 +1,5 @@
 #include "R1000A.h"
-
 #include "wait_api.h"
-
 #include "StreamOutputPool.h"
 #include "Module.h"
 
@@ -19,11 +17,7 @@
 #include "ConfigValue.h"
 
 // Juicyware includes
-//#include <string.h>
-//#include <stdlib.h>
 #include <stdio.h>
-//#include <sstream>
-
 
 // define configuration checksums here
 
@@ -34,14 +28,14 @@
 R1000A::R1000A(){
     // Default Constructor
     this->ModResetPin = new Pin();                      // define new
-    this->ModResetPin->from_string("2.10");
+    this->ModResetPin->from_string("2.10");             // defining module reset pin, fixed to 2.10
     this->ModResetPin->as_open_drain();
-    this->ModResetPin->set(true);                       // set to high
+    this->ModResetPin->set(true);                       // set pin to high
 }
 
 void R1000A::on_module_loaded(){
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED); // register on console line received
-    THEKERNEL->i2c->disablemodI2C();
+    THEKERNEL->i2c->disablemodI2C();                    // disable user functional I2C commands during module initialization
     this->ResetMods();                                  // reset all modules on I2C bus
     this->ScanI2CBus();                                 // perform initial I2C bus scan
     this->ReportI2CID();                                // report modules
@@ -50,8 +44,7 @@ void R1000A::on_module_loaded(){
     this->ScanI2CBus();                                 // re-scan to get ID of activated modules
     this->ReportI2CID();                                // report modules
     this->InitPowerMon();                               // initialize power monitor
-
-    THEKERNEL->i2c->enablemodI2C();                     // enable module functional I2C, such as R1008 temp sensor readings
+    THEKERNEL->i2c->enablemodI2C();                     // enable module functional I2C after initialization, such as R1008 temp sensor readings
 }
 
 
@@ -69,7 +62,7 @@ void R1000A::on_console_line_received(void* argument){
             getTemp(cmd);
         }
         else if (cmd == "scan"){
-            // Scan I2C bus and report
+            // Scan I2C bus and report live modules
             ScanI2CBus();
             ReportI2CID();
         }
@@ -78,13 +71,18 @@ void R1000A::on_console_line_received(void* argument){
             ResetMods();
         }
         else if (cmd == "getpmoncfg"){
+            // read power monitor configuration registers, ref INA chip datasheet 
             getPowerMonCfg();
         }
         else if (cmd == "readpmon"){
+	        // reads power monitor voltage/current values
             readPowerMon();
         }
         else if (cmd == "eeread"){
             // This function reads data from EEPROM, byte by byte
+            // ex: mod eeread 0x1 0x1a -> reads 0x1a (26) bytes from EEPROM starting at address 0x01
+            // since the function uses c_str() to parse values, hex and dec values can be used for addr/length
+            // returns the EEPROM values in decimal
 
             // evaluate the length of data to be read, integer
             int eeadr = (int)strtol(shift_parameter(possible_command).c_str(),NULL,0);
@@ -108,6 +106,8 @@ void R1000A::on_console_line_received(void* argument){
         }
         else if (cmd == "eereadhex"){
             // This function reads data from EEPROM, byte by byte
+            // ex: mod eereadhex 0x1 0x1a -> reads 0x1a (26) bytes from EEPROM starting at address 0x01
+            // same as eeread but returns values in hex
 
             // evaluate the length of data to be read, integer
             int eeadr = (int)strtol(shift_parameter(possible_command).c_str(),NULL,0);
@@ -130,32 +130,36 @@ void R1000A::on_console_line_received(void* argument){
             THEKERNEL->streams->printf("\r\n");
         }
         else if (cmd == "eewrite"){
-                // This function reads data from EEPROM, byte by byte
+            // This function writes data to EEPROM, byte by byte
+            // ex: mod eewrite 0x08 20 Hello I'm JuicyBoard
+            // writes the first 20 bytes of string "Hello I'm JuicyBoard" in EEPROM starting at address 0x08
+            // note the written values also include SPACES in the string
 
-                // evaluate the length of data to be read, integer
-                unsigned int eeadr = (unsigned int)strtol(shift_parameter(possible_command).c_str(),NULL,0);
-                int writelen = strlen(possible_command.c_str());
+            // evaluate the length of data to be read, integer
+            unsigned int eeadr = (unsigned int)strtol(shift_parameter(possible_command).c_str(),NULL,0);
+            int writelen = strlen(possible_command.c_str());
 
-                THEKERNEL->streams->printf("Writing EEPROM addr 0x%x\r\n", eeadr);
-                THEKERNEL->streams->printf("Writing %d bytes:\r\n", writelen);
-                THEKERNEL->streams->printf("%s\r\n", possible_command.c_str());
-                // do some checks on the input arguments
-                if (writelen > 0) {
-                    // now write length is > 0
-                    // perform byte by byte EEPROM write
-                    int i;
-                    for (i=0; i<writelen ;i++){
-                        if (this->writeEEbyte(eeadr, possible_command.c_str()[i]) != 0){
-                            THEKERNEL->streams->printf("EEPROM write did not ACK!\r\n");
-                        }
-                        ++eeadr;
+            THEKERNEL->streams->printf("Writing EEPROM addr 0x%x\r\n", eeadr);
+            THEKERNEL->streams->printf("Writing %d bytes:\r\n", writelen);
+            THEKERNEL->streams->printf("%s\r\n", possible_command.c_str());
+            // do some checks on the input arguments
+            if (writelen > 0) {
+                // now write length is > 0
+                // perform byte by byte EEPROM write
+                int i;
+                for (i=0; i<writelen ;i++){
+                    if (this->writeEEbyte(eeadr, possible_command.c_str()[i]) != 0){
+                        THEKERNEL->streams->printf("EEPROM write did not ACK!\r\n");
                     }
+                    ++eeadr;
                 }
-                THEKERNEL->streams->printf("\r\n");
+            }
+            THEKERNEL->streams->printf("\r\n");
         }
         else if (cmd == "scani2c"){
             THEKERNEL->i2c->disablemodI2C();
             // This scans the whole range of I2C addresses for acknowledges
+            // example: mod scani2c 
             unsigned char i;
             for ( i=1; i<0x80; i++){
                 wait_ms(5);
@@ -166,7 +170,9 @@ void R1000A::on_console_line_received(void* argument){
             THEKERNEL->i2c->enablemodI2C();
         }
         else if (cmd == "checki2c"){
-            // This scans the whole range of I2C addresses for acknowledges
+            // This checks a specific I2C address for ack
+            // example: mod checki2c 0x6
+            //        : checks I2C address 0x6 (7b addr) for ack
             unsigned char i = (unsigned char)strtol(shift_parameter(possible_command).c_str(),NULL,0);
             THEKERNEL->i2c->disablemodI2C();
             if (THEKERNEL->i2c->I2C_CheckAddr(i) == 0){
@@ -176,7 +182,7 @@ void R1000A::on_console_line_received(void* argument){
         }
         else if (cmd == "readi2creg"){
             // Reads an register from i2c bus
-            // example: readi2creg 2 0x40 3
+            // example: mod readi2creg 2 0x40 3
             //        : reads 3 bytes from I2C register 0x40 of slot number 2
             THEKERNEL->i2c->disablemodI2C();
             int slotnum =  (int)strtol(shift_parameter(possible_command).c_str(), NULL, 10);
@@ -200,6 +206,9 @@ void R1000A::on_console_line_received(void* argument){
         }
         else if (cmd == "wrhex2bl"){
             // write hex file to module (has to be in bootloader mode)
+            // example: mod wrhex2bl 3 test.hex
+            //        : writes parses and writes test.hex (stored in current directory in SD card) to module on slot number 3
+            //        : note to get into current directory or specify full path to hex file
             int slotnum =  (int)strtol(shift_parameter(possible_command).c_str(), NULL, 10);
             THEKERNEL->i2c->disablemodI2C();
             string hexfname = shift_parameter(possible_command);
@@ -208,6 +217,8 @@ void R1000A::on_console_line_received(void* argument){
         }
         else if (cmd == "dumphex"){
             // analyzes and dumps hex from module in bootloader mode to console
+            // example: mod dumphex 5
+            //        : dumps flash memory content of module #5
             THEKERNEL->i2c->disablemodI2C();
             int slotnum =  (int)strtol(shift_parameter(possible_command).c_str(), NULL, 10);
             dumphex(slotnum);
@@ -215,6 +226,7 @@ void R1000A::on_console_line_received(void* argument){
         }
         else if (cmd == "chkfwsig"){
             // checks firmware signature on mounted module
+            // example: mod chkfwsig 5
             THEKERNEL->i2c->disablemodI2C();
             int slotnum =  (int)strtol(shift_parameter(possible_command).c_str(), NULL, 10);
             int tmp = checkfwsig(slotnum);
@@ -230,9 +242,9 @@ void R1000A::on_console_line_received(void* argument){
             THEKERNEL->i2c->enablemodI2C();
         }
         else if (cmd == "readrtd"){
-            // Reads an register from i2c bus
-            // example: readi2creg 2 0x40 3
-            //        : reads 3 bytes from I2C register 0x40 of slot number 2
+            // Reads RTD temperature from R1008 module
+            // example: mod readrtd 2
+            //        : returns temperature readings from RTD module in slot #2
             int slotnum =  (int)strtol(shift_parameter(possible_command).c_str(), NULL, 10);
 
             char i2cbuf[4];
@@ -297,9 +309,11 @@ void R1000A::on_console_line_received(void* argument){
             THEKERNEL->i2c->enablemodI2C();
         }
         else if (cmd == "activate"){
-            // Reads an register from i2c bus
-            // example: readi2creg 2 0x40 3
-            //        : reads 3 bytes from I2C register 0x40 of slot number 2
+            // Activates module into functional mode
+            // note that all I2C based modules always boot (or reset) into bootloader mode
+            // this ensures that bootloader can be entered without user interaction
+            // example: mod activate 3
+            //        : activates module #3
             THEKERNEL->i2c->disablemodI2C();
             int slotnum =  (int)strtol(shift_parameter(possible_command).c_str(), NULL, 10);
 
@@ -346,10 +360,6 @@ void R1000A::ScanI2CBus(){
     
     THEKERNEL->streams->printf("Scanning I2C bus ...\r\n");
     for (i=1; i<=15; i++){
-        // Activate module in application mode
-//        if (THEKERNEL->i2c->I2C_ReadREG(i,0x0c,i2cbuf,1) == 0){
-//            wait_ms(3);
-//        }
 
         // check for slave ack
         if (THEKERNEL->i2c->I2C_ReadREG(i, 0x01, i2cbuf, 1) == 0){
