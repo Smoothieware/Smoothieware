@@ -124,6 +124,12 @@ public:
      * \sa setRandomOffTime() for spreading the noise over a wider spectrum
      */
     void setSpreadCycleChopper(int8_t constant_off_time, int8_t blank_time, int8_t hysteresis_start, int8_t hysteresis_end);
+    void enableSpreadCycle(bool enable);
+
+    void setStealthChop(uint8_t lim, uint8_t reg, uint8_t freewheel, bool autograd, bool autoscale, uint8_t freq, uint8_t grad, uint8_t ofs);
+    void setStealthChopthreshold(uint32_t threshold);
+
+
 
     /*!
      * \brief set the maximum motor current in mA (1000 is 1 Amp)
@@ -248,20 +254,23 @@ private:
     inline uint32_t send2208(uint8_t reg, uint32_t datagram);
     std::function<int(uint8_t *b, int cnt, uint8_t *r)> serial;
 
-    unsigned int resistor{50}; // current sense resitor value in milliohm
+    unsigned int resistor{50}; // current sense resistor value in milliohm
+    uint8_t mode; // StealthChop or SpreadCycle mode
+    uint32_t thrs; // StealthChop upper velocity threshold
 
     //driver control register copies to easily set & modify the registers
     uint32_t gconf_register_value;
     uint32_t ihold_irun_register_value;
-    uint32_t vactual_register_value;
+    uint32_t tpwmthrs_register_value;
     uint32_t chopconf_register_value;
+    uint32_t pwmconf_register_value;
 
     //status values
-    int microsteps; //the current number of micro steps
+    int microsteps; //the current number of microsteps
 
     std::bitset<8> error_reported;
 
-    // only beeded for the tuning app report
+    // only needed for the tuning app report
     struct {
         int8_t blank_time:8;
         int8_t constant_off_time:5; //we need to remember this value in order to enable and disable the motor
@@ -270,6 +279,7 @@ private:
         bool started:1; //if the stepper has been started yet
     };
 
+    char axis;
     char designator;
 
 };

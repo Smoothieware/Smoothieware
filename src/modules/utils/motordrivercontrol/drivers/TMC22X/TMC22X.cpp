@@ -41,17 +41,19 @@
 
 #define motor_driver_control_checksum  CHECKSUM("motor_driver_control")
 #define sense_resistor_checksum        CHECKSUM("sense_resistor")
+#define mode_checksum                  CHECKSUM("mode")
+#define thrs_checksum                  CHECKSUM("thrs")
 
 //! return value for TMC22X.getOverTemperature() if there is a overtemperature situation in the TMC chip
 /*!
- * This warning indicates that the TCM chip is too warm.
+ * This warning indicates that the TMC chip is too warm.
  * It is still working but some parameters may be inferior.
  * You should do something against it.
  */
 #define TMC22X_OVERTEMPERATURE_PREWARNING 1
 //! return value for TMC22X.getOverTemperature() if there is a overtemperature shutdown in the TMC chip
 /*!
- * This warning indicates that the TCM chip is too warm to operate and has shut down to prevent damage.
+ * This warning indicates that the TMC chip is too warm to operate and has shut down to prevent damage.
  * It will stop working until it cools down again.
  * If you encounter this situation you must do something against it. Like reducing the current or improving the PCB layout
  * and/or heat management.
@@ -72,7 +74,8 @@
 
 //some default values used in initialization
 #define DEFAULT_MICROSTEPPING_VALUE    32
-#define DEFAULT_DATA                   0x00000000
+#define ZEROS_DEFAULT_DATA             0x00000000
+#define GCONF_DEFAULT_DATA             0x00000101
 #define CHOPCONF_DEFAULT_DATA          0x10000053
 #define PWMCONF_DEFAULT_DATA           0xC10D0024
 
@@ -151,7 +154,7 @@
 
 //Register                             Address   Type      N Bits    Description
 /********************************************************************************/
-#define OTP_PROG_REGISTER              0x04      //W       16       //OTP_PROGRAM – OTP programming
+#define OTP_PROG_REGISTER              0x04      //W       16       //OTP programming
                                                                     //Write access programs OTP memory (one bit at a time),
                                                                     //Read access refreshes read data from OTP after a write
 /********************************************************************************/
@@ -165,7 +168,7 @@
 
 //Register                             Address   Type      N Bits    Description
 /********************************************************************************/
-#define OTP_READ_REGISTER              0x05      //R       24        //OTP_READ (Access to OTP memory result and update)
+#define OTP_READ_REGISTER              0x05      //R       24        //Access to OTP memory result and update
                                                                      //7..0: OTP0 byte 0 read data
                                                                      //15..8: OTP1 byte 1 read data
                                                                      //23..16: OTP2 byte 2 read data
@@ -313,23 +316,18 @@
 #define TPOWERDOWN_REGISTER            0x11      //W       8         //Sets the delay time from stand still (stst) detection to motor current power down.
                                                                      //Time range is about 0 to 5.6 seconds. 0…((2^8)-1) * 2^18 tCLK
                                                                      //Attention: A minimum setting of 2 is required to allow automatic tuning of stealthChop PWM_OFFS_AUTO.
+                                                                     //Reset default=20
 /********************************************************************************/
 
 //Register                             Address   Type      N Bits    Description
 /********************************************************************************/
-#define TSTEP_REGISTER                 0x12      //R       20        //Actual measured time between two 1/256 microsteps derived from the step input frequency.
-                                                                     //In units of 1/fCLK. Measured value is (2^20)-1 in case of overflow or stand still.
+#define TSTEP_REGISTER                 0x12      //R       20        //Actual measured time between two 1/256 microsteps derived from the step input frequency in units of 1/fCLK.
+                                                                     //Measured value is (2^20)-1 in case of overflow or stand still.
                                                                      //
-                                                                     //All TSTEP related thresholds use a hysteresis of 1/16 of the compare value to compensate for jitter in the clock or the step frequency.
-                                                                     //The flag small_hysteresis modifies the hysteresis to a smaller value of 1/32.
+                                                                     //The TSTEP related threshold use a hysteresis of 1/16 of the compare value to compensate for jitter in the clock or the step frequency:
                                                                      //(Txxx*15/16)-1 is the lower compare value for each TSTEP based comparison.
                                                                      //This means, that the lower switching velocity equals the calculated setting,
                                                                      //but the upper switching velocity is higher as defined by the hysteresis setting.
-                                                                     //
-                                                                     //In dcStep mode TSTEP will not show the mean velocity of the motor, but the velocities for each microstep,
-                                                                     //which may not be stable and thus does not represent the real motor velocity in case it runs slower than the target velocity.
-                                                                     //
-                                                                     //NOTE: microstep velocity time reference t for velocities: TSTEP = fCLK / fSTEP
 /********************************************************************************/
 
 //Register                             Address   Type      N Bits    Description
@@ -343,8 +341,7 @@
 
 //Register                             Address   Type      N Bits    Description
 /********************************************************************************/
-#define VACTUAL_REGISTER               0x22      //W       24        //Microstep counter.
-                                                                     //VACTUAL allows moving the motor by UART control. It gives the motor velocity in +-(2^23)-1 [μsteps / t]
+#define VACTUAL_REGISTER               0x22      //W       24        //VACTUAL allows moving the motor by UART control. It gives the motor velocity in +-(2^23)-1 [μsteps / t]
                                                                      //0: Normal operation. Driver reacts to STEP input.
                                                                      ///=0: Motor moves with the velocity given by VACTUAL. Step pulses can be monitored via INDEX output. The motor direction is controlled by the sign of VACTUAL.
 /********************************************************************************/
@@ -407,7 +404,6 @@
                                                            //Default: OTP
 #define CHOPCONF_HEND                  (15 << 7)           //HEND hysteresis low value, OFFSET sine wave offset
 #define CHOPCONF_HEND_SHIFT            7                   //
-                                                           //CHM=0
                                                            //%0000 ... %1111: Hysteresis is -3, -2, -1, 0, 1, ..., 12 (1/512 of this setting adds to current setting)
                                                            //This is the hysteresis value which becomes used for the hysteresis chopper.
                                                            //Default: OTP, resp. 5 in stealthChop mode
@@ -573,36 +569,51 @@ void TMC22X::init(uint16_t cs)
 {
     // read chip specific config entries
     this->resistor= THEKERNEL->config->value(motor_driver_control_checksum, cs, sense_resistor_checksum)->by_default(50)->as_number(); // in milliohms
+    this->mode= THEKERNEL->config->value(motor_driver_control_checksum, cs, mode_checksum)->by_default(0)->as_number();
+    this->thrs= THEKERNEL->config->value(motor_driver_control_checksum, cs, thrs_checksum)->by_default(0)->as_number();
 
     //setting the default register values
-    this->gconf_register_value = DEFAULT_DATA | GCONF_EN_SPREADCYCLE | GCONF_MSTEP_REG_SELECT;
-    this->ihold_irun_register_value = DEFAULT_DATA;
-    this->vactual_register_value = DEFAULT_DATA;
+    this->gconf_register_value = GCONF_DEFAULT_DATA | GCONF_MSTEP_REG_SELECT; //config microstepping via software
+    this->gconf_register_value &= ~(GCONF_I_SCALE_ANALOG); //Disable VREF current reference if using external sense resistors
+    this->ihold_irun_register_value = ZEROS_DEFAULT_DATA;
+    this->tpwmthrs_register_value = ZEROS_DEFAULT_DATA;
     this->chopconf_register_value = CHOPCONF_DEFAULT_DATA;
+    this->pwmconf_register_value = PWMCONF_DEFAULT_DATA;
 
     //set the initial values
     send2208(WRITE|GCONF_REGISTER, this->gconf_register_value);
     send2208(WRITE|IHOLD_IRUN_REGISTER, this->ihold_irun_register_value);
-    send2208(WRITE|VACTUAL_REGISTER, this->vactual_register_value);
+    send2208(WRITE|TPWMTHRS_REGISTER, this->tpwmthrs_register_value);
     send2208(WRITE|CHOPCONF_REGISTER, this->chopconf_register_value);
+    send2208(WRITE|PWMCONF_REGISTER, this->pwmconf_register_value);
 
     started = true;
 
-    readStatus(0);
-    send2208(READ|IOIN_REGISTER, DEFAULT_DATA);
-    // openbuilds high torque nema23 3amps (2.8)
-    //setSpreadCycleChopper(5, 32, 6, 0, 0);
-    // for 1.5amp kysan @ 12v
-    setSpreadCycleChopper(5, 40, 5, 0);
-    // for 4amp Nema24 @ 12v
-    //setSpreadCycleChopper(5, 40, 4, 0, 0);
+    switch(mode) {
+    case 0:
+        //enable SpreadCycle
+        enableSpreadCycle(true);
+        // openbuilds high torque nema23 3amps (2.8)
+        //setSpreadCycleChopper(5, 32, 6, 0, 0);
+        // for 1.5amp kysan @ 12v
+        setSpreadCycleChopper(5, 40, 5, 0);
+        // for 4amp Nema24 @ 12v
+        //setSpreadCycleChopper(5, 40, 4, 0, 0);
+        break;
+    case 1:
+        //enable StealthChop by disabling SpreadCycle function
+        enableSpreadCycle(false);
+        //default stealthChop configuration
+        setStealthChop(12,1,0,1,1,1,0,36);
+        //StealthChop does not use toff constant, but driver needs to be set active through it (setting any toff value is ok)
+        setEnabled(true);
+        break;
+    }
 
-    setEnabled(false);
+    readStatus(true);
 
     //set a nice microstepping value
     setMicrosteps(DEFAULT_MICROSTEPPING_VALUE);
-
-    started = true;
 }
 
 /*
@@ -768,6 +779,88 @@ void TMC22X::setSpreadCycleChopper(int8_t constant_off_time, int8_t blank_time, 
     }
 }
 
+void TMC22X::enableSpreadCycle(bool enable)
+{
+    if (enable) {
+        gconf_register_value |= GCONF_EN_SPREADCYCLE;
+    } else {
+        gconf_register_value &= ~(GCONF_EN_SPREADCYCLE);
+    }
+    //if started we directly send it to the motor
+    if (started) {
+        send2208(WRITE|GCONF_REGISTER, gconf_register_value);
+    }
+}
+
+void TMC22X::setStealthChop(uint8_t lim, uint8_t reg, uint8_t freewheel, bool autograd, bool autoscale, uint8_t freq, uint8_t grad, uint8_t ofs)
+{
+    //perform some sanity checks
+    if (lim > 15) {
+        lim = 15;
+    }
+    if (reg > 15) {
+        reg = 15;
+    }
+    if (freewheel > 3) {
+        freewheel = 3;
+    }
+    if (freq > 3) {
+        freq = 3;
+    }
+
+    //first of all delete all the values for this register
+    pwmconf_register_value = 0;
+
+    if (thrs) {
+        //switch to SpreadCycle mode when current velocity surpasses threshold value
+        setStealthChopthreshold(thrs);
+
+        //limit for PWM_SCALE_AUTO when switching back from spreadCycle to stealthChop
+        pwmconf_register_value |= lim << PWMCONF_PWM_LIM_SHIFT;
+    }
+
+    if (autoscale) {
+        //set PWM automatic amplitude scaling
+        pwmconf_register_value |= PWMCONF_PWM_AUTOSCALE;
+        if(autograd) {
+            //set PWM automatic gradient adaptation
+            pwmconf_register_value |= PWMCONF_PWM_AUTOGRAD;
+        }
+        //set regulation loop gradient
+        pwmconf_register_value |= (reg << PWMCONF_PWM_REG_SHIFT);
+    }
+
+    //set standstill mode
+    pwmconf_register_value |= (freewheel << PWMCONF_FREEWHEEL_SHIFT);
+    //set PWM frequency
+    pwmconf_register_value |= (freq << PWMCONF_PWM_FREQ_SHIFT);
+    //set user defined amplitude gradient
+    pwmconf_register_value |= (grad << PWMCONF_PWM_GRAD_SHIFT);
+    //set user defined amplitude offset
+    pwmconf_register_value |= (ofs << PWMCONF_PWM_OFS_SHIFT);
+
+    //if started we directly send it to the motor
+    if (started) {
+        send2208(WRITE|PWMCONF_REGISTER,pwmconf_register_value);
+    }
+}
+
+void TMC22X::setStealthChopthreshold(uint32_t threshold)
+{
+    if (threshold >= (1 << 20)) {
+        threshold = (1 << 20) - 1;
+    }
+
+    //save the threshold value
+    this->thrs = threshold;
+    this->tpwmthrs_register_value = threshold;
+
+    //if started we directly send it to the motor
+    if (started) {
+        send2208(WRITE|TPWMTHRS_REGISTER,tpwmthrs_register_value);
+    }
+}
+
 void TMC22X::setCurrent(unsigned int current)
 {
     uint8_t current_scaling = 0;
@@ -907,6 +1000,17 @@ bool TMC22X::isStandStill(void)
 
 void TMC22X::setEnabled(bool enabled)
 {
+    int8_t constant_off_time=this->constant_off_time;
+    //perform some sanity checks
+    if (constant_off_time < 2) {
+        constant_off_time = 2;
+    } else if (constant_off_time > 15) {
+        constant_off_time = 15;
+    }
+
+    //save the constant off time
+    this->constant_off_time = constant_off_time;
+
     //delete the t_off in the chopper config to get sure
     chopconf_register_value &= ~(CHOPCONF_TOFF);
     if (enabled) {
@@ -933,9 +1037,9 @@ unsigned long TMC22X::readStatus(int8_t read_value)
 {
     uint32_t data;
     if(read_value == TMC22X_READOUT_MICROSTEP) {
-        data = send2208(READ|MSCNT_REGISTER,DEFAULT_DATA);
+        data = send2208(READ|MSCNT_REGISTER,ZEROS_DEFAULT_DATA);
     } else {
-        data = send2208(READ|DRV_STATUS_REGISTER,DEFAULT_DATA);
+        data = send2208(READ|DRV_STATUS_REGISTER,ZEROS_DEFAULT_DATA);
     }
     return data;
 }
@@ -961,9 +1065,10 @@ void TMC22X::dumpStatus(StreamOutput *stream, bool readable)
         stream->printf("Register dump:\n");
         stream->printf(" gconf register: %08lX(%ld)\n", gconf_register_value, gconf_register_value);
         stream->printf(" ihold_irun register: %08lX(%ld)\n", ihold_irun_register_value, ihold_irun_register_value);
-        stream->printf(" vactual register: %08lX(%ld)\n", vactual_register_value, vactual_register_value);
+        stream->printf(" tpwmthrs register: %08lX(%ld)\n", tpwmthrs_register_value, tpwmthrs_register_value);
         stream->printf(" chopconf register: %08lX(%ld)\n", chopconf_register_value, chopconf_register_value);
-        stream->printf(" motor_driver_control.xxx.reg %05lX,%05lX,%05lX,%05lX\n", gconf_register_value, ihold_irun_register_value, vactual_register_value, chopconf_register_value);
+        stream->printf(" pwmconf register: %08lX(%ld)\n", pwmconf_register_value, pwmconf_register_value);
+        stream->printf(" motor_driver_control.xxx.reg %05lX,%05lX,%05lX,%05lX,%05lX\n", gconf_register_value, ihold_irun_register_value, tpwmthrs_register_value, chopconf_register_value, pwmconf_register_value);
 
     } else {
         // TODO hardcoded for X need to select ABC as needed
@@ -1088,22 +1193,25 @@ bool TMC22X::setRawRegister(StreamOutput *stream, uint32_t reg, uint32_t val)
         case 255:
             send2208(WRITE|GCONF_REGISTER, this->gconf_register_value);
             send2208(WRITE|IHOLD_IRUN_REGISTER, this->ihold_irun_register_value);
-            send2208(WRITE|VACTUAL_REGISTER, this->vactual_register_value);
+            send2208(WRITE|TPWMTHRS_REGISTER, this->tpwmthrs_register_value);
             send2208(WRITE|CHOPCONF_REGISTER, this->chopconf_register_value);
+            send2208(WRITE|PWMCONF_REGISTER, this->pwmconf_register_value);
             stream->printf("Registers written\n");
             break;
 
 
         case 1: this->gconf_register_value = val; stream->printf("gconf register set to %08lX\n", val); break;
         case 2: this->ihold_irun_register_value = val; stream->printf("ihold irun config register set to %08lX\n", val); break;
-        case 3: this->vactual_register_value = val; stream->printf("vactual register set to %08lX\n", val); break;
+        case 3: this->tpwmthrs_register_value = val; stream->printf("tpwmthrs register set to %08lX\n", val); break;
         case 4: this->chopconf_register_value = val; stream->printf("chopconf register set to %08lX\n", val); break;
+        case 5: this->pwmconf_register_value = val; stream->printf("pwmconf register set to %08lX\n", val); break;
 
         default:
             stream->printf("1: gconf register\n");
             stream->printf("2: ihold irun register\n");
-            stream->printf("3: vactual register\n");
+            stream->printf("3: tpwmthrs register\n");
             stream->printf("4: chopconf register\n");
+            stream->printf("5: pwmconf register\n");
             stream->printf("255: update all registers\n");
             return false;
     }
@@ -1135,6 +1243,7 @@ void calc_crc(uint8_t *buf, int cnt)
  * send register settings to the stepper driver via UART
  * send 64 bits for write request and 32 bit for read request
  * receive 64 bits only for read request
+ * returns received data content
  */
 uint32_t TMC22X::send2208(uint8_t reg, uint32_t datagram)
 {

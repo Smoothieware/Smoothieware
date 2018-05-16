@@ -14,7 +14,6 @@
 #include "checksumm.h"
 
 #include "mbed.h" // for SPI
-#include "libs/SoftSerial/SoftSerial.h" //for UART
 #include "libs/SoftSerial/BufferedSoftSerial.h" //for UART
 
 #include "drivers/TMC26X/TMC26X.h"
@@ -43,8 +42,9 @@
 #define spi_cs_pin_checksum            CHECKSUM("spi_cs_pin")
 #define spi_frequency_checksum         CHECKSUM("spi_frequency")
 
-#define uart_channel_checksum          CHECKSUM("uart_channel")
-#define uart_baudrate_checksum         CHECKSUM("uart_baudrate")
+#define sw_uart_tx_pin_checksum        CHECKSUM("sw_uart_tx_pin")
+#define sw_uart_rx_pin_checksum        CHECKSUM("sw_uart_rx_pin")
+#define sw_uart_baudrate_checksum      CHECKSUM("sw_uart_baudrate")
 
 MotorDriverControl::MotorDriverControl(uint8_t id) : id(id)
 {
@@ -120,24 +120,29 @@ bool MotorDriverControl::config_module(uint16_t cs)
     }
 
     if(chip == TMC2208) {
-        int uart_channel = THEKERNEL->config->value(motor_driver_control_checksum, cs, uart_channel_checksum)->by_default(0)->as_number();
-        int uart_baudrate = THEKERNEL->config->value(motor_driver_control_checksum, cs, uart_baudrate_checksum)->by_default(9600)->as_number();
+        sw_uart_tx_pin.from_string(THEKERNEL->config->value(motor_driver_control_checksum, cs, sw_uart_tx_pin_checksum)->by_default("nc")->as_string())->as_output();
+        sw_uart_rx_pin.from_string(THEKERNEL->config->value(motor_driver_control_checksum, cs, sw_uart_rx_pin_checksum)->by_default("nc")->as_string())->as_input();
 
-        // select UART channel to use
-        PinName txd, rxd;
-        if(uart_channel == 0) {
-            txd = P0_2; rxd= P0_3;
-        } else if(uart_channel == 1) {
-            txd = P0_27; rxd = P0_28;
-        } else {
-            THEKERNEL->streams->printf("MotorDriverControl %c ERROR: Unknown UART Channel: %d\n", axis, uart_channel);
-            return false;
+        if(!sw_uart_tx_pin.connected() || !sw_uart_rx_pin.connected()) {
+            if(!sw_uart_tx_pin.connected()) {
+                THEKERNEL->streams->printf("MotorDriverControl %c ERROR: uart tx pin not defined\n", axis);
+            }
+            if(!sw_uart_rx_pin.connected()) {
+                THEKERNEL->streams->printf("MotorDriverControl %c ERROR: uart rx pin not defined\n", axis);
+            }
+            return false; // if not defined then we can't use this instance
         }
 
-        this->serial = new BufferedSoftSerial(txd, rxd);
-        this->serial->baud(uart_baudrate);
+        //select soft UART baudrate
+        int sw_uart_baudrate = THEKERNEL->config->value(motor_driver_control_checksum, cs, sw_uart_baudrate_checksum)->by_default(9600)->as_number();
 
-        THEKERNEL->streams->printf("MotorDriverControl INFO: configured motor %c (%d): as %s\n", axis, id, chip==TMC2208?"TMC2208":"UNKNOWN");
+        PinName txd = port_pin((PortName)(sw_uart_tx_pin.port_number<<8), sw_uart_tx_pin.pin);
+        PinName rxd = port_pin((PortName)(sw_uart_rx_pin.port_number<<8), sw_uart_rx_pin.pin);
+
+        this->serial = new BufferedSoftSerial(txd, rxd);
+        this->serial->baud(sw_uart_baudrate);
+
+        THEKERNEL->streams->printf("MotorDriverControl INFO: configured motor %c (%d): as %s, tx: %04X, rx: %04X\n", axis, id, chip==TMC2208?"TMC2208":"UNKNOWN", (sw_uart_tx_pin.port_number<<8)|sw_uart_tx_pin.pin, (sw_uart_rx_pin.port_number<<8)|sw_uart_rx_pin.pin);
     } else {
         spi_cs_pin.from_string(THEKERNEL->config->value( motor_driver_control_checksum, cs, spi_cs_pin_checksum)->by_default("nc")->as_string())->as_output();
         if(!spi_cs_pin.connected()) {
@@ -213,6 +218,11 @@ bool MotorDriverControl::config_module(uint16_t cs)
         rawreg= false;
     }
 
+    if(chip==TMC2208) {
+        //we don't want to use soft UART on a regular basis, so we finish configuration here
+        return true;
+    }
+
     this->register_for_event(ON_GCODE_RECEIVED);
     this->register_for_event(ON_HALT);
     this->register_for_event(ON_ENABLE);
@@ -277,7 +287,7 @@ void MotorDriverControl::on_second_tick(void *argument)
             alarm= tmc26x->checkAlarm();
             break;
 
-        case TMC2208: break;
+        case TMC2208:
             alarm= tmc22x->checkAlarm();
             break;
     }
@@ -549,19 +559,16 @@ int MotorDriverControl::sendUART(uint8_t *b, int cnt, uint8_t *r)
     //write data
     for (int i = 0; i < cnt; ++i) {
         serial->putc(b[i]);
-        serial->getc(); //Flush write data which is received in the RX line
         safe_delay_ms(2); //safe delay for each byte
+        serial->getc(); //flush write data which is received in the RX line
     }
     //check if it is read command
     if (!(b[2] >> 7)) {
-        //TODO delay should not be hardcoded. With default delay, it is working for 9600 baudrate
-        safe_delay_ms(20); //delay required until a reply is provided
+        //TODO safe delay should not be hardcoded, it depends on the baudrate and also SENDDELAY
+        safe_delay_ms(20); //safe delay required until a reply is provided
         for (int i = 0; i < 8; ++i) {
             r[i] = serial->getc();
-            safe_delay_ms(2); //safe delay for each byte
         }
-
     }
-
     return cnt;
 }
