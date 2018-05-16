@@ -141,8 +141,6 @@ bool MotorDriverControl::config_module(uint16_t cs)
 
         this->serial = new BufferedSoftSerial(txd, rxd);
         this->serial->baud(sw_uart_baudrate);
-
-        THEKERNEL->streams->printf("MotorDriverControl INFO: configured motor %c (%d): as %s, tx: %04X, rx: %04X\n", axis, id, chip==TMC2208?"TMC2208":"UNKNOWN", (sw_uart_tx_pin.port_number<<8)|sw_uart_tx_pin.pin, (sw_uart_rx_pin.port_number<<8)|sw_uart_rx_pin.pin);
     } else {
         spi_cs_pin.from_string(THEKERNEL->config->value( motor_driver_control_checksum, cs, spi_cs_pin_checksum)->by_default("nc")->as_string())->as_output();
         if(!spi_cs_pin.connected()) {
@@ -169,8 +167,6 @@ bool MotorDriverControl::config_module(uint16_t cs)
         this->spi = new mbed::SPI(mosi, miso, sclk);
         this->spi->frequency(spi_frequency);
         this->spi->format(8, 3); // 8bit, mode3
-
-        THEKERNEL->streams->printf("MotorDriverControl INFO: configured motor %c (%d): as %s, cs: %04X\n", axis, id, chip==TMC2660?"TMC2660":chip==DRV8711?"DRV8711":"UNKNOWN", (spi_cs_pin.port_number<<8)|spi_cs_pin.pin);
     }
 
     // set default max currents for each chip, can be overidden in config
@@ -220,6 +216,7 @@ bool MotorDriverControl::config_module(uint16_t cs)
 
     if(chip==TMC2208) {
         //we don't want to use soft UART on a regular basis, so we finish configuration here
+        THEKERNEL->streams->printf("MotorDriverControl INFO: configured motor %c (%d): as %s, tx: %04X, rx: %04X\n", axis, id, chip, (sw_uart_tx_pin.port_number<<8)|sw_uart_tx_pin.pin, (sw_uart_rx_pin.port_number<<8)|sw_uart_rx_pin.pin);
         return true;
     }
 
@@ -233,6 +230,8 @@ bool MotorDriverControl::config_module(uint16_t cs)
         // enable alarm monitoring for the chip
         this->register_for_event(ON_SECOND_TICK);
     }
+
+    THEKERNEL->streams->printf("MotorDriverControl INFO: configured motor %c (%d): as %s, cs: %04X\n", axis, id, chip==TMC2660?"TMC2660":chip==DRV8711?"DRV8711":"UNKNOWN", (spi_cs_pin.port_number<<8)|spi_cs_pin.pin);
 
     return true;
 }
