@@ -14,7 +14,6 @@ class TMC26X;
 class TMC22X;
 class StreamOutput;
 class Gcode;
-class SoftSerial;
 class BufferedSoftSerial;
 
 class MotorDriverControl : public Module {
@@ -44,6 +43,8 @@ class MotorDriverControl : public Module {
         int sendUART(uint8_t *b, int cnt, uint8_t *r);
         Pin spi_cs_pin;
         mbed::SPI *spi;
+        Pin sw_uart_tx_pin;
+        Pin sw_uart_rx_pin;
         BufferedSoftSerial *serial;
 
         enum CHIP_TYPE {
