@@ -84,7 +84,6 @@ class Kernel {
             bool feed_hold:1;
             bool ok_per_line:1;
             bool enable_feed_hold:1;
-            bool new_status_format:1;
         };
 
 };

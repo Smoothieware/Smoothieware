@@ -54,6 +54,7 @@
 #define  z_axis_max_speed_checksum           CHECKSUM("z_axis_max_speed")
 #define  segment_z_moves_checksum            CHECKSUM("segment_z_moves")
 #define  save_g92_checksum                   CHECKSUM("save_g92")
+#define  save_g54_checksum                   CHECKSUM("save_g54")
 #define  set_g92_checksum                    CHECKSUM("set_g92")
 
 // arm solutions
@@ -77,8 +78,7 @@
 #define  dir_pin_checksum                    CHEKCSUM("dir_pin")
 #define  en_pin_checksum                     CHECKSUM("en_pin")
 
-#define  steps_per_mm_checksum               CHECKSUM("steps_per_mm")
-#define  max_rate_checksum                   CHECKSUM("max_rate")
+#define  max_speed_checksum                  CHECKSUM("max_speed")
 #define  acceleration_checksum               CHECKSUM("acceleration")
 #define  z_acceleration_checksum             CHECKSUM("z_acceleration")
 
@@ -98,7 +98,6 @@
 #define ymax_checksum                      CHECKSUM("y_max")
 #define zmax_checksum                      CHECKSUM("z_max")
 
-#define ARC_ANGULAR_TRAVEL_EPSILON 5E-9F // Float (radians)
 #define PI 3.14159265358979323846F // force to be float, do not use M_PI
 
 // The Robot converts GCodes into actual movements, and then adds them to the Planner, which passes them to the Conveyor so they can be added to the queue
@@ -189,9 +188,11 @@ void Robot::load_config()
     this->max_speeds[X_AXIS]  = THEKERNEL->config->value(x_axis_max_speed_checksum    )->by_default(60000.0F)->as_number() / 60.0F;
     this->max_speeds[Y_AXIS]  = THEKERNEL->config->value(y_axis_max_speed_checksum    )->by_default(60000.0F)->as_number() / 60.0F;
     this->max_speeds[Z_AXIS]  = THEKERNEL->config->value(z_axis_max_speed_checksum    )->by_default(  300.0F)->as_number() / 60.0F;
+    this->max_speed           = THEKERNEL->config->value(max_speed_checksum           )->by_default(  -60.0F)->as_number() / 60.0F;
 
     this->segment_z_moves     = THEKERNEL->config->value(segment_z_moves_checksum     )->by_default(true)->as_bool();
     this->save_g92            = THEKERNEL->config->value(save_g92_checksum            )->by_default(false)->as_bool();
+    this->save_g54            = THEKERNEL->config->value(save_g54_checksum            )->by_default(THEKERNEL->is_grbl_mode())->as_bool();
     string g92                = THEKERNEL->config->value(set_g92_checksum             )->by_default("")->as_string();
     if(!g92.empty()) {
         // optional setting for a fixed G92 offset
@@ -267,8 +268,14 @@ void Robot::load_config()
     // so the first move can be correct if homing is not performed
     ActuatorCoordinates actuator_pos;
     arm_solution->cartesian_to_actuator(machine_position, actuator_pos);
-    for (size_t i = 0; i < n_motors; i++)
+    for (size_t i = X_AXIS; i <= Z_AXIS; i++) {
         actuators[i]->change_last_milestone(actuator_pos[i]);
+    }
+
+    // initialize any extra axis to machine position
+    for (size_t i = A_AXIS; i < n_motors; i++) {
+         actuators[i]->change_last_milestone(machine_position[i]);
+    }
 
     //this->clearToolOffset();
 
@@ -585,6 +592,17 @@ void Robot::on_gcode_received(void *argument)
                         actuators[selected_extruder]->change_last_milestone(get_e_scale_fnc ? e*get_e_scale_fnc() : e);
                     }
                 }
+                if(gcode->subcode == 0 && gcode->get_num_args() > 0) {
+                    for (int i = A_AXIS; i < n_motors; i++) {
+                        // ABC just need to set machine_position and compensated_machine_position if specified
+                        char axis= 'A'+i-3;
+                        if(!actuators[i]->is_extruder() && gcode->has_letter(axis)) {
+                            float ap= gcode->get_value(axis);
+                            machine_position[i]= compensated_machine_position[i]= ap;
+                            actuators[i]->change_last_milestone(ap); // this updates the last_milestone in the actuator
+                        }
+                    }
+                }
                 #endif
 
                 return;
@@ -676,6 +694,8 @@ void Robot::on_gcode_received(void *argument)
                                 if(actuators[i]->is_extruder()) continue; //extruders handle this themselves
                                 gcode->stream->printf(" %c: %g ", 'A' + i - A_AXIS, actuators[i]->get_max_rate());
                             }
+                        }else{
+                            gcode->stream->printf(" S: %g ", this->max_speed);
                         }
 
                         gcode->add_nl = true;
@@ -699,6 +719,9 @@ void Robot::on_gcode_received(void *argument)
                                     actuators[i]->set_max_rate(v);
                                 }
                             }
+
+                        }else{
+                            if(gcode->has_letter('S')) max_speed= gcode->get_value('S');
                         }
 
 
@@ -821,7 +844,7 @@ void Robot::on_gcode_received(void *argument)
 
                 gcode->stream->printf(";X- Junction Deviation, Z- Z junction deviation, S - Minimum Planner speed mm/sec:\nM205 X%1.5f Z%1.5f S%1.5f\n", THEKERNEL->planner->junction_deviation, isnan(THEKERNEL->planner->z_junction_deviation)?-1:THEKERNEL->planner->z_junction_deviation, THEKERNEL->planner->minimum_planner_speed);
 
-                gcode->stream->printf(";Max cartesian feedrates in mm/sec:\nM203 X%1.5f Y%1.5f Z%1.5f\n", this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS]);
+                gcode->stream->printf(";Max cartesian feedrates in mm/sec:\nM203 X%1.5f Y%1.5f Z%1.5f S%1.5f\n", this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS], this->max_speed);
 
                 gcode->stream->printf(";Max actuator feedrates in mm/sec:\nM203.1 ");
                 for (int i = 0; i < n_motors; ++i) {
@@ -843,16 +866,18 @@ void Robot::on_gcode_received(void *argument)
 
                 // save wcs_offsets and current_wcs
                 // TODO this may need to be done whenever they change to be compliant
-                gcode->stream->printf(";WCS settings\n");
-                gcode->stream->printf("%s\n", wcs2gcode(current_wcs).c_str());
-                int n = 1;
-                for(auto &i : wcs_offsets) {
-                    if(i != wcs_t(0, 0, 0)) {
-                        float x, y, z;
-                        std::tie(x, y, z) = i;
-                        gcode->stream->printf("G10 L2 P%d X%f Y%f Z%f ; %s\n", n, x, y, z, wcs2gcode(n-1).c_str());
+                if(save_g54) {
+                    gcode->stream->printf(";WCS settings\n");
+                    gcode->stream->printf("%s\n", wcs2gcode(current_wcs).c_str());
+                    int n = 1;
+                    for(auto &i : wcs_offsets) {
+                        if(i != wcs_t(0, 0, 0)) {
+                            float x, y, z;
+                            std::tie(x, y, z) = i;
+                            gcode->stream->printf("G10 L2 P%d X%f Y%f Z%f ; %s\n", n, x, y, z, wcs2gcode(n-1).c_str());
+                        }
+                        ++n;
                     }
-                    ++n;
                 }
                 if(save_g92) {
                     // linuxcnc saves G92, so we do too if configured, default is to not save to maintain backward compatibility
@@ -1041,6 +1066,9 @@ void Robot::process_move(Gcode *gcode, enum MOTION_MODE_T motion_mode)
             break;
     }
 
+    // needed to act as start of next arc command
+    memcpy(arc_milestone, target, sizeof(arc_milestone));
+
     if(moved) {
         // set machine_position to the calculated target
         memcpy(machine_position, target, n_motors*sizeof(float));
@@ -1162,7 +1190,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
             if( (!isnan(soft_endstop_min[i]) && transformed_target[i] < soft_endstop_min[i]) || (!isnan(soft_endstop_max[i]) && transformed_target[i] > soft_endstop_max[i]) ) {
                 if(soft_endstop_halt) {
                     if(THEKERNEL->is_grbl_mode()) {
-                        THEKERNEL->streams->printf("error: ");
+                        THEKERNEL->streams->printf("error:");
                     }else{
                         THEKERNEL->streams->printf("Error: ");
                     }
@@ -1178,7 +1206,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
                 } else {
                     // ignore it
                     if(THEKERNEL->is_grbl_mode()) {
-                        THEKERNEL->streams->printf("error: ");
+                        THEKERNEL->streams->printf("error:");
                     }else{
                         THEKERNEL->streams->printf("Error: ");
                     }
@@ -1223,7 +1251,6 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     // as the last milestone won't be updated we do not actually lose any moves as they will be accounted for in the next move
     if(!auxilliary_move && distance < 0.00001F) return false;
 
-
     if(!auxilliary_move) {
          for (size_t i = X_AXIS; i < N_PRIMARY_AXIS; i++) {
             // find distance unit vector for primary axis only
@@ -1236,6 +1263,10 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
                 if (axis_speed > max_speeds[i])
                     rate_mm_s *= ( max_speeds[i] / axis_speed );
             }
+        }
+
+        if(this->max_speed > 0 && rate_mm_s > this->max_speed) {
+            rate_mm_s= this->max_speed;
         }
     }
 
@@ -1453,23 +1484,34 @@ bool Robot::append_arc(Gcode * gcode, const float target[], const float offset[]
         return false;
     }
 
-    // Scary math
-    float center_axis0 = this->machine_position[this->plane_axis_0] + offset[this->plane_axis_0];
-    float center_axis1 = this->machine_position[this->plane_axis_1] + offset[this->plane_axis_1];
-    float linear_travel = target[this->plane_axis_2] - this->machine_position[this->plane_axis_2];
-    float r_axis0 = -offset[this->plane_axis_0]; // Radius vector from center to current location
+    // Scary math.
+    // We need to use arc_milestone here to get accurate arcs as previous machine_position may have been skipped due to small movements
+    float center_axis0 = this->arc_milestone[this->plane_axis_0] + offset[this->plane_axis_0];
+    float center_axis1 = this->arc_milestone[this->plane_axis_1] + offset[this->plane_axis_1];
+    float linear_travel = target[this->plane_axis_2] - this->arc_milestone[this->plane_axis_2];
+    float r_axis0 = -offset[this->plane_axis_0]; // Radius vector from center to start position
     float r_axis1 = -offset[this->plane_axis_1];
-    float rt_axis0 = target[this->plane_axis_0] - center_axis0;
-    float rt_axis1 = target[this->plane_axis_1] - center_axis1;
-
-    // Patch from GRBL Firmware - Christoph Baumann 04072015
-    // CCW angle between position and target from circle center. Only one atan2() trig computation required.
-    float angular_travel = atan2f(r_axis0 * rt_axis1 - r_axis1 * rt_axis0, r_axis0 * rt_axis0 + r_axis1 * rt_axis1);
-    if (plane_axis_2 == Y_AXIS) { is_clockwise = !is_clockwise; }  //Math for XZ plane is reverse of other 2 planes
-    if (is_clockwise) { // Correct atan2 output per direction
-        if (angular_travel >= -ARC_ANGULAR_TRAVEL_EPSILON) { angular_travel -= (2 * PI); }
+    float rt_axis0 = target[this->plane_axis_0] - this->arc_milestone[this->plane_axis_0] - offset[this->plane_axis_0]; // Radius vector from center to target position
+    float rt_axis1 = target[this->plane_axis_1] - this->arc_milestone[this->plane_axis_1] - offset[this->plane_axis_1];
+    float angular_travel = 0;
+    //check for condition where atan2 formula will fail due to everything canceling out exactly
+    if((this->arc_milestone[this->plane_axis_0]==target[this->plane_axis_0]) && (this->arc_milestone[this->plane_axis_1]==target[this->plane_axis_1])) {
+        if (is_clockwise) { // set angular_travel to -2pi for a clockwise full circle
+           angular_travel = (-2 * PI);
+        } else { // set angular_travel to 2pi for a counterclockwise full circle
+           angular_travel = (2 * PI);
+        }
     } else {
-        if (angular_travel <= ARC_ANGULAR_TRAVEL_EPSILON) { angular_travel += (2 * PI); }
+        // Patch from GRBL Firmware - Christoph Baumann 04072015
+        // CCW angle between position and target from circle center. Only one atan2() trig computation required.
+        // Only run if not a full circle or angular travel will incorrectly result in 0.0f
+        angular_travel = atan2f(r_axis0 * rt_axis1 - r_axis1 * rt_axis0, r_axis0 * rt_axis0 + r_axis1 * rt_axis1);
+        if (plane_axis_2 == Y_AXIS) { is_clockwise = !is_clockwise; }  //Math for XZ plane is reverse of other 2 planes
+        if (is_clockwise) { // adjust angular_travel to be in the range of -2pi to 0 for clockwise arcs
+           if (angular_travel > 0) { angular_travel -= (2 * PI); }
+        } else {  // adjust angular_travel to be in the range of 0 to 2pi for counterclockwise arcs
+           if (angular_travel < 0) { angular_travel += (2 * PI); }
+        }
     }
 
     // Find the distance for this gcode

@@ -109,7 +109,7 @@ try_again:
                 cs &= 0xff;  // Defensive programming...
                 cs -= chksum;
 			}
-			
+
             //Strip line number value from possible_command
 			size_t lnsize = possible_command.find_first_not_of("N0123456789.,- ");
 			if(lnsize != string::npos) {
@@ -138,6 +138,7 @@ try_again:
                 currentline = nextline;
             }
 
+            bool sent_ok= false; // used for G1 optimization
             while(possible_command.size() > 0) {
                 // assumes G or M are always the first on the line
                 size_t nextcmd = possible_command.find_first_of("GM", 2);
@@ -164,7 +165,7 @@ try_again:
                             }
                             new_message.stream->printf("ok\n");
                             delete gcode;
-                            continue;
+                            return;
 
                         }else if(!is_allowed_mcode(gcode->m)) {
                             // ignore everything, return error string to host
@@ -175,7 +176,7 @@ try_again:
                                 new_message.stream->printf("!!\r\n");
                             }
                             delete gcode;
-                            continue;
+                            return;
                         }
                     }
 
@@ -209,6 +210,12 @@ try_again:
                             // makes it handle the parameters as a machine position
                             THEROBOT->next_command_is_MCS= true;
 
+                        } else if(gcode->g == 1) {
+                            // optimize G1 to send ok immediately (one per line) before it is planned
+                            if(!sent_ok) {
+                                sent_ok= true;
+                                new_message.stream->printf("ok\n");
+                            }
                         }
 
                         // remember last modal group 1 code
@@ -260,25 +267,26 @@ try_again:
                                 delete gcode;
                                 return;
 
-                            case 115: // M115 Get firmware version and capabilities
+                            case 115: { // M115 Get firmware version and capabilities
                                 Version vers;
 
-                                new_message.stream->printf("FIRMWARE_NAME:Smoothieware, FIRMWARE_URL:http://smoothieware.org, SOURCE_CODE_URL:https://github.com/Smoothieware/Smoothieware, FIRMWARE_VERSION:%s, BUILD_DATE:%s, SYSTEM_CLOCK:%ldMHz, AXES:%d", vers.get_build(), vers.get_build_date(), SystemCoreClock / 1000000, MAX_ROBOT_ACTUATORS);
+                                new_message.stream->printf("FIRMWARE_NAME:Smoothieware, FIRMWARE_URL:http%%3A//smoothieware.org, X-SOURCE_CODE_URL:https://github.com/Smoothieware/Smoothieware, FIRMWARE_VERSION:%s, X-FIRMWARE_BUILD_DATE:%s, X-SYSTEM_CLOCK:%ldMHz, X-AXES:%d", vers.get_build(), vers.get_build_date(), SystemCoreClock / 1000000, MAX_ROBOT_ACTUATORS);
 
                                 #ifdef CNC
-                                new_message.stream->printf(", CNC:1");
+                                new_message.stream->printf(", X-CNC:1");
                                 #else
-                                new_message.stream->printf(", CNC:0");
+                                new_message.stream->printf(", X-CNC:0");
                                 #endif
 
                                 #ifdef DISABLEMSD
-                                new_message.stream->printf(", MSD:0");
+                                new_message.stream->printf(", X-MSD:0");
                                 #else
-                                new_message.stream->printf(", MSD:1");
+                                new_message.stream->printf(", X-MSD:1");
                                 #endif
 
-                                new_message.stream->printf("\r\nok\r\n");
+                                new_message.stream->printf("\nok\n");
                                 return;
+                            }
 
                             case 117: // M117 is a special non compliant Gcode as it allows arbitrary text on the line following the command
                             {    // concatenate the command again and send to panel if enabled
@@ -374,7 +382,7 @@ try_again:
                     if (gcode->is_error) {
                         // report error
                         if(THEKERNEL->is_grbl_mode()) {
-                            new_message.stream->printf("error: ");
+                            new_message.stream->printf("error:");
                         }else{
                             new_message.stream->printf("Error: ");
                         }
@@ -391,7 +399,7 @@ try_again:
                         new_message.stream->printf("Entering Alarm/Halt state\n");
                         THEKERNEL->call_event(ON_HALT, nullptr);
 
-                    }else{
+                    }else if(!sent_ok) {
 
                         if(gcode->add_nl)
                             new_message.stream->printf("\r\n");
@@ -460,9 +468,13 @@ try_again:
         possible_command.insert(0, buf);
         goto try_again;
 
-        // Ignore comments and blank lines
     } else if ( first_char == ';' || first_char == '(' || first_char == ' ' || first_char == '\n' || first_char == '\r' ) {
-        new_message.stream->printf("ok\r\n");
+        // Ignore comments and blank lines
+        new_message.stream->printf("ok\n");
+
+    } else {
+        // an uppercase non command word on its own (except XYZF) just returns ok, we could add an error but no hosts expect that.
+        new_message.stream->printf("ok - ignored\n");
     }
 }
 

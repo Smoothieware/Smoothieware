@@ -255,7 +255,7 @@ gamma_trim                                    0                # Software trim f
 zprobe.enable                                false           # Set to true to enable a zprobe
 zprobe.probe_pin                             1.28!^          # Pin probe is attached to, if NC remove the !
 zprobe.slow_feedrate                         5               # Mm/sec probe feed rate
-#zprobe.debounce_count                       100             # Set if noisy
+#zprobe.debounce_ms                          1               # Set if noisy
 zprobe.fast_feedrate                         100             # Move feedrate mm/sec
 zprobe.probe_height                          5               # How much above bed to start probe
 #gamma_min_endstop                           nc              # Normally 1.28. Change to nc to prevent conflict,

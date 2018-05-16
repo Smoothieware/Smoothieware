@@ -85,6 +85,7 @@ class Robot : public Module {
             bool disable_arm_solution:1;                      // set to disable the arm solution
             bool segment_z_moves:1;
             bool save_g92:1;                                  // save g92 on M500 if set
+            bool save_g54:1;                                  // save WCS on M500 if set
             bool is_g123:1;
             bool soft_endstop_enabled:1;
             bool soft_endstop_halt:1;
@@ -136,6 +137,7 @@ class Robot : public Module {
         float seconds_per_minute;                            // for realtime speed change
         float default_acceleration;                          // the defualt accleration if not set for each axis
         float s_value;                                       // modal S value
+        float arc_milestone[3];                              // used as start of an arc command
 
         // Number of arc generation iterations by small angle approximation before exact arc trajectory
         // correction. This parameter may be decreased if there are issues with the accuracy of the arc
@@ -144,6 +146,7 @@ class Robot : public Module {
         // computational efficiency of generating arcs.
         int arc_correction;                                  // Setting : how often to rectify arc computation
         float max_speeds[3];                                 // Setting : max allowable speed in mm/s for each axis
+        float max_speed;                                     // Setting : maximum feedrate in mm/s as specified by F parameter
 
         float soft_endstop_min[3], soft_endstop_max[3];
 
