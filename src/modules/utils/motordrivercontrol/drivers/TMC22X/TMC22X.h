@@ -104,7 +104,7 @@ public:
     void setDoubleEdge(int8_t value);
 
     /*!
-     * \brief Sets and configures with spread cycle chopper.
+     * \brief Configures the driver with spread cycle chopper.
      * \param constant_off_time The off time setting controls the minimum chopper frequency. For most applications an off time within the range of 5μs to 20μs will fit. Setting this parameter to zero completely disables all driver transistors and the motor can free-wheel. 0: chopper off, 1:15: off time setting (1 will work with minimum blank time of 24 clocks)
      * \param blank_time Selects the comparator blank time. This time needs to safely cover the switching event and the duration of the ringing on the sense resistor. For most low current drivers, a setting of 1 or 2 is good. For high current applications with large MOSFETs, a setting of 2 or 3 will be required. 0 (min setting) … (3) amx setting
      * \param hysteresis_start Hysteresis start setting. Please remark, that this value is an offset to the hysteresis end value. 1 … 8
@@ -121,15 +121,41 @@ public:
      * The duration of the on- and fast decay phase needs to cover at least the blank time, because the current comparator is
      * disabled during this time.
      *
-     * \sa setRandomOffTime() for spreading the noise over a wider spectrum
      */
     void setSpreadCycleChopper(int8_t constant_off_time, int8_t blank_time, int8_t hysteresis_start, int8_t hysteresis_end);
+
+    /*!
+     *\brief enables or disables SpreadCycle mode. If disabled, SpreadCycle is disabled, which means StealthChop is enabled. If enabled, SpreadCycle is enabled and StealthChop not.
+     *\param enabled a bool value true if SpreadCycle should be enabled, false otherwise.
+     */
     void enableSpreadCycle(bool enable);
 
+    /*!
+     * \brief Configures the driver with stealthChop.
+     * \param lim Limiting value for limiting the current jerk when switching from spreadCycle to stealthChop. Reduce the value to yield a lower current jerk. 0 ... 15
+     * \param reg User defined PWM amplitude (gradient) for velocity based scaling or regulation loop gradient when pwm_autoscale=1. 1 ... 15
+     * \param freewheel Stand still option when motor current setting is zero (I_HOLD=0). Only available with stealthChop enabled. The freewheeling option makes the motor easy movable, while both coil short options realize a passive brake. 0 - Normal operation, 1 - Freewheeling, 2 - Coil short via LS drivers, 3 - Coil short via HS drivers
+     * \param autograd  Enable automatic tuning of PWM_GRAD_AUTO. 0 - disable, use PWM_GRAD from register instead. 1 - enable
+     * \param autoscale Enable automatic current scaling using current measurement or use forward controlled velocity based mode. 0 - Forward controlled mode, 1 - Automatic scaling with current regulator
+     * \param freq PWM frequency selection. Use the lowest setting giving good results. The frequency measured at each of the chopper outputs is half of the effective chopper frequency fPWM. 0 - fPWM = 2/1024 fCLK, 1 - fPWM=2/683 fCLK, 2 - fPWM=2/512 fCLK, 3 - fPWM=2/410 fCLK
+     * \param grad User defined PWM amplitude (gradient) for velocity based scaling and initialization value for automatic tuning of PWM_GRAD_AUTO.
+     * \param ofs User defined PWM amplitude (offset) for velocity based scaling and initialization value for automatic tuning of PWM_OFFS_AUTO.
+     *
+     * Noiseless stealthChop operates absolutely free of vibration at low velocities. With stealthChop, the motor current is applied by driving a certain effective voltage into the coil, using a voltage mode PWM.
+     * Optional configuration allows for tuning the setting in special cases, or for storing initial values for the automatic adaptation algorithm.
+     * Use automatic tuning procedure (pwm_autoscale = 1) if motor is not well-known as well as operating conditions.
+     */
     void setStealthChop(uint8_t lim, uint8_t reg, uint8_t freewheel, bool autograd, bool autoscale, uint8_t freq, uint8_t grad, uint8_t ofs);
+
+    /*!
+     * \brief Configures the stealthChop upper velocity threshold.
+     * \param threshold velocity threshold. For most applications an velocity threshold between 30 and 200 will fit. Setting this parameter to zero will not enable SpreadCycle.
+     *
+     * For applications requiring high velocity motion, spreadCycle may bring more stable operation in the
+     * upper velocity range. To combine no-noise operation with highest dynamic performance, the TMC22xx
+     * allows combining stealthChop and spreadCycle based on a velocity threshold
+     */
     void setStealthChopthreshold(uint32_t threshold);
-
-
 
     /*!
      * \brief set the maximum motor current in mA (1000 is 1 Amp)
@@ -279,7 +305,6 @@ private:
         bool started:1; //if the stepper has been started yet
     };
 
-    char axis;
     char designator;
 
 };
