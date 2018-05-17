@@ -41,6 +41,7 @@ class MotorDriverControl : public Module {
         void enable(bool on);
         int sendSPI(uint8_t *b, int cnt, uint8_t *r);
         int sendUART(uint8_t *b, int cnt, uint8_t *r);
+        
         Pin spi_cs_pin;
         mbed::SPI *spi;
         Pin sw_uart_tx_pin;

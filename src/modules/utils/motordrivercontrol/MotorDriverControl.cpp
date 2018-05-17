@@ -120,6 +120,9 @@ bool MotorDriverControl::config_module(uint16_t cs)
     }
 
     if(chip == TMC2208) {
+        //Configure soft UART
+    		
+        //select TX and RX pins
         sw_uart_tx_pin.from_string(THEKERNEL->config->value(motor_driver_control_checksum, cs, sw_uart_tx_pin_checksum)->by_default("nc")->as_string())->as_output();
         sw_uart_rx_pin.from_string(THEKERNEL->config->value(motor_driver_control_checksum, cs, sw_uart_rx_pin_checksum)->by_default("nc")->as_string())->as_input();
 
@@ -142,6 +145,9 @@ bool MotorDriverControl::config_module(uint16_t cs)
         this->serial = new BufferedSoftSerial(txd, rxd);
         this->serial->baud(sw_uart_baudrate);
     } else {
+        //Configure SPI
+    		
+        //select chip select pin
         spi_cs_pin.from_string(THEKERNEL->config->value( motor_driver_control_checksum, cs, spi_cs_pin_checksum)->by_default("nc")->as_string())->as_output();
         if(!spi_cs_pin.connected()) {
             THEKERNEL->streams->printf("MotorDriverControl %c ERROR: chip select not defined\n", axis);
@@ -153,7 +159,7 @@ bool MotorDriverControl::config_module(uint16_t cs)
         int spi_channel = THEKERNEL->config->value(motor_driver_control_checksum, cs, spi_channel_checksum)->by_default(1)->as_number();
         int spi_frequency = THEKERNEL->config->value(motor_driver_control_checksum, cs, spi_frequency_checksum)->by_default(1000000)->as_number();
 
-        // select SPI channel to use
+        // select which SPI pins to use
         PinName mosi, miso, sclk;
         if(spi_channel == 0) {
             mosi = P0_18; miso = P0_17; sclk = P0_15;
@@ -216,7 +222,8 @@ bool MotorDriverControl::config_module(uint16_t cs)
 
     if(chip==TMC2208) {
         //we don't want to use soft UART on a regular basis, so we finish configuration here
-        THEKERNEL->streams->printf("MotorDriverControl INFO: configured motor %c (%d): as %s, tx: %04X, rx: %04X\n", axis, id, chip, (sw_uart_tx_pin.port_number<<8)|sw_uart_tx_pin.pin, (sw_uart_rx_pin.port_number<<8)|sw_uart_rx_pin.pin);
+        //TODO not sure if this should be here
+        THEKERNEL->streams->printf("MotorDriverControl INFO: configured motor %c (%d): as %s, tx: %04X, rx: %04X\n", axis, id, "TMC2208", (sw_uart_tx_pin.port_number<<8)|sw_uart_tx_pin.pin, (sw_uart_rx_pin.port_number<<8)|sw_uart_rx_pin.pin);
         return true;
     }
 
@@ -563,7 +570,7 @@ int MotorDriverControl::sendUART(uint8_t *b, int cnt, uint8_t *r)
     }
     //check if it is read command
     if (!(b[2] >> 7)) {
-        //TODO safe delay should not be hardcoded, it depends on the baudrate and also SENDDELAY
+        //TODO safe delay should not be constant, it depends on the baudrate and also SENDDELAY
         safe_delay_ms(20); //safe delay required until a reply is provided
         for (int i = 0; i < 8; ++i) {
             r[i] = serial->getc();

@@ -570,7 +570,7 @@ void TMC22X::init(uint16_t cs)
     // read chip specific config entries
     this->resistor= THEKERNEL->config->value(motor_driver_control_checksum, cs, sense_resistor_checksum)->by_default(50)->as_number(); // in milliohms
     this->mode= THEKERNEL->config->value(motor_driver_control_checksum, cs, mode_checksum)->by_default(0)->as_number();
-    this->thrs= THEKERNEL->config->value(motor_driver_control_checksum, cs, thrs_checksum)->by_default(0)->as_number();
+    this->thrs= THEKERNEL->config->value(motor_driver_control_checksum, cs, thrs_checksum)->by_default(100)->as_number();
 
     //setting the default register values
     this->gconf_register_value = GCONF_DEFAULT_DATA | GCONF_MSTEP_REG_SELECT; //config microstepping via software
@@ -605,12 +605,10 @@ void TMC22X::init(uint16_t cs)
         enableSpreadCycle(false);
         //default stealthChop configuration
         setStealthChop(12,1,0,1,1,1,0,36);
-        //StealthChop does not use toff constant, but driver needs to be set active through it (setting any toff value is ok)
+        //StealthChop does not use toff constant, but driver needs to be set active though (setting any toff value is ok)
         setEnabled(true);
         break;
     }
-
-    readStatus(true);
 
     //set a nice microstepping value
     setMicrosteps(DEFAULT_MICROSTEPPING_VALUE);
@@ -847,6 +845,7 @@ void TMC22X::setStealthChop(uint8_t lim, uint8_t reg, uint8_t freewheel, bool au
 
 void TMC22X::setStealthChopthreshold(uint32_t threshold)
 {
+    //perform some sanity checks
     if (threshold >= (1 << 20)) {
         threshold = (1 << 20) - 1;
     }
@@ -1083,7 +1082,7 @@ void TMC22X::dumpStatus(StreamOutput *stream, bool readable)
         stream->printf("d%d,", THEROBOT->actuators[0]->which_direction() ? -1 : 1);
         stream->printf("c%u,m%d,", getCurrent(), getMicrosteps());
         // stream->printf('S');
-        // stream->printf(tmc21XStepper.getSpeed(), DEC);
+        // stream->printf(tmc22XStepper.getSpeed(), DEC);
 
         //detect the winding status
         if (isOpenLoadA()) {
@@ -1258,7 +1257,7 @@ uint32_t TMC22X::send2208(uint8_t reg, uint32_t datagram)
         //write/read the values
         serial(buf, 8, rbuf);
 
-        THEKERNEL->streams->printf("sent: %02X, %02X, %02X, %02X, %02X, %02X, %02X, %02X \n", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7]);
+        //THEKERNEL->streams->printf("sent: %02X, %02X, %02X, %02X, %02X, %02X, %02X, %02X \n", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7]);
     } else {
         uint8_t buf[] {(uint8_t)(SYNC), (uint8_t)(SLAVEADDR), (uint8_t)(reg), (uint8_t)(0x00)};
 
@@ -1271,7 +1270,7 @@ uint32_t TMC22X::send2208(uint8_t reg, uint32_t datagram)
         //construct reply
         i_datagram = ((rbuf[3] << 24) | (rbuf[4] << 16) | (rbuf[5] << 8) | (rbuf[6] << 0));
 
-        THEKERNEL->streams->printf("sent: %02X, %02X, %02X, %02X received: %02X, %02X, %02X, %02X, %02X, %02X, %02X, %02X \n", buf[0], buf[1], buf[2], buf[3], rbuf[0], rbuf[1], rbuf[2], rbuf[3], rbuf[4], rbuf[5], rbuf[6], rbuf[7]);
+        //THEKERNEL->streams->printf("sent: %02X, %02X, %02X, %02X received: %02X, %02X, %02X, %02X, %02X, %02X, %02X, %02X \n", buf[0], buf[1], buf[2], buf[3], rbuf[0], rbuf[1], rbuf[2], rbuf[3], rbuf[4], rbuf[5], rbuf[6], rbuf[7]);
     }
     return i_datagram;
 }
