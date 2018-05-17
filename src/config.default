@@ -36,11 +36,11 @@ zeta_acceleration                            3000.0
 
 # SPEED LIMITS (mm/min)
 
-x_axis_max_speed                             60000
-alpha_max_rate                               60000
+x_axis_max_speed                             90000
+alpha_max_rate                               90000
 
-y_axis_max_speed                             48000
-beta_max_rate                                48000
+y_axis_max_speed                             90000
+beta_max_rate                                90000
 
 z_axis_max_speed                             15000
 gamma_max_rate                               15000
@@ -202,7 +202,7 @@ zprobe.slow_feedrate                         5
 zprobe.fast_feedrate                         150
 zprobe.return_feedrate                       150
 zprobe.z_max                                 200
-#zprobe.debounce_ms                          1
+zprobe.debounce_ms                           2
 
 ##################################
 ##################################
