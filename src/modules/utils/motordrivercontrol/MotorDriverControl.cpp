@@ -121,7 +121,6 @@ bool MotorDriverControl::config_module(uint16_t cs)
 
     if(chip == TMC2208) {
         //Configure soft UART
-        setup = true;
     		
         //select TX and RX pins
         sw_uart_tx_pin = new Pin();
@@ -238,9 +237,6 @@ bool MotorDriverControl::config_module(uint16_t cs)
     //finish driver setup
     if(chip == TMC2208) {
         THEKERNEL->streams->printf("MotorDriverControl INFO: configured motor %c (%d): as %s, tx: %04X, rx: %04X\n", axis, id, "TMC2208", (sw_uart_tx_pin->port_number<<8)|sw_uart_tx_pin->pin, (sw_uart_rx_pin->port_number<<8)|sw_uart_rx_pin->pin);
-        //we don't want to use soft UART on a regular basis, so we delete unused UART object
-        setup = false;
-        delete this->serial;
     } else {
         THEKERNEL->streams->printf("MotorDriverControl INFO: configured motor %c (%d): as %s, cs: %04X\n", axis, id, chip==TMC2660?"TMC2660":chip==DRV8711?"DRV8711":"UNKNOWN", (spi_cs_pin->port_number<<8)|spi_cs_pin->pin);
     }
@@ -567,21 +563,18 @@ int MotorDriverControl::sendSPI(uint8_t *b, int cnt, uint8_t *r)
 // Called by the drivers codes to send and receive UART data to/from the chip
 int MotorDriverControl::sendUART(uint8_t *b, int cnt, uint8_t *r)
 {
-    //Make sure UART is only used during initial driver configuration
-    if (setup) {
-        //write data
-        for (int i = 0; i < cnt; ++i) {
-            serial->putc(b[i]);
-            safe_delay_ms(2); //safe delay for each byte
-            serial->getc(); //flush write data which is received in the RX line
-        }
-        //check if it is read command
-        if (!(b[2] >> 7)) {
-            //TODO safe delay should not be constant, it depends on the baudrate and also SENDDELAY
-            safe_delay_ms(20); //safe delay required until a reply is provided
-            for (int i = 0; i < 8; ++i) {
-                r[i] = serial->getc();
-            }
+    //write data
+    for (int i = 0; i < cnt; ++i) {
+        serial->putc(b[i]);
+        safe_delay_ms(2); //safe delay for each byte
+        serial->getc(); //flush write data which is received in the RX line
+    }
+    //check if it is read command
+    if (!(b[2] >> 7)) {
+        //TODO safe delay should not be constant, it depends on the baudrate and also SENDDELAY
+        safe_delay_ms(20); //safe delay required until a reply is provided
+        for (int i = 0; i < 8; ++i) {
+            r[i] = serial->getc();
         }
     }
     return cnt;
