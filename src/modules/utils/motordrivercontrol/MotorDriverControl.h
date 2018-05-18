@@ -51,6 +51,7 @@ class MotorDriverControl : public Module {
             struct {
                 Pin *sw_uart_tx_pin;
                 Pin *sw_uart_rx_pin;
+                bool setup;
             };
         };
 
