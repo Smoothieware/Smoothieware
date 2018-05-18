@@ -42,11 +42,17 @@ class MotorDriverControl : public Module {
         int sendSPI(uint8_t *b, int cnt, uint8_t *r);
         int sendUART(uint8_t *b, int cnt, uint8_t *r);
         
-        Pin spi_cs_pin;
         mbed::SPI *spi;
-        Pin sw_uart_tx_pin;
-        Pin sw_uart_rx_pin;
         BufferedSoftSerial *serial;
+
+        // use SPI or UART pins
+        union {
+            Pin *spi_cs_pin;
+            struct {
+                Pin *sw_uart_tx_pin;
+                Pin *sw_uart_rx_pin;
+            };
+        };
 
         enum CHIP_TYPE {
             DRV8711,
