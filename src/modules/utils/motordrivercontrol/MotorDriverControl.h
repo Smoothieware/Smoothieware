@@ -76,7 +76,6 @@ class MotorDriverControl : public Module {
         uint32_t microsteps;
 
         char axis;
-        bool setup;
 
         struct{
             uint8_t id:4;
