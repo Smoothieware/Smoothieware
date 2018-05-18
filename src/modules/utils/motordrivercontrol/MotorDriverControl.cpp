@@ -123,14 +123,16 @@ bool MotorDriverControl::config_module(uint16_t cs)
         //Configure soft UART
     		
         //select TX and RX pins
-        sw_uart_tx_pin.from_string(THEKERNEL->config->value(motor_driver_control_checksum, cs, sw_uart_tx_pin_checksum)->by_default("nc")->as_string())->as_output();
-        sw_uart_rx_pin.from_string(THEKERNEL->config->value(motor_driver_control_checksum, cs, sw_uart_rx_pin_checksum)->by_default("nc")->as_string())->as_input();
+        sw_uart_tx_pin = new Pin();
+        sw_uart_rx_pin = new Pin();
+        sw_uart_tx_pin->from_string(THEKERNEL->config->value(motor_driver_control_checksum, cs, sw_uart_tx_pin_checksum)->by_default("nc")->as_string())->as_output();
+        sw_uart_rx_pin->from_string(THEKERNEL->config->value(motor_driver_control_checksum, cs, sw_uart_rx_pin_checksum)->by_default("nc")->as_string())->as_input();
 
-        if(!sw_uart_tx_pin.connected() || !sw_uart_rx_pin.connected()) {
-            if(!sw_uart_tx_pin.connected()) {
+        if(!sw_uart_tx_pin->connected() || !sw_uart_rx_pin->connected()) {
+            if(!sw_uart_tx_pin->connected()) {
                 THEKERNEL->streams->printf("MotorDriverControl %c ERROR: uart tx pin not defined\n", axis);
             }
-            if(!sw_uart_rx_pin.connected()) {
+            if(!sw_uart_rx_pin->connected()) {
                 THEKERNEL->streams->printf("MotorDriverControl %c ERROR: uart rx pin not defined\n", axis);
             }
             return false; // if not defined then we can't use this instance
@@ -139,8 +141,8 @@ bool MotorDriverControl::config_module(uint16_t cs)
         //select soft UART baudrate
         int sw_uart_baudrate = THEKERNEL->config->value(motor_driver_control_checksum, cs, sw_uart_baudrate_checksum)->by_default(9600)->as_number();
 
-        PinName txd = port_pin((PortName)(sw_uart_tx_pin.port_number<<8), sw_uart_tx_pin.pin);
-        PinName rxd = port_pin((PortName)(sw_uart_rx_pin.port_number<<8), sw_uart_rx_pin.pin);
+        PinName txd = port_pin((PortName)(sw_uart_tx_pin->port_number<<8), sw_uart_tx_pin->pin);
+        PinName rxd = port_pin((PortName)(sw_uart_rx_pin->port_number<<8), sw_uart_rx_pin->pin);
 
         this->serial = new BufferedSoftSerial(txd, rxd);
         this->serial->baud(sw_uart_baudrate);
@@ -148,12 +150,13 @@ bool MotorDriverControl::config_module(uint16_t cs)
         //Configure SPI
     		
         //select chip select pin
-        spi_cs_pin.from_string(THEKERNEL->config->value( motor_driver_control_checksum, cs, spi_cs_pin_checksum)->by_default("nc")->as_string())->as_output();
-        if(!spi_cs_pin.connected()) {
+        spi_cs_pin = new Pin();
+        spi_cs_pin->from_string(THEKERNEL->config->value( motor_driver_control_checksum, cs, spi_cs_pin_checksum)->by_default("nc")->as_string())->as_output();
+        if(!spi_cs_pin->connected()) {
             THEKERNEL->streams->printf("MotorDriverControl %c ERROR: chip select not defined\n", axis);
             return false; // if not defined then we can't use this instance
         }
-        spi_cs_pin.set(1);
+        spi_cs_pin->set(1);
 
         // select which SPI channel to use
         int spi_channel = THEKERNEL->config->value(motor_driver_control_checksum, cs, spi_channel_checksum)->by_default(1)->as_number();
@@ -223,7 +226,7 @@ bool MotorDriverControl::config_module(uint16_t cs)
     if(chip==TMC2208) {
         //we don't want to use soft UART on a regular basis, so we finish configuration here
         //TODO not sure if this should be here
-        THEKERNEL->streams->printf("MotorDriverControl INFO: configured motor %c (%d): as %s, tx: %04X, rx: %04X\n", axis, id, "TMC2208", (sw_uart_tx_pin.port_number<<8)|sw_uart_tx_pin.pin, (sw_uart_rx_pin.port_number<<8)|sw_uart_rx_pin.pin);
+        THEKERNEL->streams->printf("MotorDriverControl INFO: configured motor %c (%d): as %s, tx: %04X, rx: %04X\n", axis, id, "TMC2208", (sw_uart_tx_pin->port_number<<8)|sw_uart_tx_pin->pin, (sw_uart_rx_pin->port_number<<8)|sw_uart_rx_pin->pin);
         return true;
     }
 
@@ -238,7 +241,7 @@ bool MotorDriverControl::config_module(uint16_t cs)
         this->register_for_event(ON_SECOND_TICK);
     }
 
-    THEKERNEL->streams->printf("MotorDriverControl INFO: configured motor %c (%d): as %s, cs: %04X\n", axis, id, chip==TMC2660?"TMC2660":chip==DRV8711?"DRV8711":"UNKNOWN", (spi_cs_pin.port_number<<8)|spi_cs_pin.pin);
+    THEKERNEL->streams->printf("MotorDriverControl INFO: configured motor %c (%d): as %s, cs: %04X\n", axis, id, chip==TMC2660?"TMC2660":chip==DRV8711?"DRV8711":"UNKNOWN", (spi_cs_pin->port_number<<8)|spi_cs_pin->pin);
 
     return true;
 }
@@ -551,11 +554,11 @@ void MotorDriverControl::set_options(Gcode *gcode)
 // Called by the drivers codes to send and receive SPI data to/from the chip
 int MotorDriverControl::sendSPI(uint8_t *b, int cnt, uint8_t *r)
 {
-    spi_cs_pin.set(0);
+    spi_cs_pin->set(0);
     for (int i = 0; i < cnt; ++i) {
         r[i]= spi->write(b[i]);
     }
-    spi_cs_pin.set(1);
+    spi_cs_pin->set(1);
     return cnt;
 }
 
