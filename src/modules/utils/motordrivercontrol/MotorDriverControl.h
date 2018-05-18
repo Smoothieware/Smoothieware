@@ -42,16 +42,17 @@ class MotorDriverControl : public Module {
         int sendSPI(uint8_t *b, int cnt, uint8_t *r);
         int sendUART(uint8_t *b, int cnt, uint8_t *r);
         
-        mbed::SPI *spi;
-        BufferedSoftSerial *serial;
-
-        // use SPI or UART pins
+        // use SPI or UART
         union {
-            Pin *spi_cs_pin;
+            struct {
+                Pin *spi_cs_pin;
+                mbed::SPI *spi;
+            };
             struct {
                 Pin *sw_uart_tx_pin;
                 Pin *sw_uart_rx_pin;
                 bool setup;
+                BufferedSoftSerial *serial;
             };
         };
 
