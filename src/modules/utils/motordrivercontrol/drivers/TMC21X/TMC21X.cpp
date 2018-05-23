@@ -69,8 +69,9 @@
 #define TMC21X_READOUT_STALLGUARD_CURRENT 1
 
 //some default values used in initialization
-#define DEFAULT_MICROSTEPPING_VALUE 32
-#define DEFAULT_DATA 0x00000000
+#define DEFAULT_MICROSTEPPING_VALUE     32
+#define ZEROS_DEFAULT_DATA              0x00000000
+#define PWMCONF_DEFAULT_DATA            0x00050480
 
 //driver access request (read MSB bit is 0 and write MSB bit is 1)
 #define READ  0x00
@@ -635,18 +636,22 @@ void TMC21X::init(uint16_t cs)
     this->resistor= THEKERNEL->config->value(motor_driver_control_checksum, cs, sense_resistor_checksum)->by_default(50)->as_number(); // in milliohms
 
     //setting the default register values
-    this->gconf_register_value = DEFAULT_DATA;
-    this->ihold_irun_register_value = DEFAULT_DATA;
-    this->xdirect_register_value = DEFAULT_DATA;
-    this->chopconf_register_value = DEFAULT_DATA;
-    this->coolconf_register_value = DEFAULT_DATA;
+    this->gconf_register_value = ZEROS_DEFAULT_DATA;
+    this->ihold_irun_register_value = ZEROS_DEFAULT_DATA;
+    this->tpwmthrs_register_value = ZEROS_DEFAULT_DATA;
+    this->xdirect_register_value = ZEROS_DEFAULT_DATA;
+    this->chopconf_register_value = ZEROS_DEFAULT_DATA;
+    this->coolconf_register_value = ZEROS_DEFAULT_DATA;
+    this->pwmconf_register_value = PWMCONF_DEFAULT_DATA;
 
     //set the initial values
     send2130(WRITE|GCONF_REGISTER, this->gconf_register_value);
     send2130(WRITE|IHOLD_IRUN_REGISTER, this->ihold_irun_register_value);
+    send2130(WRITE|TPWMTHRS_REGISTER, this->tpwmthrs_register_value);
     send2130(WRITE|XDIRECT_REGISTER, this->xdirect_register_value);
     send2130(WRITE|CHOPCONF_REGISTER, this->chopconf_register_value);
     send2130(WRITE|COOLCONF_REGISTER, this->coolconf_register_value);
+    send2130(WRITE|PWMCONF_REGISTER, this->pwmconf_register_value);
 
     started = true;
 
@@ -1289,12 +1294,12 @@ uint32_t TMC21X::readStatus(int8_t read_value)
     uint32_t data;
     if(read_value == TMC21X_READOUT_MICROSTEP) {
         //we need to read access twice to obtain the actual read access response
-        send2130(READ|MSCNT_REGISTER,DEFAULT_DATA);
-        data = send2130(READ|MSCNT_REGISTER,DEFAULT_DATA);
+        send2130(READ|MSCNT_REGISTER,ZEROS_DEFAULT_DATA);
+        data = send2130(READ|MSCNT_REGISTER,ZEROS_DEFAULT_DATA);
     } else {
         //we need to read access twice to obtain the actual read access response
-        send2130(READ|DRV_STATUS_REGISTER,DEFAULT_DATA);
-        data = send2130(READ|DRV_STATUS_REGISTER,DEFAULT_DATA);
+        send2130(READ|DRV_STATUS_REGISTER,ZEROS_DEFAULT_DATA);
+        data = send2130(READ|DRV_STATUS_REGISTER,ZEROS_DEFAULT_DATA);
     }
     return data;
 }
@@ -1328,10 +1333,12 @@ void TMC21X::dumpStatus(StreamOutput *stream, bool readable)
         stream->printf("Register dump:\n");
         stream->printf(" gconf register: %08lX(%ld)\n", gconf_register_value, gconf_register_value);
         stream->printf(" ihold_irun register: %08lX(%ld)\n", ihold_irun_register_value, ihold_irun_register_value);
+        stream->printf(" tpwmthrs register: %08lX(%ld)\n", tpwmthrs_register_value, tpwmthrs_register_value);
         stream->printf(" xdirect register: %08lX(%ld)\n", xdirect_register_value, xdirect_register_value);
         stream->printf(" chopconf register: %08lX(%ld)\n", chopconf_register_value, chopconf_register_value);
         stream->printf(" coolconf register: %08lX(%ld)\n", coolconf_register_value, coolconf_register_value);
-        stream->printf(" motor_driver_control.xxx.reg %05lX,%05lX,%05lX,%05lX,%05lX\n", gconf_register_value, ihold_irun_register_value, xdirect_register_value, chopconf_register_value, coolconf_register_value);
+        stream->printf(" pwmconf register: %08lX(%ld)\n", pwmconf_register_value, pwmconf_register_value);
+        stream->printf(" motor_driver_control.xxx.reg %05lX,%05lX,%05lX,%05lX,%05lX,%05lX,%05lX\n", gconf_register_value, ihold_irun_register_value, tpwmthrs_register_value, xdirect_register_value, chopconf_register_value, coolconf_register_value, pwmconf_register_value);
 
     } else {
         // TODO hardcoded for X need to select ABC as needed
@@ -1468,25 +1475,31 @@ bool TMC21X::setRawRegister(StreamOutput *stream, uint32_t reg, uint32_t val)
         case 255:
             send2130(WRITE|GCONF_REGISTER, this->gconf_register_value);
             send2130(WRITE|IHOLD_IRUN_REGISTER, this->ihold_irun_register_value);
+            send2130(WRITE|TPWMTHRS_REGISTER, this->tpwmthrs_register_value);
             send2130(WRITE|XDIRECT_REGISTER, this->xdirect_register_value);
             send2130(WRITE|CHOPCONF_REGISTER, this->chopconf_register_value);
             send2130(WRITE|COOLCONF_REGISTER, this->coolconf_register_value);
+            send2130(WRITE|PWMCONF_REGISTER, this->pwmconf_register_value);
             stream->printf("Registers written\n");
             break;
 
 
         case 1: this->gconf_register_value = val; stream->printf("gconf register set to %08lX\n", val); break;
         case 2: this->ihold_irun_register_value = val; stream->printf("ihold irun config register set to %08lX\n", val); break;
-        case 3: this->xdirect_register_value = val; stream->printf("xdirect register set to %08lX\n", val); break;
-        case 4: this->chopconf_register_value = val; stream->printf("chopconf register set to %08lX\n", val); break;
-        case 5: this->coolconf_register_value = val; stream->printf("coolconf register set to %08lX\n", val); break;
+        case 3: this->tpwmthrs_register_value = val; stream->printf("tpwmthrs config register set to %08lX\n", val); break;
+        case 4: this->xdirect_register_value = val; stream->printf("xdirect register set to %08lX\n", val); break;
+        case 5: this->chopconf_register_value = val; stream->printf("chopconf register set to %08lX\n", val); break;
+        case 6: this->coolconf_register_value = val; stream->printf("coolconf register set to %08lX\n", val); break;
+        case 7: this->pwmconf_register_value = val; stream->printf("pwmconf register set to %08lX\n", val); break;
 
         default:
             stream->printf("1: gconf register\n");
             stream->printf("2: ihold irun register\n");
-            stream->printf("3: xdirect register\n");
-            stream->printf("4: chopconf register\n");
-            stream->printf("5: coolconf register\n");
+            stream->printf("3: tpwmthrs_register\n");
+            stream->printf("4: xdirect register\n");
+            stream->printf("5: chopconf register\n");
+            stream->printf("6: coolconf register\n");
+            stream->printf("7: pwmconf register\n");
             stream->printf("255: update all registers\n");
             return false;
     }
@@ -1511,7 +1524,7 @@ uint32_t TMC21X::send2130(uint8_t reg, uint32_t datagram)
     spi_status_result = rbuf[0];
     uint32_t i_datagram = ((rbuf[1] << 24) | (rbuf[2] << 16) | (rbuf[3] << 8) | (rbuf[4] << 0));
 
-    //THEKERNEL->streams->printf("sent: %02X, %02X, %02X, %02X, %02X received: %02X, %02X, %02X, %02X, %02X \n", buf[4], buf[3], buf[2], buf[1], buf[0], rbuf[4], rbuf[3], rbuf[2], rbuf[1], rbuf[0]);
+    THEKERNEL->streams->printf("sent: %02X, %02X, %02X, %02X, %02X received: %02X, %02X, %02X, %02X, %02X \n", buf[4], buf[3], buf[2], buf[1], buf[0], rbuf[4], rbuf[3], rbuf[2], rbuf[1], rbuf[0]);
 
     return i_datagram;
 }

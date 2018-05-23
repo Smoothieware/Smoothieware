@@ -419,9 +419,11 @@ private:
     //driver control register copies to easily set & modify the registers
     uint32_t gconf_register_value;
     uint32_t ihold_irun_register_value;
+    uint32_t tpwmthrs_register_value;
     uint32_t xdirect_register_value;
     uint32_t chopconf_register_value;
     uint32_t coolconf_register_value;
+    uint32_t pwmconf_register_value;
 
     //SPI status result transferred with each datagram read back
     uint8_t spi_status_result;
