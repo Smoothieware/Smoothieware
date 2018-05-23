@@ -39,6 +39,9 @@
 
 #define motor_driver_control_checksum  CHECKSUM("motor_driver_control")
 #define sense_resistor_checksum        CHECKSUM("sense_resistor")
+#define mode_checksum                  CHECKSUM("mode")
+#define chopper_mode_checksum          CHECKSUM("chopper_mode")
+#define thrs_checksum                  CHECKSUM("thrs")
 
 //! return value for TMC21X.getOverTemperature() if there is a overtemperature situation in the TMC chip
 /*!
@@ -633,7 +636,10 @@ TMC21X::TMC21X(std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi, char d) 
 void TMC21X::init(uint16_t cs)
 {
     // read chip specific config entries
-    this->resistor= THEKERNEL->config->value(motor_driver_control_checksum, cs, sense_resistor_checksum)->by_default(50)->as_number(); // in milliohms
+    this->resistor = THEKERNEL->config->value(motor_driver_control_checksum, cs, sense_resistor_checksum)->by_default(50)->as_number(); // in milliohms
+    this->mode = THEKERNEL->config->value(motor_driver_control_checksum, cs, mode_checksum)->by_default(0)->as_number();
+    this->chopper_mode = THEKERNEL->config->value(motor_driver_control_checksum, cs, chopper_mode_checksum)->by_default(1)->as_number();
+    this->thrs = THEKERNEL->config->value(motor_driver_control_checksum, cs, thrs_checksum)->by_default(100)->as_number();
 
     //setting the default register values
     this->gconf_register_value = ZEROS_DEFAULT_DATA;
@@ -655,18 +661,31 @@ void TMC21X::init(uint16_t cs)
 
     started = true;
 
-
-#if 1
-    //set to a conservative start value
-    setConstantOffTimeChopper(7, 54, 13, 12, 1);
-#else
-    // openbuilds high torque nema23 3amps (2.8)
-    setSpreadCycleChopper(5, 36, 6, 0, 0);
-    // for 1.5amp kysan @ 12v
-    setSpreadCycleChopper(5, 54, 5, 0, 0);
-    // for 4amp Nema24 @ 12v
-    //setSpreadCycleChopper(5, 54, 4, 0, 0);
-#endif
+    switch(mode) {
+    case 0:
+        //enable SpreadCycle by disabling StealthChop function
+        enableStealthChop(false);
+        if(chopper_mode) {
+            //set to a conservative start value
+            setConstantOffTimeChopper(7, 54, 13, 12, 1);
+        } else {
+            // openbuilds high torque nema23 3amps (2.8)
+            //setSpreadCycleChopper(5, 36, 6, 0, 0);
+            // for 1.5amp kysan @ 12v
+            setSpreadCycleChopper(5, 54, 5, 0, 0);
+            // for 4amp Nema24 @ 12v
+            //setSpreadCycleChopper(5, 54, 4, 0, 0);
+        }
+        break;
+    case 1:
+        //enable StealthChop
+        enableStealthChop(true);
+        //default stealthChop configuration
+        setStealthChop(12,1,0,1,1,1,0,36);
+        //StealthChop does not use toff constant, but driver needs to be set active though (setting any toff value is ok)
+        setEnabled(true);
+        break;
+    }
 
     setEnabled(false);
 
@@ -759,6 +778,19 @@ void TMC21X::setDoubleEdge(int8_t value)
     //if started we directly send it to the motor
     if (started) {
         send2130(WRITE|CHOPCONF_REGISTER, chopconf_register_value);
+    }
+}
+
+void TMC21X::enableStealthChop(bool enable)
+{
+    if (enable) {
+        gconf_register_value |= GCONF_EN_PWM_MODE;
+    } else {
+        gconf_register_value &= ~(GCONF_EN_PWM_MODE);
+    }
+    //if started we directly send it to the motor
+    if (started) {
+        send2130(WRITE|GCONF_REGISTER, gconf_register_value);
     }
 }
 
@@ -957,6 +989,10 @@ void TMC21X::setRandomOffTime(int8_t value)
     if (started) {
         send2130(WRITE|CHOPCONF_REGISTER,chopconf_register_value);
     }
+}
+
+void TMC21X::setStealthChop(uint8_t lim, uint8_t reg, uint8_t freewheel, bool autograd, bool autoscale, uint8_t freq, uint8_t grad, uint8_t ofs)
+{
 }
 
 void TMC21X::setCurrent(unsigned int current)
