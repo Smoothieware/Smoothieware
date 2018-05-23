@@ -1303,6 +1303,17 @@ bool TMC21X::isStallGuardReached(void)
 
 void TMC21X::setEnabled(bool enabled)
 {
+    int8_t constant_off_time=this->constant_off_time;
+    //perform some sanity checks
+    if (constant_off_time < 2) {
+        constant_off_time = 2;
+    } else if (constant_off_time > 15) {
+        constant_off_time = 15;
+    }
+
+    //save the constant off time
+    this->constant_off_time = constant_off_time;
+
     //delete the t_off in the chopper config to get sure
     chopconf_register_value &= ~(CHOPCONF_TOFF);
     if (enabled) {
