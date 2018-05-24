@@ -40,7 +40,6 @@
 #define motor_driver_control_checksum  CHECKSUM("motor_driver_control")
 #define sense_resistor_checksum        CHECKSUM("sense_resistor")
 #define mode_checksum                  CHECKSUM("mode")
-#define chopper_mode_checksum          CHECKSUM("chopper_mode")
 #define thrs_checksum                  CHECKSUM("thrs")
 
 //! return value for TMC21X.getOverTemperature() if there is a overtemperature situation in the TMC chip
@@ -637,8 +636,8 @@ void TMC21X::init(uint16_t cs)
 {
     // read chip specific config entries
     this->resistor = THEKERNEL->config->value(motor_driver_control_checksum, cs, sense_resistor_checksum)->by_default(50)->as_number(); // in milliohms
-    this->mode = THEKERNEL->config->value(motor_driver_control_checksum, cs, mode_checksum)->by_default(2)->as_number();
-    this->thrs = THEKERNEL->config->value(motor_driver_control_checksum, cs, thrs_checksum)->by_default(100)->as_number();
+    this->mode = THEKERNEL->config->value(motor_driver_control_checksum, cs, mode_checksum)->by_default(2)->as_number(); //traditional constant-off time as default
+    this->thrs = THEKERNEL->config->value(motor_driver_control_checksum, cs, thrs_checksum)->by_default(0)->as_number(); //Combined SpreadCycle and StealthChop setting is disabled as default
 
     //setting the default register values
     this->gconf_register_value = ZEROS_DEFAULT_DATA;
@@ -681,22 +680,24 @@ void TMC21X::init(uint16_t cs)
         setSpreadCycleChopper(5, 54, 5, 0, 0);
         // for 4amp Nema24 @ 12v
         //setSpreadCycleChopper(5, 54, 4, 0, 0);
+        // set stallguard to a conservative value so it doesn't trigger immediately
+        setStallGuardThreshold(10, 1);
         break;
     case 2:
         //enable SpreadCycle by disabling StealthChop function
         enableStealthChop(false);
-        //set to a conservative start value
+        //set constantofftimechopper to a conservative start value
         setConstantOffTimeChopper(7, 54, 13, 12, 1);
+        // set stallguard to a conservative value so it doesn't trigger immediately
+        setStallGuardThreshold(10, 1);
         break;
     }
 
+    //start with driver disabled
     setEnabled(false);
 
     //set a nice microstepping value
     setMicrosteps(DEFAULT_MICROSTEPPING_VALUE);
-
-    // set stallguard to a conservative value so it doesn't trigger immediately
-    setStallGuardThreshold(10, 1);
 }
 
 /*
@@ -781,19 +782,6 @@ void TMC21X::setDoubleEdge(int8_t value)
     //if started we directly send it to the motor
     if (started) {
         send2130(WRITE|CHOPCONF_REGISTER, chopconf_register_value);
-    }
-}
-
-void TMC21X::enableStealthChop(bool enable)
-{
-    if (enable) {
-        gconf_register_value |= GCONF_EN_PWM_MODE;
-    } else {
-        gconf_register_value &= ~(GCONF_EN_PWM_MODE);
-    }
-    //if started we directly send it to the motor
-    if (started) {
-        send2130(WRITE|GCONF_REGISTER, gconf_register_value);
     }
 }
 
@@ -994,6 +982,19 @@ void TMC21X::setRandomOffTime(int8_t value)
     }
 }
 
+void TMC21X::enableStealthChop(bool enable)
+{
+    if (enable) {
+        gconf_register_value |= GCONF_EN_PWM_MODE;
+    } else {
+        gconf_register_value &= ~(GCONF_EN_PWM_MODE);
+    }
+    //if started we directly send it to the motor
+    if (started) {
+        send2130(WRITE|GCONF_REGISTER, gconf_register_value);
+    }
+}
+
 void TMC21X::setStealthChop(uint8_t freewheel, bool symmetric, bool autoscale, uint8_t freq, uint8_t grad, uint8_t ampl)
 {
     //perform some sanity checks
@@ -1009,7 +1010,7 @@ void TMC21X::setStealthChop(uint8_t freewheel, bool symmetric, bool autoscale, u
 
     if (thrs) {
         //switch to SpreadCycle mode when current velocity surpasses threshold value
-        //setStealthChopthreshold(thrs);
+        setStealthChopthreshold(thrs);
     }
 
     if (autoscale) {
@@ -1034,6 +1035,23 @@ void TMC21X::setStealthChop(uint8_t freewheel, bool symmetric, bool autoscale, u
     //if started we directly send it to the motor
     if (started) {
         send2130(WRITE|PWMCONF_REGISTER,pwmconf_register_value);
+    }
+}
+
+void TMC21X::setStealthChopthreshold(uint32_t threshold)
+{
+    //perform some sanity checks
+    if (threshold >= (1 << 20)) {
+        threshold = (1 << 20) - 1;
+    }
+
+    //save the threshold value
+    this->thrs = threshold;
+    this->tpwmthrs_register_value = threshold;
+
+    //if started we directly send it to the motor
+    if (started) {
+        send2130(WRITE|TPWMTHRS_REGISTER,tpwmthrs_register_value);
     }
 }
 

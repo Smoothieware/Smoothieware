@@ -94,12 +94,6 @@ public:
     void setDoubleEdge(int8_t value);
 
     /*!
-     *\brief enables or disables StealthChop mode. If disabled, StealthChop is disabled, which means SpreadCycle is enabled. If enabled, StealthChop is enabled and SpreadCycle not.
-     *\param enabled a bool value true if StealthChop should be enabled, false otherwise.
-     */
-    void enableStealthChop(bool enable);
-
-    /*!
      * \brief Sets and configure the classical Constant Off Timer Chopper
      * \param constant_off_time The off time setting controls the minimum chopper frequency. For most applications an off time within the range of 5μs to 20μs will fit. Setting this parameter to zero completely disables all driver transistors and the motor can free-wheel. 0: chopper off, 1:15: off time setting (1 will work with minimum blank time of 24 clocks)
      * \param blank_time Selects the comparator blank time. This time needs to safely cover the switching event and the duration of the ringing on the sense resistor. For most low current drivers, a setting of 1 or 2 is good. For high current applications with large MOSFETs, a setting of 2 or 3 will be required. 0 (min setting) … (3) amx setting
@@ -165,6 +159,12 @@ public:
     void setRandomOffTime(int8_t value);
 
     /*!
+     *\brief enables or disables StealthChop mode. If disabled, StealthChop is disabled, which means SpreadCycle is enabled. If enabled, StealthChop is enabled and SpreadCycle not.
+     *\param enabled a bool value true if StealthChop should be enabled, false otherwise.
+     */
+    void enableStealthChop(bool enable);
+
+    /*!
      * \brief Configures the driver with stealthChop.
      * \param freewheel Stand still option when motor current setting is zero (I_HOLD=0). Only available with stealthChop enabled. The freewheeling option makes the motor easy movable, while both coil short options realize a passive brake. 0 - Normal operation, 1 - Freewheeling, 2 - Coil short via LS drivers, 3 - Coil short via HS drivers
      * \param symmetric Force a symmetric PWM for each cycle. Reduces the number of updates to the PWM cycle. 0 - Normal Operation. 1 - A symmetric PWM cycle is enforced
@@ -178,6 +178,16 @@ public:
      * Use automatic current control (pwm_autoscale = 1) if motor is not well-known as well as operating conditions.
      */
     void setStealthChop(uint8_t freewheel, bool symmetric, bool autoscale, uint8_t freq, uint8_t grad, uint8_t ampl);
+
+    /*!
+     * \brief Configures the stealthChop upper velocity threshold.
+     * \param threshold velocity threshold. For most applications an velocity threshold between 30 and 200 will fit. Setting this parameter to zero will not enable SpreadCycle.
+     *
+     * For applications requiring high velocity motion, spreadCycle may bring more stable operation in the
+     * upper velocity range. To combine no-noise operation with highest dynamic performance, the TMC22xx
+     * allows combining stealthChop and spreadCycle based on a velocity threshold
+     */
+    void setStealthChopthreshold(uint32_t threshold);
 
     /*!
      * \brief set the maximum motor current in mA (1000 is 1 Amp)
