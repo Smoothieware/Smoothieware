@@ -569,8 +569,8 @@ void TMC22X::init(uint16_t cs)
 {
     // read chip specific config entries
     this->resistor= THEKERNEL->config->value(motor_driver_control_checksum, cs, sense_resistor_checksum)->by_default(50)->as_number(); // in milliohms
-    this->mode= THEKERNEL->config->value(motor_driver_control_checksum, cs, mode_checksum)->by_default(0)->as_number();
-    this->thrs= THEKERNEL->config->value(motor_driver_control_checksum, cs, thrs_checksum)->by_default(100)->as_number();
+    this->mode= THEKERNEL->config->value(motor_driver_control_checksum, cs, mode_checksum)->by_default(0)->as_number(); //SpreadCycle as default
+    this->thrs= THEKERNEL->config->value(motor_driver_control_checksum, cs, thrs_checksum)->by_default(0)->as_number(); //Combined SpreadCycle and StealthChop setting is disabled as default
 
     //setting the default register values
     this->gconf_register_value = GCONF_DEFAULT_DATA | GCONF_MSTEP_REG_SELECT; //config microstepping via software
