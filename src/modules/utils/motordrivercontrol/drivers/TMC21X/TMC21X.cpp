@@ -637,8 +637,7 @@ void TMC21X::init(uint16_t cs)
 {
     // read chip specific config entries
     this->resistor = THEKERNEL->config->value(motor_driver_control_checksum, cs, sense_resistor_checksum)->by_default(50)->as_number(); // in milliohms
-    this->mode = THEKERNEL->config->value(motor_driver_control_checksum, cs, mode_checksum)->by_default(0)->as_number();
-    this->chopper_mode = THEKERNEL->config->value(motor_driver_control_checksum, cs, chopper_mode_checksum)->by_default(1)->as_number();
+    this->mode = THEKERNEL->config->value(motor_driver_control_checksum, cs, mode_checksum)->by_default(2)->as_number();
     this->thrs = THEKERNEL->config->value(motor_driver_control_checksum, cs, thrs_checksum)->by_default(100)->as_number();
 
     //setting the default register values
@@ -661,29 +660,33 @@ void TMC21X::init(uint16_t cs)
 
     started = true;
 
+    /* set and configure chopper
+     * 0 - stealthChop
+     * 1 - spreadCycle
+     * 2 - traditional constant off-time
+     */
     switch(mode) {
     case 0:
-        //enable SpreadCycle by disabling StealthChop function
-        enableStealthChop(false);
-        if(chopper_mode) {
-            //set to a conservative start value
-            setConstantOffTimeChopper(7, 54, 13, 12, 1);
-        } else {
-            // openbuilds high torque nema23 3amps (2.8)
-            //setSpreadCycleChopper(5, 36, 6, 0, 0);
-            // for 1.5amp kysan @ 12v
-            setSpreadCycleChopper(5, 54, 5, 0, 0);
-            // for 4amp Nema24 @ 12v
-            //setSpreadCycleChopper(5, 54, 4, 0, 0);
-        }
-        break;
-    case 1:
         //enable StealthChop
         enableStealthChop(true);
-        //default stealthChop configuration
-        setStealthChop(12,1,0,1,1,1,0,36);
-        //StealthChop does not use toff constant, but driver needs to be set active though (setting any toff value is ok)
-        setEnabled(true);
+        //default StealthChop configuration
+        setStealthChop(0,0,1,1,4,128);
+        break;
+    case 1:
+        //enable SpreadCycle by disabling StealthChop function
+        enableStealthChop(false);
+        // openbuilds high torque nema23 3amps (2.8)
+        //setSpreadCycleChopper(5, 36, 6, 0, 0);
+        // for 1.5amp kysan @ 12v
+        setSpreadCycleChopper(5, 54, 5, 0, 0);
+        // for 4amp Nema24 @ 12v
+        //setSpreadCycleChopper(5, 54, 4, 0, 0);
+        break;
+    case 2:
+        //enable SpreadCycle by disabling StealthChop function
+        enableStealthChop(false);
+        //set to a conservative start value
+        setConstantOffTimeChopper(7, 54, 13, 12, 1);
         break;
     }
 
@@ -991,8 +994,47 @@ void TMC21X::setRandomOffTime(int8_t value)
     }
 }
 
-void TMC21X::setStealthChop(uint8_t lim, uint8_t reg, uint8_t freewheel, bool autograd, bool autoscale, uint8_t freq, uint8_t grad, uint8_t ofs)
+void TMC21X::setStealthChop(uint8_t freewheel, bool symmetric, bool autoscale, uint8_t freq, uint8_t grad, uint8_t ampl)
 {
+    //perform some sanity checks
+    if (freewheel > 3) {
+        freewheel = 3;
+    }
+    if (freq > 3) {
+        freq = 3;
+    }
+
+    //first of all delete all the values for this register
+    pwmconf_register_value = 0;
+
+    if (thrs) {
+        //switch to SpreadCycle mode when current velocity surpasses threshold value
+        //setStealthChopthreshold(thrs);
+    }
+
+    if (autoscale) {
+        //set PWM automatic amplitude scaling
+        pwmconf_register_value |= PWMCONF_PWM_AUTOSCALE;
+    }
+
+    if(symmetric) {
+        //set PWM automatic gradient adaptation
+        pwmconf_register_value |= PWMCONF_PWM_SYMMETRIC;
+    }
+
+    //set standstill mode
+    pwmconf_register_value |= (freewheel << PWMCONF_FREEWHEEL_SHIFT);
+    //set PWM frequency
+    pwmconf_register_value |= (freq << PWMCONF_PWM_FREQ_SHIFT);
+    //set user defined amplitude gradient
+    pwmconf_register_value |= (grad << PWMCONF_PWM_GRAD_SHIFT);
+    //set user defined amplitude offset
+    pwmconf_register_value |= (ampl << PWMCONF_PWM_AMPL_SHIFT);
+
+    //if started we directly send it to the motor
+    if (started) {
+        send2130(WRITE|PWMCONF_REGISTER,pwmconf_register_value);
+    }
 }
 
 void TMC21X::setCurrent(unsigned int current)
