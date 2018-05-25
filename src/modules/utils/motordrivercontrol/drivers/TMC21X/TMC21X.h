@@ -446,13 +446,21 @@ private:
     std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi;
 
     unsigned int resistor{50}; // current sense resistor value in milliohm
-    uint8_t mode; // StealthChop or SpreadCycle mode or traditional constant off-time
-    uint32_t thrs; // StealthChop upper velocity threshold
+    uint8_t chopper_mode; // stealthChop or spreadCycle mode or traditional constant off-time
+    uint32_t tpowerdown; // delay between motor stand still and motor current power down
+    uint32_t tpwmthrs; // stealthChop upper velocity threshold
+    uint32_t tcoolthrs; // coolStep lower threshold velocity
+    uint32_t thigh; // traditional constant off-time lower velocity threshold
+    bool vhighchm; // enables switching to operate in traditional constant off-time with only slow decay,  when vhigh is exceeded.
+    bool vhighfs; // enables switching to operate in fullstep mode, when vhigh is exceeded.
 
     //driver control register copies to easily set & modify the registers
     uint32_t gconf_register_value;
     uint32_t ihold_irun_register_value;
+    uint32_t tpowerdown_register_value;
     uint32_t tpwmthrs_register_value;
+    uint32_t tcoolthrs_register_value;
+    uint32_t thigh_register_value;
     uint32_t xdirect_register_value;
     uint32_t chopconf_register_value;
     uint32_t coolconf_register_value;
