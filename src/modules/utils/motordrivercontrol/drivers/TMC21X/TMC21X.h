@@ -180,6 +180,23 @@ public:
     void setStealthChop(uint8_t freewheel, bool symmetric, bool autoscale, uint8_t freq, uint8_t grad, uint8_t ampl);
 
     /*!
+     * \brief Configures Velocity Dependent Driver time parameters. The configured settings are TPOWERDOWN, TPWMTHRS, TCOOLTHRS and THIGH.
+     *
+     * A number of velocity thresholds allow combining the different modes of operation within an application requiring a wide velocity range.
+     * To combine all available thresholds, the settings value must be specified in the required order:
+     * TPWMTHRS > TCOOLTHRS > THIGH
+     */
+    void setVelocityDependentDrivertimes(void);
+
+    /*!
+     * \brief Configures delayed standstill current reduction
+     * \param value Delay before power down in stand still
+     *
+     * TPOWERDOWN sets the delay time after stand still (stst) of the motor to motor current power down. Time range is about 0 to 4 seconds (0...((2^8)-1) * 2^18 t CLK).
+     */
+    void setPowerDowndelay(uint8_t value);
+
+    /*!
      * \brief Configures the stealthChop upper velocity threshold.
      * \param threshold velocity threshold. For most applications an velocity threshold between 30 and 200 will fit. Setting this parameter to zero will not enable SpreadCycle.
      *
@@ -188,6 +205,28 @@ public:
      * allows combining stealthChop and spreadCycle based on a velocity threshold
      */
     void setStealthChopthreshold(uint32_t threshold);
+
+    /*!
+     * \brief Configures the coolStep lower velocity threshold.
+     * \param threshold velocity threshold. For most applications an velocity threshold between 30 and 200 will fit. This setting is only used in SpreadCycle. 1... 2^20-1
+     *
+     * Lower velocity threshold for switching on coolStep and stop on stall. Below this velocity coolStep becomes disabled (not used in STEP/DIR mode).
+     * Adapt to the lower limit of the velocity range where stallGuard2 gives a stable result.
+     * Hint: May be adapted to disable coolStep during acceleration and deceleration phase by setting identical to maximum velocity value.
+     */
+    void setCoolStepthreshold(uint32_t threshold);
+
+    /*!
+     * \brief Configures the traditional constant off-time lower velocity threshold.
+     * \param threshold velocity threshold. For most applications an velocity threshold between 30 and 200 will fit. This setting disables StealthChop and SpreadCycle. 1... 2^20-1
+     * \param vhighchm high velocity chopper mode. Enables switching to chm=1 and fd=0 (constant off time with slow decay, only), when VHIGH is exceeded.
+     * \param vhighfs high velocity fullstep selection. Enables switching to fullstep, when VHIGH is exceeded. Switching takes place only at 45° position.
+     *
+     * This velocity setting allows velocity dependent switching into a different chopper mode and fullstepping to maximize torque. The stall detection feature becomes switched off for 2-3
+     * electrical periods whenever passing THIGH threshold to compensate for the effect of switching modes.
+     * Note that vhighchm and vhighfs can be combined. If set, the TOFF setting automatically becomes doubled during high velocity operation in order to avoid doubling of the chopper frequency.
+     */
+    void setConstantOffTimethreshold(uint32_t threshold, bool vhighchm, bool vhighfs);
 
     /*!
      * \brief set the maximum motor current in mA (1000 is 1 Amp)
@@ -447,7 +486,7 @@ private:
 
     unsigned int resistor{50}; // current sense resistor value in milliohm
     uint8_t chopper_mode; // stealthChop or spreadCycle mode or traditional constant off-time
-    uint32_t tpowerdown; // delay between motor stand still and motor current power down
+    uint8_t tpowerdown; // delay between motor stand still and motor current power down
     uint32_t tpwmthrs; // stealthChop upper velocity threshold
     uint32_t tcoolthrs; // coolStep lower threshold velocity
     uint32_t thigh; // traditional constant off-time lower velocity threshold

@@ -709,11 +709,14 @@ void TMC21X::init(uint16_t cs)
         break;
     }
 
-    //start with driver disabled
-    setEnabled(false);
+    //set driver thresholds and delays
+    setVelocityDependentDrivertimes();
 
     //set a nice microstepping value
     setMicrosteps(DEFAULT_MICROSTEPPING_VALUE);
+
+    //start with driver disabled
+    setEnabled(false);
 }
 
 /*
@@ -1024,11 +1027,6 @@ void TMC21X::setStealthChop(uint8_t freewheel, bool symmetric, bool autoscale, u
     //first of all delete all the values for this register
     pwmconf_register_value = 0;
 
-    if (tpwmthrs) {
-        //switch to SpreadCycle mode when current velocity surpasses threshold value
-        setStealthChopthreshold(tpwmthrs);
-    }
-
     if (autoscale) {
         //set PWM automatic amplitude scaling
         pwmconf_register_value |= PWMCONF_PWM_AUTOSCALE;
@@ -1054,6 +1052,42 @@ void TMC21X::setStealthChop(uint8_t freewheel, bool symmetric, bool autoscale, u
     }
 }
 
+void TMC21X::setVelocityDependentDrivertimes(void)
+{
+
+    if(tpowerdown) {
+        //sets delay after stand still of the motor to motor current power down
+        setPowerDowndelay(tpowerdown);
+    }
+
+    if (tpwmthrs) {
+        //switch to SpreadCycle mode when current velocity surpasses threshold value
+        setStealthChopthreshold(tpwmthrs);
+    }
+
+    if(tcoolthrs) {
+        //switch to coolStep and stallGuard feature when current velocity surpasses threshold value
+        setCoolStepthreshold(tcoolthrs);
+    }
+
+    if(thigh) {
+        //switch to traditional constant off-time mode when current velocity surpasses threshold value
+        setConstantOffTimethreshold (thigh,vhighchm,vhighfs);
+    }
+
+}
+
+void TMC21X::setPowerDowndelay(uint8_t value)
+{
+    //save the delay to the register variable
+    this->tpowerdown_register_value = value;
+
+    //if started we directly send it to the motor
+    if (started) {
+        send2130(WRITE|TPOWERDOWN_REGISTER,tpowerdown_register_value);
+    }
+}
+
 void TMC21X::setStealthChopthreshold(uint32_t threshold)
 {
     //perform some sanity checks
@@ -1068,6 +1102,53 @@ void TMC21X::setStealthChopthreshold(uint32_t threshold)
     //if started we directly send it to the motor
     if (started) {
         send2130(WRITE|TPWMTHRS_REGISTER,tpwmthrs_register_value);
+    }
+}
+
+void TMC21X::setConstantOffTimethreshold (uint32_t threshold, bool vhighchm, bool vhighfs)
+{
+    //perform some sanity checks
+    if (threshold >= (1 << 20)) {
+        threshold = (1 << 20) - 1;
+    }
+
+    //save the threshold value
+    this->thigh = threshold;
+    this->thigh_register_value = threshold;
+
+    if (vhighchm) {
+        this->chopconf_register_value |= CHOPCONF_VHIGHCHM;
+    } else {
+        this->chopconf_register_value &= ~(CHOPCONF_VHIGHCHM);
+    }
+
+    if (vhighfs) {
+        this->chopconf_register_value |= CHOPCONF_VHIGHFS;
+    } else {
+        this->chopconf_register_value &= ~(CHOPCONF_VHIGHFS);
+    }
+
+    //if started we directly send it to the motor
+    if (started) {
+        send2130(WRITE|THIGH_REGISTER,thigh_register_value);
+        send2130(WRITE|CHOPCONF_REGISTER,chopconf_register_value);
+    }
+}
+
+void TMC21X::setCoolStepthreshold (uint32_t threshold)
+{
+    //perform some sanity checks
+    if (threshold >= (1 << 20)) {
+        threshold = (1 << 20) - 1;
+    }
+
+    //save the threshold value
+    this->tcoolthrs = threshold;
+    this->tcoolthrs_register_value = threshold;
+
+    //if started we directly send it to the motor
+    if (started) {
+        send2130(WRITE|TCOOLTHRS_REGISTER,tcoolthrs_register_value);
     }
 }
 
