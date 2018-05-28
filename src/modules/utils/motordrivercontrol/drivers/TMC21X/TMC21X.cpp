@@ -656,7 +656,6 @@ void TMC21X::init(uint16_t cs)
     this->tpwmthrs_register_value = ZEROS_DEFAULT_DATA;
     this->tcoolthrs_register_value = ZEROS_DEFAULT_DATA;
     this->thigh_register_value = ZEROS_DEFAULT_DATA;
-    this->xdirect_register_value = ZEROS_DEFAULT_DATA;
     this->chopconf_register_value = ZEROS_DEFAULT_DATA;
     this->coolconf_register_value = ZEROS_DEFAULT_DATA;
     this->pwmconf_register_value = PWMCONF_DEFAULT_DATA;
@@ -668,7 +667,6 @@ void TMC21X::init(uint16_t cs)
     send2130(WRITE|TPWMTHRS_REGISTER, this->tpwmthrs_register_value);
     send2130(WRITE|TCOOLTHRS_REGISTER, this->tcoolthrs_register_value);
     send2130(WRITE|THIGH_REGISTER, this->thigh_register_value);
-    send2130(WRITE|XDIRECT_REGISTER, this->xdirect_register_value);
     send2130(WRITE|CHOPCONF_REGISTER, this->chopconf_register_value);
     send2130(WRITE|COOLCONF_REGISTER, this->coolconf_register_value);
     send2130(WRITE|PWMCONF_REGISTER, this->pwmconf_register_value);
@@ -1541,13 +1539,12 @@ void TMC21X::dumpStatus(StreamOutput *stream, bool readable)
         stream->printf(" tpwmthrs register: %08lX(%ld)\n", tpwmthrs_register_value, tpwmthrs_register_value);
         stream->printf(" tcoolthrs register: %08lX(%ld)\n", tcoolthrs_register_value, tcoolthrs_register_value);
         stream->printf(" thigh register: %08lX(%ld)\n", thigh_register_value, thigh_register_value);
-        stream->printf(" xdirect register: %08lX(%ld)\n", xdirect_register_value, xdirect_register_value);
         stream->printf(" chopconf register: %08lX(%ld)\n", chopconf_register_value, chopconf_register_value);
         stream->printf(" coolconf register: %08lX(%ld)\n", coolconf_register_value, coolconf_register_value);
         stream->printf(" pwmconf register: %08lX(%ld)\n", pwmconf_register_value, pwmconf_register_value);
-        stream->printf(" motor_driver_control.xxx.reg %05lX,%05lX,%05lX,%05lX,%05lX,%05lX,%05lX,%05lX,%05lX,%05lX\n", gconf_register_value, ihold_irun_register_value, tpowerdown_register_value,
+        stream->printf(" motor_driver_control.xxx.reg %05lX,%05lX,%05lX,%05lX,%05lX,%05lX,%05lX,%05lX,%05lX\n", gconf_register_value, ihold_irun_register_value, tpowerdown_register_value,
                                                                                                                       tpwmthrs_register_value, tcoolthrs_register_value, thigh_register_value,
-                                                                                                                      xdirect_register_value, chopconf_register_value, coolconf_register_value, pwmconf_register_value);
+                                                                                                                      chopconf_register_value, coolconf_register_value, pwmconf_register_value);
 
     } else {
         // TODO hardcoded for X need to select ABC as needed
@@ -1688,7 +1685,6 @@ bool TMC21X::setRawRegister(StreamOutput *stream, uint32_t reg, uint32_t val)
             send2130(WRITE|TPWMTHRS_REGISTER, this->tpwmthrs_register_value);
             send2130(WRITE|TCOOLTHRS_REGISTER, this->tcoolthrs_register_value);
             send2130(WRITE|THIGH_REGISTER, this->thigh_register_value);
-            send2130(WRITE|XDIRECT_REGISTER, this->xdirect_register_value);
             send2130(WRITE|CHOPCONF_REGISTER, this->chopconf_register_value);
             send2130(WRITE|COOLCONF_REGISTER, this->coolconf_register_value);
             send2130(WRITE|PWMCONF_REGISTER, this->pwmconf_register_value);
@@ -1702,10 +1698,9 @@ bool TMC21X::setRawRegister(StreamOutput *stream, uint32_t reg, uint32_t val)
         case 4: this->tpwmthrs_register_value = val; stream->printf("tpwmthrs config register set to %08lX\n", val); break;
         case 5: this->tcoolthrs_register_value = val; stream->printf("tcoolthrs config register set to %08lX\n", val); break;
         case 6: this->thigh_register_value = val; stream->printf("thigh config register set to %08lX\n", val); break;
-        case 7: this->xdirect_register_value = val; stream->printf("xdirect register set to %08lX\n", val); break;
-        case 8: this->chopconf_register_value = val; stream->printf("chopconf register set to %08lX\n", val); break;
-        case 9: this->coolconf_register_value = val; stream->printf("coolconf register set to %08lX\n", val); break;
-        case 10: this->pwmconf_register_value = val; stream->printf("pwmconf register set to %08lX\n", val); break;
+        case 7: this->chopconf_register_value = val; stream->printf("chopconf register set to %08lX\n", val); break;
+        case 8: this->coolconf_register_value = val; stream->printf("coolconf register set to %08lX\n", val); break;
+        case 9: this->pwmconf_register_value = val; stream->printf("pwmconf register set to %08lX\n", val); break;
 
         default:
             stream->printf("1: gconf register\n");
@@ -1714,10 +1709,9 @@ bool TMC21X::setRawRegister(StreamOutput *stream, uint32_t reg, uint32_t val)
             stream->printf("4: tpwmthrs_register\n");
             stream->printf("5: tcoolthrs_register\n");
             stream->printf("6: thigh_register\n");
-            stream->printf("7: xdirect register\n");
-            stream->printf("8: chopconf register\n");
-            stream->printf("9: coolconf register\n");
-            stream->printf("10: pwmconf register\n");
+            stream->printf("7: chopconf register\n");
+            stream->printf("8: coolconf register\n");
+            stream->printf("9: pwmconf register\n");
             stream->printf("255: update all registers\n");
             return false;
     }

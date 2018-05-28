@@ -500,7 +500,6 @@ private:
     uint32_t tpwmthrs_register_value;
     uint32_t tcoolthrs_register_value;
     uint32_t thigh_register_value;
-    uint32_t xdirect_register_value;
     uint32_t chopconf_register_value;
     uint32_t coolconf_register_value;
     uint32_t pwmconf_register_value;
