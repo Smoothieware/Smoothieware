@@ -596,8 +596,8 @@ void Robot::on_gcode_received(void *argument)
                     for (int i = A_AXIS; i < n_motors; i++) {
                         // ABC just need to set machine_position and compensated_machine_position if specified
                         char axis= 'A'+i-3;
-                        if(!actuators[i]->is_extruder() && gcode->has_letter(axis)) {
-                            float ap= gcode->get_value(axis);
+                        float ap= gcode->get_value(axis);
+                        if((!actuators[i]->is_extruder() || ap == 0) && gcode->has_letter(axis)) {
                             machine_position[i]= compensated_machine_position[i]= ap;
                             actuators[i]->change_last_milestone(ap); // this updates the last_milestone in the actuator
                         }
