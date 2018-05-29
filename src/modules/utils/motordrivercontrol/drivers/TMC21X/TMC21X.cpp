@@ -40,6 +40,8 @@
 #define motor_driver_control_checksum  CHECKSUM("motor_driver_control")
 #define sense_resistor_checksum        CHECKSUM("sense_resistor")
 #define chopper_mode_checksum          CHECKSUM("chopper_mode")
+#define hold_percent_checksum          CHECKSUM("hold_percent")
+#define iholddelay_checksum            CHECKSUM("iholddelay")
 #define tpowerdown_checksum            CHECKSUM("tpowerdown")
 #define tpwmthrs_checksum              CHECKSUM("tpwmthrs")
 #define tcoolthrs_checksum             CHECKSUM("tcoolthrs")
@@ -642,6 +644,8 @@ void TMC21X::init(uint16_t cs)
     // read chip specific config entries
     this->resistor = THEKERNEL->config->value(motor_driver_control_checksum, cs, sense_resistor_checksum)->by_default(50)->as_number(); // in milliohms
     this->chopper_mode = THEKERNEL->config->value(motor_driver_control_checksum, cs, chopper_mode_checksum)->by_default(2)->as_number(); //traditional constant-off time as default
+    this->hold_percent = THEKERNEL->config->value(motor_driver_control_checksum, cs, hold_percent_checksum)->by_default(0)->as_number();
+    this->iholddelay = THEKERNEL->config->value(motor_driver_control_checksum, cs, iholddelay_checksum)->by_default(0)->as_number();
     this->tpowerdown = THEKERNEL->config->value(motor_driver_control_checksum, cs, tpowerdown_checksum)->by_default(0)->as_number();
     this->tpwmthrs = THEKERNEL->config->value(motor_driver_control_checksum, cs, tpwmthrs_checksum)->by_default(0)->as_number(); //Combined SpreadCycle and StealthChop setting is disabled as default
     this->tcoolthrs = THEKERNEL->config->value(motor_driver_control_checksum, cs, tcoolthrs_checksum)->by_default(0)->as_number();
@@ -1052,7 +1056,11 @@ void TMC21X::setStealthChop(uint8_t freewheel, bool symmetric, bool autoscale, u
 
 void TMC21X::setVelocityDependentDrivertimes(void)
 {
-
+    if(iholddelay) {
+        //sets delay before power down in stand still, after tpowerdown expires
+        setHolddelay(iholddelay);
+    }
+    
     if(tpowerdown) {
         //sets delay after stand still of the motor to motor current power down
         setPowerDowndelay(tpowerdown);
@@ -1073,6 +1081,26 @@ void TMC21X::setVelocityDependentDrivertimes(void)
         setConstantOffTimethreshold (thigh,vhighchm,vhighfs);
     }
 
+}
+
+void TMC21X::setHolddelay(uint8_t value)
+{
+    //perform some sanity checks
+    if (value > 15) {
+        value = 15;
+    }
+
+    //delete the old value
+    this->ihold_irun_register_value &= ~(IHOLD_IRUN_IHOLDDELAY);
+
+    //save the new value
+    this->iholddelay = value;
+    this->ihold_irun_register_value = value << IHOLD_IRUN_IHOLDDELAY_SHIFT;
+
+    //if started we directly send it to the motor
+    if (started) {
+        send2130(WRITE|IHOLD_IRUN_REGISTER,ihold_irun_register_value);
+    }
 }
 
 void TMC21X::setPowerDowndelay(uint8_t value)
@@ -1182,6 +1210,15 @@ void TMC21X::setCurrent(unsigned int current)
     ihold_irun_register_value &= ~(IHOLD_IRUN_IRUN);
     //set the new current scaling
     ihold_irun_register_value  |= current_scaling << IHOLD_IRUN_IRUN_SHIFT;
+
+		//set standstill current
+    if(hold_percent) {
+        //delete the old value
+        ihold_irun_register_value &= ~(IHOLD_IRUN_IHOLD);
+        //set the new current scaling
+        ihold_irun_register_value |= (uint8_t)(current_scaling * ((double) this->hold_percent) / 100.0F) << IHOLD_IRUN_IHOLD_SHIFT;
+    }
+
     //if started we directly send it to the motor
     if (started) {
         send2130(WRITE|CHOPCONF_REGISTER,chopconf_register_value);

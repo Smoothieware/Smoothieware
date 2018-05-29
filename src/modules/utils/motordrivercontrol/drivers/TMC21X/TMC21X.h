@@ -180,13 +180,21 @@ public:
     void setStealthChop(uint8_t freewheel, bool symmetric, bool autoscale, uint8_t freq, uint8_t grad, uint8_t ampl);
 
     /*!
-     * \brief Configures Velocity Dependent Driver time parameters. The configured settings are TPOWERDOWN, TPWMTHRS, TCOOLTHRS and THIGH.
+     * \brief Configures Velocity Dependent Driver time parameters. The configured settings are IHOLDDELAY, TPOWERDOWN, TPWMTHRS, TCOOLTHRS and THIGH.
      *
      * A number of velocity thresholds allow combining the different modes of operation within an application requiring a wide velocity range.
      * To combine all available thresholds, the settings value must be specified in the required order:
      * TPWMTHRS > TCOOLTHRS > THIGH
      */
     void setVelocityDependentDrivertimes(void);
+
+    /*!
+     * \brief Configures smooth current reduction time from run current to hold current.
+     * \param value Delay before power down in stand still 0=instant power down, 1..15: Current reduction delay per current step in multiple of 2^18 clocks
+     *
+     * IHOLDDELAY controls the number of clock cycles for motor power down after TPOWERDOWN in increments of 2^18 clocks
+     */
+    void setHolddelay(uint8_t value);
 
     /*!
      * \brief Configures delayed standstill current reduction
@@ -229,7 +237,7 @@ public:
     void setConstantOffTimethreshold(uint32_t threshold, bool vhighchm, bool vhighfs);
 
     /*!
-     * \brief set the maximum motor current in mA (1000 is 1 Amp)
+     * \brief set the maximum motor current and StandStill current in mA (1000 is 1 Amp)
      * Keep in mind this is the maximum peak Current. The RMS current will be 1/sqrt(2) smaller. The actual current can also be smaller
      * by employing CoolStep.
      * \param current the maximum motor current in mA
@@ -486,6 +494,8 @@ private:
 
     unsigned int resistor{50}; // current sense resistor value in milliohm
     uint8_t chopper_mode; // stealthChop or spreadCycle mode or traditional constant off-time
+    unsigned int hold_percent;
+    uint8_t iholddelay; // delay between motor stand still and motor current power down
     uint8_t tpowerdown; // delay between motor stand still and motor current power down
     uint32_t tpwmthrs; // stealthChop upper velocity threshold
     uint32_t tcoolthrs; // coolStep lower threshold velocity
