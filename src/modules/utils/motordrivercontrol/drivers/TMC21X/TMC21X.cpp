@@ -48,6 +48,10 @@
 #define thigh_checksum                 CHECKSUM("thigh")
 #define vhighchm_checksum              CHECKSUM("vhighchm")
 #define vhighfs_checksum               CHECKSUM("vhighfs")
+#define i_scale_analog_checksum        CHECKSUM("i_scale_analog")
+#define internal_rsense_checksum       CHECKSUM("internal_rsense")
+#define shaft_checksum                 CHECKSUM("shaft")
+#define small_hysteresis_checksum      CHECKSUM("small_hysteresis")
 
 //! return value for TMC21X.getOverTemperature() if there is a overtemperature situation in the TMC chip
 /*!
@@ -652,6 +656,10 @@ void TMC21X::init(uint16_t cs)
     this->thigh = THEKERNEL->config->value(motor_driver_control_checksum, cs, thigh_checksum)->by_default(0)->as_number();
     this->vhighchm = THEKERNEL->config->value(motor_driver_control_checksum, cs, vhighchm_checksum)->by_default(false)->as_bool();
     this->vhighfs = THEKERNEL->config->value(motor_driver_control_checksum, cs, vhighfs_checksum)->by_default(false)->as_bool();
+    this->i_scale_analog = THEKERNEL->config->value(motor_driver_control_checksum, cs, i_scale_analog_checksum)->by_default(false)->as_bool();
+    this->internal_rsense = THEKERNEL->config->value(motor_driver_control_checksum, cs, internal_rsense_checksum)->by_default(false)->as_bool();
+    this->shaft = THEKERNEL->config->value(motor_driver_control_checksum, cs, shaft_checksum)->by_default(false)->as_bool();
+    this->small_hysteresis = THEKERNEL->config->value(motor_driver_control_checksum, cs, small_hysteresis_checksum)->by_default(false)->as_bool();
 
     //setting the default register values
     this->gconf_register_value = ZEROS_DEFAULT_DATA;
@@ -677,6 +685,9 @@ void TMC21X::init(uint16_t cs)
 
     started = true;
 
+    //set general parameters of the driver
+    setGeneralConfiguration();
+
     /* set and configure chopper
      * 0 - stealthChop
      * 1 - spreadCycle
@@ -684,14 +695,10 @@ void TMC21X::init(uint16_t cs)
      */
     switch(chopper_mode) {
     case 0:
-        //enable StealthChop
-        enableStealthChop(true);
         //default StealthChop configuration
         setStealthChop(0,0,1,1,4,128);
         break;
     case 1:
-        //enable SpreadCycle by disabling StealthChop function
-        enableStealthChop(false);
         // openbuilds high torque nema23 3amps (2.8)
         //setSpreadCycleChopper(5, 36, 6, 0, 0);
         // for 1.5amp kysan @ 12v
@@ -702,8 +709,6 @@ void TMC21X::init(uint16_t cs)
         setStallGuardThreshold(10, 1);
         break;
     case 2:
-        //enable SpreadCycle by disabling StealthChop function
-        enableStealthChop(false);
         //set constantofftimechopper to a conservative start value
         setConstantOffTimeChopper(7, 54, 13, 12, 1);
         // set stallguard to a conservative value so it doesn't trigger immediately
@@ -719,6 +724,36 @@ void TMC21X::init(uint16_t cs)
 
     //start with driver disabled
     setEnabled(false);
+}
+
+void TMC21X::setGeneralConfiguration(void)
+{
+    if(i_scale_analog) {
+        gconf_register_value |= GCONF_I_SCALE_ANALOG;
+    }
+
+    if(internal_rsense) {
+        gconf_register_value |= GCONF_INTERNAL_RSENSE|GCONF_I_SCALE_ANALOG;
+    }
+
+    if(shaft) {
+        gconf_register_value |= GCONF_SHAFT;
+    }
+
+    if(small_hysteresis) {
+        gconf_register_value |= GCONF_SMALL_HYSTERESIS;
+    }
+
+    if (!chopper_mode) {
+        gconf_register_value |= GCONF_EN_PWM_MODE;
+    } else {
+        gconf_register_value &= ~(GCONF_EN_PWM_MODE);
+    }
+
+    //if started we directly send it to the motor
+    if (started) {
+        send2130(WRITE|GCONF_REGISTER, gconf_register_value);
+    }
 }
 
 /*

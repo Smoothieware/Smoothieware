@@ -71,6 +71,14 @@ public:
     void init(uint16_t cs);
 
     /*!
+     * \brief Set general parameters
+     *
+     * This method sets general parameters such as chopper mode, sense resistors, inverse motor direction, emergency stop
+     * and functions via DIAG0 and DIAG1 outputs.
+     */
+    void setGeneralConfiguration(void);
+
+    /*!
      * \brief Set the number of microsteps in 2^i values (rounded) up to 256
      *
      * This method set's the number of microsteps per step in 2^i interval.
@@ -502,6 +510,10 @@ private:
     uint32_t thigh; // traditional constant off-time lower velocity threshold
     bool vhighchm; // enables switching to operate in traditional constant off-time with only slow decay,  when vhigh is exceeded.
     bool vhighfs; // enables switching to operate in fullstep mode, when vhigh is exceeded.
+    bool i_scale_analog; //sets reference voltage
+    bool internal_rsense; //sets sense resistors
+    bool shaft; //Inverse motor direction
+    bool small_hysteresis; //set hysteresis for step frequency comparison
 
     //driver control register copies to easily set & modify the registers
     uint32_t gconf_register_value;
