@@ -79,6 +79,30 @@ public:
     void setGeneralConfiguration(void);
 
     /*!
+     * \brief Set diag0 pin options
+     * \param error enable DIAG0 active on driver errors: Over temperature (ot), short to GND (s2g), undervoltage chargepump (uv_cp)
+     * \param otpw enable DIAG0 active on driver over temperature
+     * \param stall enable DIAG0 active on motor stall
+     * \param pushpull enable DIAG1 push pull output (active high) or open collector output (active low)
+     *
+     *  The diagnostic pin 0 supplies a configurable set of different real time information such as driver over temperature, short to GND,
+     *  undervoltage chargepump and motor stall.
+     */
+    void setDiag0options(bool error, bool otpw, bool stall, bool pushpull);
+
+    /*!
+     * \brief Set diag1 pin options
+     * \param stall enable DIAG1 active on motor stall
+     * \param index enable DIAG1 active on index position (microstep look up table position 0)
+     * \param onstate enable DIAG1 active when chopper is on (for the coil which is in the second half of the fullstep)
+     * \param pushpull enable DIAG1 push pull output (active high) or open collector output (active low)
+     *
+     *  The diagnostic pin 1 supplies a configurable set of different real time information such as motor stall, index position
+     *  and chopper on-state.
+     */
+    void setDiag1options(bool stall, bool index, bool onstate, bool pushpull);
+
+    /*!
      * \brief Set the number of microsteps in 2^i values (rounded) up to 256
      *
      * This method set's the number of microsteps per step in 2^i interval.
@@ -170,7 +194,7 @@ public:
      *\brief enables or disables StealthChop mode. If disabled, StealthChop is disabled, which means SpreadCycle is enabled. If enabled, StealthChop is enabled and SpreadCycle not.
      *\param enabled a bool value true if StealthChop should be enabled, false otherwise.
      */
-    void enableStealthChop(bool enable);
+    void setStealthChopEnabled(bool enable);
 
     /*!
      * \brief Configures the driver with stealthChop.
@@ -500,20 +524,31 @@ private:
     inline uint32_t send2130(uint8_t reg, uint32_t datagram);
     std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi;
 
-    unsigned int resistor{50}; // current sense resistor value in milliohm
-    uint8_t chopper_mode; // stealthChop or spreadCycle mode or traditional constant off-time
+    unsigned int resistor{50}; //current sense resistor value in milliohm
     unsigned int hold_percent;
-    uint8_t iholddelay; // delay between motor stand still and motor current power down
-    uint8_t tpowerdown; // delay between motor stand still and motor current power down
-    uint32_t tpwmthrs; // stealthChop upper velocity threshold
-    uint32_t tcoolthrs; // coolStep lower threshold velocity
-    uint32_t thigh; // traditional constant off-time lower velocity threshold
-    bool vhighchm; // enables switching to operate in traditional constant off-time with only slow decay,  when vhigh is exceeded.
-    bool vhighfs; // enables switching to operate in fullstep mode, when vhigh is exceeded.
-    bool i_scale_analog; //sets reference voltage
-    bool internal_rsense; //sets sense resistors
-    bool shaft; //Inverse motor direction
-    bool small_hysteresis; //set hysteresis for step frequency comparison
+    uint32_t tpwmthrs; //stealthChop upper velocity threshold
+    uint32_t tcoolthrs; //coolStep lower threshold velocity
+    uint32_t thigh; //traditional constant off-time lower velocity threshold
+
+    struct {
+        uint8_t chopper_mode; //stealthChop or spreadCycle mode or traditional constant off-time
+        uint8_t iholddelay; //delay between motor stand still and motor current power down
+        uint8_t tpowerdown; //delay between motor stand still and motor current power down
+        bool vhighchm; //enables switching to operate in traditional constant off-time with only slow decay,  when vhigh is exceeded.
+        bool vhighfs; //enables switching to operate in fullstep mode, when vhigh is exceeded.
+        bool i_scale_analog; //sets reference voltage
+        bool internal_rsense; //sets sense resistors
+        bool shaft; // Inverse motor direction
+        bool small_hysteresis; //set hysteresis for step frequency comparison
+        bool diag0_error; //enable DIAG0 active on driver errors: Over temperature (ot), short to GND (s2g), undervoltage chargepump (uv_cp)
+        bool diag0_otpw; //enable DIAG0 active on driver over temperature
+        bool diag0_stall; //enable DIAG0 active on motor stall.
+        bool diag0_int_pushpull; //enable DIAG1 push pull output (active high) or open collector output (active low)
+        bool diag1_stall; //enable DIAG1 active on motor stall.
+        bool diag1_index;  //enable DIAG1 active on index position (microstep look up table position 0)
+        bool diag1_onstate;  //enable DIAG1 active when chopper is on (for the coil which is in the second half of the fullstep)
+        bool diag1_pushpull;  //enable DIAG1 push pull output (active high) or open collector output (active low)
+    };
 
     //driver control register copies to easily set & modify the registers
     uint32_t gconf_register_value;
