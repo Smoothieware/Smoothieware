@@ -72,11 +72,14 @@ public:
 
     /*!
      * \brief Set general parameters
+     * \param i_scale_analog sets reference voltage
+     * \param internal_rsense sets sense resistors
+     * \param shaft inverse motor direction
+     * \param set hysteresis for step frequency comparison
      *
-     * This method sets general parameters such as chopper mode, sense resistors, inverse motor direction, emergency stop
-     * and functions via DIAG0 and DIAG1 outputs.
+     * This method sets some general flags of global configuration (GCONF) register
      */
-    void setGeneralConfiguration(void);
+    void setGeneralConfiguration(bool i_scale_analog, bool internal_rsense, bool shaft, bool small_hysteresis);
 
     /*!
      * \brief Set diag0 pin options
@@ -212,15 +215,6 @@ public:
     void setStealthChop(uint8_t freewheel, bool symmetric, bool autoscale, uint8_t freq, uint8_t grad, uint8_t ampl);
 
     /*!
-     * \brief Configures Velocity Dependent Driver time parameters. The configured settings are IHOLDDELAY, TPOWERDOWN, TPWMTHRS, TCOOLTHRS and THIGH.
-     *
-     * A number of velocity thresholds allow combining the different modes of operation within an application requiring a wide velocity range.
-     * To combine all available thresholds, the settings value must be specified in the required order:
-     * TPWMTHRS > TCOOLTHRS > THIGH
-     */
-    void setVelocityDependentDrivertimes(void);
-
-    /*!
      * \brief Configures smooth current reduction time from run current to hold current.
      * \param value Delay before power down in stand still 0=instant power down, 1..15: Current reduction delay per current step in multiple of 2^18 clocks
      *
@@ -278,12 +272,27 @@ public:
     void setCurrent(unsigned int current);
 
     /*!
+     * \brief set standstill motor current
+     * Keep in mind this is the maximum peak Current. The RMS current will be 1/sqrt(2) smaller. The actual current can also be smaller
+     * by employing CoolStep.
+     * \param hold the standtill motor current relative to maximum motor current in percentage
+     */
+    void setHoldCurrent(uint8_t hold);
+
+    /*!
      * \brief readout the motor maximum current in mA (1000 is an Amp)
      * This is the maximum current. to get the current current - which may be affected by CoolStep us getCurrentCurrent()
      *\return the maximum motor current in milli amps
      * \sa getCurrentCurrent()
      */
     unsigned int getCurrent(void);
+
+    /*!
+     * \brief sets new resistor value
+     * This method registers the new resistor value included in current scaling calculations
+     *\rparam value sensing resistor value as a reference in milliohms
+     */
+    void setResistor(unsigned int value);
 
     /*!
      * \brief set the StallGuard threshold in order to get sensible StallGuard readings.
@@ -524,31 +533,8 @@ private:
     inline uint32_t send2130(uint8_t reg, uint32_t datagram);
     std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi;
 
-    unsigned int resistor{50}; //current sense resistor value in milliohm
-    unsigned int hold_percent;
-    uint32_t tpwmthrs; //stealthChop upper velocity threshold
-    uint32_t tcoolthrs; //coolStep lower threshold velocity
-    uint32_t thigh; //traditional constant off-time lower velocity threshold
-
-    struct {
-        uint8_t chopper_mode; //stealthChop or spreadCycle mode or traditional constant off-time
-        uint8_t iholddelay; //delay between motor stand still and motor current power down
-        uint8_t tpowerdown; //delay between motor stand still and motor current power down
-        bool vhighchm; //enables switching to operate in traditional constant off-time with only slow decay,  when vhigh is exceeded.
-        bool vhighfs; //enables switching to operate in fullstep mode, when vhigh is exceeded.
-        bool i_scale_analog; //sets reference voltage
-        bool internal_rsense; //sets sense resistors
-        bool shaft; // Inverse motor direction
-        bool small_hysteresis; //set hysteresis for step frequency comparison
-        bool diag0_error; //enable DIAG0 active on driver errors: Over temperature (ot), short to GND (s2g), undervoltage chargepump (uv_cp)
-        bool diag0_otpw; //enable DIAG0 active on driver over temperature
-        bool diag0_stall; //enable DIAG0 active on motor stall.
-        bool diag0_int_pushpull; //enable DIAG1 push pull output (active high) or open collector output (active low)
-        bool diag1_stall; //enable DIAG1 active on motor stall.
-        bool diag1_index;  //enable DIAG1 active on index position (microstep look up table position 0)
-        bool diag1_onstate;  //enable DIAG1 active when chopper is on (for the coil which is in the second half of the fullstep)
-        bool diag1_pushpull;  //enable DIAG1 push pull output (active high) or open collector output (active low)
-    };
+    unsigned int resistor{50}; // current sense resistor value in milliohm
+    uint8_t chopper_mode; //stealthChop or spreadCycle mode or traditional constant off-time
 
     //driver control register copies to easily set & modify the registers
     uint32_t gconf_register_value;

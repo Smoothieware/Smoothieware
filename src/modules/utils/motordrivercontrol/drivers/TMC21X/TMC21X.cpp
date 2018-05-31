@@ -40,26 +40,6 @@
 #define motor_driver_control_checksum  CHECKSUM("motor_driver_control")
 #define sense_resistor_checksum        CHECKSUM("sense_resistor")
 #define chopper_mode_checksum          CHECKSUM("chopper_mode")
-#define hold_percent_checksum          CHECKSUM("hold_percent")
-#define iholddelay_checksum            CHECKSUM("iholddelay")
-#define tpowerdown_checksum            CHECKSUM("tpowerdown")
-#define tpwmthrs_checksum              CHECKSUM("tpwmthrs")
-#define tcoolthrs_checksum             CHECKSUM("tcoolthrs")
-#define thigh_checksum                 CHECKSUM("thigh")
-#define vhighchm_checksum              CHECKSUM("vhighchm")
-#define vhighfs_checksum               CHECKSUM("vhighfs")
-#define i_scale_analog_checksum        CHECKSUM("i_scale_analog")
-#define internal_rsense_checksum       CHECKSUM("internal_rsense")
-#define shaft_checksum                 CHECKSUM("shaft")
-#define small_hysteresis_checksum      CHECKSUM("small_hysteresis")
-#define diag0_error_checksum           CHECKSUM("diag0_error")
-#define diag0_otpw_checksum            CHECKSUM("diag0_otpw")
-#define diag0_stall_checksum           CHECKSUM("diag0_stall")
-#define diag0_int_pushpull_checksum    CHECKSUM("diag0_int_pushpull")
-#define diag1_stall_checksum           CHECKSUM("diag1_stall")
-#define diag1_index_checksum           CHECKSUM("diag1_index")
-#define diag1_onstate_checksum         CHECKSUM("diag1_onstate")
-#define diag1_pushpull_checksum        CHECKSUM("diag1_pushpull")
 
 //! return value for TMC21X.getOverTemperature() if there is a overtemperature situation in the TMC chip
 /*!
@@ -654,35 +634,8 @@ TMC21X::TMC21X(std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi, char d) 
 void TMC21X::init(uint16_t cs)
 {
     // read chip specific config entries
-
-    this->resistor = THEKERNEL->config->value(motor_driver_control_checksum, cs, sense_resistor_checksum)->by_default(50)->as_number(); // in milliohms
-    this->chopper_mode = THEKERNEL->config->value(motor_driver_control_checksum, cs, chopper_mode_checksum)->by_default(2)->as_number(); //traditional constant-off time as default
-    this->hold_percent = THEKERNEL->config->value(motor_driver_control_checksum, cs, hold_percent_checksum)->by_default(0)->as_number();
-
-    //velocity dependent driver parameters
-    this->iholddelay = THEKERNEL->config->value(motor_driver_control_checksum, cs, iholddelay_checksum)->by_default(0)->as_number();
-    this->tpowerdown = THEKERNEL->config->value(motor_driver_control_checksum, cs, tpowerdown_checksum)->by_default(0)->as_number();
-    this->tpwmthrs = THEKERNEL->config->value(motor_driver_control_checksum, cs, tpwmthrs_checksum)->by_default(0)->as_number(); //Combined SpreadCycle and StealthChop setting is disabled as default
-    this->tcoolthrs = THEKERNEL->config->value(motor_driver_control_checksum, cs, tcoolthrs_checksum)->by_default(0)->as_number();
-    this->thigh = THEKERNEL->config->value(motor_driver_control_checksum, cs, thigh_checksum)->by_default(0)->as_number();
-    this->vhighchm = THEKERNEL->config->value(motor_driver_control_checksum, cs, vhighchm_checksum)->by_default(false)->as_bool();
-    this->vhighfs = THEKERNEL->config->value(motor_driver_control_checksum, cs, vhighfs_checksum)->by_default(false)->as_bool();
-
-    //general configuration parameters
-    this->i_scale_analog = THEKERNEL->config->value(motor_driver_control_checksum, cs, i_scale_analog_checksum)->by_default(false)->as_bool();
-    this->internal_rsense = THEKERNEL->config->value(motor_driver_control_checksum, cs, internal_rsense_checksum)->by_default(false)->as_bool();
-    this->shaft = THEKERNEL->config->value(motor_driver_control_checksum, cs, shaft_checksum)->by_default(false)->as_bool();
-    this->small_hysteresis = THEKERNEL->config->value(motor_driver_control_checksum, cs, small_hysteresis_checksum)->by_default(false)->as_bool();
-
-    //diag pins functions parameters
-    this->diag0_error = THEKERNEL->config->value(motor_driver_control_checksum, cs, diag0_error_checksum)->by_default(false)->as_bool();
-    this->diag0_otpw = THEKERNEL->config->value(motor_driver_control_checksum, cs, diag0_otpw_checksum)->by_default(false)->as_bool();
-    this->diag0_stall = THEKERNEL->config->value(motor_driver_control_checksum, cs, diag0_stall_checksum)->by_default(false)->as_bool();
-    this->diag0_int_pushpull = THEKERNEL->config->value(motor_driver_control_checksum, cs, diag0_int_pushpull_checksum)->by_default(false)->as_bool();
-    this->diag1_stall = THEKERNEL->config->value(motor_driver_control_checksum, cs, diag1_stall_checksum)->by_default(false)->as_bool();
-    this->diag1_index = THEKERNEL->config->value(motor_driver_control_checksum, cs, diag1_index_checksum)->by_default(false)->as_bool();
-    this->diag1_onstate = THEKERNEL->config->value(motor_driver_control_checksum, cs, diag1_onstate_checksum)->by_default(false)->as_bool();
-    this->diag1_pushpull = THEKERNEL->config->value(motor_driver_control_checksum, cs, diag1_pushpull_checksum)->by_default(false)->as_bool();
+    this->resistor= THEKERNEL->config->value(motor_driver_control_checksum, cs, sense_resistor_checksum)->by_default(50)->as_number(); // in milliohms
+    this->chopper_mode= THEKERNEL->config->value(motor_driver_control_checksum, cs, sense_resistor_checksum)->by_default(2)->as_number();
 
     //setting the default register values
     this->gconf_register_value = ZEROS_DEFAULT_DATA;
@@ -715,11 +668,17 @@ void TMC21X::init(uint16_t cs)
      */
     switch(chopper_mode) {
     case 0:
+        //enable StealthChop
+        setStealthChopEnabled(true);
+        
         //arguments order: freewheel, symmetric, autoscale, freq, grad, ampl
         //default StealthChop configuration
         setStealthChop(0,0,1,1,4,128);
         break;
     case 1:
+        //enable SpreadCycle by disabling StealthChop function
+        setStealthChopEnabled(false);
+        
         //arguments order: constant_off_time, blank_time, hysteresis_start, hysteresis_end, hysteresis_decrement
         // openbuilds high torque nema23 3amps (2.8)
         //setSpreadCycleChopper(5, 36, 6, 0, 0);
@@ -733,7 +692,9 @@ void TMC21X::init(uint16_t cs)
         setStallGuardThreshold(10, 1);
         break;
     case 2:
-
+        //enable SpreadCycle by disabling StealthChop function
+        setStealthChopEnabled(false);
+        
         //arguments order: constant_off_time, blank_time, fast_decay_time_setting, sine_wave_offset, use_current_comparator
         //set constantofftimechopper to a conservative start value
         setConstantOffTimeChopper(7, 54, 13, 12, 1);
@@ -744,85 +705,47 @@ void TMC21X::init(uint16_t cs)
         break;
     }
 
-    //set driver thresholds and delays
-    setVelocityDependentDrivertimes();
-
-    //set general parameters of the driver
-    setGeneralConfiguration();
+    //start with driver disabled
+    setEnabled(false);
 
     //set a nice microstepping value
     setMicrosteps(DEFAULT_MICROSTEPPING_VALUE);
-
-    //start with driver disabled
-    setEnabled(false);
 }
 
-void TMC21X::setGeneralConfiguration(void)
+void TMC21X::setGeneralConfiguration(bool i_scale_analog, bool internal_rsense, bool shaft, bool small_hysteresis)
 {
     if (i_scale_analog) {
         //set voltage supplied to AIN as current reference
         gconf_register_value |= GCONF_I_SCALE_ANALOG;
+    } else {
+        //use internal reference voltage
+        gconf_register_value &= ~(GCONF_I_SCALE_ANALOG);
     }
 
     if (internal_rsense) {
         //use internal sense resistors
         gconf_register_value |= GCONF_INTERNAL_RSENSE;
+    } else {
+        //use external sense resistors
+        gconf_register_value &= ~(GCONF_INTERNAL_RSENSE);
     }
 
     if (shaft) {
         //invert motor direction
         gconf_register_value |= GCONF_SHAFT;
+    } else {
+        //normal operation
+        gconf_register_value &= ~(GCONF_SHAFT);
     }
 
     if (small_hysteresis) {
-        //if enabled, hysteresis for step frequency comparison is 1/32. Otherwise, it's 1/16.
+        //hysteresis for step frequency comparison is 1/32
         gconf_register_value |= GCONF_SMALL_HYSTERESIS;
+    } else {
+        //hysteresis for step frequency comparison is 1/16
+        gconf_register_value &= ~(GCONF_SMALL_HYSTERESIS);
     }
 
-    if (!chopper_mode) {
-        //enable stealthChop mode
-        gconf_register_value |= GCONF_EN_PWM_MODE;
-    }
-
-    if (diag0_error) {
-        //enable DIAG0 active on driver errors
-        gconf_register_value |= GCONF_DIAG0_ERROR;
-    }
-
-    if (diag0_otpw) {
-        //enable DIAG0 active on driver over temperature
-        gconf_register_value |= GCONF_DIAG0_OTPW;
-    }
-
-    if (diag0_stall) {
-        //enable DIAG0 active on motor stall
-        gconf_register_value |= GCONF_DIAG0_STALL;
-    }
-
-    if (diag0_int_pushpull) {
-        //set DIAG0 to active high
-        gconf_register_value |= GCONF_DIAG0_INT_PUSHPULL;
-    }
-
-    if (diag1_stall) {
-        //enable DIAG1 active on motor stall
-        gconf_register_value |= GCONF_DIAG1_STALL;
-    }
-
-    if (diag1_index) {
-        //enable DIAG1 active on index position
-        gconf_register_value |= GCONF_DIAG1_INDEX;
-    }
-
-    if (diag1_onstate) {
-        //enable DIAG1 active when chopper is on
-        gconf_register_value |= GCONF_DIAG1_ONSTATE;
-    }
-
-    if (diag1_pushpull) {
-        //set DIAG1 to active high
-        gconf_register_value |= GCONF_DIAG1_PUSHPULL;
-    }
     //if started we directly send it to the motor
     if (started) {
         send2130(WRITE|GCONF_REGISTER, gconf_register_value);
@@ -831,7 +754,7 @@ void TMC21X::setGeneralConfiguration(void)
 
 void TMC21X::setDiag0options(bool error, bool otpw, bool stall, bool pushpull)
 {
-    if (diag0_error) {
+    if (error) {
         //enable DIAG0 active on driver errors
         gconf_register_value |= GCONF_DIAG0_ERROR;
     } else {
@@ -839,7 +762,7 @@ void TMC21X::setDiag0options(bool error, bool otpw, bool stall, bool pushpull)
         gconf_register_value &= ~(GCONF_DIAG0_ERROR);
     }
 
-    if (diag0_otpw) {
+    if (otpw) {
         //enable DIAG0 active on driver over temperature
         gconf_register_value |= GCONF_DIAG0_OTPW;
     } else {
@@ -847,7 +770,7 @@ void TMC21X::setDiag0options(bool error, bool otpw, bool stall, bool pushpull)
         gconf_register_value &= ~(GCONF_DIAG0_OTPW);
     }
 
-    if (diag0_stall) {
+    if (stall) {
         //enable DIAG0 active on motor stall
         gconf_register_value |= GCONF_DIAG0_STALL;
     } else {
@@ -855,7 +778,7 @@ void TMC21X::setDiag0options(bool error, bool otpw, bool stall, bool pushpull)
         gconf_register_value &= ~(GCONF_DIAG0_STALL);
     }
 
-    if (diag0_int_pushpull) {
+    if (pushpull) {
         //set DIAG0 to active high
         gconf_register_value |= GCONF_DIAG0_INT_PUSHPULL;
     } else {
@@ -871,15 +794,15 @@ void TMC21X::setDiag0options(bool error, bool otpw, bool stall, bool pushpull)
 
 void TMC21X::setDiag1options(bool stall, bool index, bool onstate, bool pushpull)
 {
-    if (diag1_stall) {
+    if (stall) {
         //enable DIAG1 active on motor stall
         gconf_register_value |= GCONF_DIAG1_STALL;
     } else {
         //disable DIAG1 active on motor stall
-        gconf_register_value &= ~(GCONF_DIAG0_STALL);
+        gconf_register_value &= ~(GCONF_DIAG1_STALL);
     }
 
-    if (diag1_index) {
+    if (index) {
         //enable DIAG1 active on index position
         gconf_register_value |= GCONF_DIAG1_INDEX;
     } else {
@@ -887,7 +810,7 @@ void TMC21X::setDiag1options(bool stall, bool index, bool onstate, bool pushpull
         gconf_register_value &= ~(GCONF_DIAG1_INDEX);
     }
 
-    if (diag1_onstate) {
+    if (onstate) {
         //enable DIAG1 active when chopper is on
         gconf_register_value |= GCONF_DIAG1_ONSTATE;
     } else {
@@ -895,7 +818,7 @@ void TMC21X::setDiag1options(bool stall, bool index, bool onstate, bool pushpull
         gconf_register_value &= ~(GCONF_DIAG1_ONSTATE);
     }
 
-    if (diag1_pushpull) {
+    if (pushpull) {
         //set DIAG1 to active high
         gconf_register_value |= GCONF_DIAG1_PUSHPULL;
     } else {
@@ -1242,35 +1165,6 @@ void TMC21X::setStealthChop(uint8_t freewheel, bool symmetric, bool autoscale, u
     }
 }
 
-void TMC21X::setVelocityDependentDrivertimes(void)
-{
-    if (iholddelay) {
-        //sets delay before power down in stand still, after tpowerdown expires
-        setHolddelay(iholddelay);
-    }
-    
-    if (tpowerdown) {
-        //sets delay after stand still of the motor to motor current power down
-        setPowerDowndelay(tpowerdown);
-    }
-
-    if (tpwmthrs) {
-        //switch to SpreadCycle mode when current velocity surpasses threshold value
-        setStealthChopthreshold(tpwmthrs);
-    }
-
-    if (tcoolthrs) {
-        //switch to coolStep and stallGuard feature when current velocity surpasses threshold value
-        setCoolStepthreshold(tcoolthrs);
-    }
-
-    if (thigh) {
-        //switch to traditional constant off-time mode when current velocity surpasses threshold value
-        setConstantOffTimethreshold (thigh,vhighchm,vhighfs);
-    }
-
-}
-
 void TMC21X::setHolddelay(uint8_t value)
 {
     //perform some sanity checks
@@ -1282,7 +1176,6 @@ void TMC21X::setHolddelay(uint8_t value)
     this->ihold_irun_register_value &= ~(IHOLD_IRUN_IHOLDDELAY);
 
     //save the new value
-    this->iholddelay = value;
     this->ihold_irun_register_value = value << IHOLD_IRUN_IHOLDDELAY_SHIFT;
 
     //if started we directly send it to the motor
@@ -1310,7 +1203,6 @@ void TMC21X::setStealthChopthreshold(uint32_t threshold)
     }
 
     //save the threshold value
-    this->tpwmthrs = threshold;
     this->tpwmthrs_register_value = threshold;
 
     //if started we directly send it to the motor
@@ -1327,7 +1219,6 @@ void TMC21X::setConstantOffTimethreshold (uint32_t threshold, bool vhighchm, boo
     }
 
     //save the threshold value
-    this->thigh = threshold;
     this->thigh_register_value = threshold;
 
     if (vhighchm) {
@@ -1357,7 +1248,6 @@ void TMC21X::setCoolStepthreshold (uint32_t threshold)
     }
 
     //save the threshold value
-    this->tcoolthrs = threshold;
     this->tcoolthrs_register_value = threshold;
 
     //if started we directly send it to the motor
@@ -1398,20 +1288,28 @@ void TMC21X::setCurrent(unsigned int current)
     ihold_irun_register_value &= ~(IHOLD_IRUN_IRUN);
     //set the new current scaling
     ihold_irun_register_value  |= current_scaling << IHOLD_IRUN_IRUN_SHIFT;
-
-		//set standstill current
-    if (hold_percent) {
-        //delete the old value
-        ihold_irun_register_value &= ~(IHOLD_IRUN_IHOLD);
-        //set the new current scaling
-        ihold_irun_register_value |= (uint8_t)(current_scaling * ((double) this->hold_percent) / 100.0F) << IHOLD_IRUN_IHOLD_SHIFT;
-    }
-
     //if started we directly send it to the motor
     if (started) {
         send2130(WRITE|CHOPCONF_REGISTER,chopconf_register_value);
         send2130(WRITE|IHOLD_IRUN_REGISTER,ihold_irun_register_value);
     }
+}
+
+void TMC21X::setHoldCurrent(uint8_t hold)
+{
+    double current_scaling = (double)((ihold_irun_register_value & IHOLD_IRUN_IRUN) >> IHOLD_IRUN_IRUN_SHIFT);
+    //delete the old value
+    ihold_irun_register_value &= ~(IHOLD_IRUN_IHOLD);
+    //set the new current scaling
+    ihold_irun_register_value |= (uint8_t)(current_scaling * ((double) hold) / 100.0F) << IHOLD_IRUN_IHOLD_SHIFT;
+    if (started) {
+        send2130(WRITE|IHOLD_IRUN_REGISTER,ihold_irun_register_value);
+    }
+}
+
+void TMC21X::setResistor(unsigned int value)
+{
+    this->resistor = value;
 }
 
 unsigned int TMC21X::getCurrent(void)
@@ -2036,19 +1934,32 @@ bool TMC21X::set_options(const options_t& options)
             set = true;
 
         } else if(s == 11 && HAS('Z')) {
-            setHolddelay(GET('Z'));
+            setResistor(GET('Z'));
             set = true;
 
         } else if(s == 12 && HAS('Z')) {
+            setHoldCurrent(GET('Z'));
+            set = true;
+
+        } else if(s == 13 && HAS('Z')) {
+            setHolddelay(GET('Z'));
+            set = true;
+
+        } else if(s == 14 && HAS('Z')) {
             setPowerDowndelay(GET('Z'));
             set = true;
 
-        } else if(s == 13 && HAS('U') && HAS('V') && HAS('W') && HAS('X')) {
+        } else if(s == 15 && HAS('U') && HAS('V') && HAS('W') && HAS('X')) {
+            //arguments order: i_scale_analog, internal_rsense, shaft, small_hysteresis
+            setGeneralConfiguration(GET('U'), GET('V'), GET('W'), GET('X'));
+            set = true;
+
+        } else if(s == 16 && HAS('U') && HAS('V') && HAS('W') && HAS('X')) {
             //arguments order: error, otpw, stall, pushpull
             setDiag0options(GET('U'), GET('V'), GET('W'), GET('X'));
             set = true;
 
-        } else if(s == 14 && HAS('U') && HAS('V') && HAS('W') && HAS('X')) {
+        } else if(s == 17 && HAS('U') && HAS('V') && HAS('W') && HAS('X')) {
             //arguments order: stall, index, onstate, pushpull
             setDiag1options(GET('U'), GET('V'), GET('W'), GET('X'));
             set = true;
