@@ -95,6 +95,17 @@ public:
     void setIndexoptions(bool otpw, bool step);
 
     /*!
+     * \brief Set delay time for read access until a reply is sent
+     * \param value each adjacent numbers sets increased odd delay time in multiples of eight bit times
+     *
+     * In order to ensure a clean bus transition from the master to the slave, the TMC22xx does not
+     * immediately send the reply to a read access, but it uses a programmable delay time after which the
+     * first reply byte becomes sent following a read request. This delay time can be set in multiples of
+     * eight bit times using SENDDELAY time setting (default=8 bit times) according to the needs of the master.
+     */
+    void setSenddelay(uint8_t value);
+
+    /*!
      * \brief Set the number of microsteps in 2^i values (rounded) up to 256
      *
      * This method set's the number of microsteps per step in 2^i interval.
@@ -300,6 +311,7 @@ private:
 
     //driver control register copies to easily set & modify the registers
     uint32_t gconf_register_value;
+    uint32_t slaveconf_register_value;
     uint32_t ihold_irun_register_value;
     uint32_t tpwmthrs_register_value;
     uint32_t chopconf_register_value;
