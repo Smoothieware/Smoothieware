@@ -72,13 +72,27 @@ public:
     void init(uint16_t cs);
 
     /*!
-     * \brief Set the number of microsteps in 2^i values (rounded) up to 256
+     * \brief Set general parameters
+     * \param i_scale_analog sets reference voltage (default = 1)
+     * \param internal_rsense sets sense resistors
+     * \param shaft inverse motor direction
+     * \param pdn_disable controls standstill current reduction
+     * \param mstep_reg_select microstep resolution selection via register access
+     * \param multistep_filt software pulse generator optimization enabled when fullstep frequency > 750Hz
      *
-     * This method set's the number of microsteps per step in 2^i interval.
-     * This means you can select 1, 2, 4, 16, 32, 64, 128 or 256 as valid microsteps.
-     * If you give any other value it will be rounded to the next smaller number (3 would give a microstepping of 2).
-     * You can always check the current microstepping with getMicrosteps().
+     * This method sets some general flags of global configuration (GCONF) register
      */
+    void setGeneralConfiguration(bool i_scale_analog, bool internal_rsense, bool shaft, bool pdn_disable, bool mstep_reg_select, bool multistep_filt);
+
+    /*!
+     * \brief Set Index pin options
+     * \param otpw enable INDEX active on driver overtemperature prewarning or on first microstep position of sequencer
+     * \param step enable INDEX active on step pulses from internal pulse generator
+     *
+     *  The index pin supplies a configurable set of different real time information such as driver overtemperature pre-warning, first microstep position
+     *  of sequencer or step pulses from internal pulse generator
+     */
+    void setIndexoptions(bool otpw, bool step);
 
     /*!
      * \brief Set the number of microsteps in 2^i values (rounded) up to 256
