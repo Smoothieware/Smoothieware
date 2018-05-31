@@ -42,7 +42,6 @@
 #define motor_driver_control_checksum  CHECKSUM("motor_driver_control")
 #define sense_resistor_checksum        CHECKSUM("sense_resistor")
 #define mode_checksum                  CHECKSUM("mode")
-#define thrs_checksum                  CHECKSUM("thrs")
 
 //! return value for TMC22X.getOverTemperature() if there is a overtemperature situation in the TMC chip
 /*!
@@ -569,12 +568,10 @@ void TMC22X::init(uint16_t cs)
 {
     // read chip specific config entries
     this->resistor= THEKERNEL->config->value(motor_driver_control_checksum, cs, sense_resistor_checksum)->by_default(50)->as_number(); // in milliohms
-    this->mode= THEKERNEL->config->value(motor_driver_control_checksum, cs, mode_checksum)->by_default(0)->as_number(); //SpreadCycle as default
-    this->thrs= THEKERNEL->config->value(motor_driver_control_checksum, cs, thrs_checksum)->by_default(0)->as_number(); //Combined SpreadCycle and StealthChop setting is disabled as default
+    this->mode= THEKERNEL->config->value(motor_driver_control_checksum, cs, mode_checksum)->by_default(0)->as_number();
 
     //setting the default register values
-    this->gconf_register_value = GCONF_DEFAULT_DATA | GCONF_MSTEP_REG_SELECT; //config microstepping via software
-    this->gconf_register_value &= ~(GCONF_I_SCALE_ANALOG); //Disable VREF current reference if using external sense resistors
+    this->gconf_register_value = GCONF_DEFAULT_DATA;
     this->ihold_irun_register_value = ZEROS_DEFAULT_DATA;
     this->tpwmthrs_register_value = ZEROS_DEFAULT_DATA;
     this->chopconf_register_value = CHOPCONF_DEFAULT_DATA;
@@ -589,10 +586,16 @@ void TMC22X::init(uint16_t cs)
 
     started = true;
 
+    /* set and configure chopper
+     * 0 - spreadCycle
+     * 1 - stealthChop
+     */
     switch(mode) {
     case 0:
         //enable SpreadCycle
         enableSpreadCycle(true);
+
+        //arguments order: constant_off_time, blank_time, hysteresis_start, hysteresis_end
         // openbuilds high torque nema23 3amps (2.8)
         //setSpreadCycleChopper(5, 32, 6, 0, 0);
         // for 1.5amp kysan @ 12v
@@ -603,15 +606,109 @@ void TMC22X::init(uint16_t cs)
     case 1:
         //enable StealthChop by disabling SpreadCycle function
         enableSpreadCycle(false);
+
+        //arguments order: lim, reg, freewheel, autograd, autoscale, freq, grad, ofs
         //default stealthChop configuration
         setStealthChop(12,1,0,1,1,1,0,36);
+
         //StealthChop does not use toff constant, but driver needs to be set active though (setting any toff value is ok)
         setEnabled(true);
         break;
     }
 
+    //set microstepping via software and set external sense resistors using internal reference voltage
+    setGeneralConfiguration(0,0,0,0,1,1);
+
     //set a nice microstepping value
     setMicrosteps(DEFAULT_MICROSTEPPING_VALUE);
+}
+
+void TMC22X::setGeneralConfiguration(bool i_scale_analog, bool internal_rsense, bool shaft, bool pdn_disable, bool mstep_reg_select, bool multistep_filt)
+{
+    if (i_scale_analog) {
+        //set voltage supplied to VREF as current reference
+        gconf_register_value |= GCONF_I_SCALE_ANALOG;
+    } else {
+        //use internal reference voltage
+        gconf_register_value &= ~(GCONF_I_SCALE_ANALOG);
+    }
+
+    if (internal_rsense) {
+        //use internal sense resistors
+        gconf_register_value |= GCONF_INTERNAL_RSENSE;
+    } else {
+        //use external sense resistors
+        gconf_register_value &= ~(GCONF_INTERNAL_RSENSE);
+    }
+
+    if (shaft) {
+        //invert motor direction
+        gconf_register_value |= GCONF_SHAFT;
+    } else {
+        //normal operation
+        gconf_register_value &= ~(GCONF_SHAFT);
+    }
+
+    if (pdn_disable) {
+        //disable standstill current reduction via PDN_UART pin
+        gconf_register_value |= GCONF_PDN_DISABLE;
+    } else {
+        //enable standstill current reduction via PDN_UART pin
+        gconf_register_value &= ~(GCONF_PDN_DISABLE);
+    }
+
+    if (mstep_reg_select) {
+        //select microstep resolution by MSTEP register
+        gconf_register_value |= GCONF_MSTEP_REG_SELECT;
+    } else {
+        //select microstep resolution by pins MS1, MS2
+        gconf_register_value &= ~(GCONF_MSTEP_REG_SELECT);
+    }
+
+    if (multistep_filt) {
+        //enable software pulse generator optimization when fullstep frequency > 750 Hz
+        gconf_register_value |= GCONF_MULTISTEP_FILT;
+    } else {
+        //disable STEP pulses filtering
+        gconf_register_value &= ~(GCONF_MULTISTEP_FILT);
+    }
+
+    //if started we directly send it to the motor
+    if (started) {
+        send2130(WRITE|GCONF_REGISTER, gconf_register_value);
+    }
+}
+
+/*!
+ * \brief Set Index pin options
+ * \param otpw enable INDEX active on driver overtemperature prewarning or on first microstep position of sequencer
+ * \param step enable INDEX active on driver overtemperature prewarning or on step pulses from internal pulse generator
+ *
+ *  The index pin supplies a configurable set of different real time information such as driver overtemperature pre-warning, first microstep position
+ *  of sequencer or step pulses from internal pulse generator
+ */
+void TMC22X::setIndexoptions(bool otpw, bool step)
+{
+    if (otpw) {
+        //Index pin outputs overtemperature pre-warning flag
+        gconf_register_value |= GCONF_INDEX_OTPW;
+    } else {
+        //Index pin outputs first microstep position of sequencer
+        gconf_register_value &= ~(GCONF_INDEX_OTPW);
+    }
+
+    if (step) {
+        //Index pin outputs step pulses from internal pulse generator
+        gconf_register_value |= GCONF_MULTISTEP_FILT;
+    } else {
+        //Index pin outputs the same as selected by index_otpw
+        gconf_register_value &= ~(GCONF_MULTISTEP_FILT);
+    }
+
+    //if started we directly send it to the motor
+    if (started) {
+        send2130(WRITE|GCONF_REGISTER, gconf_register_value);
+    }
 }
 
 /*
@@ -1284,6 +1381,7 @@ bool TMC22X::set_options(const options_t& options)
     if(HAS('S')) {
         uint32_t s = GET('S');
         if(s == 0 && HAS('U') && HAS('V') && HAS('W') && HAS('X')) {
+            //arguments order: constant_off_time, blank_time, hysteresis_start, hysteresis_end
             setSpreadCycleChopper(GET('U'), GET('V'), GET('W'), GET('X'));
             set = true;
 
@@ -1295,7 +1393,18 @@ bool TMC22X::set_options(const options_t& options)
             setStepInterpolation(GET('Z'));
             set = true;
 
+        } else if(s == 3 && HAS('U') && HAS('V') && HAS('W') && HAS('X') && HAS('Y') && HAS('Z')) {
+            //arguments order: i_scale_analog, internal_rsense, shaft, pdn_disable, mstep_reg_select, multistep_filt
+            setGeneralConfiguration(GET('U'), GET('V'), GET('W'), GET('X'), GET('Y'), GET('Z'));
+            set = true;
+
+        } else if(s == 4 && HAS('U') && HAS('V')) {
+            //arguments order: otpw, step
+            setIndexoptions(GET('U'), GET('V'), GET('W'), GET('X'), GET('Y'), GET('Z'));
+            set = true;
+
         }
+
     }
 
     return set;
