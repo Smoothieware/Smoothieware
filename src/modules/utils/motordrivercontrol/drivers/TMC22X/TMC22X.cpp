@@ -953,6 +953,25 @@ void TMC22X::setStealthChop(uint8_t lim, uint8_t reg, uint8_t freewheel, bool au
     }
 }
 
+void TMC22X::setHolddelay(uint8_t value)
+{
+    //perform some sanity checks
+    if (value > 15) {
+        value = 15;
+    }
+
+    //delete the old value
+    this->ihold_irun_register_value &= ~(IHOLD_IRUN_IHOLDDELAY);
+
+    //save the new value
+    this->ihold_irun_register_value = value << IHOLD_IRUN_IHOLDDELAY_SHIFT;
+
+    //if started we directly send it to the motor
+    if (started) {
+        send2208(WRITE|IHOLD_IRUN_REGISTER,ihold_irun_register_value);
+    }
+}
+
 void TMC22X::setStealthChopthreshold(uint32_t threshold)
 {
     //perform some sanity checks
@@ -1005,6 +1024,18 @@ void TMC22X::setCurrent(unsigned int current)
     //if started we directly send it to the motor
     if (started) {
         send2208(WRITE|CHOPCONF_REGISTER,chopconf_register_value);
+        send2208(WRITE|IHOLD_IRUN_REGISTER,ihold_irun_register_value);
+    }
+}
+
+void TMC22X::setHoldCurrent(uint8_t hold)
+{
+    double current_scaling = (double)((ihold_irun_register_value & IHOLD_IRUN_IRUN) >> IHOLD_IRUN_IRUN_SHIFT);
+    //delete the old value
+    ihold_irun_register_value &= ~(IHOLD_IRUN_IHOLD);
+    //set the new current scaling
+    ihold_irun_register_value |= (uint8_t)(current_scaling * ((double) hold) / 100.0F) << IHOLD_IRUN_IHOLD_SHIFT;
+    if (started) {
         send2208(WRITE|IHOLD_IRUN_REGISTER,ihold_irun_register_value);
     }
 }
@@ -1423,6 +1454,14 @@ bool TMC22X::set_options(const options_t& options)
 
         } else if(s == 5 && HAS('Z')) {
             setSenddelay(GET('Z'));
+            set = true;
+
+        } else if(s == 6 && HAS('Z')) {
+            setHoldCurrent(GET('Z'));
+            set = true;
+
+        } else if(s == 7 && HAS('Z')) {
+            setHolddelay(GET('Z'));
             set = true;
 
         }

@@ -173,6 +173,14 @@ public:
     void setStealthChop(uint8_t lim, uint8_t reg, uint8_t freewheel, bool autograd, bool autoscale, uint8_t freq, uint8_t grad, uint8_t ofs);
 
     /*!
+     * \brief Configures smooth current reduction time from run current to hold current.
+     * \param value Delay before power down in stand still 0=instant power down, 1..15: Current reduction delay per current step in multiple of 2^18 clocks
+     *
+     * IHOLDDELAY controls the number of clock cycles for motor power down after TPOWERDOWN in increments of 2^18 clocks
+     */
+    void setHolddelay(uint8_t value);
+
+    /*!
      * \brief Configures the stealthChop upper velocity threshold.
      * \param threshold velocity threshold. For most applications an velocity threshold between 30 and 200 will fit. Setting this parameter to zero will not enable SpreadCycle.
      *
@@ -190,6 +198,13 @@ public:
      * \sa getCurrent(), getCurrentCurrent()
      */
     void setCurrent(unsigned int current);
+
+    /*!
+     * \brief set standstill motor current
+     * Keep in mind this is the maximum peak Current. The RMS current will be 1/sqrt(2) smaller.
+     * \param hold the standtill motor current relative to maximum motor current in percentage
+     */
+    void setHoldCurrent(uint8_t hold);
 
     /*!
      * \brief readout the motor maximum current in mA (1000 is an Amp)
