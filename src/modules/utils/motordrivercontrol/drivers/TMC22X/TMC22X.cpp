@@ -572,6 +572,7 @@ void TMC22X::init(uint16_t cs)
 
     //setting the default register values
     this->gconf_register_value = GCONF_DEFAULT_DATA;
+    this->slaveconf_register_value = ZEROS_DEFAULT_DATA;
     this->ihold_irun_register_value = ZEROS_DEFAULT_DATA;
     this->tpwmthrs_register_value = ZEROS_DEFAULT_DATA;
     this->chopconf_register_value = CHOPCONF_DEFAULT_DATA;
@@ -579,6 +580,7 @@ void TMC22X::init(uint16_t cs)
 
     //set the initial values
     send2208(WRITE|GCONF_REGISTER, this->gconf_register_value);
+    send2208(WRITE|SLAVECONF_REGISTER, this->slaveconf_register_value);
     send2208(WRITE|IHOLD_IRUN_REGISTER, this->ihold_irun_register_value);
     send2208(WRITE|TPWMTHRS_REGISTER, this->tpwmthrs_register_value);
     send2208(WRITE|CHOPCONF_REGISTER, this->chopconf_register_value);
@@ -675,18 +677,10 @@ void TMC22X::setGeneralConfiguration(bool i_scale_analog, bool internal_rsense, 
 
     //if started we directly send it to the motor
     if (started) {
-        send2130(WRITE|GCONF_REGISTER, gconf_register_value);
+        send2208(WRITE|GCONF_REGISTER, gconf_register_value);
     }
 }
 
-/*!
- * \brief Set Index pin options
- * \param otpw enable INDEX active on driver overtemperature prewarning or on first microstep position of sequencer
- * \param step enable INDEX active on driver overtemperature prewarning or on step pulses from internal pulse generator
- *
- *  The index pin supplies a configurable set of different real time information such as driver overtemperature pre-warning, first microstep position
- *  of sequencer or step pulses from internal pulse generator
- */
 void TMC22X::setIndexoptions(bool otpw, bool step)
 {
     if (otpw) {
@@ -707,7 +701,26 @@ void TMC22X::setIndexoptions(bool otpw, bool step)
 
     //if started we directly send it to the motor
     if (started) {
-        send2130(WRITE|GCONF_REGISTER, gconf_register_value);
+        send2208(WRITE|GCONF_REGISTER, gconf_register_value);
+    }
+}
+
+void TMC22X::setSenddelay(uint8_t value)
+{
+    //perform some sanity checks
+    if (value > 15) {
+        value = 15;
+    }
+
+    //delete the old value
+    this->slaveconf_register_value &= ~(SLAVECONF_SENDDELAY);
+
+    //save the new value
+    this->slaveconf_register_value = value << SLAVECONF_SENDDELAY_SHIFT;
+
+    //if started we directly send it to the motor
+    if (started) {
+        send2208(WRITE|SLAVECONF_REGISTER,slaveconf_register_value);
     }
 }
 
@@ -1160,11 +1173,13 @@ void TMC22X::dumpStatus(StreamOutput *stream, bool readable)
 
         stream->printf("Register dump:\n");
         stream->printf(" gconf register: %08lX(%ld)\n", gconf_register_value, gconf_register_value);
+        stream->printf(" slaveconf register: %08lX(%ld)\n", slaveconf_register_value, slaveconf_register_value);
         stream->printf(" ihold_irun register: %08lX(%ld)\n", ihold_irun_register_value, ihold_irun_register_value);
         stream->printf(" tpwmthrs register: %08lX(%ld)\n", tpwmthrs_register_value, tpwmthrs_register_value);
         stream->printf(" chopconf register: %08lX(%ld)\n", chopconf_register_value, chopconf_register_value);
         stream->printf(" pwmconf register: %08lX(%ld)\n", pwmconf_register_value, pwmconf_register_value);
-        stream->printf(" motor_driver_control.xxx.reg %05lX,%05lX,%05lX,%05lX,%05lX\n", gconf_register_value, ihold_irun_register_value, tpwmthrs_register_value, chopconf_register_value, pwmconf_register_value);
+        stream->printf(" motor_driver_control.xxx.reg %05lX,%05lX,%05lX,%05lX,%05lX,%05lX\n", gconf_register_value, slaveconf_register_value, ihold_irun_register_value,
+                                                                                              tpwmthrs_register_value, chopconf_register_value, pwmconf_register_value);
 
     } else {
         // TODO hardcoded for X need to select ABC as needed
@@ -1288,6 +1303,7 @@ bool TMC22X::setRawRegister(StreamOutput *stream, uint32_t reg, uint32_t val)
     switch(reg) {
         case 255:
             send2208(WRITE|GCONF_REGISTER, this->gconf_register_value);
+            send2208(WRITE|SLAVECONF_REGISTER, this->slaveconf_register_value);
             send2208(WRITE|IHOLD_IRUN_REGISTER, this->ihold_irun_register_value);
             send2208(WRITE|TPWMTHRS_REGISTER, this->tpwmthrs_register_value);
             send2208(WRITE|CHOPCONF_REGISTER, this->chopconf_register_value);
@@ -1298,16 +1314,18 @@ bool TMC22X::setRawRegister(StreamOutput *stream, uint32_t reg, uint32_t val)
 
         case 1: this->gconf_register_value = val; stream->printf("gconf register set to %08lX\n", val); break;
         case 2: this->ihold_irun_register_value = val; stream->printf("ihold irun config register set to %08lX\n", val); break;
-        case 3: this->tpwmthrs_register_value = val; stream->printf("tpwmthrs register set to %08lX\n", val); break;
-        case 4: this->chopconf_register_value = val; stream->printf("chopconf register set to %08lX\n", val); break;
-        case 5: this->pwmconf_register_value = val; stream->printf("pwmconf register set to %08lX\n", val); break;
+        case 3: this->slaveconf_register_value = val; stream->printf("slaveconf config register set to %08lX\n", val); break;
+        case 4: this->tpwmthrs_register_value = val; stream->printf("tpwmthrs register set to %08lX\n", val); break;
+        case 5: this->chopconf_register_value = val; stream->printf("chopconf register set to %08lX\n", val); break;
+        case 6: this->pwmconf_register_value = val; stream->printf("pwmconf register set to %08lX\n", val); break;
 
         default:
             stream->printf("1: gconf register\n");
-            stream->printf("2: ihold irun register\n");
-            stream->printf("3: tpwmthrs register\n");
-            stream->printf("4: chopconf register\n");
-            stream->printf("5: pwmconf register\n");
+            stream->printf("2: slaveconf register\n");
+            stream->printf("3: ihold irun register\n");
+            stream->printf("4: tpwmthrs register\n");
+            stream->printf("5: chopconf register\n");
+            stream->printf("6: pwmconf register\n");
             stream->printf("255: update all registers\n");
             return false;
     }
@@ -1400,7 +1418,11 @@ bool TMC22X::set_options(const options_t& options)
 
         } else if(s == 4 && HAS('U') && HAS('V')) {
             //arguments order: otpw, step
-            setIndexoptions(GET('U'), GET('V'), GET('W'), GET('X'), GET('Y'), GET('Z'));
+            setIndexoptions(GET('U'), GET('V'));
+            set = true;
+
+        } else if(s == 5 && HAS('Z')) {
+            setSenddelay(GET('Z'));
             set = true;
 
         }
