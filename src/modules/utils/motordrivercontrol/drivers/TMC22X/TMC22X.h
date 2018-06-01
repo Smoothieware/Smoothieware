@@ -153,7 +153,7 @@ public:
      *\brief enables or disables SpreadCycle mode. If disabled, SpreadCycle is disabled, which means StealthChop is enabled. If enabled, SpreadCycle is enabled and StealthChop not.
      *\param enabled a bool value true if SpreadCycle should be enabled, false otherwise.
      */
-    void enableSpreadCycle(bool enable);
+    void setSpreadCycleEnabled(bool enable);
 
     /*!
      * \brief Configures the driver with stealthChop.
@@ -181,6 +181,14 @@ public:
     void setHolddelay(uint8_t value);
 
     /*!
+     * \brief Configures delayed standstill current reduction
+     * \param value Delay before power down in stand still
+     *
+     * TPOWERDOWN sets the delay time after stand still (stst) of the motor to motor current power down. Time range is about 0 to 4 seconds (0...((2^8)-1) * 2^18 t CLK).
+     */
+    void setPowerDowndelay(uint8_t value);
+
+    /*!
      * \brief Configures the stealthChop upper velocity threshold.
      * \param threshold velocity threshold. For most applications an velocity threshold between 30 and 200 will fit. Setting this parameter to zero will not enable SpreadCycle.
      *
@@ -205,6 +213,13 @@ public:
      * \param hold the standtill motor current relative to maximum motor current in percentage
      */
     void setHoldCurrent(uint8_t hold);
+
+    /*!
+     * \brief sets new resistor value
+     * This method registers the new resistor value included in current scaling calculations
+     *\rparam value sensing resistor value as a reference in milliohms
+     */
+    void setResistor(unsigned int value);
 
     /*!
      * \brief readout the motor maximum current in mA (1000 is an Amp)
@@ -322,12 +337,12 @@ private:
 
     unsigned int resistor{50}; // current sense resistor value in milliohm
     uint8_t mode; // StealthChop or SpreadCycle mode
-    uint32_t thrs; // StealthChop upper velocity threshold
 
     //driver control register copies to easily set & modify the registers
     uint32_t gconf_register_value;
     uint32_t slaveconf_register_value;
     uint32_t ihold_irun_register_value;
+    uint32_t tpowerdown_register_value;
     uint32_t tpwmthrs_register_value;
     uint32_t chopconf_register_value;
     uint32_t pwmconf_register_value;
