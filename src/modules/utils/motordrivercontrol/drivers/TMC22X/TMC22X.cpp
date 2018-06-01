@@ -75,6 +75,7 @@
 #define DEFAULT_MICROSTEPPING_VALUE    32
 #define ZEROS_DEFAULT_DATA             0x00000000
 #define GCONF_DEFAULT_DATA             0x00000101
+#define TPOWERDOWN_DEFAULT_DATA        0x00000014
 #define CHOPCONF_DEFAULT_DATA          0x10000053
 #define PWMCONF_DEFAULT_DATA           0xC10D0024
 
@@ -574,6 +575,7 @@ void TMC22X::init(uint16_t cs)
     this->gconf_register_value = GCONF_DEFAULT_DATA;
     this->slaveconf_register_value = ZEROS_DEFAULT_DATA;
     this->ihold_irun_register_value = ZEROS_DEFAULT_DATA;
+    this->tpowerdown_register_value = TPOWERDOWN_DEFAULT_DATA;
     this->tpwmthrs_register_value = ZEROS_DEFAULT_DATA;
     this->chopconf_register_value = CHOPCONF_DEFAULT_DATA;
     this->pwmconf_register_value = PWMCONF_DEFAULT_DATA;
@@ -582,6 +584,7 @@ void TMC22X::init(uint16_t cs)
     send2208(WRITE|GCONF_REGISTER, this->gconf_register_value);
     send2208(WRITE|SLAVECONF_REGISTER, this->slaveconf_register_value);
     send2208(WRITE|IHOLD_IRUN_REGISTER, this->ihold_irun_register_value);
+    send2208(WRITE|TPOWERDOWN_REGISTER, this->tpowerdown_register_value);
     send2208(WRITE|TPWMTHRS_REGISTER, this->tpwmthrs_register_value);
     send2208(WRITE|CHOPCONF_REGISTER, this->chopconf_register_value);
     send2208(WRITE|PWMCONF_REGISTER, this->pwmconf_register_value);
@@ -595,7 +598,7 @@ void TMC22X::init(uint16_t cs)
     switch(mode) {
     case 0:
         //enable SpreadCycle
-        enableSpreadCycle(true);
+        setSpreadCycleEnabled(true);
 
         //arguments order: constant_off_time, blank_time, hysteresis_start, hysteresis_end
         // openbuilds high torque nema23 3amps (2.8)
@@ -607,7 +610,7 @@ void TMC22X::init(uint16_t cs)
         break;
     case 1:
         //enable StealthChop by disabling SpreadCycle function
-        enableSpreadCycle(false);
+        setSpreadCycleEnabled(false);
 
         //arguments order: lim, reg, freewheel, autograd, autoscale, freq, grad, ofs
         //default stealthChop configuration
@@ -887,7 +890,7 @@ void TMC22X::setSpreadCycleChopper(int8_t constant_off_time, int8_t blank_time, 
     }
 }
 
-void TMC22X::enableSpreadCycle(bool enable)
+void TMC22X::setSpreadCycleEnabled(bool enable)
 {
     if (enable) {
         gconf_register_value |= GCONF_EN_SPREADCYCLE;
@@ -919,14 +922,6 @@ void TMC22X::setStealthChop(uint8_t lim, uint8_t reg, uint8_t freewheel, bool au
     //first of all delete all the values for this register
     pwmconf_register_value = 0;
 
-    if (thrs) {
-        //switch to SpreadCycle mode when current velocity surpasses threshold value
-        setStealthChopthreshold(thrs);
-
-        //limit for PWM_SCALE_AUTO when switching back from spreadCycle to stealthChop
-        pwmconf_register_value |= lim << PWMCONF_PWM_LIM_SHIFT;
-    }
-
     if (autoscale) {
         //set PWM automatic amplitude scaling
         pwmconf_register_value |= PWMCONF_PWM_AUTOSCALE;
@@ -938,6 +933,8 @@ void TMC22X::setStealthChop(uint8_t lim, uint8_t reg, uint8_t freewheel, bool au
         pwmconf_register_value |= (reg << PWMCONF_PWM_REG_SHIFT);
     }
 
+    //limit for PWM_SCALE_AUTO when switching back from spreadCycle to stealthChop
+    pwmconf_register_value |= (lim << PWMCONF_PWM_LIM_SHIFT);
     //set standstill mode
     pwmconf_register_value |= (freewheel << PWMCONF_FREEWHEEL_SHIFT);
     //set PWM frequency
@@ -972,6 +969,17 @@ void TMC22X::setHolddelay(uint8_t value)
     }
 }
 
+void TMC22X::setPowerDowndelay(uint8_t value)
+{
+    //save the delay to the register variable
+    this->tpowerdown_register_value = value;
+
+    //if started we directly send it to the motor
+    if (started) {
+        send2208(WRITE|TPOWERDOWN_REGISTER,tpowerdown_register_value);
+    }
+}
+
 void TMC22X::setStealthChopthreshold(uint32_t threshold)
 {
     //perform some sanity checks
@@ -980,7 +988,6 @@ void TMC22X::setStealthChopthreshold(uint32_t threshold)
     }
 
     //save the threshold value
-    this->thrs = threshold;
     this->tpwmthrs_register_value = threshold;
 
     //if started we directly send it to the motor
@@ -1038,6 +1045,11 @@ void TMC22X::setHoldCurrent(uint8_t hold)
     if (started) {
         send2208(WRITE|IHOLD_IRUN_REGISTER,ihold_irun_register_value);
     }
+}
+
+void TMC22X::setResistor(unsigned int value)
+{
+    this->resistor = value;
 }
 
 unsigned int TMC22X::getCurrent(void)
@@ -1206,11 +1218,12 @@ void TMC22X::dumpStatus(StreamOutput *stream, bool readable)
         stream->printf(" gconf register: %08lX(%ld)\n", gconf_register_value, gconf_register_value);
         stream->printf(" slaveconf register: %08lX(%ld)\n", slaveconf_register_value, slaveconf_register_value);
         stream->printf(" ihold_irun register: %08lX(%ld)\n", ihold_irun_register_value, ihold_irun_register_value);
+        stream->printf(" tpowerdown register: %08lX(%ld)\n", tpowerdown_register_value, tpowerdown_register_value);
         stream->printf(" tpwmthrs register: %08lX(%ld)\n", tpwmthrs_register_value, tpwmthrs_register_value);
         stream->printf(" chopconf register: %08lX(%ld)\n", chopconf_register_value, chopconf_register_value);
         stream->printf(" pwmconf register: %08lX(%ld)\n", pwmconf_register_value, pwmconf_register_value);
-        stream->printf(" motor_driver_control.xxx.reg %05lX,%05lX,%05lX,%05lX,%05lX,%05lX\n", gconf_register_value, slaveconf_register_value, ihold_irun_register_value,
-                                                                                              tpwmthrs_register_value, chopconf_register_value, pwmconf_register_value);
+        stream->printf(" motor_driver_control.xxx.reg %05lX,%05lX,%05lX,%05lX,%05lX,%05lX,%05lX\n", gconf_register_value, slaveconf_register_value, ihold_irun_register_value,
+                                                                                              tpowerdown_register_value, tpwmthrs_register_value, chopconf_register_value, pwmconf_register_value);
 
     } else {
         // TODO hardcoded for X need to select ABC as needed
@@ -1336,6 +1349,7 @@ bool TMC22X::setRawRegister(StreamOutput *stream, uint32_t reg, uint32_t val)
             send2208(WRITE|GCONF_REGISTER, this->gconf_register_value);
             send2208(WRITE|SLAVECONF_REGISTER, this->slaveconf_register_value);
             send2208(WRITE|IHOLD_IRUN_REGISTER, this->ihold_irun_register_value);
+            send2208(WRITE|TPOWERDOWN_REGISTER, this->tpowerdown_register_value);
             send2208(WRITE|TPWMTHRS_REGISTER, this->tpwmthrs_register_value);
             send2208(WRITE|CHOPCONF_REGISTER, this->chopconf_register_value);
             send2208(WRITE|PWMCONF_REGISTER, this->pwmconf_register_value);
@@ -1346,17 +1360,19 @@ bool TMC22X::setRawRegister(StreamOutput *stream, uint32_t reg, uint32_t val)
         case 1: this->gconf_register_value = val; stream->printf("gconf register set to %08lX\n", val); break;
         case 2: this->ihold_irun_register_value = val; stream->printf("ihold irun config register set to %08lX\n", val); break;
         case 3: this->slaveconf_register_value = val; stream->printf("slaveconf config register set to %08lX\n", val); break;
-        case 4: this->tpwmthrs_register_value = val; stream->printf("tpwmthrs register set to %08lX\n", val); break;
-        case 5: this->chopconf_register_value = val; stream->printf("chopconf register set to %08lX\n", val); break;
-        case 6: this->pwmconf_register_value = val; stream->printf("pwmconf register set to %08lX\n", val); break;
+        case 4: this->tpowerdown_register_value = val; stream->printf("tpowerdown register set to %08lX\n", val); break;
+        case 5: this->tpwmthrs_register_value = val; stream->printf("tpwmthrs register set to %08lX\n", val); break;
+        case 6: this->chopconf_register_value = val; stream->printf("chopconf register set to %08lX\n", val); break;
+        case 7: this->pwmconf_register_value = val; stream->printf("pwmconf register set to %08lX\n", val); break;
 
         default:
             stream->printf("1: gconf register\n");
             stream->printf("2: slaveconf register\n");
             stream->printf("3: ihold irun register\n");
-            stream->printf("4: tpwmthrs register\n");
-            stream->printf("5: chopconf register\n");
-            stream->printf("6: pwmconf register\n");
+            stream->printf("4: tpowerdown register\n");
+            stream->printf("5: tpwmthrs register\n");
+            stream->printf("6: chopconf register\n");
+            stream->printf("7: pwmconf register\n");
             stream->printf("255: update all registers\n");
             return false;
     }
@@ -1435,33 +1451,54 @@ bool TMC22X::set_options(const options_t& options)
             set = true;
 
         } else if(s == 1 && HAS('Z')) {
-            setDoubleEdge(GET('Z'));
+            setSpreadCycleEnabled(GET('Z'));
             set = true;
 
         } else if(s == 2 && HAS('Z')) {
+            setDoubleEdge(GET('Z'));
+            set = true;
+
+        } else if(s == 3 && HAS('Z')) {
             setStepInterpolation(GET('Z'));
             set = true;
 
-        } else if(s == 3 && HAS('U') && HAS('V') && HAS('W') && HAS('X') && HAS('Y') && HAS('Z')) {
+        } else if(s == 4 && HAS('U') && HAS('V') && HAS('W') && HAS('X') && HAS('Y') && HAS('Z')) {
+            //arguments order: lim, reg, freewheel, autograd, autoscale, freq, grad, ofs
+            setStealthChop(GET('U'), GET('V'), GET('W'), 1, 1, GET('X'), GET('Y'), GET('Z'));
+            set = true;
+
+        } else if(s == 5 && HAS('Z')) {
+            setStealthChopthreshold(GET('Z'));
+            set = true;
+
+        } else if(s == 6 && HAS('Z')) {
+            setResistor(GET('Z'));
+            set = true;
+
+        } else if(s == 7 && HAS('Z')) {
+            setHoldCurrent(GET('Z'));
+            set = true;
+
+        } else if(s == 8 && HAS('Z')) {
+            setHolddelay(GET('Z'));
+            set = true;
+
+        } else if(s == 9 && HAS('Z')) {
+            setPowerDowndelay(GET('Z'));
+            set = true;
+
+        } else if(s == 10 && HAS('U') && HAS('V') && HAS('W') && HAS('X') && HAS('Y') && HAS('Z')) {
             //arguments order: i_scale_analog, internal_rsense, shaft, pdn_disable, mstep_reg_select, multistep_filt
             setGeneralConfiguration(GET('U'), GET('V'), GET('W'), GET('X'), GET('Y'), GET('Z'));
             set = true;
 
-        } else if(s == 4 && HAS('U') && HAS('V')) {
+        } else if(s == 11 && HAS('U') && HAS('V')) {
             //arguments order: otpw, step
             setIndexoptions(GET('U'), GET('V'));
             set = true;
 
-        } else if(s == 5 && HAS('Z')) {
+        } else if(s == 12 && HAS('Z')) {
             setSenddelay(GET('Z'));
-            set = true;
-
-        } else if(s == 6 && HAS('Z')) {
-            setHoldCurrent(GET('Z'));
-            set = true;
-
-        } else if(s == 7 && HAS('Z')) {
-            setHolddelay(GET('Z'));
             set = true;
 
         }
