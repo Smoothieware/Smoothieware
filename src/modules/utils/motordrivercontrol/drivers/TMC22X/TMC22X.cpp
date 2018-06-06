@@ -41,7 +41,7 @@
 
 #define motor_driver_control_checksum  CHECKSUM("motor_driver_control")
 #define sense_resistor_checksum        CHECKSUM("sense_resistor")
-#define mode_checksum                  CHECKSUM("mode")
+#define chopper_mode_checksum          CHECKSUM("chopper_mode")
 
 //! return value for TMC22X.getOverTemperature() if there is a overtemperature situation in the TMC chip
 /*!
@@ -569,7 +569,7 @@ void TMC22X::init(uint16_t cs)
 {
     // read chip specific config entries
     this->resistor= THEKERNEL->config->value(motor_driver_control_checksum, cs, sense_resistor_checksum)->by_default(50)->as_number(); // in milliohms
-    this->mode= THEKERNEL->config->value(motor_driver_control_checksum, cs, mode_checksum)->by_default(0)->as_number();
+    this->chopper_mode= THEKERNEL->config->value(motor_driver_control_checksum, cs, chopper_mode_checksum)->by_default(0)->as_number();
 
     //setting the default register values
     this->gconf_register_value = GCONF_DEFAULT_DATA;
@@ -595,7 +595,7 @@ void TMC22X::init(uint16_t cs)
      * 0 - spreadCycle
      * 1 - stealthChop
      */
-    switch(mode) {
+    switch(chopper_mode) {
     case 0:
         //enable SpreadCycle
         setSpreadCycleEnabled(true);

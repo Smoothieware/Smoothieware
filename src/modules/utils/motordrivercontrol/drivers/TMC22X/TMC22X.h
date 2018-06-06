@@ -336,7 +336,7 @@ private:
     std::function<int(uint8_t *b, int cnt, uint8_t *r)> serial;
 
     unsigned int resistor{50}; // current sense resistor value in milliohm
-    uint8_t mode; // StealthChop or SpreadCycle mode
+    uint8_t chopper_mode; // StealthChop or SpreadCycle mode
 
     //driver control register copies to easily set & modify the registers
     uint32_t gconf_register_value;
