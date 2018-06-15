@@ -1218,7 +1218,8 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     }
 
 
-    bool move= false;
+    bool primary_move= false;
+    bool secondary_move = false;
     float sos= 0; // sum of squares for just primary axis (XYZ usually)
 
     // find distance moved by each axis, use transformed target from the current compensated machine position
@@ -1226,30 +1227,83 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
         deltas[i] = transformed_target[i] - compensated_machine_position[i];
         if(deltas[i] == 0) continue;
         // at least one non zero delta
-        move = true;
         if(i < N_PRIMARY_AXIS) {
             sos += powf(deltas[i], 2);
+            primary_move = true;
+        }
+        else {
+            secondary_move = true;
         }
     }
 
     // nothing moved
-    if(!move) return false;
+    if(!(primary_move||secondary_move)) return false;
 
+
+    // NIST RS274NGC Interpreter - Version 3, Section 2.1.2.5 applies feedrates as follows:
+    //
+    // A. For motion involving one or more of the X, Y, and Z axes (with or without simultaneous
+    //    rotational axis motion), the feed rate means length units per minute along the
+    //    programmed XYZ path, as if the rotational axes were not moving.
+    //
+    // B. For motion of one rotational axis with X, Y, and Z axes not moving, the feed rate means
+    //    degrees per minute rotation of the rotational axis.
+    //
+    // C. For motion of two or three rotational axes with X, Y, and Z axes not moving, the rate is
+    //    applied as follows.Let dA, dB, and dC be the angles in degrees through which the A, B,
+    //    and C axes, respectively, must move. Let D = sqrt((dA)^2 + (dB)^2 + (dC)^2). Conceptually, 
+    //    D is a measure of total angular motion, using the usual Euclidean metric. Let T be the 
+    //    amount of time required to move through D degrees at the current feed rate in degrees per
+    //    minute. The rotational axes should be moved in coordinated linear motion so that the
+    //    elapsed time from the start to the end of the motion is T plus any time required for
+    //    acceleration or deceleration.
+
+    // Rule C is equivalent to rule B so only two cases have to be distinguished. Rule B/C moves are called "auxilliary". 
+    // Note that for mixed moves under rule A the secondary axes ABC are allowed to move as fast as they can 
+    // (up to the actuator limits). This is relevant when the motion on ABC is numerically much larger than the one 
+    // on XYZ. This is often the case with rotation angles in degrees vs. small mm dimensions. Feedrates in 
+    // millimeters per minute should not be mixed with rotation speeds in degrees per minute. With other applications (i.e. 
+    // extruders), the same may be true. 
+    
     // see if this is a primary axis move or not
-    bool auxilliary_move= true;
-    for (int i = 0; i < N_PRIMARY_AXIS; ++i) {
-        if(deltas[i] != 0) {
-            auxilliary_move= false;
-            break;
+    bool auxilliary_move = !primary_move;
+    
+    // total movement, use XYZ if a primary axis otherwise we calculate distance for ABC after scaling to mm for extruders
+    float distance = auxilliary_move ? 0 : sqrtf(sos);
+    bool override_feedrate = false;
+    bool override_acceleration = false;
+
+    // it is unlikely but we need to protect against divide by zero, so ignore insanely small moves here
+    if (!auxilliary_move && distance < 0.00001F) {
+        // we're skipping the primary actuators but there might still be secondary motion
+        if (secondary_move) {
+            #ifndef ROBOT_NO_BAIL_ON_NEARZERO_XYZ
+                for (size_t i = E_AXIS; i < n_motors; i++) {
+                    if (deltas[i] != 0 && actuators[i]->is_extruder()) {
+                        // one or more of the moved secondary axes are extruders - bail anyway to prevent blobs
+                        // as the last milestone won't be updated we do not actually lose any moves as they will be accounted for in the next move
+                        return false;
+                    }
+                }
+            #endif
+
+            // with near zero primary motion, we handle this as an auxiliary move
+            auxilliary_move = true;
+            // NOTE: the NIST RS274NGC section 2.1.2.5 rule A still applies, so we must NOT apply the feedrate 
+            // to the secondary axes (i.e. not interprete millimeters/min as degrees/min). This is important as otherwise there 
+            // might be a glitch (a sudden dip) in effective feedrate for one tiny segment, causing the planner to painfully 
+            // slow down moves before and after.
+            override_feedrate = true;
+            override_acceleration = true;
+        }
+        else {
+            // as the last milestone won't be updated we do not actually lose any moves as they will be accounted for in the next move
+            return false;
         }
     }
 
-    // total movement, use XYZ if a primary axis otherwise we calculate distance for E after scaling to mm
-    float distance= auxilliary_move ? 0 : sqrtf(sos);
-
-    // it is unlikely but we need to protect against divide by zero, so ignore insanely small moves here
-    // as the last milestone won't be updated we do not actually lose any moves as they will be accounted for in the next move
-    if(!auxilliary_move && distance < 0.00001F) return false;
+    // find actuator position given the machine position, use actual adjusted target
+    ActuatorCoordinates actuator_pos;
 
     if(!auxilliary_move) {
          for (size_t i = X_AXIS; i < N_PRIMARY_AXIS; i++) {
@@ -1264,43 +1318,58 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
                     rate_mm_s *= ( max_speeds[i] / axis_speed );
             }
         }
-
+        
         if(this->max_speed > 0 && rate_mm_s > this->max_speed) {
             rate_mm_s= this->max_speed;
         }
+
+        if(!disable_arm_solution) {
+            arm_solution->cartesian_to_actuator( transformed_target, actuator_pos );
+
+        }else{
+            // basically the same as cartesian, would be used for special homing situations like for scara
+            for (size_t i = X_AXIS; i <= Z_AXIS; i++) {
+                actuator_pos[i] = transformed_target[i];
+            }
+        }
     }
-
-    // find actuator position given the machine position, use actual adjusted target
-    ActuatorCoordinates actuator_pos;
-    if(!disable_arm_solution) {
-        arm_solution->cartesian_to_actuator( transformed_target, actuator_pos );
-
-    }else{
-        // basically the same as cartesian, would be used for special homing situations like for scara
+    else {
+        // this is an auxiliary move, so we just copy the last XYZ actuator positions, 
+        // no need to do a new cartesian_to_actuator transformation.
+        // NOTE when we skipped a near zero distance primary axes move (see above) we really must keep the old position.
         for (size_t i = X_AXIS; i <= Z_AXIS; i++) {
-            actuator_pos[i] = transformed_target[i];
+            actuator_pos[i] = actuators[i]->get_last_milestone();
         }
     }
 
 #if MAX_ROBOT_ACTUATORS > 3
     sos= 0;
-    // for the extruders just copy the position, and possibly scale it from mm³ to mm
+    // for the secondary axes just copy the position, and possibly scale extruders from mm³ to mm
     for (size_t i = E_AXIS; i < n_motors; i++) {
-        actuator_pos[i]= transformed_target[i];
-        if(actuators[i]->is_extruder() && get_e_scale_fnc) {
-            // NOTE this relies on the fact only one extruder is active at a time
-            // scale for volumetric or flow rate
-            // TODO is this correct? scaling the absolute target? what if the scale changes?
-            // for volumetric it basically converts mm³ to mm, but what about flow rate?
-            actuator_pos[i] *= get_e_scale_fnc();
+        if (auxilliary_move && i < N_PRIMARY_AXIS) {
+            // only with N_PRIMARY_AXIS > 3 :
+            // this is an auxiliary move, so we just copy the last primary axis actuator positions, 
+            // no need to do a new get_e_scale_fnc.
+            // NOTE when we skipped a near zero distance primary axes move (see above) we really must keep the old position.
+            actuator_pos[i] = actuators[i]->get_last_milestone();
         }
-        if(auxilliary_move) {
-            // for E only moves we need to use the scaled E to calculate the distance
-            sos += powf(actuator_pos[i] - actuators[i]->get_last_milestone(), 2);
+        else { 
+            actuator_pos[i]= transformed_target[i];
+            if(actuators[i]->is_extruder() && get_e_scale_fnc) {
+                // NOTE this relies on the fact only one extruder is active at a time
+                // scale for volumetric or flow rate
+                // TODO is this correct? scaling the absolute target? what if the scale changes?
+                // for volumetric it basically converts mm³ to mm, but what about flow rate?
+                actuator_pos[i] *= get_e_scale_fnc();
+            }
+            if(auxilliary_move) {
+                // for secondary axes only moves we need to use the scaled positions to calculate the distance
+                sos += powf(actuator_pos[i] - actuators[i]->get_last_milestone(), 2);
+            }
         }
     }
     if(auxilliary_move) {
-        distance= sqrtf(sos); // distance in mm of the e move
+        distance= sqrtf(sos); // distance in mm of the auxilliary move
         if(distance < 0.00001F) return false;
     }
 #endif
@@ -1308,28 +1377,37 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     // use default acceleration to start with
     float acceleration = default_acceleration;
 
-    float isecs = rate_mm_s / distance;
-
-    // check per-actuator speed limits
+    // check per-actuator speed and acceleration limits
     for (size_t actuator = 0; actuator < n_motors; actuator++) {
         float d = fabsf(actuator_pos[actuator] - actuators[actuator]->get_last_milestone());
         if(d == 0 || !actuators[actuator]->is_selected()) continue; // no movement for this actuator
 
-        float actuator_rate= d * isecs;
-        if (actuator_rate > actuators[actuator]->get_max_rate()) {
-            rate_mm_s *= (actuators[actuator]->get_max_rate() / actuator_rate);
-            isecs = rate_mm_s / distance;
+        // as all limits are applied relative to the euclidean distance, the limits applicable to a single actuator 
+        // can be multiplied by euclidean distance per actuator motion 
+        float limit_factor = distance / d;
+        // NOTE: many times d is a part of the cartesian (XYZ or ABC) vector making up the euclidean distance, so it follows that
+        // d <= distance and limit_factor >= 1.  
+        // But for arm_solutions other than cartesian and for secondary axes (ABC) in mixed motion, the 
+        // delta (d) may be larger than the euclidean distance, so the limit_factor can be smaller
+        // than 1 meaning that the actuator rate and acceleration limits apply more stringently. 
+
+        // adjust rate to lowest found
+        float actuator_rate = limit_factor * actuators[actuator]->get_max_rate();
+        if (rate_mm_s > actuator_rate || override_feedrate) {
+            rate_mm_s = actuator_rate;
+            // the first we find overrides the default; subsequent ones only limit if smaller
+            override_feedrate = false;
         }
 
-        // adjust acceleration to lowest found, for now just primary axis unless it is an auxiliary move
-        // TODO we may need to do all of them, check E won't limit XYZ.. it does on long E moves, but not checking it could exceed the E acceleration.
-        if(auxilliary_move || actuator < N_PRIMARY_AXIS) {
-            float ma =  actuators[actuator]->get_acceleration(); // in mm/sec²
-            if(!isnan(ma)) {  // if axis does not have acceleration set then it uses the default_acceleration
-                float ca = fabsf((d/distance) * acceleration);
-                if (ca > ma) {
-                    acceleration *= ( ma / ca );
-                }
+        // adjust acceleration to lowest found
+        // NOTE: we need to do all of them, check if any axis won't limit XYZ.. it does on long moves, but not checking it could exceed the axis acceleration.
+        float ma =  actuators[actuator]->get_acceleration(); // in mm/sec²
+        if(!isnan(ma)) {  // if axis does not have acceleration set then it uses the default_acceleration
+            ma *= limit_factor;
+            if (acceleration > ma || override_acceleration) {
+                acceleration = ma;
+                // the first we find overrides the default; subsequent ones only limit if smaller
+                override_acceleration = false;
             }
         }
     }
