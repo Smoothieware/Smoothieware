@@ -270,7 +270,7 @@ try_again:
                             case 115: { // M115 Get firmware version and capabilities
                                 Version vers;
 
-                                new_message.stream->printf("FIRMWARE_NAME:Smoothieware, FIRMWARE_URL:http%%3A//smoothieware.org, X-SOURCE_CODE_URL:https://github.com/Smoothieware/Smoothieware, FIRMWARE_VERSION:%s, X-FIRMWARE_BUILD_DATE:%s, X-SYSTEM_CLOCK:%ldMHz, X-AXES:%d", vers.get_build(), vers.get_build_date(), SystemCoreClock / 1000000, MAX_ROBOT_ACTUATORS);
+                                new_message.stream->printf("FIRMWARE_NAME:Smoothieware, FIRMWARE_URL:http%%3A//smoothieware.org, X-SOURCE_CODE_URL:https://github.com/Smoothieware/Smoothieware, FIRMWARE_VERSION:%s, X-FIRMWARE_BUILD_DATE:%s, X-SYSTEM_CLOCK:%ldMHz, X-AXES:%d, X-GRBL_MODE:%d", vers.get_build(), vers.get_build_date(), SystemCoreClock / 1000000, MAX_ROBOT_ACTUATORS, THEKERNEL->is_grbl_mode());
 
                                 #ifdef CNC
                                 new_message.stream->printf(", X-CNC:1");
