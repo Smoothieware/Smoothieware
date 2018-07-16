@@ -314,6 +314,7 @@ void Kernel::call_event(_EVENT_ENUM id_event, void * argument)
     bool was_idle = true;
     if(id_event == ON_HALT) {
         this->halted = (argument == nullptr);
+        if(!this->halted && this->feed_hold) this->feed_hold= false; // also clear feed hold
         was_idle = conveyor->is_idle(); // see if we were doing anything like printing
     }
 
