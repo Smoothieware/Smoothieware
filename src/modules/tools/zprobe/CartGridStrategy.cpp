@@ -554,6 +554,19 @@ bool CartGridStrategy::doProbe(Gcode *gc)
 void CartGridStrategy::doCompensation(float *target, bool inverse)
 {
     // Adjust print surface height by linear interpolation over the bed_level array.
+    // offset scale: 1 for default (use offset as is)
+    float scale = 1.0;
+    if (!isnan(this->damping_interval)) {
+        // if the height is below our compensation limit:
+        if(target[Z_AXIS] <= this->height_limit) {
+            // scale the offset as necessary:
+            if(target[Z_AXIS] >= this->dampening_start) {
+                scale = (1.0 - ((target[Z_AXIS] - this->dampening_start) / this->damping_interval));
+            } // else leave scale at 1.0;
+        } else {
+            return; // if Z is higher than max, no compensation
+        }
+    }
 
     // find min/maxes, and handle the case where size is negative (assuming this is possible? Legacy code supported this)
     float min_x = std::min(this->x_start, this->x_start + this->x_size);
@@ -579,20 +592,6 @@ void CartGridStrategy::doCompensation(float *target, bool inverse)
     float left = (1 - ratio_y) * z1 + ratio_y * z2;
     float right = (1 - ratio_y) * z3 + ratio_y * z4;
     float offset = (1 - ratio_x) * left + ratio_x * right;
-    // offset scale: 1 for default (use offset as is)
-    float scale = 1.0;
-
-    if (!isnan(this->damping_interval)) {
-        // if the height is below our compensation limit:
-        if(target[Z_AXIS] <= this->height_limit) {
-            // scale the offset as necessary:
-            if(target[Z_AXIS] >= this->dampening_start) {
-                scale = (1 - ((target[Z_AXIS] - this->dampening_start ) / this->damping_interval));
-            } // else leave scale at 1.0;
-        } else {
-            return; // if Z is higher than max, no compensation
-        }
-    }
 
     if (inverse) {
         target[Z_AXIS] -= offset * scale;
