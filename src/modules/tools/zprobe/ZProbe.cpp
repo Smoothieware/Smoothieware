@@ -379,12 +379,12 @@ void ZProbe::on_gcode_received(void *argument)
         // M code processing here
         int c;
         switch (gcode->m) {
-            case 48:
+            case 48: {
                 int pointNumber = 3;
                 if (gcode->has_letter('P')) pointNumber = gcode->get_value('P');
                 this->repeatability(gcode->stream, pointNumber);
                 break;
-
+}
             case 119:
                 c = this->pin.get();
                 gcode->stream->printf(" Probe: %d", c);
@@ -522,25 +522,25 @@ void ZProbe::repeatability(StreamOutput *stream, int number_point) {
   int nb_point_read = 0;
 
   // some sanity checking
-  if (numberPoint<0) {
-    gcode->stream->printf("Wrong number point (P) !");
+  if (number_point<0) {
+    stream->printf("Wrong number point (P) !");
     return;
   }
 
   // probe the bed and store result until the number point is reached or an error is occured
-  gcode->stream->printf("Probe repeatability with %d sample, start sampling :\n", number_point);
+  stream->printf("Probe repeatability with %d sample, start sampling :\n", number_point);
   for (int i = 0; i < number_point; i++) {
 
       // if not setting Z then return probe to where it started, otherwise leave it where it is
-      probe_result = run_probe_return(mm, this->slow_feedrate, -1, false));
+      probe_result = run_probe_return(mm, this->slow_feedrate, -1, false);
 
       if(!probe_result) {
         // the result is in actuator coordinates moved
         sample[i] = THEKERNEL->robot->from_millimeters(mm);
-        gcode->stream->printf(" sample %d, Z=%1.4f\n", sample[i]);
+        stream->printf(" sample %d, Z=%1.4f\n", i, sample[i]);
         nb_point_read++;
       } else {
-        gcode->stream->printf(" sample %d, can't probe !\n");
+        stream->printf(" sample %d, can't probe !\n", i);
         break;
       }
 
@@ -551,8 +551,8 @@ void ZProbe::repeatability(StreamOutput *stream, int number_point) {
   for (int i = 0; i < nb_point_read; i++) {
       sum += sample[i];
 
-      min = (sample[i] < min)? sample[i] : min);
-      max = (max < sample[i])? sample[i] : max);
+      min = (sample[i] < min)? sample[i] : min;
+      max = (max < sample[i])? sample[i] : max;
   }
   mean = sum / nb_point_read;
 
@@ -561,7 +561,7 @@ void ZProbe::repeatability(StreamOutput *stream, int number_point) {
   for (int i = 0; i <= nb_point_read; i++) sum += pow(sample[i] - mean, 2);
   sigma = sqrt(sum / nb_point_read);
 
-  gcode->stream->printf("Finished with %d samples :\n", nb_point_read);
-  gcode->stream->printf(" min %1.3f, max %1.3f, range %1.3f\n", min, max, max-min);
-  gcode->stream->printf(" standard deviation %1.6f, mean %1.4f\n", sigma, mean);
+  stream->printf("Finished with %d samples :\n", nb_point_read);
+  stream->printf(" min %1.3f, max %1.3f, range %1.3f\n", min, max, max-min);
+  stream->printf(" standard deviation %1.6f, mean %1.4f\n", sigma, mean);
 }
