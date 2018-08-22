@@ -550,11 +550,11 @@ void ZProbe::repeatability(StreamOutput *stream, int number_point) {
   sum = 0.0;
   for (int i = 0; i < nb_point_read; i++) {
       sum += sample[i];
-      mean = sum / nb_point_read;
 
       min = (sample[i] < min)? sample[i] : min);
       max = (max < sample[i])? sample[i] : max);
   }
+  mean = sum / nb_point_read;
 
   // compute standard deviation for the probed value
   sum = 0.0;
