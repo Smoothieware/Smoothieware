@@ -379,6 +379,12 @@ void ZProbe::on_gcode_received(void *argument)
         // M code processing here
         int c;
         switch (gcode->m) {
+            case 48:
+                int pointNumber = 3;
+                if (gcode->has_letter('P')) pointNumber = gcode->get_value('P');
+                this->repeatability(gcode->stream, pointNumber);
+                break;
+
             case 119:
                 c = this->pin.get();
                 gcode->stream->printf(" Probe: %d", c);
@@ -506,4 +512,56 @@ void ZProbe::home()
 {
     Gcode gc(THEKERNEL->is_grbl_mode() ? "G28.2" : "G28", &(StreamOutput::NullStream));
     THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
+}
+
+// measure repeatability of probe (M48)
+void ZProbe::repeatability(StreamOutput *stream, int number_point) {
+  bool probe_result;
+  float mm;
+  float sum = 0.0, mean = 0.0, sigma = 0.0, min = 99999.9, max = -99999.9, sample[number_point];
+  int nb_point_read = 0;
+
+  // some sanity checking
+  if (numberPoint<0) {
+    gcode->stream->printf("Wrong number point (P) !");
+    return;
+  }
+
+  // probe the bed and store result until the number point is reached or an error is occured
+  gcode->stream->printf("Probe repeatability with %d sample, start sampling :\n", number_point);
+  for (int i = 0; i < number_point; i++) {
+
+      // if not setting Z then return probe to where it started, otherwise leave it where it is
+      probe_result = run_probe_return(mm, this->slow_feedrate, -1, false));
+
+      if(!probe_result) {
+        // the result is in actuator coordinates moved
+        sample[i] = THEKERNEL->robot->from_millimeters(mm);
+        gcode->stream->printf(" sample %d, Z=%1.4f\n", sample[i]);
+        nb_point_read++;
+      } else {
+        gcode->stream->printf(" sample %d, can't probe !\n");
+        break;
+      }
+
+  }
+
+  // compute mean for the probed value
+  sum = 0.0;
+  for (int i = 0; i < nb_point_read; i++) {
+      sum += sample[i];
+      mean = sum / nb_point_read;
+
+      min = (sample[i] < min)? sample[i] : min);
+      max = (max < sample[i])? sample[i] : max);
+  }
+
+  // compute standard deviation for the probed value
+  sum = 0.0;
+  for (int i = 0; i <= nb_point_read; i++) sum += pow(sample[i] - mean, 2);
+  sigma = sqrt(sum / nb_point_read);
+
+  gcode->stream->printf("Finished with %d samples :\n", nb_point_read);
+  gcode->stream->printf(" min %1.3f, max %1.3f, range %1.3f\n", min, max, max-min);
+  gcode->stream->printf(" standard deviation %1.6f, mean %1.4f\n", sigma, mean);
 }
