@@ -534,7 +534,7 @@ void ZProbe::repeatability(StreamOutput *stream, int number_point) {
       // if not setting Z then return probe to where it started, otherwise leave it where it is
       probe_result = run_probe_return(mm, this->slow_feedrate, -1, false);
 
-      if(!probe_result) {
+      if(probe_result) {
         // the result is in actuator coordinates moved
         sample[i] = THEKERNEL->robot->from_millimeters(mm);
         stream->printf(" sample %d, Z=%1.4f\n", i, sample[i]);
@@ -558,7 +558,7 @@ void ZProbe::repeatability(StreamOutput *stream, int number_point) {
 
   // compute standard deviation for the probed value
   sum = 0.0;
-  for (int i = 0; i <= nb_point_read; i++) sum += pow(sample[i] - mean, 2);
+  for (int i = 0; i < nb_point_read; i++) sum += pow(sample[i] - mean, 2);
   sigma = sqrt(sum / nb_point_read);
 
   stream->printf("Finished with %d samples :\n", nb_point_read);
