@@ -35,7 +35,7 @@ public:
     bool run_probe(float& mm, float feedrate, float max_dist= -1, bool reverse= false);
     bool run_probe_return(float& mm, float feedrate, float max_dist= -1, bool reverse= false);
     bool doProbeAt(float &mm, float x, float y);
-    void repeatability(StreamOutput *stream, int number_point);
+    void repeatability(StreamOutput *stream, int number_point, float x, float y);
 
     void coordinated_move(float x, float y, float z, float feedrate, bool relative=false);
     void home();

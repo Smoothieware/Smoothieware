@@ -381,10 +381,13 @@ void ZProbe::on_gcode_received(void *argument)
         switch (gcode->m) {
             case 48: {
                 int pointNumber = 3;
+                float x = NAN, y = NAN;
                 if (gcode->has_letter('P')) pointNumber = gcode->get_value('P');
-                this->repeatability(gcode->stream, pointNumber);
+                if (gcode->has_letter('X')) x = gcode->get_value('X');
+                if (gcode->has_letter('Y')) y = gcode->get_value('Y');
+                this->repeatability(gcode->stream, pointNumber, x, y);
                 break;
-}
+            }
             case 119:
                 c = this->pin.get();
                 gcode->stream->printf(" Probe: %d", c);
@@ -515,7 +518,7 @@ void ZProbe::home()
 }
 
 // measure repeatability of probe (M48)
-void ZProbe::repeatability(StreamOutput *stream, int number_point) {
+void ZProbe::repeatability(StreamOutput *stream, int number_point, float x, float y) {
   bool probe_result;
   float mm;
   float sum = 0.0, mean = 0.0, sigma = 0.0, min = 99999.9, max = -99999.9, sample[number_point];
@@ -525,6 +528,14 @@ void ZProbe::repeatability(StreamOutput *stream, int number_point) {
   if (number_point<0) {
     stream->printf("Wrong number point (P) !");
     return;
+  }
+
+  // if x or y is passed, move to the position.
+  if (!isnan(x) || !isnan(y)) {
+    coordinated_move(x, y, NAN, this->fast_feedrate, false);
+  } else {
+    // first wait for all moves to finish
+    THEKERNEL->conveyor->wait_for_idle();
   }
 
   // probe the bed and store result until the number point is reached or an error is occured
