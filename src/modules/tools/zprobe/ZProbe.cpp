@@ -521,7 +521,7 @@ void ZProbe::home()
 void ZProbe::repeatability(StreamOutput *stream, int number_point, float x, float y) {
   bool probe_result;
   float mm;
-  float sum = 0.0, mean = 0.0, sigma = 0.0, min = 99999.9, max = -99999.9, sample[number_point];
+  float sum = 0.0f, mean = 0.0f, sigma = 0.0f, min = 99999.9f, max = -99999.9f, sample[number_point];
   int nb_point_read = 0;
 
   // some sanity checking
