@@ -569,7 +569,7 @@ void ZProbe::repeatability(StreamOutput *stream, int number_point, float x, floa
 
   // compute standard deviation for the probed value
   sum = 0.0f;
-  for (int i = 0; i < nb_point_read; i++) sum += pow(sample[i] - mean, 2);
+  for (int i = 0; i < nb_point_read; i++) sum += powf(sample[i] - mean, 2.0f);
   sigma = sqrtf(sum / nb_point_read);
 
   stream->printf("Finished with %d samples :\n", nb_point_read);
