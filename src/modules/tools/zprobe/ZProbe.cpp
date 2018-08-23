@@ -557,6 +557,11 @@ void ZProbe::repeatability(StreamOutput *stream, int number_point, float x, floa
 
   }
 
+  // if no data probe, can't compute statistic, so end method
+  if (nb_point_read == 0) {
+    return;
+  }
+
   // compute mean for the probed value
   sum = 0.0f;
   for (int i = 0; i < nb_point_read; i++) {
