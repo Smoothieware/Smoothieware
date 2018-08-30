@@ -61,8 +61,8 @@
 #define TELNET_GA       0x03
 #define TELNET_X_PROMPT 0x55
 
-//#define DEBUG_PRINTF(...)
-#define DEBUG_PRINTF printf
+#define DEBUG_PRINTF(...)
+//#define DEBUG_PRINTF printf
 
 static char *alloc_line(int size)
 {

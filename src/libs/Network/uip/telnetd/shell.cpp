@@ -46,8 +46,8 @@
 #include "StreamOutputPool.h"
 #include "CommandQueue.h"
 
-//#define DEBUG_PRINTF(...)
-#define DEBUG_PRINTF printf
+#define DEBUG_PRINTF(...)
+//#define DEBUG_PRINTF printf
 
 struct ptentry {
     const char *command;
