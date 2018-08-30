@@ -95,8 +95,8 @@
 #define ISO_slash   0x2f
 #define ISO_colon   0x3a
 
-#define DEBUG_PRINTF printf
-//#define DEBUG_PRINTF(...)
+//#define DEBUG_PRINTF printf
+#define DEBUG_PRINTF(...)
 
 
 // this callback gets the results of a command, line by line. need to check if
