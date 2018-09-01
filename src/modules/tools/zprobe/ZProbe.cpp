@@ -379,6 +379,15 @@ void ZProbe::on_gcode_received(void *argument)
         // M code processing here
         int c;
         switch (gcode->m) {
+            case 48: {
+                int pointNumber = 3;
+                float x = NAN, y = NAN;
+                if (gcode->has_letter('P')) pointNumber = gcode->get_value('P');
+                if (gcode->has_letter('X')) x = gcode->get_value('X');
+                if (gcode->has_letter('Y')) y = gcode->get_value('Y');
+                this->repeatability(gcode->stream, pointNumber, x, y);
+                break;
+            }
             case 119:
                 c = this->pin.get();
                 gcode->stream->printf(" Probe: %d", c);
@@ -506,4 +515,69 @@ void ZProbe::home()
 {
     Gcode gc(THEKERNEL->is_grbl_mode() ? "G28.2" : "G28", &(StreamOutput::NullStream));
     THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
+}
+
+// measure repeatability of probe (M48)
+void ZProbe::repeatability(StreamOutput *stream, int number_point, float x, float y) {
+  bool probe_result;
+  float mm;
+  float sum = 0.0f, mean = 0.0f, sigma = 0.0f, min = 99999.9f, max = -99999.9f, sample[number_point];
+  int nb_point_read = 0;
+
+  // some sanity checking
+  if (number_point<0) {
+    stream->printf("Wrong number point (P) !");
+    return;
+  }
+
+  // if x or y is passed, move to the position.
+  if (!isnan(x) || !isnan(y)) {
+    coordinated_move(x, y, NAN, this->fast_feedrate, false);
+  } else {
+    // first wait for all moves to finish
+    THEKERNEL->conveyor->wait_for_idle();
+  }
+
+  // probe the bed and store result until the number point is reached or an error is occured
+  stream->printf("Probe repeatability with %d sample, start sampling :\n", number_point);
+  for (int i = 0; i < number_point; i++) {
+
+      // if not setting Z then return probe to where it started, otherwise leave it where it is
+      probe_result = run_probe_return(mm, this->slow_feedrate, -1, false);
+
+      if(probe_result) {
+        // the result is in actuator coordinates moved
+        sample[i] = THEKERNEL->robot->from_millimeters(mm);
+        stream->printf(" sample %d, Z=%1.4f\n", i, sample[i]);
+        nb_point_read++;
+      } else {
+        stream->printf(" sample %d, can't probe !\n", i);
+        break;
+      }
+
+  }
+
+  // if no data probe, can't compute statistic, so end method
+  if (nb_point_read == 0) {
+    return;
+  }
+
+  // compute mean for the probed value
+  sum = 0.0f;
+  for (int i = 0; i < nb_point_read; i++) {
+      sum += sample[i];
+
+      min = (sample[i] < min)? sample[i] : min;
+      max = (max < sample[i])? sample[i] : max;
+  }
+  mean = sum / nb_point_read;
+
+  // compute standard deviation for the probed value
+  sum = 0.0f;
+  for (int i = 0; i < nb_point_read; i++) sum += powf(sample[i] - mean, 2.0f);
+  sigma = sqrtf(sum / nb_point_read);
+
+  stream->printf("Finished with %d samples :\n", nb_point_read);
+  stream->printf(" min %1.3f, max %1.3f, range %1.3f\n", min, max, max-min);
+  stream->printf(" standard deviation %1.6f, mean %1.4f\n", sigma, mean);
 }
