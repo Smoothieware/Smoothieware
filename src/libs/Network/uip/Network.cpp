@@ -23,6 +23,7 @@
 #include "webserver.h"
 #include "dhcpc.h"
 #include "sftpd.h"
+#include "ftpd.h"
 
 #ifndef NOPLAN9
 #include "plan9.h"
@@ -55,6 +56,7 @@ Network::Network()
     ethernet = new LPC17XX_Ethernet();
     tickcnt= 0;
     sftpd= NULL;
+    ftpd= NULL;
     hostname = NULL;
     plan9_enabled= false;
     command_q= CommandQueue::getInstance();
@@ -316,6 +318,9 @@ void Network::setup_servers()
 
     // sftpd service, which is lazily created on reciept of first packet
     uip_listen(HTONS(115));
+    
+    // ftpd service, which is lazily created on reciept of first packet
+    uip_listen(HTONS(FTP_CONTROL_PORT));
 }
 
 extern "C" void dhcpc_configured(const struct dhcpc_state *s)
@@ -423,6 +428,17 @@ extern "C" void app_select_appcall(void)
             }
             theNetwork->sftpd->appcall();
             break;
+            
+            
+        case HTONS(FTP_CONTROL_PORT):
+        case HTONS(FTP_PASSIVE_DATA_PORT): 
+            if(theNetwork->ftpd == NULL) {
+                theNetwork->ftpd= new Ftpd();
+                printf("Created FTPd service\n");
+            }
+            theNetwork->ftpd->appcall();
+            break;
+            
 
         default:
             printf("unknown app for port: %d\n", uip_conn->lport);
