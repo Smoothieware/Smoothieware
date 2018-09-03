@@ -37,6 +37,7 @@
 #define back_button_pin_checksum   CHECKSUM("back_button_pin")
 #define buzz_pin_checksum          CHECKSUM("buzz_pin")
 #define contrast_checksum          CHECKSUM("contrast")
+#define rough_contrast_checksum    CHECKSUM("rough_contrast")
 #define reverse_checksum           CHECKSUM("reverse")
 #define rst_pin_checksum           CHECKSUM("rst_pin")
 #define a0_pin_checksum            CHECKSUM("a0_pin")
@@ -51,6 +52,9 @@ ST7565::ST7565(uint8_t variant)
     is_viki2 = false;
     is_mini_viki2 = false;
     is_ssd1306= false;
+	is_azsmz_lcd = false;
+	is_azsmz_oled = false;
+	this->rough_contrast = 0x27;
 
     // set the variant
     switch(variant) {
@@ -70,6 +74,22 @@ ST7565::ST7565(uint8_t variant)
             this->reversed = false;
             this->contrast = 9;
             break;
+
+        case 4: // AZSMZ LCD
+            // set default for sub variants
+            is_azsmz_lcd = true;
+            this->reversed = true;
+			this->rough_contrast = 0x24;
+            this->contrast = 15;        // 15 For azsmz lcd blue; 48 For azsmz lcd green;
+            break;			
+			
+        case 5: // AZSMZ OLED
+            // set default for sub variants
+            is_azsmz_oled = true;
+            this->reversed = true;
+            this->contrast = 9;
+            break;			
+			
        default:
             // set default for sub variants
             this->reversed = false;
@@ -104,7 +124,7 @@ ST7565::ST7565(uint8_t variant)
     this->a0.from_string(THEKERNEL->config->value( panel_checksum, a0_pin_checksum)->by_default("nc")->as_string())->as_output();
     if(a0.connected()) a0.set(1);
 
-    if(!is_viki2 && !is_mini_viki2 && !is_ssd1306) {
+    if(!is_viki2 && !is_mini_viki2 && !is_ssd1306 && !is_azsmz_lcd && !is_azsmz_oled) {
         this->up_pin.from_string(THEKERNEL->config->value( panel_checksum, up_button_pin_checksum )->by_default("nc")->as_string())->as_input();
         this->down_pin.from_string(THEKERNEL->config->value( panel_checksum, down_button_pin_checksum )->by_default("nc")->as_string())->as_input();
     } else {
@@ -147,6 +167,9 @@ ST7565::ST7565(uint8_t variant)
     // contrast override
     this->contrast = THEKERNEL->config->value(panel_checksum, contrast_checksum)->by_default(this->contrast)->as_number();
 
+    // rough_contrast override
+    this->rough_contrast = THEKERNEL->config->value(panel_checksum, rough_contrast_checksum)->by_default(this->rough_contrast)->as_number();
+	
     // reverse display
     this->reversed = THEKERNEL->config->value(panel_checksum, reverse_checksum)->by_default(this->reversed)->as_bool();
 
@@ -221,7 +244,10 @@ void ST7565::set_xy(int x, int y)
     }else{
         unsigned char cmd[3];
         cmd[0] = 0xb0 | (y & 0x07);
-        cmd[1] = 0x10 | (x >> 4);
+        
+		if ( is_azsmz_oled) x = x + 2;		// For azsmz_oled
+		
+		cmd[1] = 0x10 | (x >> 4);
         cmd[2] = 0x00 | (x & 0x0f);
         send_commands(cmd, 3);
     }
@@ -294,18 +320,53 @@ void ST7565::init()
             0xAF,  // drivers on
         };
         send_commands(init_seq, sizeof(init_seq));
-
-    }else{
+    }else if(is_azsmz_lcd){
         const unsigned char init_seq[] = {
             0x40,    //Display start line 0
-            (unsigned char)(reversed ? 0xa0 : 0xa1), // ADC
+			(unsigned char)(reversed ? 0xa0 : 0xa1), // ADC				
             (unsigned char)(reversed ? 0xc8 : 0xc0), // COM select
             0xa6,    //Display normal
             0xa2,    //Set Bias 1/9 (Duty 1/65)
             0x2f,    //Booster, Regulator and Follower On
             0xf8,    //Set internal Booster to 4x
             0x00,
-            0x27,    //Contrast set
+			this->rough_contrast, 		//	0x24 For azsmz lcd blue, 0x27 For azsmz lcd green
+            0x81,
+            this->contrast,    //contrast value
+            0xac,    //No indicator
+            0x00,
+            0xaf,    //Display on
+        };
+        send_commands(init_seq, sizeof(init_seq));
+    }else if (is_azsmz_oled){
+        const unsigned char init_seq[] = {
+            0x40,    //Display start line 0
+			0xa1, 	// ADC	For azsmz oled
+            (unsigned char)(reversed ? 0xc8 : 0xc0), // COM select
+            0xa6,    //Display normal
+            0xa2,    //Set Bias 1/9 (Duty 1/65)
+            0x2f,    //Booster, Regulator and Follower On
+            0xf8,    //Set internal Booster to 4x
+            0x00,
+			0x27,    //Contrast set
+            0x81,
+            this->contrast,    //contrast value
+            0xac,    //No indicator
+            0x00,
+            0xaf,    //Display on
+        };
+        send_commands(init_seq, sizeof(init_seq));
+	}else{
+        const unsigned char init_seq[] = {
+            0x40,    //Display start line 0
+			(unsigned char)(reversed ? 0xa0 : 0xa1), // ADC				
+            (unsigned char)(reversed ? 0xc8 : 0xc0), // COM select
+            0xa6,    //Display normal
+            0xa2,    //Set Bias 1/9 (Duty 1/65)
+            0x2f,    //Booster, Regulator and Follower On
+            0xf8,    //Set internal Booster to 4x
+            0x00,
+			0x27,    //Contrast set
             0x81,
             this->contrast,    //contrast value
             0xac,    //No indicator
@@ -314,19 +375,18 @@ void ST7565::init()
         };
         send_commands(init_seq, sizeof(init_seq));
     }
-
     clear();
 }
 
 void ST7565::setContrast(uint8_t c)
 {
-    const unsigned char contrast_seq[] = {
-        0x27,    //Contrast set
-        0x81,
-        c    //contrast value
-    };
-    this->contrast = c;
-    send_commands(contrast_seq, sizeof(contrast_seq));
+	const unsigned char contrast_seq[] = {
+		this->rough_contrast,
+		0x81,
+		c    //contrast value
+	};
+	this->contrast = c;
+	send_commands(contrast_seq, sizeof(contrast_seq));
 }
 
 int ST7565::drawChar(int x, int y, unsigned char c, int color)

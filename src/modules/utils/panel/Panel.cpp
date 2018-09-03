@@ -48,6 +48,11 @@
 #define ssd1306_oled_checksum      CHECKSUM("ssd1306_oled")
 #define viki2_checksum             CHECKSUM("viki2")
 #define mini_viki2_checksum        CHECKSUM("mini_viki2")
+
+#define azsmz_lcd_checksum        CHECKSUM("azsmz_lcd")
+#define azsmz_oled_checksum        CHECKSUM("azsmz_oled")
+
+
 #define universal_adapter_checksum CHECKSUM("universal_adapter")
 
 #define menu_offset_checksum        CHECKSUM("menu_offset")
@@ -126,9 +131,13 @@ void Panel::on_module_loaded()
         this->lcd = new ST7565(2); // variant 2
     } else if (lcd_cksm == ssd1306_oled_checksum) {
         this->lcd = new ST7565(3); // variant 3
-    } else if (lcd_cksm == universal_adapter_checksum) {
+	} else if (lcd_cksm == universal_adapter_checksum) {
         this->lcd = new UniversalAdapter();
-    } else {
+    } else if (lcd_cksm == azsmz_lcd_checksum) {
+        this->lcd = new ST7565(4); // variant 4
+    } else if (lcd_cksm == azsmz_oled_checksum) {
+        this->lcd = new ST7565(5); // variant 5
+	} else {
         // no known lcd type defined
         delete this;
         return;

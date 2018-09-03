@@ -75,6 +75,7 @@ private:
 	// text cursor position
 	uint8_t tx, ty;
     uint8_t contrast;
+	uint8_t rough_contrast;
     struct {
         bool reversed:1;
         bool is_viki2:1;
@@ -82,6 +83,8 @@ private:
         bool is_ssd1306:1;
         bool use_pause:1;
         bool use_back:1;
+		bool is_azsmz_lcd:1;
+		bool is_azsmz_oled:1;
     };
 };
 
