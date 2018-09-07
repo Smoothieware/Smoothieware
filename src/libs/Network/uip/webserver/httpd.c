@@ -319,6 +319,7 @@ static PT_THREAD(send_headers(struct httpd_state *s, const char *statushdr))
 static
 PT_THREAD(handle_output(struct httpd_state *s))
 {
+    char qstr[132];
     PT_BEGIN(&s->outputpt);
 
     if (s->method == OPTIONS) {
@@ -359,7 +360,8 @@ PT_THREAD(handle_output(struct httpd_state *s))
 
         if (strcmp(s->filename, "/query") == 0) { // query short cut
             PT_WAIT_THREAD(&s->outputpt, send_headers(s, http_header_200));
-            PSOCK_SEND_STR(&s->sout, get_query_string());
+            strncpy(qstr, get_query_string(), sizeof(qstr) - 1);
+            PSOCK_SEND_STR(&s->sout, qstr);
 
         } else if (!fs_open(s)) { // Note this has the side effect of opening the file
             DEBUG_PRINTF("404 file not found\n");
