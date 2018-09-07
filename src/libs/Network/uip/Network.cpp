@@ -397,6 +397,12 @@ void Network::on_main_loop(void *argument)
 
 }
 
+extern "C" const char *get_query_string()
+{
+    const char* dup= strdup(THEKERNEL->get_query_string().c_str());
+    return dup;
+}
+
 // select between webserver and telnetd server
 extern "C" void app_select_appcall(void)
 {

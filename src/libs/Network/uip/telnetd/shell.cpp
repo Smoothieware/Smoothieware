@@ -61,7 +61,7 @@ bool Shell::parse(register char *str, const struct ptentry *t)
 {
     const struct ptentry *p;
     for (p = t; p->command != 0; ++p) {
-        if (strncasecmp(str, p->command, strlen(p->command)) == 0) {
+        if (strcasecmp(str, p->command) == 0) {
             break;
         }
     }
@@ -73,11 +73,17 @@ bool Shell::parse(register char *str, const struct ptentry *t)
 /*---------------------------------------------------------------------------*/
 static void help(char *str, Shell *sh)
 {
-    sh->output("Available commands: All others are passed on\n");
+    sh->output("Available telnet commands: All others are passed to the command handler\n");
     sh->output("netstat     - show network info\n");
     sh->output("h           - show network help\n");
+    sh->output("?           - show current query status\n");
     sh->output("help        - show command help\n");
     sh->output("exit, quit  - exit shell\n");
+}
+
+static void query(char *str, Shell *sh)
+{
+    sh->output(THEKERNEL->get_query_string().c_str());
 }
 
 /*---------------------------------------------------------------------------*/
@@ -191,6 +197,7 @@ static const struct ptentry parsetab[] = {
     {"exit", quit},
     {"quit", quit},
     {"ntest", ntest},
+    {"?", query},
     {"h", help},
 
     /* Default action */
