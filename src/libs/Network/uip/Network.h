@@ -29,7 +29,7 @@ public:
         bool plan9_enabled:1;
         bool use_dhcp:1;
     };
-
+    const char *get_query_string();
 
 private:
     void init();
@@ -42,6 +42,7 @@ private:
 
     struct timer periodic_timer, arp_timer;
     char *hostname;
+    char query_str[132];
     volatile uint32_t tickcnt;
     uint8_t mac_address[6];
     uint8_t ipaddr[4];

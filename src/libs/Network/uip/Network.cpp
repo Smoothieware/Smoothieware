@@ -399,8 +399,13 @@ void Network::on_main_loop(void *argument)
 
 extern "C" const char *get_query_string()
 {
-    const char* dup= strdup(THEKERNEL->get_query_string().c_str());
-    return dup;
+    return theNetwork->get_query_string();
+}
+
+const char *Network::get_query_string()
+{
+    strncpy(query_str, THEKERNEL->get_query_string().c_str(), 131);
+    return query_str;
 }
 
 // select between webserver and telnetd server
