@@ -73,7 +73,7 @@ bool Shell::parse(register char *str, const struct ptentry *t)
 /*---------------------------------------------------------------------------*/
 static void help(char *str, Shell *sh)
 {
-    sh->output("Available telent commands: All others are passed to the command handler\n");
+    sh->output("Available telnet commands: All others are passed to the command handler\n");
     sh->output("netstat     - show network info\n");
     sh->output("h           - show network help\n");
     sh->output("?           - show current query status\n");
