@@ -98,6 +98,7 @@
 //#define DEBUG_PRINTF printf
 #define DEBUG_PRINTF(...)
 
+extern const char *get_query_string();
 
 // this callback gets the results of a command, line by line. need to check if
 // we need to stall the upstream sender return 0 if stalled 1 if ok to keep
@@ -314,6 +315,16 @@ static PT_THREAD(send_headers(struct httpd_state *s, const char *statushdr))
 {
     return send_headers_3(s, statushdr, 1);
 }
+static PT_THREAD(send_string(struct httpd_state *s, const char *str, int duped))
+{
+    PSOCK_BEGIN(&s->sout);
+
+    PSOCK_SEND_STR(&s->sout, str);
+    if(duped) {
+        free((void *)str);
+    }
+    PSOCK_END(&s->sout);
+}
 /*---------------------------------------------------------------------------*/
 static
 PT_THREAD(handle_output(struct httpd_state *s))
@@ -355,7 +366,12 @@ PT_THREAD(handle_output(struct httpd_state *s))
 
     } else {
         // Presume method GET
-        if (!fs_open(s)) { // Note this has the side effect of opening the file
+
+        if (strcmp(s->filename, "/query") == 0) { // query short cut
+            PT_WAIT_THREAD(&s->outputpt, send_headers(s, http_header_200));
+            PT_WAIT_THREAD(&s->outputpt, send_string(s, get_query_string(), 1));
+
+        } else if (!fs_open(s)) { // Note this has the side effect of opening the file
             DEBUG_PRINTF("404 file not found\n");
             httpd_fs_open(http_404_html, &s->file);
             strcpy(s->filename, http_404_html);
