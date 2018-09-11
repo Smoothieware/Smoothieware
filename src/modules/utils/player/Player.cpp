@@ -79,7 +79,16 @@ void Player::on_halt(void* argument)
 {
     if(argument == nullptr && this->playing_file ) {
         abort_command("1", &(StreamOutput::NullStream));
-    }
+	}
+	
+	if(argument == nullptr && this->suspended) {
+		// clean up from suspend
+		this->suspended= false;
+		THEROBOT->pop_state();
+		this->saved_temperatures.clear();
+		this->was_playing_file= false;
+		this->suspend_loops= 0;
+	}
 }
 
 void Player::on_second_tick(void *)
