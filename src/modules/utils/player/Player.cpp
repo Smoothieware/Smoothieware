@@ -80,7 +80,7 @@ void Player::on_halt(void* argument)
     if(argument == nullptr && this->playing_file ) {
         abort_command("1", &(StreamOutput::NullStream));
 	}
-	
+
 	if(argument == nullptr && this->suspended) {
 		// clean up from suspend
 		this->suspended= false;
@@ -88,6 +88,7 @@ void Player::on_halt(void* argument)
 		this->saved_temperatures.clear();
 		this->was_playing_file= false;
 		this->suspend_loops= 0;
+		THEKERNEL->streams->printf("// Suspend cleared\n");
 	}
 }
 
@@ -548,6 +549,12 @@ void Player::suspend_part2()
     // wait for queue to empty
     THEKERNEL->conveyor->wait_for_idle();
 
+    if(THEKERNEL->is_halted()) {
+        THEKERNEL->streams->printf("Suspend aborted by kill\n");
+        suspended= false;
+        return;
+    }
+
     THEKERNEL->streams->printf("// Saving current state...\n");
 
     // save current XYZ position
@@ -653,6 +660,16 @@ void Player::resume_command(string parameters, StreamOutput *stream )
         }
     }
 
+    // clean up
+    this->saved_temperatures.clear();
+
+    if(THEKERNEL->is_halted()) {
+        THEKERNEL->streams->printf("Resume aborted by kill\n");
+        THEROBOT->pop_state();
+        suspended= false;
+        return;
+    }
+
     // execute optional gcode if defined
     if(!before_resume_gcode.empty()) {
         stream->printf("Executing before resume gcode...\n");
@@ -682,6 +699,12 @@ void Player::resume_command(string parameters, StreamOutput *stream )
     // restore extruder state
     PublicData::set_value( extruder_checksum, restore_state_checksum, nullptr );
 
+   if(THEKERNEL->is_halted()) {
+        THEKERNEL->streams->printf("Resume aborted by kill\n");
+        suspended= false;
+        return;
+    }
+
     stream->printf("Resuming print\n");
 
     if(this->was_playing_file) {
@@ -692,7 +715,5 @@ void Player::resume_command(string parameters, StreamOutput *stream )
         THEKERNEL->streams->printf("// action:resume\r\n");
     }
 
-    // clean up
-    this->saved_temperatures.clear();
-    suspended= false;
+   suspended= false;
 }
