@@ -42,6 +42,8 @@
 #define a0_pin_checksum            CHECKSUM("a0_pin")
 #define red_led_checksum           CHECKSUM("red_led_pin")
 #define blue_led_checksum          CHECKSUM("blue_led_pin")
+#define rough_contrast_checksum    CHECKSUM("rough_contrast")
+#define is_sh1106_checksum         CHECKSUM("is_sh1106")
 
 #define CLAMP(x, low, high) { if ( (x) < (low) ) x = (low); if ( (x) > (high) ) x = (high); } while (0);
 #define swap(a, b) { uint8_t t = a; a = b; b = t; }
@@ -51,6 +53,8 @@ ST7565::ST7565(uint8_t variant)
     is_viki2 = false;
     is_mini_viki2 = false;
     is_ssd1306= false;
+	is_sh1106 = false;
+	rough_contrast = 27;
 
     // set the variant
     switch(variant) {
@@ -144,12 +148,19 @@ ST7565::ST7565(uint8_t variant)
         this->blue_led.set(true);
     }
 
+    // rough contrast override
+    this->rough_contrast = THEKERNEL->config->value(panel_checksum, rough_contrast_checksum)->by_default(this->rough_contrast)->as_number();
+
     // contrast override
     this->contrast = THEKERNEL->config->value(panel_checksum, contrast_checksum)->by_default(this->contrast)->as_number();
 
     // reverse display
     this->reversed = THEKERNEL->config->value(panel_checksum, reverse_checksum)->by_default(this->reversed)->as_bool();
 
+    // For sh1106
+    this->is_sh1106 = THEKERNEL->config->value(panel_checksum, is_sh1106_checksum)->by_default(this->is_sh1106)->as_bool();
+	
+	
     framebuffer = (uint8_t *)AHB0.alloc(FB_SIZE); // grab some memory from USB_RAM
     if(framebuffer == NULL) {
         THEKERNEL->streams->printf("Not enough memory available for frame buffer");
@@ -221,7 +232,8 @@ void ST7565::set_xy(int x, int y)
     }else{
         unsigned char cmd[3];
         cmd[0] = 0xb0 | (y & 0x07);
-        cmd[1] = 0x10 | (x >> 4);
+		if (is_sh1106) x = x + 2 ;		// For sh1106
+		cmd[1] = 0x10 | (x >> 4);		
         cmd[2] = 0x00 | (x & 0x0f);
         send_commands(cmd, 3);
     }
@@ -298,14 +310,15 @@ void ST7565::init()
     }else{
         const unsigned char init_seq[] = {
             0x40,    //Display start line 0
-            (unsigned char)(reversed ? 0xa0 : 0xa1), // ADC
+            (unsigned char)(is_sh1106 ? (reversed ? 0xa1 : 0xa0) : (reversed ? 0xa0 : 0xa1)), // ADC
             (unsigned char)(reversed ? 0xc8 : 0xc0), // COM select
             0xa6,    //Display normal
             0xa2,    //Set Bias 1/9 (Duty 1/65)
             0x2f,    //Booster, Regulator and Follower On
             0xf8,    //Set internal Booster to 4x
-            0x00,
-            0x27,    //Contrast set
+            0x00,			
+//            0x27,    //Contrast set
+			this->rough_contrast,
             0x81,
             this->contrast,    //contrast value
             0xac,    //No indicator
@@ -321,7 +334,8 @@ void ST7565::init()
 void ST7565::setContrast(uint8_t c)
 {
     const unsigned char contrast_seq[] = {
-        0x27,    //Contrast set
+		//0x27,    //Contrast set
+        this->rough_contrast,
         0x81,
         c    //contrast value
     };
