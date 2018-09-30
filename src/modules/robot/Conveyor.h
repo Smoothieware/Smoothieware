@@ -34,6 +34,7 @@ public:
     void dump_queue(void);
     void flush_queue(void);
     float get_current_feedrate() const { return current_feedrate; }
+    void force_queue() { check_queue(true); }
 
     friend class Planner; // for queue
 
