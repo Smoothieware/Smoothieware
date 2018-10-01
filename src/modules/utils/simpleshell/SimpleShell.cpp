@@ -1183,7 +1183,7 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
     // turn off queue delay and run it now
     THECONVEYOR->force_queue();
     THEROBOT->pop_state();
-    stream->printf("Jog: %c%f F%f\n", ax, d, scale);
+    //stream->printf("Jog: %c%f F%f\n", ax, d, scale);
 }
 
 void SimpleShell::help_command( string parameters, StreamOutput *stream )
