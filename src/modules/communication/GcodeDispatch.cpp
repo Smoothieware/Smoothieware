@@ -461,6 +461,10 @@ try_again:
             new_message.stream->printf("rs N%d\r\n", nextline);
         }
 
+    } else if ( first_char == ';' || first_char == '(' || first_char == '\n' || first_char == '\r' ) {
+        // Ignore comments and blank lines
+        new_message.stream->printf("ok\n");
+
     } else if( (n=possible_command.find_first_of("XYZF")) == 0 || (first_char == ' ' && n != string::npos) ) {
         // handle pycam syntax, use last modal group 1 command and resubmit if an X Y Z or F is found on its own line
         char buf[6];
@@ -468,9 +472,6 @@ try_again:
         possible_command.insert(0, buf);
         goto try_again;
 
-    } else if ( first_char == ';' || first_char == '(' || first_char == ' ' || first_char == '\n' || first_char == '\r' ) {
-        // Ignore comments and blank lines
-        new_message.stream->printf("ok\n");
 
     } else {
         // an uppercase non command word on its own (except XYZF) just returns ok, we could add an error but no hosts expect that.
