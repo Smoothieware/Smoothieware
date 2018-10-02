@@ -61,7 +61,7 @@ protected:
     virtual void on_attach(void);
     virtual void on_detach(void);
 
-    void ensure_tx_space(int);
+    bool ensure_tx_space(int);
 
     // keep track of number of newlines in the buffer
     // this makes it trivial to detect if there's a new line available

@@ -25,6 +25,8 @@
 #include "libs/SerialMessage.h"
 #include "StreamOutputPool.h"
 
+#include "mbed.h"
+
 // extern void setled(int, bool);
 #define setled(a, b) do {} while (0)
 
@@ -41,20 +43,28 @@ USBSerial::USBSerial(USB *u): USBCDC(u), rxbuf(256 + 8), txbuf(128 + 8)
     last_char_was_dollar = false;
 }
 
-void USBSerial::ensure_tx_space(int space)
+bool USBSerial::ensure_tx_space(int space)
 {
+    // we need some kind of timeout here or it will hang if upstream stalls
+    uint32_t start = us_ticker_read();
     while (txbuf.free() < space) {
+        if((us_ticker_read() - start) > 1000000) {
+            // 1 second timeout
+            return false;
+        }
         usb->endpointSetInterrupt(CDC_BulkIn.bEndpointAddress, true);
         usb->usbisr();
     }
+    return true;
 }
 
 int USBSerial::_putc(int c)
 {
     if (!attached)
         return 1;
-    ensure_tx_space(1);
-    txbuf.queue(c);
+    if(ensure_tx_space(1)) {
+        txbuf.queue(c);
+    }
 
     usb->endpointSetInterrupt(CDC_BulkIn.bEndpointAddress, true);
     return 1;
@@ -91,7 +101,7 @@ int USBSerial::puts(const char *str)
         return strlen(str);
     int i = 0;
     while (*str) {
-        ensure_tx_space(1);
+        if(!ensure_tx_space(1)) break;
         txbuf.queue(*str);
         if ((txbuf.available() % 64) == 0)
             usb->endpointSetInterrupt(CDC_BulkIn.bEndpointAddress, true);
