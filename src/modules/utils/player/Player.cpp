@@ -80,7 +80,7 @@ void Player::on_halt(void* argument)
     if(argument == nullptr && this->playing_file ) {
         abort_command("1", &(StreamOutput::NullStream));
 	}
-	
+
 	if(argument == nullptr && this->suspended) {
 		// clean up from suspend
 		this->suspended= false;
@@ -88,6 +88,7 @@ void Player::on_halt(void* argument)
 		this->saved_temperatures.clear();
 		this->was_playing_file= false;
 		this->suspend_loops= 0;
+		THEKERNEL->streams->printf("// Suspend cleared\n");
 	}
 }
 
@@ -520,7 +521,7 @@ void Player::suspend_command(string parameters, StreamOutput *stream )
         return;
     }
 
-    stream->printf("Suspending print, waiting for queue to empty...\n");
+    stream->printf("// Suspending print, waiting for queue to empty...\n");
 
     // override the leave_heaters_on setting
     this->override_leave_heaters_on= (parameters == "h");
@@ -547,6 +548,12 @@ void Player::suspend_part2()
     THEKERNEL->streams->printf("// Waiting for queue to empty (Host must stop sending)...\n");
     // wait for queue to empty
     THEKERNEL->conveyor->wait_for_idle();
+
+    if(THEKERNEL->is_halted()) {
+        THEKERNEL->streams->printf("Suspend aborted by kill\n");
+        suspended= false;
+        return;
+    }
 
     THEKERNEL->streams->printf("// Saving current state...\n");
 
@@ -608,7 +615,7 @@ void Player::resume_command(string parameters, StreamOutput *stream )
         return;
     }
 
-    stream->printf("resuming print...\n");
+    stream->printf("// resuming print...\n");
 
     // wait for them to reach temp
     if(!this->saved_temperatures.empty()) {
@@ -617,7 +624,7 @@ void Player::resume_command(string parameters, StreamOutput *stream )
             float t= h.second;
             PublicData::set_value( temperature_control_checksum, h.first, &t );
         }
-        stream->printf("Waiting for heaters...\n");
+        stream->printf("// Waiting for heaters...\n");
         bool wait= true;
         uint32_t tus= us_ticker_read(); // mbed call
         while(wait) {
@@ -653,9 +660,19 @@ void Player::resume_command(string parameters, StreamOutput *stream )
         }
     }
 
+    // clean up
+    this->saved_temperatures.clear();
+
+    if(THEKERNEL->is_halted()) {
+        THEKERNEL->streams->printf("Resume aborted by kill\n");
+        THEROBOT->pop_state();
+        suspended= false;
+        return;
+    }
+
     // execute optional gcode if defined
     if(!before_resume_gcode.empty()) {
-        stream->printf("Executing before resume gcode...\n");
+        stream->printf("// Executing before resume gcode...\n");
         struct SerialMessage message;
         message.message = before_resume_gcode;
         message.stream = &(StreamOutput::NullStream);
@@ -663,7 +680,7 @@ void Player::resume_command(string parameters, StreamOutput *stream )
     }
 
     // Restore position
-    stream->printf("Restoring saved XYZ positions and state...\n");
+    stream->printf("// Restoring saved XYZ positions and state...\n");
     THEROBOT->pop_state();
     bool abs_mode= THEROBOT->absolute_mode; // what mode we were in
     // force absolute mode for restoring position, then set to the saved relative/absolute mode
@@ -682,7 +699,13 @@ void Player::resume_command(string parameters, StreamOutput *stream )
     // restore extruder state
     PublicData::set_value( extruder_checksum, restore_state_checksum, nullptr );
 
-    stream->printf("Resuming print\n");
+   if(THEKERNEL->is_halted()) {
+        THEKERNEL->streams->printf("Resume aborted by kill\n");
+        suspended= false;
+        return;
+    }
+
+    stream->printf("// Resuming print\n");
 
     if(this->was_playing_file) {
         this->playing_file = true;
@@ -692,7 +715,5 @@ void Player::resume_command(string parameters, StreamOutput *stream )
         THEKERNEL->streams->printf("// action:resume\r\n");
     }
 
-    // clean up
-    this->saved_temperatures.clear();
-    suspended= false;
+   suspended= false;
 }

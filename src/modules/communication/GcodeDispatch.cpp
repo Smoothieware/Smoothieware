@@ -31,7 +31,7 @@
 #define panel_checksum             CHECKSUM("panel")
 
 // goes in Flash, list of Mxxx codes that are allowed when in Halted state
-static const int allowed_mcodes[]= {2,5,9,30,105,114,119,80,81,911,503,106,107}; // get temp, get pos, get endstops etc
+static const int allowed_mcodes[]= {2,5,9,30,105,114,115,119,80,81,911,503,106,107}; // get temp, get pos, get endstops etc
 static bool is_allowed_mcode(int m) {
     for (size_t i = 0; i < sizeof(allowed_mcodes)/sizeof(int); ++i) {
         if(allowed_mcodes[i] == m) return true;
@@ -461,6 +461,10 @@ try_again:
             new_message.stream->printf("rs N%d\r\n", nextline);
         }
 
+    } else if ( first_char == ';' || first_char == '(' || first_char == '\n' || first_char == '\r' ) {
+        // Ignore comments and blank lines
+        new_message.stream->printf("ok\n");
+
     } else if( (n=possible_command.find_first_of("XYZF")) == 0 || (first_char == ' ' && n != string::npos) ) {
         // handle pycam syntax, use last modal group 1 command and resubmit if an X Y Z or F is found on its own line
         char buf[6];
@@ -468,9 +472,6 @@ try_again:
         possible_command.insert(0, buf);
         goto try_again;
 
-    } else if ( first_char == ';' || first_char == '(' || first_char == ' ' || first_char == '\n' || first_char == '\r' ) {
-        // Ignore comments and blank lines
-        new_message.stream->printf("ok\n");
 
     } else {
         // an uppercase non command word on its own (except XYZF) just returns ok, we could add an error but no hosts expect that.
