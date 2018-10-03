@@ -275,9 +275,9 @@ void SimpleShell::on_console_line_received( void *argument )
         } else if (cmd == "fire") {
             // these are handled by Laser module
 
-        } else if (cmd == "ok") {
-            // probably an echo so reply ok
-            new_message.stream->printf("ok\n");
+        } else if (cmd.substr(0, 2) == "ok") {
+            // probably an echo so ignore the whole line
+            //new_message.stream->printf("ok\n");
 
         }else if(!parse_command(cmd.c_str(), possible_command, new_message.stream)) {
             new_message.stream->printf("error:Unsupported command - %s\n", cmd.c_str());
