@@ -62,6 +62,7 @@ enum DEFNS {MIN_PIN, MAX_PIN, MAX_TRAVEL, FAST_RATE, SLOW_RATE, RETRACT, DIRECTI
 #define endstop_debounce_ms_checksum     CHECKSUM("endstop_debounce_ms")
 
 #define home_z_first_checksum            CHECKSUM("home_z_first")
+#define home_z_rack_and_pinion_checksum  CHECKSUM("home_z_rack_and_pinion")
 #define homing_order_checksum            CHECKSUM("homing_order")
 #define move_to_origin_checksum          CHECKSUM("move_to_origin_after_home")
 
@@ -391,6 +392,7 @@ void Endstops::get_global_configs()
     this->is_scara=  THEKERNEL->config->value(scara_homing_checksum)->by_default(false)->as_bool();
 
     this->home_z_first= THEKERNEL->config->value(home_z_first_checksum)->by_default(false)->as_bool();
+    this->home_z_rack_and_pinion= THEKERNEL->config->value(home_z_rack_and_pinion_checksum)->by_default(false)->as_bool();
 
     this->trim_mm[0] = THEKERNEL->config->value(alpha_trim_checksum)->by_default(0)->as_number();
     this->trim_mm[1] = THEKERNEL->config->value(beta_trim_checksum)->by_default(0)->as_number();
@@ -644,7 +646,18 @@ void Endstops::home(axis_bitmap_t a)
     if(axis_to_home[Z_AXIS]) {
         // now home z
         float delta[3] {0, 0, homing_axis[Z_AXIS].max_travel}; // we go the max z
-        if(homing_axis[Z_AXIS].home_direction) delta[Z_AXIS]= -delta[Z_AXIS];
+		
+		if(home_z_rack_and_pinion) {
+			//dynamically set homing direction and endstop configuration
+			if(homing_axis[Z_AXIS].pin_info->pin.get()) {
+				homing_axis[Z_AXIS].home_direction = !homing_axis[Z_AXIS].pin_info->pin.is_inverting(); // true on non inverted
+				homing_axis[Z_AXIS].pin_info->pin.set_inverting(!homing_axis[Z_AXIS].pin_info->pin.is_inverting());
+			} else {
+				homing_axis[Z_AXIS].home_direction = homing_axis[Z_AXIS].pin_info->pin.is_inverting(); // false on non inverted
+			}
+		}
+
+		if(homing_axis[Z_AXIS].home_direction) delta[Z_AXIS]= -delta[Z_AXIS];
         THEROBOT->delta_move(delta, homing_axis[Z_AXIS].fast_rate, 3);
         // wait for Z
         THECONVEYOR->wait_for_idle();

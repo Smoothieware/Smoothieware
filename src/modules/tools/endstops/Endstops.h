@@ -94,6 +94,7 @@ class Endstops : public Module{
             bool is_rdelta:1;
             bool is_scara:1;
             bool home_z_first:1;
+            bool home_z_rack_and_pinion:1;
             bool move_to_origin_after_home:1;
         };
 };
