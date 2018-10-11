@@ -223,22 +223,26 @@ std::string Kernel::get_query_string()
         if(n > sizeof(buf)) n= sizeof(buf);
 
         str.append("|WPos:").append(buf, n);
-        // current feedrate
+
+        // current feedrate and requested fr and override
         float fr= robot->from_millimeters(conveyor->get_current_feedrate()*60.0F);
-        n = snprintf(buf, sizeof(buf), "|F:%1.4f", fr);
+        float frr= robot->from_millimeters(robot->get_feed_rate());
+        float fro= 6000.0F / robot->get_seconds_per_minute();
+        n = snprintf(buf, sizeof(buf), "|F:%1.1f,%1.1f,%1.1f", fr, frr,fro);
         if(n > sizeof(buf)) n= sizeof(buf);
         str.append(buf, n);
-        float sr= robot->get_s_value();
-        n = snprintf(buf, sizeof(buf), "|S:%1.4f", sr);
-        if(n > sizeof(buf)) n= sizeof(buf);
-        str.append(buf, n);
+
 
         // current Laser power
         #ifndef NO_TOOLS_LASER
             Laser *plaser= nullptr;
             if(PublicData::get_value(laser_checksum, (void *)&plaser) && plaser != nullptr) {
-               float lp= plaser->get_current_power();
+                float lp= plaser->get_current_power();
                 n = snprintf(buf, sizeof(buf), "|L:%1.4f", lp);
+                if(n > sizeof(buf)) n= sizeof(buf);
+                str.append(buf, n);
+                float sr= robot->get_s_value();
+                n = snprintf(buf, sizeof(buf), "|S:%1.4f", sr);
                 if(n > sizeof(buf)) n= sizeof(buf);
                 str.append(buf, n);
             }
@@ -270,8 +274,10 @@ std::string Kernel::get_query_string()
         if(n > sizeof(buf)) n= sizeof(buf);
         str.append("|WPos:").append(buf, n);
 
+        // requested framerate, and override
         float fr= robot->from_millimeters(robot->get_feed_rate());
-        n = snprintf(buf, sizeof(buf), "|F:%1.4f", fr);
+        float fro= 6000.0F / robot->get_seconds_per_minute();
+        n = snprintf(buf, sizeof(buf), "|F:%1.1f,%1.1f", fr, fro);
         if(n > sizeof(buf)) n= sizeof(buf);
         str.append(buf, n);
     }
