@@ -934,9 +934,6 @@ void Endstops::home_with_other_endstop(axis_bitmap_t a, uint8_t axis_to_use_ends
 
     this->axis_to_home= a;
 
-    // Start moving the axes to the origin
-    this->status = MOVING_TO_ENDSTOP_FAST;
-
     THEROBOT->disable_segmentation= true; // we must disable segmentation as this won't work with it enabled
 
     for (size_t i = X_AXIS; i < B_AXIS; ++i) {  // do not home BC
@@ -946,6 +943,8 @@ void Endstops::home_with_other_endstop(axis_bitmap_t a, uint8_t axis_to_use_ends
 
             this->alternate_endstop = axis_to_use_endstop;
 
+            // Start moving the axes to activate the endstop
+            this->status = MOVING_TO_ENDSTOP_FAST;
             delta[i]= 20; // only go 20mm when using BC axes
             if(!homing_axis[i].home_direction) delta[i]= -delta[i]; // move AWAY from the endstop switch
             this->using_alternate_endstop = true;
@@ -967,17 +966,17 @@ void Endstops::home_with_other_endstop(axis_bitmap_t a, uint8_t axis_to_use_ends
             // use minimum feed rate of all axes that are being homed (sub optimal, but necessary)
             float feed_rate= homing_axis[i].slow_rate;
             delta[i] = homing_axis[i].retract;
-            if(homing_axis[i].home_direction) delta[i]= -delta[i]; // move TOWARDS from the endstop switch
-            THEROBOT->delta_move(delta, feed_rate, homing_axis.size());
+            if(homing_axis[i].home_direction) delta[i]= -delta[i]; // move TOWARDS the endstop switch
+            THEROBOT->delta_move(delta, feed_rate, i+1);
             // wait until finished
             THECONVEYOR->wait_for_idle();
 
             // Start moving the axes towards the surface slowly
             this->status = MOVING_TO_ENDSTOP_SLOW;
-            delta[i] = homing_axis[i].retract; // move further than we moved off to make sure we hit it cleanly
+            delta[i] = homing_axis[i].retract*2; // move further than we moved off to make sure we hit it cleanly
             if(!homing_axis[i].home_direction) delta[i]= -delta[i];  // move AWAY from endstop
             this->using_alternate_endstop = true;
-            THEROBOT->delta_move(delta, feed_rate, homing_axis.size());
+            THEROBOT->delta_move(delta, feed_rate, i+1);
             // wait until finished
             THECONVEYOR->wait_for_idle();
             this->using_alternate_endstop = false;
@@ -1002,16 +1001,12 @@ void Endstops::process_home_with_alternate_axis(Gcode* gcode)
     axis_bitmap_t haxis;
     haxis.reset();
 
-    bool axis_speced = (gcode->has_letter('X') || gcode->has_letter('Y') || gcode->has_letter('Z') ||
-                        gcode->has_letter('A'));
-
-    // if we specified an axis we check ABC
-    for (size_t i = A_AXIS; i < homing_axis.size(); ++i) {
+    // if we specified an axis we check XYZA
+    for (size_t i = X_AXIS; i < B_AXIS; ++i) {
         auto &p= homing_axis[i];
         if(p.pin_info == nullptr) continue;
-        if(!axis_speced || gcode->has_letter(p.axis)) haxis.set(p.axis_index);
+        if(gcode->has_letter(p.axis)) haxis.set(p.axis_index);
     }
-
     if(haxis.none()) {
         THEKERNEL->streams->printf("WARNING: Nothing to home\n");
         return;
