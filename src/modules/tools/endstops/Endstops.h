@@ -30,6 +30,7 @@ class Endstops : public Module{
         void get_global_configs();
         using axis_bitmap_t = std::bitset<6>;
         void home(axis_bitmap_t a);
+        void home_with_other_endstop(axis_bitmap_t a, uint8_t axis_to_use_endstop);
         void home_xy();
         void back_off_home(axis_bitmap_t axis);
         void move_to_origin(axis_bitmap_t axis);
@@ -38,6 +39,7 @@ class Endstops : public Module{
         void on_idle(void *argument);
         bool debounced_get(Pin *pin);
         void process_home_command(Gcode* gcode);
+        void process_home_with_alternate_axis(Gcode* gcode);
         void set_homing_offset(Gcode* gcode);
         uint32_t read_endstops(uint32_t dummy);
         void handle_park(Gcode * gcode);
@@ -49,6 +51,9 @@ class Endstops : public Module{
         axis_bitmap_t axis_to_home;
 
         float trim_mm[3];
+
+        bool using_alternate_endstop = false;
+        uint8_t alternate_endstop = 0;
 
         // per endstop settings
         using endstop_info_t = struct {

@@ -544,7 +544,16 @@ uint32_t Endstops::read_endstops(uint32_t dummy)
 
         if(STEPPER[m]->is_moving()) {
             // if it is moving then we check the associated endstop, and debounce it
-            if(e.pin_info->pin.get()) {
+            if (this->using_alternate_endstop && homing_axis[this->alternate_endstop].pin_info->pin.get()) {
+                if(homing_axis[this->alternate_endstop].pin_info->debounce < debounce_ms) {
+                    homing_axis[this->alternate_endstop].pin_info->debounce++;
+                }
+                else {
+                    STEPPER[m]->stop_moving();
+                    homing_axis[this->alternate_endstop].pin_info->triggered= true;
+                }
+            }
+            else if(e.pin_info->pin.get()) {
                 if(e.pin_info->debounce < debounce_ms) {
                     e.pin_info->debounce++;
 
@@ -915,6 +924,118 @@ void Endstops::process_home_command(Gcode* gcode)
     }
 }
 
+void Endstops::home_with_other_endstop(axis_bitmap_t a, uint8_t axis_to_use_endstop)
+{
+    // reset debounce counts for all endstops
+    for(auto& e : endstops) {
+       e->debounce= 0;
+       e->triggered= false;
+    }
+
+    this->axis_to_home= a;
+
+    // Start moving the axes to the origin
+    this->status = MOVING_TO_ENDSTOP_FAST;
+
+    THEROBOT->disable_segmentation= true; // we must disable segmentation as this won't work with it enabled
+
+    for (size_t i = X_AXIS; i < B_AXIS; ++i) {  // do not home BC
+        if(axis_to_home[i]) {
+            float delta[i+1];
+            for (size_t j = 0; j <= i; ++j) delta[j]= 0;
+
+            this->alternate_endstop = axis_to_use_endstop;
+
+            delta[i]= 20; // only go 20mm when using BC axes
+            if(!homing_axis[i].home_direction) delta[i]= -delta[i]; // move AWAY from the endstop switch
+            this->using_alternate_endstop = true;
+            THEROBOT->delta_move(delta, homing_axis[i].fast_rate, i+1);
+            // wait for it
+            THECONVEYOR->wait_for_idle();
+            this->using_alternate_endstop = false;
+
+            // check that the endstops were hit and it did not stop short for some reason
+            // if the endstop is not triggered then enter ALARM state
+            if(!homing_axis[axis_to_use_endstop].pin_info->triggered) {
+                this->status = NOT_HOMING;
+                THEKERNEL->call_event(ON_HALT, nullptr);
+                return;
+            }
+
+            // Move back a small distance for all homing axis
+            this->status = MOVING_BACK;
+            // use minimum feed rate of all axes that are being homed (sub optimal, but necessary)
+            float feed_rate= homing_axis[i].slow_rate;
+            delta[i] = homing_axis[i].retract;
+            if(homing_axis[i].home_direction) delta[i]= -delta[i]; // move TOWARDS from the endstop switch
+            THEROBOT->delta_move(delta, feed_rate, homing_axis.size());
+            // wait until finished
+            THECONVEYOR->wait_for_idle();
+
+            // Start moving the axes towards the surface slowly
+            this->status = MOVING_TO_ENDSTOP_SLOW;
+            delta[i] = homing_axis[i].retract; // move further than we moved off to make sure we hit it cleanly
+            if(!homing_axis[i].home_direction) delta[i]= -delta[i];  // move AWAY from endstop
+            this->using_alternate_endstop = true;
+            THEROBOT->delta_move(delta, feed_rate, homing_axis.size());
+            // wait until finished
+            THECONVEYOR->wait_for_idle();
+            this->using_alternate_endstop = false;
+        }
+    }
+
+    THEROBOT->disable_segmentation= false;
+
+    this->status = NOT_HOMING;
+}
+
+void Endstops::process_home_with_alternate_axis(Gcode* gcode)
+{
+    // First wait for the queue to be empty
+    THECONVEYOR->wait_for_idle();
+
+    // turn off any compensation transform so Z does not move as XY home
+    auto savect= THEROBOT->compensationTransform;
+    THEROBOT->compensationTransform= nullptr;
+
+    // figure out which axis to home
+    axis_bitmap_t haxis;
+    haxis.reset();
+
+    bool axis_speced = (gcode->has_letter('X') || gcode->has_letter('Y') || gcode->has_letter('Z') ||
+                        gcode->has_letter('A') || gcode->has_letter('B') || gcode->has_letter('C'));
+
+    // if we specified an axis we check ABC
+    for (size_t i = A_AXIS; i < homing_axis.size(); ++i) {
+        auto &p= homing_axis[i];
+        if(p.pin_info == nullptr) continue;
+        if(!axis_speced || gcode->has_letter(p.axis)) haxis.set(p.axis_index);
+    }
+
+    if(haxis.none()) {
+        THEKERNEL->streams->printf("WARNING: Nothing to home\n");
+        return;
+    }
+
+    // they could all home at the same time
+    home_with_other_endstop(haxis, B_AXIS);  // only using the B axis for now, needs to be read form G-Code
+
+    // restore compensationTransform
+    THEROBOT->compensationTransform= savect;
+
+    // check if on_halt (eg kill or fail)
+    if(THEKERNEL->is_halted()) {
+        if(!THEKERNEL->is_grbl_mode()) {
+            THEKERNEL->streams->printf("ERROR: Homing cycle failed - check the max_travel settings\n");
+        }else{
+            THEKERNEL->streams->printf("ALARM: Homing fail\n");
+        }
+        // clear all the homed flags
+        for (auto &p : homing_axis) p.homed= false;
+        return;
+    }
+}
+
 void Endstops::set_homing_offset(Gcode *gcode)
 {
     // M306 Similar to M206 but sets Homing offsets based on current MCS position
@@ -1044,6 +1165,10 @@ void Endstops::on_gcode_received(void *argument)
                     gcode->stream->printf("%c:%d ", p.axis, p.homed);
                 }
                 gcode->add_nl= true;
+                break;
+
+            case 7: // G28.7 to home an axis with an alternate axis' endstop
+                process_home_with_alternate_axis(gcode);
                 break;
 
             default:
