@@ -1003,7 +1003,7 @@ void Endstops::process_home_with_alternate_axis(Gcode* gcode)
     haxis.reset();
 
     bool axis_speced = (gcode->has_letter('X') || gcode->has_letter('Y') || gcode->has_letter('Z') ||
-                        gcode->has_letter('A') || gcode->has_letter('B') || gcode->has_letter('C'));
+                        gcode->has_letter('A'));
 
     // if we specified an axis we check ABC
     for (size_t i = A_AXIS; i < homing_axis.size(); ++i) {
@@ -1017,8 +1017,14 @@ void Endstops::process_home_with_alternate_axis(Gcode* gcode)
         return;
     }
 
-    // they could all home at the same time
-    home_with_other_endstop(haxis, B_AXIS);  // only using the B axis for now, needs to be read form G-Code
+    uint8_t axis_to_use_endstop = 0;
+    if (gcode->has_letter('L')) axis_to_use_endstop = B_AXIS;
+    else if (gcode->has_letter('R')) axis_to_use_endstop = C_AXIS;
+    else {
+        THEKERNEL->streams->printf("WARNING: No mount specified, not probing\n");
+        return;
+    }
+    home_with_other_endstop(haxis, axis_to_use_endstop);
 
     // restore compensationTransform
     THEROBOT->compensationTransform= savect;
