@@ -30,7 +30,7 @@ class Endstops : public Module{
         void get_global_configs();
         using axis_bitmap_t = std::bitset<6>;
         void home(axis_bitmap_t a);
-        void home_with_other_endstop(axis_bitmap_t a, uint8_t axis_to_use_endstop);
+        void home_with_other_endstop(axis_bitmap_t a, uint8_t axis_to_use_endstop, float distance);
         void home_xy();
         void back_off_home(axis_bitmap_t axis);
         void move_to_origin(axis_bitmap_t axis);

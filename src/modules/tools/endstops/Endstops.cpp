@@ -924,7 +924,7 @@ void Endstops::process_home_command(Gcode* gcode)
     }
 }
 
-void Endstops::home_with_other_endstop(axis_bitmap_t a, uint8_t axis_to_use_endstop)
+void Endstops::home_with_other_endstop(axis_bitmap_t a, uint8_t axis_to_use_endstop, float distance)
 {
     // reset debounce counts for all endstops
     for(auto& e : endstops) {
@@ -940,13 +940,12 @@ void Endstops::home_with_other_endstop(axis_bitmap_t a, uint8_t axis_to_use_ends
         if(axis_to_home[i]) {
             float delta[i+1];
             for (size_t j = 0; j <= i; ++j) delta[j]= 0;
+            delta[i]= distance;
 
             this->alternate_endstop = axis_to_use_endstop;
 
             // Start moving the axes to activate the endstop
             this->status = MOVING_TO_ENDSTOP_FAST;
-            delta[i]= 20; // only go 20mm when using BC axes
-            if(!homing_axis[i].home_direction) delta[i]= -delta[i]; // move AWAY from the endstop switch
             this->using_alternate_endstop = true;
             THEROBOT->delta_move(delta, homing_axis[i].fast_rate, i+1);
             // wait for it
@@ -985,14 +984,20 @@ void Endstops::process_home_with_alternate_axis(Gcode* gcode)
     axis_bitmap_t haxis;
     haxis.reset();
 
+    float distance_to_probe = 0;
+
     // if we specified an axis we check XYZA
     for (size_t i = X_AXIS; i < B_AXIS; ++i) {
         auto &p= homing_axis[i];
         if(p.pin_info == nullptr) continue;
-        if(gcode->has_letter(p.axis)) haxis.set(p.axis_index);
+        if(gcode->has_letter(p.axis)) {
+            haxis.set(p.axis_index);
+            distance_to_probe = gcode->get_value(p.axis);
+            break;
+        }
     }
-    if(haxis.none()) {
-        THEKERNEL->streams->printf("WARNING: Nothing to home\n");
+    if(haxis.none() || distance_to_probe == 0) {
+        THEKERNEL->streams->printf("WARNING: No axis specified, not probing\n");
         return;
     }
 
@@ -1003,7 +1008,7 @@ void Endstops::process_home_with_alternate_axis(Gcode* gcode)
         THEKERNEL->streams->printf("WARNING: No mount specified, not probing\n");
         return;
     }
-    home_with_other_endstop(haxis, axis_to_use_endstop);
+    home_with_other_endstop(haxis, axis_to_use_endstop, distance_to_probe);
 
     // restore compensationTransform
     THEROBOT->compensationTransform= savect;
@@ -1011,9 +1016,9 @@ void Endstops::process_home_with_alternate_axis(Gcode* gcode)
     // check if on_halt (eg kill or fail)
     if(THEKERNEL->is_halted()) {
         if(!THEKERNEL->is_grbl_mode()) {
-            THEKERNEL->streams->printf("ERROR: Homing cycle failed - check the max_travel settings\n");
+            THEKERNEL->streams->printf("ERROR: Probing cycle failed\n");
         }else{
-            THEKERNEL->streams->printf("ALARM: Homing fail\n");
+            THEKERNEL->streams->printf("ALARM: Probing fail\n");
         }
         // clear all the homed flags
         for (auto &p : homing_axis) p.homed= false;
