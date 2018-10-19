@@ -960,28 +960,12 @@ void Endstops::home_with_other_endstop(axis_bitmap_t a, uint8_t axis_to_use_ends
                 THEKERNEL->call_event(ON_HALT, nullptr);
                 return;
             }
-
-            // Move back a small distance for all homing axis
-            this->status = MOVING_BACK;
-            // use minimum feed rate of all axes that are being homed (sub optimal, but necessary)
-            float feed_rate= homing_axis[i].slow_rate;
-            delta[i] = homing_axis[i].retract;
-            if(homing_axis[i].home_direction) delta[i]= -delta[i]; // move TOWARDS the endstop switch
-            THEROBOT->delta_move(delta, feed_rate, i+1);
-            // wait until finished
-            THECONVEYOR->wait_for_idle();
-
-            // Start moving the axes towards the surface slowly
-            this->status = MOVING_TO_ENDSTOP_SLOW;
-            delta[i] = homing_axis[i].retract*2; // move further than we moved off to make sure we hit it cleanly
-            if(!homing_axis[i].home_direction) delta[i]= -delta[i];  // move AWAY from endstop
-            this->using_alternate_endstop = true;
-            THEROBOT->delta_move(delta, feed_rate, i+1);
-            // wait until finished
-            THECONVEYOR->wait_for_idle();
-            this->using_alternate_endstop = false;
         }
     }
+
+    // we did not complete movement the full distance if we hit the endstops
+    // TODO Maybe only reset axis involved in the homing cycle
+    THEROBOT->reset_position_from_current_actuator_position();
 
     THEROBOT->disable_segmentation= false;
 
