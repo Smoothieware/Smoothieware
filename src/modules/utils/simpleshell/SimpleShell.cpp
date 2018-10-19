@@ -12,7 +12,6 @@
 #include "libs/utils.h"
 #include "libs/SerialMessage.h"
 #include "libs/StreamOutput.h"
-#include "libs/Pin.h"
 #include "modules/robot/Conveyor.h"
 #include "DirHandle.h"
 #include "mri.h"
@@ -631,20 +630,8 @@ void SimpleShell::version_command( string parameters, StreamOutput *stream)
 {
     Version vers;
     uint32_t dev = getDeviceType();
-    Pin *rev_bit_0 = new Pin();
-    Pin *rev_bit_1 = new Pin();
-    rev_bit_0->from_string("3.26!^")->as_input();
-    rev_bit_1->from_string("3.25!^")->as_input();
-    safe_delay_us(200);  // make sure the pin has settled
-    uint8_t rev = 12;  // PCB revision number (Production began at v12)
-    if (rev_bit_0->get()) {
-        rev += 1;
-    }
-    if (rev_bit_1->get()) {
-        rev += 2;
-    }
     const char *mcu = (dev & 0x00100000) ? "LPC1769" : "LPC1768";
-    stream->printf("Build version: %s, Build date: %s, Rev: %d, MCU: %s, System Clock: %ldMHz\r\n", vers.get_build(), vers.get_build_date(), rev, mcu, SystemCoreClock / 1000000);
+    stream->printf("Build version: %s, Build date: %s, MCU: %s, System Clock: %ldMHz\r\n", vers.get_build(), vers.get_build_date(), mcu, SystemCoreClock / 1000000);
     #ifdef CNC
     stream->printf("  CNC Build ");
     #endif
