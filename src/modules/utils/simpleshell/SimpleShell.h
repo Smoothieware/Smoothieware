@@ -61,6 +61,8 @@ private:
 
     static void test_command( string parameters, StreamOutput *stream);
 
+    static uint8_t get_pcb_revision();
+
     typedef void (*PFUNC)(string parameters, StreamOutput *stream);
     typedef struct {
         const char *command;
@@ -69,4 +71,6 @@ private:
 
     static const ptentry_t commands_table[];
     static int reset_delay_secs;
+
+    static uint8_t pcb_revision;
 };

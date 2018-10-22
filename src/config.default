@@ -11,6 +11,15 @@
 ##################################
 ##################################
 
+# reads the following GPIO to determine hardware version
+
+pcb_revision_bit_0                           3.26!^
+pcb_revision_bit_1                           3.25!^
+
+##################################
+##################################
+##################################
+
 # DEFAULT SPEEDS (mm/min)
 
 default_feed_rate                            200000
