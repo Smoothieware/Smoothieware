@@ -421,7 +421,7 @@ void Endstops::get_global_configs()
 bool Endstops::debounced_get(Pin *pin)
 {
     if(pin == nullptr) return false;
-    uint8_t debounce = 0;
+    uint32_t debounce = 0;
     while(pin->get()) {
         if ( ++debounce >= this->debounce_count ) {
             // pin triggered
