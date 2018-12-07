@@ -19,6 +19,7 @@
 #define morgan_homing_checksum        CHECKSUM("morgan_homing")
 #define morgan_undefined_min_checksum CHECKSUM("morgan_undefined_min")
 #define morgan_undefined_max_checksum CHECKSUM("morgan_undefined_max")
+#define real_scara_checksum           CHECKSUM("real_scara")
 
 #define SQ(x) powf(x, 2)
 #define ROUND(x, y) (roundf(x * 1e ## y) / 1e ## y)
@@ -42,7 +43,8 @@ MorganSCARASolution::MorganSCARASolution(Config* config)
     morgan_undefined_min  = config->value(morgan_undefined_min_checksum)->by_default(0.95f)->as_number();
     // max: head on maximum reach
     morgan_undefined_max  = config->value(morgan_undefined_max_checksum)->by_default(0.95f)->as_number();
-
+    real_scara  = config->value(real_scara_checksum)->by_default(false)->as_bool();
+    
     init();
 }
 
@@ -95,21 +97,29 @@ void MorganSCARASolution::cartesian_to_actuator(const float cartesian_mm[], Actu
 
 
     actuator_mm[ALPHA_STEPPER] = to_degrees(SCARA_theta);             // Multiply by 180/Pi  -  theta is support arm angle
-    actuator_mm[BETA_STEPPER ] = to_degrees(SCARA_theta + SCARA_psi); // Morgan kinematics (dual arm)
-    //actuator_mm[BETA_STEPPER ] = to_degrees(SCARA_psi);             // real scara
-    actuator_mm[GAMMA_STEPPER] = cartesian_mm[Z_AXIS];                // No inverse kinematics on Z - Position to add bed offset?
 
+    if (real_scara == true){
+        actuator_mm[BETA_STEPPER ] = 180 - to_degrees(SCARA_psi); // real scara
+    }else{
+        actuator_mm[BETA_STEPPER ] = to_degrees(SCARA_theta + SCARA_psi); // Morgan kinematics (dual arm)
+    }
+
+    actuator_mm[GAMMA_STEPPER] = cartesian_mm[Z_AXIS];            // No inverse kinematics on Z - Position to add bed offset?
 }
 
 void MorganSCARASolution::actuator_to_cartesian(const ActuatorCoordinates &actuator_mm, float cartesian_mm[] ) const
 {
     // Perform forward kinematics, and place results in cartesian_mm[]
-
     float y1, y2,
           actuator_rad[2];
 
     actuator_rad[X_AXIS] = actuator_mm[X_AXIS] / (180.0F / 3.14159265359f);
-    actuator_rad[Y_AXIS] = actuator_mm[Y_AXIS] / (180.0F / 3.14159265359f);
+
+    if (real_scara == true){
+        actuator_rad[Y_AXIS] = (180 - actuator_mm[Y_AXIS] + actuator_mm[X_AXIS]) / (180.0F / 3.14159265359f);
+    } else {
+        actuator_rad[Y_AXIS] = actuator_mm[Y_AXIS] / (180.0F / 3.14159265359f);
+    }
 
     y1 = sinf(actuator_rad[X_AXIS]) * this->arm1_length;
     y2 = sinf(actuator_rad[Y_AXIS]) * this->arm2_length + y1;
