@@ -27,6 +27,7 @@ class MorganSCARASolution : public BaseSolution {
         float morgan_undefined_min;
         float morgan_undefined_max;
         float slow_rate;
+        bool real_scara;
 };
 
 #endif // MORGANSCARASOLUTION_H
