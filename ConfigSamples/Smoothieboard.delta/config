@@ -43,19 +43,19 @@ z_axis_max_speed                             30000            # Maximum speed in
 alpha_step_pin                               2.0              # Pin for alpha stepper step signal
 alpha_dir_pin                                0.5              # Pin for alpha stepper direction, add '!' to reverse direction
 alpha_en_pin                                 0.4              # Pin for alpha enable pin
-alpha_current                                1.5              # X stepper motor current
+alpha_current                                1.5              # M1 stepper motor current
 alpha_max_rate                               30000.0          # Maximum rate in mm/min
 
 beta_step_pin                                2.1              # Pin for beta stepper step signal
 beta_dir_pin                                 0.11             # Pin for beta stepper direction, add '!' to reverse direction
 beta_en_pin                                  0.10             # Pin for beta enable
-beta_current                                 1.5              # Y stepper motor current
+beta_current                                 1.5              # M2 stepper motor current
 beta_max_rate                                30000.0          # Maxmimum rate in mm/min
 
 gamma_step_pin                               2.2              # Pin for gamma stepper step signal
 gamma_dir_pin                                0.20             # Pin for gamma stepper direction, add '!' to reverse direction
 gamma_en_pin                                 0.19             # Pin for gamma enable
-gamma_current                                1.5              # Z stepper motor current
+gamma_current                                1.5              # M3 stepper motor current
 gamma_max_rate                               30000.0          # Maximum rate in mm/min
 
 ## Extruder module configuration
@@ -83,7 +83,7 @@ extruder.hotend.en_pin                          0.21          # Pin for extruder
 #extruder.hotend.retract_zlift_length            0            # Z-lift on retract in mm, 0 disables
 #extruder.hotend.retract_zlift_feedrate          6000         # Z-lift feedrate in mm/min (Note mm/min NOT mm/sec)
 
-delta_current                                    1.5          # First extruder stepper motor current
+delta_current                                    1.5          # M4 driver - typically first extruder stepper motor current
 
 # Second extruder module configuration
 #extruder.hotend2.enable                         true         # Whether to activate the extruder module at all. All configuration is ignored if false
@@ -100,7 +100,7 @@ delta_current                                    1.5          # First extruder s
 #extruder.hotend2.y_offset                       25.0         # y offset from origin in mm
 #extruder.hotend2.z_offset                       0            # z offset from origin in mm
 
-#epsilon_current                                 1.5          # Second extruder stepper motor current
+#epsilon_current                                 1.5          # M5 driver - typically second extruder stepper motor current
 
 ## Laser module configuration
 # See http://smoothieware.org/laser
