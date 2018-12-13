@@ -244,6 +244,10 @@ void SimpleShell::on_console_line_received( void *argument )
                 new_message.stream->printf("ok\n");
                 break;
 
+            case 'S':
+                switch_command(possible_command, new_message.stream);
+                break;
+
             case 'J':
                 // instant jog command
                 jog(possible_command, new_message.stream);
@@ -919,8 +923,28 @@ void SimpleShell::calc_thermistor_command( string parameters, StreamOutput *stre
 // set or get switch state for a named switch
 void SimpleShell::switch_command( string parameters, StreamOutput *stream)
 {
-    string type = shift_parameter( parameters );
-    string value = shift_parameter( parameters );
+    string type;
+    string value;
+
+    if(parameters[0] == '$') {
+        // $S command
+        type = shift_parameter( parameters );
+        while(!type.empty()) {
+            struct pad_switch pad;
+            bool ok = PublicData::get_value(switch_checksum, get_checksum(type), 0, &pad);
+            if(ok) {
+                stream->printf("switch %s is %d\n", type.c_str(), pad.state);
+            }
+
+            type = shift_parameter( parameters );
+        }
+        return;
+
+    }else{
+        type = shift_parameter( parameters );
+        value = shift_parameter( parameters );
+    }
+
     bool ok = false;
     if(value.empty()) {
         // get switch state
