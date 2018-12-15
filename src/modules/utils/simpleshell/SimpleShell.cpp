@@ -216,7 +216,12 @@ void SimpleShell::on_console_line_received( void *argument )
             case 'G':
                 // issue get state
                 get_command("state", new_message.stream);
-                //new_message.stream->printf("ok\n"); // sending this while printing will cause ok count to get out of sync
+                new_message.stream->printf("ok\n");
+                break;
+
+            case 'I':
+                // issue get state for smoopi
+                get_command("state", new_message.stream);
                 break;
 
             case 'X':
