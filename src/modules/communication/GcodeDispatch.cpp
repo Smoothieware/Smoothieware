@@ -86,8 +86,8 @@ try_again:
         //Get linenumber
         if ( first_char == 'N' ) {
             Gcode full_line = Gcode(possible_command, new_message.stream, false);
-            ln = (int) full_line.get_value('N');
-            int chksum = (int) full_line.get_value('*');
+            ln = (int) full_line.get_int('N');
+            int chksum = (int) full_line.get_int('*');
 
             //Catch message if it is M110: Set Current Line Number
             if ( full_line.has_m ) {
