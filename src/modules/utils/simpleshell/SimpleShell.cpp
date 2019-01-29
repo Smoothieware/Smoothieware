@@ -1174,7 +1174,7 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
     // for now always 1 axis
     size_t npos= parameters.find_first_of("XYZABC");
     if(npos == string::npos) {
-        stream->printf("usage: $J X|Y|Z|A|B|C 0.01 [F0.5]\n");
+        stream->printf("usage: $J X0.01 [F0.5] - axis can be one of XYZABC, optional speed is scale of max_rate\n");
         return;
     }
 
