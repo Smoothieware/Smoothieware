@@ -47,6 +47,7 @@ public:
     void bltGlyph(int x, int y, int w, int h, const uint8_t *glyph, int span= 0, int x_offset=0, int y_offset=0);
     void renderGlyph(int x, int y, const uint8_t *g, int pixelWidth, int pixelHeight);
     void pixel(int x, int y, int colour);
+	void setCursorPX(int x, int y);
 
     uint8_t getContrast() { return contrast; }
     void setContrast(uint8_t c);

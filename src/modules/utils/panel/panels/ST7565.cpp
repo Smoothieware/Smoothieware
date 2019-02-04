@@ -233,6 +233,12 @@ void ST7565::setCursor(uint8_t col, uint8_t row)
     this->ty = row * 8;
 }
 
+void ST7565::setCursorPX(int x, int y)
+{
+    this->tx = x;
+    this->ty = y;
+}
+
 void ST7565::home()
 {
     this->tx = 0;

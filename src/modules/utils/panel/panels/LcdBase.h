@@ -61,6 +61,7 @@ class LcdBase {
         // with the bits in a byte reversed so bit7 is left most and bit0 is
         // right most. x_offset must by byte aligned if used
         virtual void bltGlyph(int x, int y, int w, int h, const uint8_t *glyph, int span= 0, int x_offset=0, int y_offset=0){}
+        virtual void setCursorPX(int x, int y){};
         // only used on certain panels
         virtual void on_refresh(bool now= false){};
         virtual void on_main_loop(){};
