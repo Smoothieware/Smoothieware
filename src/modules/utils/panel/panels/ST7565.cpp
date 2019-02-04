@@ -329,6 +329,13 @@ void ST7565::setContrast(uint8_t c)
     send_commands(contrast_seq, sizeof(contrast_seq));
 }
 
+/**
+*@brief Draws a character to the screen buffer
+*@param x   X coordinate
+*@param y   Y coordinate
+*@param c   Character to print
+*@param color 0: Turn pixels on (OR logic), 1: Turn pixels off (AND logic)
+*/
 int ST7565::drawChar(int x, int y, unsigned char c, int color)
 {
     int retVal = -1;
@@ -340,16 +347,25 @@ int ST7565::drawChar(int x, int y, unsigned char c, int color)
         retVal = -tx;
     } else {
         for (uint8_t i = 0; i < 5; i++ ) {
-            if(color == 0) {
-                framebuffer[x + (y / 8 * 128) ] = ~(glcd_font[(c * 5) + i] << y % 8);
-                if(y + 8 < 63) {
-                    framebuffer[x + ((y + 8) / 8 * 128) ] = ~(glcd_font[(c * 5) + i] >> (8 - (y % 8)));
-                }
+            // Character glyph may cross two bytes
+            // Draw the first byte
+            int screenIndex = x + (y / 8 * 128);
+            uint8_t screenByte = framebuffer[screenIndex];
+            uint8_t fontByte = glcd_font[(c * 5) + i] << (y % 8);
+            if (color) {
+                framebuffer[screenIndex] = screenByte | fontByte;
+            } else {
+                framebuffer[screenIndex] = screenByte ^ fontByte;
             }
-            if(color == 1) {
-                framebuffer[x + ((y) / 8 * 128) ] = glcd_font[(c * 5) + i] << (y % 8);
-                if(y + 8 < 63) {
-                    framebuffer[x + ((y + 8) / 8 * 128) ] = glcd_font[(c * 5) + i] >> (8 - (y % 8));
+            // Draw the second byte
+            if (y + 8 < 63) {
+                screenIndex = x + ((y + 8) / 8 * 128);
+                screenByte = framebuffer[screenIndex];
+                fontByte = glcd_font[(c * 5) + i] >> (8 - (y % 8));
+                if (color) {
+                    framebuffer[screenIndex] = screenByte | fontByte;
+                } else {
+                    framebuffer[screenIndex] = screenByte & fontByte;
                 }
             }
             x++;
