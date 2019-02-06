@@ -242,9 +242,9 @@ gamma_homing_retract_mm                      5                # Distance to retr
 #endstop_debounce_ms                          1                # Uncomment if you get noise on your endstops, default is 1 millisecond debounce
 
 # Endstop trim options
-alpha_trim                                    0                # Software trim for alpha stepper endstop (in mm)
-beta_trim                                     0                # Software trim for beta stepper endstop (in mm)
-gamma_trim                                    0                # Software trim for gamma stepper endstop (in mm)
+alpha_trim_mm                                   0                # Software trim for alpha stepper endstop (in mm)
+beta_trim_mm                                    0                # Software trim for beta stepper endstop (in mm)
+gamma_trim_mm                                   0                # Software trim for gamma stepper endstop (in mm)
 
 # End of endstop config
 # Delete the above endstop section and uncomment next line and copy and edit Snippets/abc-endstop.config file to enable endstops for ABC axis
