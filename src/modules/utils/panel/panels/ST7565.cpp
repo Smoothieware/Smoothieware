@@ -364,7 +364,7 @@ int ST7565::drawChar(int x, int y, unsigned char c, int color)
                 framebuffer[screenIndex] = screenByte ^ fontByte;
             }
             // Draw the second byte
-            if (y + 8 < 63) {
+            if (y + 8 < 64) {
                 screenIndex = x + ((y + 8) / 8 * 128);
                 screenByte = framebuffer[screenIndex];
                 fontByte = glcd_font[(c * 5) + i] >> (8 - (y % 8));
