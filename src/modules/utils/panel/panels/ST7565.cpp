@@ -192,6 +192,7 @@ void ST7565::clear()
     memset(framebuffer, 0, FB_SIZE);
     this->tx = 0;
     this->ty = 0;
+    this->text_color = 1;
 }
 
 void ST7565::send_pic(const unsigned char *data)
@@ -237,6 +238,11 @@ void ST7565::setCursorPX(int x, int y)
 {
     this->tx = x;
     this->ty = y;
+}
+
+void ST7565::setColor(int c)
+{
+    this->text_color = c;
 }
 
 void ST7565::home()
@@ -345,36 +351,31 @@ void ST7565::setContrast(uint8_t c)
 int ST7565::drawChar(int x, int y, unsigned char c, int color)
 {
     int retVal = -1;
-    if(c == '\n') {
+    if (c == '\n') {
         this->ty += 8;
         retVal = -tx;
-    }
-    if(c == '\r') {
+    } else if (c == '\r') {
         retVal = -tx;
     } else {
         for (uint8_t i = 0; i < 5; i++ ) {
-            // Character glyph may cross two bytes
-            // Draw the first byte
-            int screenIndex = x + (y / 8 * 128);
-            uint8_t screenByte = framebuffer[screenIndex];
-            uint8_t fontByte = glcd_font[(c * 5) + i] << (y % 8);
-            if (color) {
-                framebuffer[screenIndex] = screenByte | fontByte;
-            } else {
-                framebuffer[screenIndex] = screenByte ^ fontByte;
-            }
-            // Draw the second byte
-            if (y + 8 < 64) {
-                screenIndex = x + ((y + 8) / 8 * 128);
-                screenByte = framebuffer[screenIndex];
-                fontByte = glcd_font[(c * 5) + i] >> (8 - (y % 8));
-                if (color) {
-                    framebuffer[screenIndex] = screenByte | fontByte;
-                } else {
-                    framebuffer[screenIndex] = screenByte & fontByte;
+            if (x < LCDWIDTH) {     // Guard against drawing off screen
+                // Character glyph may cross two screen pages
+                int page = (y / 8 * 128);
+                // Draw the first byte
+                if (page < LCDPAGES) {
+                    int screenIndex = page + x;
+                    uint8_t fontByte = glcd_font[(c * 5) + i] << (y % 8);
+                    drawByte(screenIndex, fontByte, color);
                 }
+                // Draw the second byte
+                page++;
+                if (page < LCDPAGES) {
+                    int screenIndex = page + x;
+                    uint8_t fontByte = glcd_font[(c * 5) + i] >> (8 - (y % 8));
+                    drawByte(screenIndex, fontByte, color);
+                }
+                x++;
             }
-            x++;
         }
         retVal = 6;
         this->tx += 6;
@@ -386,7 +387,7 @@ int ST7565::drawChar(int x, int y, unsigned char c, int color)
 //write single char to screen
 void ST7565::write_char(char value)
 {
-    drawChar(this->tx, this->ty, value, 1);
+    drawChar(this->tx, this->ty, value, this->text_color);
 }
 
 void ST7565::write(const char *line, int len)
@@ -476,7 +477,18 @@ void ST7565::renderGlyph(int x, int y, const uint8_t *g, int w, int h)
     }
 }
 
-void ST7565::pixel(int x, int y, int colour)
+void ST7565::drawByte(int index, uint8_t mask, int color)
+{
+    if (color == 1) {
+        framebuffer[index] |= mask;
+    } else if (color == 0) {
+        framebuffer[index] &= ~mask;
+    } else {
+        framebuffer[index] ^= mask;
+    }
+}
+
+void ST7565::pixel(int x, int y, int color)
 {
     int page = y / 8;
     unsigned char mask = 1 << (y % 8);
