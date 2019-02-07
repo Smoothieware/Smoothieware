@@ -360,17 +360,17 @@ int ST7565::drawChar(int x, int y, unsigned char c, int color)
         for (uint8_t i = 0; i < 5; i++ ) {
             if (x < LCDWIDTH) {     // Guard against drawing off screen
                 // Character glyph may cross two screen pages
-                int page = (y / 8 * 128);
+                int page = y / 8;
                 // Draw the first byte
                 if (page < LCDPAGES) {
-                    int screenIndex = page + x;
+                    int screenIndex = page * LCDWIDTH + x;
                     uint8_t fontByte = glcd_font[(c * 5) + i] << (y % 8);
                     drawByte(screenIndex, fontByte, color);
                 }
                 // Draw the second byte
                 page++;
                 if (page < LCDPAGES) {
-                    int screenIndex = page + x;
+                    int screenIndex = page * LCDWIDTH + x;
                     uint8_t fontByte = glcd_font[(c * 5) + i] >> (8 - (y % 8));
                     drawByte(screenIndex, fontByte, color);
                 }
