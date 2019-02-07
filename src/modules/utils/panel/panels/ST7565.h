@@ -46,8 +46,16 @@ public:
     // The glyph bytes will be 8 bits of X pixels, msbit->lsbit from top left to bottom right
     void bltGlyph(int x, int y, int w, int h, const uint8_t *glyph, int span= 0, int x_offset=0, int y_offset=0);
     void renderGlyph(int x, int y, const uint8_t *g, int pixelWidth, int pixelHeight);
-    void pixel(int x, int y, int colour);
+	void drawByte(int index, uint8_t mask, int color);
+    void pixel(int x, int y, int color);
 	void setCursorPX(int x, int y);
+	// 0: Turn pixels off (AND logic)
+	// 1: Turn pixels on (OR logic)
+	// 2: Invert pixels (XOR logic)
+	void setColor(int c);
+	void drawHLine(int x, int y, int w, int color);
+	void drawVLine(int x, int y, int h, int color);
+	void drawBox(int x, int y, int w, int h, int color);
 
     uint8_t getContrast() { return contrast; }
     void setContrast(uint8_t c);
@@ -75,6 +83,7 @@ private:
 
 	// text cursor position
 	uint8_t tx, ty;
+	uint8_t text_color = 1;
     uint8_t contrast;
     struct {
         bool reversed:1;

@@ -492,11 +492,51 @@ void ST7565::pixel(int x, int y, int color)
 {
     int page = y / 8;
     unsigned char mask = 1 << (y % 8);
-    unsigned char *byte = &framebuffer[page * LCDWIDTH + x];
-    if ( colour == 0 )
-        *byte &= ~mask; // clear pixel
-    else
-        *byte |= mask; // set pixel
+    drawByte(page * LCDWIDTH + x, mask, color);
+}
+
+void ST7565::drawHLine(int x, int y, int w, int color)
+{
+    int page = y / 8;
+    uint8_t mask = 1 << (y % 8);
+    for (int i = 0; i < w; i++) {
+        drawByte(page * LCDWIDTH + x + i, mask, color);
+    }
+}
+
+void ST7565::drawVLine(int x, int y, int h, int color){
+    int page = y / 8;
+    if (page >= LCDPAGES) return;
+    // First byte. Start with all on and shift to turn of the
+    // bits before the start of the line
+    int startbit = y % 8;
+    uint8_t mask = 0xff << startbit;
+    // Account for when the start and end of the line fall on the
+    // same byte
+    if (h < 8) {
+        mask &= 0xff >> (8 - (startbit + h));
+    }
+    drawByte(page * LCDWIDTH + x, mask, color);
+    h -= 8 - (y % 8);
+    // Draw any completely filled bytes along the line
+    while (h > 8) {
+        page++;
+        if (page >= LCDPAGES) return;
+        mask = 0xff;
+        drawByte(page * LCDWIDTH + x, mask, color);
+        h -= 8;
+    }
+    page++;
+    if (page >= LCDPAGES) return;
+    // Last byte. Start filled and shift by 8 - number of pixels remaining
+    mask = 0xff >> (8 - h);
+    drawByte(page * LCDWIDTH + x, mask, color);
+}
+
+void ST7565::drawBox(int x, int y, int w, int h, int color) {
+    for (int i = 0; i < w; i++) {
+        drawVLine(x + i, y, h, color);
+    }
 }
 
 // cycle the buzzer pin at a certain frequency (hz) for a certain duration (ms)
