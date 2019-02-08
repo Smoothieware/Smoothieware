@@ -381,7 +381,7 @@ void WatchScreen::draw_graphics()
         y = 11 + (row * (icon_height + 1));
         THEPANEL->lcd->bltGlyph(x, y, icon_width, icon_height, time_icon);
         THEPANEL->lcd->setCursorPX(x + icon_width + 1, y);
-        THEPANEL->lcd->printf("%luh %lum %lus", this->elapsed_time / 3600, (this->elapsed_time % 3600) / 60, this->elapsed_time % 60);
+        THEPANEL->lcd->printf("%luh%lum%lus", this->elapsed_time / 3600, (this->elapsed_time % 3600) / 60, this->elapsed_time % 60);
 
         // Print the progress bar
         THEPANEL->lcd->drawHLine(3, 55, 122);
