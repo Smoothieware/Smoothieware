@@ -25,7 +25,7 @@ public:
     virtual void on_enter();
     virtual void on_exit(){};
     // if you completely rewrite the screen do not clear it, this avoids flicker
-    void refresh_screen(bool clear);
+    virtual void refresh_screen(bool clear);
     void refresh_menu(bool clear);
     void refresh_menu(void) { refresh_menu(true); };
     virtual void display_menu_line(uint16_t line) = 0;

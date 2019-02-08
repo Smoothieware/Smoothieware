@@ -96,6 +96,7 @@ class Panel : public Module {
 
         // as panelscreen accesses private fields in Panel
         friend class PanelScreen;
+        friend class WatchScreen;
 
     private:
 

@@ -39,14 +39,7 @@ void PanelScreen::refresh_menu(bool clear)
     THEPANEL->lcd->printf(">");
 }
 
-void PanelScreen::refresh_screen(bool clear)
-{
-    if (clear) THEPANEL->lcd->clear();
-    for (uint16_t i = THEPANEL->menu_start_line; i < THEPANEL->menu_start_line + min( THEPANEL->menu_rows, THEPANEL->panel_lines ); i++ ) {
-        THEPANEL->lcd->setCursor(0, i - THEPANEL->menu_start_line );
-        this->display_menu_line(i);
-    }
-}
+void PanelScreen::refresh_screen(bool clear) {}
 
 PanelScreen *PanelScreen::set_parent(PanelScreen *passed_parent)
 {
