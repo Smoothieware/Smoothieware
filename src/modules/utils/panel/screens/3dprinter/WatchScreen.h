@@ -20,7 +20,7 @@ public:
     void on_refresh();
     void on_enter();
     void on_main_loop();
-    void refresh_screen(bool clear);
+    void redraw();
     void display_menu_line(uint16_t line);
 
 private:

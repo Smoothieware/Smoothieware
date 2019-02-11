@@ -57,7 +57,7 @@ void WatchScreen::on_enter()
     get_current_pos(this->pos);
     get_sd_play_info();
     this->current_speed = lroundf(get_current_speed());
-    this->refresh_screen(false);
+    this->redraw();
     THEPANEL->enter_control_mode(1, 0.5);
     THEPANEL->set_control_value(this->current_speed);
 
@@ -98,7 +98,7 @@ void WatchScreen::on_refresh()
             // flag the update to change the speed, we don't want to issue hundreds of M220s
             // but we do want to display the change we are going to make
             this->speed_changed = true; // flag indicating speed changed
-            this->refresh_screen(false);
+            this->redraw();
         }
     }
 
@@ -118,7 +118,7 @@ void WatchScreen::on_refresh()
             THEPANEL->reset_counter();
         }
 
-        this->refresh_screen(false); // graphics screens should be cleared
+        this->redraw();
 
         // for LCDs with leds set them according to heater status
         bool bed_on= false, hotend_on= false, is_hot= false;
@@ -294,18 +294,14 @@ const char *WatchScreen::get_network()
     return NULL;
 }
 
-void WatchScreen::refresh_screen(bool clear)
+void WatchScreen::redraw()
 {
     if (THEPANEL->lcd->hasGraphics()) {
-        // For graphic LCDs we do all of the drawing manually
+        // Use the full graphic watch screen on supported displays
         this->draw_graphics();
     } else {
         // Use the text based menu system for text only displays
-        if (clear) THEPANEL->lcd->clear();
-        for (uint16_t i = 0; i < min( THEPANEL->menu_rows, THEPANEL->panel_lines ); i++ ) {
-            THEPANEL->lcd->setCursor(0, i);
-            this->display_menu_line(i);
-        }
+        this->refresh_screen(false);
     }
 }
 
