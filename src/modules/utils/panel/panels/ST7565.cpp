@@ -352,7 +352,7 @@ void ST7565::setContrast(uint8_t c)
 * @param x   X coordinate
 * @param y   Y coordinate
 * @param c   Character to print
-* @param color 0: Turn pixels on (OR logic), 1: Turn pixels off (AND logic)
+* @param color Drawing mode for foreground.
 * @param bg  True: Draw background, False: Transparent background)
 */
 int ST7565::drawChar(int x, int y, unsigned char c, int color, bool bg)
