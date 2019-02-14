@@ -418,4 +418,6 @@ void WatchScreen::draw_graphics()
         THEPANEL->lcd->printf("%u%%", this->sd_pcnt_played);
         THEPANEL->lcd->setColor(1);
     }
+
+    THEPANEL->lcd->setBackground(true);
 }

@@ -86,7 +86,6 @@ private:
 	// text cursor position
 	uint8_t tx, ty;
 	uint8_t text_color = 1;
-	bool text_background = true;
     uint8_t contrast;
     struct {
         bool reversed:1;
@@ -95,6 +94,7 @@ private:
         bool is_ssd1306:1;
         bool use_pause:1;
         bool use_back:1;
+		bool text_background:1;
     };
 };
 
