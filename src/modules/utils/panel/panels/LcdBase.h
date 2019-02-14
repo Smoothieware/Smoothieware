@@ -65,6 +65,14 @@ class LcdBase {
         virtual void bltGlyph(int x, int y, int w, int h, const uint8_t *glyph, int span= 0, int x_offset=0, int y_offset=0){}
         virtual void setCursorPX(int x, int y) {};
         virtual void setColor(int c) {};
+
+        /**
+        * Turns on/off drawing the background behind text. If on, the background color will be the inverse of the text color.
+        * If off the background will be transparent. Defaults to on.
+        * 
+        * @param bg True: Background on (default), False: Background off (transparent)
+        */
+        virtual void setBackground(bool bg) {};
         virtual void pixel(int x, int y, int color = 1) {};
         virtual void drawHLine(int x, int y, int w, int color = 1) {};
         virtual void drawVLine(int x, int y, int h, int color = 1) {};

@@ -41,7 +41,7 @@ public:
 	//send pic to whole screen
 	void send_pic(const unsigned char* data);
 	//drawing char
-	int drawChar(int x, int y, unsigned char c, int color);
+	int drawChar(int x, int y, unsigned char c, int color, bool bg);
     // blit a glyph of w pixels wide and h pixels high to x, y. offset pixel position in glyph by x_offset, y_offset.
     // span is the width in bytes of the src bitmap
     // The glyph bytes will be 8 bits of X pixels, msbit->lsbit from top left to bottom right
@@ -54,6 +54,7 @@ public:
 	// 1: Turn pixels on (OR logic)
 	// 2: Invert pixels (XOR logic)
 	void setColor(int c);
+	void setBackground(bool bg);
 	void drawHLine(int x, int y, int w, int color);
 	void drawVLine(int x, int y, int h, int color);
 	void drawBox(int x, int y, int w, int h, int color);
@@ -85,6 +86,7 @@ private:
 	// text cursor position
 	uint8_t tx, ty;
 	uint8_t text_color = 1;
+	bool text_background = true;
     uint8_t contrast;
     struct {
         bool reversed:1;

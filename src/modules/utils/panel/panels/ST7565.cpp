@@ -193,6 +193,7 @@ void ST7565::clear()
     this->tx = 0;
     this->ty = 0;
     this->text_color = 1;
+    this->text_background = true;
 }
 
 void ST7565::send_pic(const unsigned char *data)
@@ -243,6 +244,11 @@ void ST7565::setCursorPX(int x, int y)
 void ST7565::setColor(int c)
 {
     this->text_color = c;
+}
+
+void ST7565::setBackground(bool bg)
+{
+    this->text_background = bg;
 }
 
 void ST7565::home()
@@ -342,13 +348,14 @@ void ST7565::setContrast(uint8_t c)
 }
 
 /**
-*@brief Draws a character to the screen buffer
-*@param x   X coordinate
-*@param y   Y coordinate
-*@param c   Character to print
-*@param color 0: Turn pixels on (OR logic), 1: Turn pixels off (AND logic)
+* @brief Draws a character to the screen buffer
+* @param x   X coordinate
+* @param y   Y coordinate
+* @param c   Character to print
+* @param color 0: Turn pixels on (OR logic), 1: Turn pixels off (AND logic)
+* @param bg  True: Draw background, False: Transparent background)
 */
-int ST7565::drawChar(int x, int y, unsigned char c, int color)
+int ST7565::drawChar(int x, int y, unsigned char c, int color, bool bg)
 {
     int retVal = -1;
     if (c == '\n') {
@@ -365,6 +372,7 @@ int ST7565::drawChar(int x, int y, unsigned char c, int color)
                 if (page < LCDPAGES) {
                     int screenIndex = page * LCDWIDTH + x;
                     uint8_t fontByte = glcd_font[(c * 5) + i] << (y % 8);
+                    if (bg) drawByte(screenIndex, 0xFF << (y % 8), !color);
                     drawByte(screenIndex, fontByte, color);
                 }
                 // Draw the second byte
@@ -372,6 +380,7 @@ int ST7565::drawChar(int x, int y, unsigned char c, int color)
                 if (page < LCDPAGES) {
                     int screenIndex = page * LCDWIDTH + x;
                     uint8_t fontByte = glcd_font[(c * 5) + i] >> (8 - (y % 8));
+                    if (bg) drawByte(screenIndex, 0xFF >> (8 - (y % 8)), !color);
                     drawByte(screenIndex, fontByte, color);
                 }
                 x++;
@@ -387,7 +396,7 @@ int ST7565::drawChar(int x, int y, unsigned char c, int color)
 //write single char to screen
 void ST7565::write_char(char value)
 {
-    drawChar(this->tx, this->ty, value, this->text_color);
+    drawChar(this->tx, this->ty, value, this->text_color, this->text_background);
 }
 
 void ST7565::write(const char *line, int len)

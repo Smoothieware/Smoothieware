@@ -331,6 +331,7 @@ void WatchScreen::redraw()
 void WatchScreen::draw_graphics()
 {
     THEPANEL->lcd->clear();
+    THEPANEL->lcd->setBackground(false);
 
     // Print the status line
     THEPANEL->lcd->setCursorPX(0, 0); THEPANEL->lcd->printf("%.21s", this->get_status());
