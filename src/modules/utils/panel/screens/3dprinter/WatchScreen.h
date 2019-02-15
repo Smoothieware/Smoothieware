@@ -20,6 +20,7 @@ public:
     void on_refresh();
     void on_enter();
     void on_main_loop();
+    void redraw();
     void display_menu_line(uint16_t line);
 
 private:
@@ -29,6 +30,7 @@ private:
     void get_sd_play_info();
     const char *get_status();
     const char *get_network();
+    void draw_graphics();
 
     std::vector<uint16_t> temp_controllers;
 
@@ -42,6 +44,7 @@ private:
     struct {
         bool speed_changed:1;
         bool issue_change_speed:1;
+        bool has_fan:1;
         bool fan_state:1;
     };
 };

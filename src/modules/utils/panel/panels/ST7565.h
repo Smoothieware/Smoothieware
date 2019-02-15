@@ -14,39 +14,47 @@
 
 class ST7565: public LcdBase {
 public:
-	ST7565(uint8_t v= 0);
-	virtual ~ST7565();
-	void home();
+    ST7565(uint8_t v= 0);
+    virtual ~ST7565();
+    void home();
     void clear();
     void display();
     void setCursor(uint8_t col, uint8_t row);
-	void init();
-	void write_char(char value);
-	void write(const char* line, int len);
+    void init();
+    void write_char(char value);
+    void write(const char* line, int len);
 
-	void on_refresh(bool now=false);
-	//encoder which dosent exist :/
-	uint8_t readButtons();
-	int readEncoderDelta();
-	int getEncoderResolution() { return is_viki2 ? 4 : 2; }
-	uint16_t get_screen_lines() { return 8; }
-	bool hasGraphics() { return true; }
+    void on_refresh(bool now=false);
+    //encoder which dosent exist :/
+    uint8_t readButtons();
+    int readEncoderDelta();
+    int getEncoderResolution() { return is_viki2 ? 4 : 2; }
+    uint16_t get_screen_lines() { return 8; }
+    bool hasGraphics() { return true; }
+    bool hasFullGraphics() { return true; }
 
-	//added ST7565 commands
-	void send_commands(const unsigned char* buf, size_t size);
-	void send_data(const unsigned char* buf, size_t size);
-	// set column and page number
-	void set_xy(int x, int y);
-	//send pic to whole screen
-	void send_pic(const unsigned char* data);
-	//drawing char
-	int drawChar(int x, int y, unsigned char c, int color);
+    //added ST7565 commands
+    void send_commands(const unsigned char* buf, size_t size);
+    void send_data(const unsigned char* buf, size_t size);
+    // set column and page number
+    void set_xy(int x, int y);
+    //send pic to whole screen
+    void send_pic(const unsigned char* data);
+    //drawing char
+    int drawChar(int x, int y, unsigned char c, int color, bool bg);
     // blit a glyph of w pixels wide and h pixels high to x, y. offset pixel position in glyph by x_offset, y_offset.
     // span is the width in bytes of the src bitmap
     // The glyph bytes will be 8 bits of X pixels, msbit->lsbit from top left to bottom right
     void bltGlyph(int x, int y, int w, int h, const uint8_t *glyph, int span= 0, int x_offset=0, int y_offset=0);
     void renderGlyph(int x, int y, const uint8_t *g, int pixelWidth, int pixelHeight);
-    void pixel(int x, int y, int colour);
+    void drawByte(int index, uint8_t mask, int color);
+    void pixel(int x, int y, int color);
+    void setCursorPX(int x, int y);
+    void setColor(int c);
+    void setBackground(bool bg);
+    void drawHLine(int x, int y, int w, int color);
+    void drawVLine(int x, int y, int h, int color);
+    void drawBox(int x, int y, int w, int h, int color);
 
     uint8_t getContrast() { return contrast; }
     void setContrast(uint8_t c);
@@ -57,23 +65,24 @@ public:
 private:
 
     //buffer
-	unsigned char *framebuffer;
-	mbed::SPI* spi;
-	Pin cs;
-	Pin rst;
-	Pin a0;
-	Pin click_pin;
-	Pin up_pin;
+    unsigned char *framebuffer;
+    mbed::SPI* spi;
+    Pin cs;
+    Pin rst;
+    Pin a0;
+    Pin click_pin;
+    Pin up_pin;
     Pin down_pin;
     Pin buzz_pin;
-	Pin aux_pin;
+    Pin aux_pin;
     Pin encoder_a_pin;
     Pin encoder_b_pin;
     Pin red_led;
     Pin blue_led;
 
-	// text cursor position
-	uint8_t tx, ty;
+    // text cursor position
+    uint8_t tx, ty;
+    uint8_t text_color = 1;
     uint8_t contrast;
     struct {
         bool reversed:1;
@@ -82,6 +91,7 @@ private:
         bool is_ssd1306:1;
         bool use_pause:1;
         bool use_back:1;
+        bool text_background:1;
     };
 };
 
