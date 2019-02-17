@@ -51,7 +51,7 @@ Contributions very welcome !
 
 ==Donate
 The Smoothie firmware is free software developed by volunteers. If you find this software useful, want to say thanks and encourage development, please consider a 
-[[https://paypal.me/smoothieware?locale.x=en_GB|Donation]]
+[[https://paypal.me/smoothieware|Donation]]
 
 ==License
 
