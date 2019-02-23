@@ -49,6 +49,7 @@
 
 MotorDriverControl::MotorDriverControl(uint8_t id) : id(id)
 {
+    write_only=false;
     enable_event= false;
     current_override= false;
     microstep_override= false;
@@ -138,23 +139,30 @@ bool MotorDriverControl::config_module(uint16_t cs)
         sw_uart_tx_pin->from_string(THEKERNEL->config->value(motor_driver_control_checksum, cs, sw_uart_tx_pin_checksum)->by_default("nc")->as_string())->as_output();
         sw_uart_rx_pin->from_string(THEKERNEL->config->value(motor_driver_control_checksum, cs, sw_uart_rx_pin_checksum)->by_default("nc")->as_string())->as_input();
 
-        if(!sw_uart_tx_pin->connected() || !sw_uart_rx_pin->connected()) {
-            if(!sw_uart_tx_pin->connected()) {
-                THEKERNEL->streams->printf("MotorDriverControl %c ERROR: uart tx pin not defined\n", axis);
-            }
-            if(!sw_uart_rx_pin->connected()) {
-                THEKERNEL->streams->printf("MotorDriverControl %c ERROR: uart rx pin not defined\n", axis);
-            }
-            return false; // if not defined then we can't use this instance
+        if(!sw_uart_tx_pin->connected()) {
+            THEKERNEL->streams->printf("MotorDriverControl %c ERROR: uart tx pin not defined\n", axis);
+            return false; 
+        }
+
+        if(sw_uart_rx_pin->connected()) {
+            // Read/Write mode
+            PinName txd = port_pin((PortName)(sw_uart_tx_pin->port_number<<8), sw_uart_tx_pin->pin);
+            PinName rxd = port_pin((PortName)(sw_uart_rx_pin->port_number<<8), sw_uart_rx_pin->pin);
+
+            write_only   = false;
+            this->serial = new BufferedSoftSerial(txd, rxd);
+        } else {
+            // Write only mode
+            PinName txd = port_pin((PortName)(sw_uart_tx_pin->port_number<<8), sw_uart_tx_pin->pin);
+            PinName rxd = NC;
+
+            write_only   = true;
+            this->serial = new BufferedSoftSerial(txd, rxd);
         }
 
         //select soft UART baudrate
         int sw_uart_baudrate = THEKERNEL->config->value(motor_driver_control_checksum, cs, sw_uart_baudrate_checksum)->by_default(9600)->as_number();
 
-        PinName txd = port_pin((PortName)(sw_uart_tx_pin->port_number<<8), sw_uart_tx_pin->pin);
-        PinName rxd = port_pin((PortName)(sw_uart_rx_pin->port_number<<8), sw_uart_rx_pin->pin);
-
-        this->serial = new BufferedSoftSerial(txd, rxd);
         this->serial->baud(sw_uart_baudrate);
     } else {
         //Configure SPI
@@ -238,7 +246,7 @@ bool MotorDriverControl::config_module(uint16_t cs)
     this->register_for_event(ON_ENABLE);
     this->register_for_event(ON_IDLE);
 
-    if( THEKERNEL->config->value(motor_driver_control_checksum, cs, alarm_checksum )->by_default(false)->as_bool() ) {
+    if( !write_only && THEKERNEL->config->value(motor_driver_control_checksum, cs, alarm_checksum )->by_default(false)->as_bool() ) {
         halt_on_alarm= THEKERNEL->config->value(motor_driver_control_checksum, cs, halt_on_alarm_checksum )->by_default(false)->as_bool();
         // enable alarm monitoring for the chip
         this->register_for_event(ON_SECOND_TICK);
@@ -371,12 +379,16 @@ void MotorDriverControl::on_gcode_received(void *argument)
 
             if(gcode->subcode == 0 && gcode->get_num_args() == 0) {
                 // M911 no args dump status for all drivers, M911.1 P0|A0 dump for specific driver
-                gcode->stream->printf("Motor %d (%c)...\n", id, axis);
-                dump_status(gcode->stream, true);
-
+                if (!write_only) {
+                    gcode->stream->printf("Motor %d (%c)...\n", id, axis);
+                    dump_status(gcode->stream, true);
+                }
+                
             }else if( (gcode->has_letter('P') && gcode->get_value('P') == id) || gcode->has_letter(axis)) {
                 if(gcode->subcode == 1) {
-                    dump_status(gcode->stream, !gcode->has_letter('R'));
+                    if (!write_only) {
+                        dump_status(gcode->stream, !gcode->has_letter('R'));
+                    }
 
                 }else if(gcode->subcode == 2 && gcode->has_letter('R') && gcode->has_letter('V')) {
                     set_raw_register(gcode->stream, gcode->get_value('R'), gcode->get_value('V'));

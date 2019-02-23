@@ -86,6 +86,7 @@ class MotorDriverControl : public Module {
             bool current_override:1;
             bool microstep_override:1;
             bool halt_on_alarm:1;
+            bool write_only:1;
         };
 
 };
