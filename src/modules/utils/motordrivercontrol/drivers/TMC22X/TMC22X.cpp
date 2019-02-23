@@ -42,6 +42,7 @@
 #define motor_driver_control_checksum  CHECKSUM("motor_driver_control")
 #define sense_resistor_checksum        CHECKSUM("sense_resistor")
 #define chopper_mode_checksum          CHECKSUM("chopper_mode")
+#define tpwmthrs_checksum              CHECKSUM("tpwmthrs")
 
 //! return value for TMC22X.getOverTemperature() if there is a overtemperature situation in the TMC chip
 /*!
@@ -595,18 +596,17 @@ void TMC22X::init(uint16_t cs)
      * 0 - spreadCycle
      * 1 - stealthChop
      */
+    // arguments order: constant_off_time, blank_time, hysteresis_start, hysteresis_end
+    // openbuilds high torque nema23 3amps (2.8)
+    // setSpreadCycleChopper(5, 32, 6, 0, 0);
+    // for 1.5amp kysan @ 12v
+    setSpreadCycleChopper(5, 40, 5, 0);
+    // for 4amp Nema24 @ 12v
+    // setSpreadCycleChopper(5, 40, 4, 0, 0);
+    
     switch(chopper_mode) {
     case 0:
-        //enable SpreadCycle
         setSpreadCycleEnabled(true);
-
-        //arguments order: constant_off_time, blank_time, hysteresis_start, hysteresis_end
-        // openbuilds high torque nema23 3amps (2.8)
-        //setSpreadCycleChopper(5, 32, 6, 0, 0);
-        // for 1.5amp kysan @ 12v
-        setSpreadCycleChopper(5, 40, 5, 0);
-        // for 4amp Nema24 @ 12v
-        //setSpreadCycleChopper(5, 40, 4, 0, 0);
         break;
     case 1:
         //enable StealthChop by disabling SpreadCycle function
@@ -615,6 +615,13 @@ void TMC22X::init(uint16_t cs)
         //arguments order: lim, reg, freewheel, autograd, autoscale, freq, grad, ofs
         //default stealthChop configuration
         setStealthChop(12,1,0,1,1,1,0,36);
+
+        // Set the upper velocity for stealthChop voltage PWM mode (TPWMTHRS)
+        int tpwmthrs = THEKERNEL->config->value(motor_driver_control_checksum, cs, tpwmthrs_checksum)->by_default(0)->as_int();
+
+        if (tpwmthrs > 0) {
+            setStealthChopthreshold(tpwmthrs);
+        }
 
         //StealthChop does not use toff constant, but driver needs to be set active though (setting any toff value is ok)
         setEnabled(true);
