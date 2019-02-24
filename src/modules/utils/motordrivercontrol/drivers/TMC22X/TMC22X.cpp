@@ -616,15 +616,13 @@ void TMC22X::init(uint16_t cs)
         //default stealthChop configuration
         setStealthChop(12,1,0,1,1,1,0,36);
 
-        // Set the upper velocity for stealthChop voltage PWM mode (TPWMTHRS)
+        // Set he upper velocity for stealthChop voltage PWM mode (TPWMTHRS)
         int tpwmthrs = THEKERNEL->config->value(motor_driver_control_checksum, cs, tpwmthrs_checksum)->by_default(0)->as_int();
 
         if (tpwmthrs > 0) {
             setStealthChopthreshold(tpwmthrs);
-        }
+        } 
 
-        //StealthChop does not use toff constant, but driver needs to be set active though (setting any toff value is ok)
-        setEnabled(true);
         break;
     }
 
@@ -885,7 +883,7 @@ void TMC22X::setSpreadCycleChopper(int8_t constant_off_time, int8_t blank_time, 
     //set the blank timing value
     chopconf_register_value |= ((unsigned long)blank_value) << CHOPCONF_TBL_SHIFT;
     //setting the constant off time
-    chopconf_register_value |= constant_off_time;
+    chopconf_register_value |= ((unsigned long)constant_off_time) << CHOPCONF_TOFF_SHIFT;
     //set the hysteresis_start
     chopconf_register_value |= ((unsigned long)hysteresis_start) << CHOPCONF_HSTRT_SHIFT;
     //set the hysteresis end
@@ -1174,7 +1172,7 @@ void TMC22X::setEnabled(bool enabled)
     chopconf_register_value &= ~(CHOPCONF_TOFF);
     if (enabled) {
         //and set the t_off time
-        chopconf_register_value |= this->constant_off_time;
+        chopconf_register_value |= ((unsigned long)this->constant_off_time) << CHOPCONF_TOFF_SHIFT;
     }
     //if not enabled we don't have to do anything since we already delete t_off from the register
     if (started) {
