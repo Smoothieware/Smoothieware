@@ -125,7 +125,11 @@ public:
      */
     int getMicrosteps(void);
 
+    /*!
+     * \brief Enable actual microstep resolution (MRES) to 256 microsteps for smoothest motor operation.
+     */
     void setStepInterpolation(int8_t value);
+
     void setDoubleEdge(int8_t value);
 
     /*!

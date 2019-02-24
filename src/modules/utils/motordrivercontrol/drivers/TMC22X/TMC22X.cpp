@@ -618,6 +618,7 @@ void TMC22X::init(uint16_t cs)
     setGeneralConfiguration(0,0,0,0,1,1);
 
     // Set a nice microstepping value
+    setStepInterpolation(1);
     setMicrosteps(DEFAULT_MICROSTEPPING_VALUE);
 
     // Set the initial values
