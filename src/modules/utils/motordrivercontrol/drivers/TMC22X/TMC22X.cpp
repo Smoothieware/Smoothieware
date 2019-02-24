@@ -39,10 +39,15 @@
 #include "checksumm.h"
 #include "StepTicker.h"
 
-#define motor_driver_control_checksum  CHECKSUM("motor_driver_control")
-#define sense_resistor_checksum        CHECKSUM("sense_resistor")
-#define chopper_mode_checksum          CHECKSUM("chopper_mode")
-#define tpwmthrs_checksum              CHECKSUM("tpwmthrs")
+#define motor_driver_control_checksum   CHECKSUM("motor_driver_control")
+#define sense_resistor_checksum         CHECKSUM("sense_resistor")
+#define chopper_mode_checksum           CHECKSUM("chopper_mode")
+#define stealthchop_tpwmthrs_checksum   CHECKSUM("stealthchop_tpwmthrs")
+#define spreadcycle_toff_checksum       CHECKSUM("spreadcycle_toff")
+#define spreadcycle_tbl_checksum        CHECKSUM("spreadcycle_tbl")
+#define spreadcycle_hstrt_checksum      CHECKSUM("spreadcycle_hstrt")
+#define spreadcycle_hend_checksum       CHECKSUM("spreadcycle_hend")
+
 
 //! return value for TMC22X.getOverTemperature() if there is a overtemperature situation in the TMC chip
 /*!
@@ -568,11 +573,11 @@ TMC22X::TMC22X(std::function<int(uint8_t *b, int cnt, uint8_t *r)> serial, char 
  */
 void TMC22X::init(uint16_t cs)
 {
-    // read chip specific config entries
+    // Read chip specific config entries
     this->resistor= THEKERNEL->config->value(motor_driver_control_checksum, cs, sense_resistor_checksum)->by_default(50)->as_number(); // in milliohms
     this->chopper_mode= THEKERNEL->config->value(motor_driver_control_checksum, cs, chopper_mode_checksum)->by_default(0)->as_number();
 
-    //setting the default register values
+    // Setting the default register values
     this->gconf_register_value = GCONF_DEFAULT_DATA;
     this->slaveconf_register_value = ZEROS_DEFAULT_DATA;
     this->ihold_irun_register_value = ZEROS_DEFAULT_DATA;
@@ -581,47 +586,41 @@ void TMC22X::init(uint16_t cs)
     this->chopconf_register_value = CHOPCONF_DEFAULT_DATA;
     this->pwmconf_register_value = PWMCONF_DEFAULT_DATA;
 
-    /* set and configure chopper
-     * 0 - spreadCycle
-     * 1 - stealthChop
-     */
-    // arguments order: constant_off_time, blank_time, hysteresis_start, hysteresis_end
-    // openbuilds high torque nema23 3amps (2.8)
-    // setSpreadCycleChopper(5, 32, 6, 0, 0);
-    // for 1.5amp kysan @ 12v
-    setSpreadCycleChopper(5, 40, 5, 0);
-    // for 4amp Nema24 @ 12v
-    // setSpreadCycleChopper(5, 40, 4, 0, 0);
-    
-    switch(chopper_mode) {
-    case 0:
-        setSpreadCycleEnabled(true);
-        break;
-    case 1:
-        //enable StealthChop by disabling SpreadCycle function
+    // Configure SpreadCycle (also uses in StealthChop when TPWMTHRS is set)
+    // (default values come from the Quick Configuration Guide chapter in TMC2208 datasheet)
+    int8_t toff  = THEKERNEL->config->value(motor_driver_control_checksum, cs, spreadcycle_toff_checksum)->by_default(5)->as_int();
+    int8_t tbl   = THEKERNEL->config->value(motor_driver_control_checksum, cs, spreadcycle_tbl_checksum)->by_default(2)->as_int();
+    int8_t hstrt = THEKERNEL->config->value(motor_driver_control_checksum, cs, spreadcycle_hstrt_checksum)->by_default(4)->as_int(); 
+    int8_t hend  = THEKERNEL->config->value(motor_driver_control_checksum, cs, spreadcycle_hend_checksum)->by_default(0)->as_int(); 
+
+    setSpreadCycleChopper(toff, tbl, hstrt, hend);
+
+    // Select mode (0 - spreadCycle, 1 - stealthChop)
+    if (chopper_mode == 1) {
+        // Enable StealthChop by disabling SpreadCycle function
         setSpreadCycleEnabled(false);
 
-        //arguments order: lim, reg, freewheel, autograd, autoscale, freq, grad, ofs
-        //default stealthChop configuration
+        // Arguments order: lim, reg, freewheel, autograd, autoscale, freq, grad, ofs
+        // Default stealthChop configuration
         setStealthChop(12,1,0,1,1,1,0,36);
 
-        // Set he upper velocity for stealthChop voltage PWM mode (TPWMTHRS)
-        int tpwmthrs = THEKERNEL->config->value(motor_driver_control_checksum, cs, tpwmthrs_checksum)->by_default(0)->as_int();
+        // Set the upper velocity for stealthChop voltage PWM mode (TPWMTHRS)
+        int tpwmthrs = THEKERNEL->config->value(motor_driver_control_checksum, cs, stealthchop_tpwmthrs_checksum)->by_default(0)->as_int();
 
         if (tpwmthrs > 0) {
             setStealthChopthreshold(tpwmthrs);
         } 
-
-        break;
+    } else {
+        setSpreadCycleEnabled(true);
     }
 
-    //set microstepping via software and set external sense resistors using internal reference voltage
+    // Set microstepping via software and set external sense resistors using internal reference voltage
     setGeneralConfiguration(0,0,0,0,1,1);
 
-    //set a nice microstepping value
+    // Set a nice microstepping value
     setMicrosteps(DEFAULT_MICROSTEPPING_VALUE);
 
-    //set the initial values
+    // Set the initial values
     send2208(WRITE|GCONF_REGISTER, this->gconf_register_value);
     send2208(WRITE|SLAVECONF_REGISTER, this->slaveconf_register_value);
     send2208(WRITE|IHOLD_IRUN_REGISTER, this->ihold_irun_register_value);
@@ -833,9 +832,6 @@ void TMC22X::setDoubleEdge(int8_t value)
  * hysteresis_end: Hysteresis end setting. Sets the hysteresis end value after a number of decrements. Decrement interval time is controlled by HDEC.
  * The sum HSTRT+HEND must be <16. At a current setting CS of max. 30 (amplitude reduced to 240), the sum is not limited.
  *      -3..-1: negative HEND 0: zero HEND 1...12: positive HEND
- *
- * hysteresis_decrement: Hysteresis decrement setting. This setting determines the slope of the hysteresis during on time and during fast decay time.
- *      0: fast decrement 3: very slow decrement
  */
 
 void TMC22X::setSpreadCycleChopper(int8_t constant_off_time, int8_t blank_time, int8_t hysteresis_start, int8_t hysteresis_end)

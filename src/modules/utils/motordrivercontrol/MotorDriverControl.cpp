@@ -62,6 +62,12 @@ MotorDriverControl::~MotorDriverControl()
 // this will load all motor driver controls defined in config, called from main
 void MotorDriverControl::on_module_loaded()
 {
+    // Enabled?
+    if (!THEKERNEL->config->value(motor_driver_control_checksum, enable_checksum )->by_default(1)->as_bool()) {
+        delete this;
+        return;
+    }
+
     // Wait for drivers
     int timeout = THEKERNEL->config->value(motor_driver_control_checksum, timeout_checksum)->by_default(0)->as_number();
 
