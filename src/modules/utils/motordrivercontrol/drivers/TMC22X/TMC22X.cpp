@@ -581,17 +581,6 @@ void TMC22X::init(uint16_t cs)
     this->chopconf_register_value = CHOPCONF_DEFAULT_DATA;
     this->pwmconf_register_value = PWMCONF_DEFAULT_DATA;
 
-    //set the initial values
-    send2208(WRITE|GCONF_REGISTER, this->gconf_register_value);
-    send2208(WRITE|SLAVECONF_REGISTER, this->slaveconf_register_value);
-    send2208(WRITE|IHOLD_IRUN_REGISTER, this->ihold_irun_register_value);
-    send2208(WRITE|TPOWERDOWN_REGISTER, this->tpowerdown_register_value);
-    send2208(WRITE|TPWMTHRS_REGISTER, this->tpwmthrs_register_value);
-    send2208(WRITE|CHOPCONF_REGISTER, this->chopconf_register_value);
-    send2208(WRITE|PWMCONF_REGISTER, this->pwmconf_register_value);
-
-    started = true;
-
     /* set and configure chopper
      * 0 - spreadCycle
      * 1 - stealthChop
@@ -631,6 +620,18 @@ void TMC22X::init(uint16_t cs)
 
     //set a nice microstepping value
     setMicrosteps(DEFAULT_MICROSTEPPING_VALUE);
+
+    //set the initial values
+    send2208(WRITE|GCONF_REGISTER, this->gconf_register_value);
+    send2208(WRITE|SLAVECONF_REGISTER, this->slaveconf_register_value);
+    send2208(WRITE|IHOLD_IRUN_REGISTER, this->ihold_irun_register_value);
+    send2208(WRITE|TPOWERDOWN_REGISTER, this->tpowerdown_register_value);
+    send2208(WRITE|TPWMTHRS_REGISTER, this->tpwmthrs_register_value);
+    send2208(WRITE|CHOPCONF_REGISTER, this->chopconf_register_value);
+    send2208(WRITE|PWMCONF_REGISTER, this->pwmconf_register_value);
+
+    //started
+    started = true;
 }
 
 void TMC22X::setGeneralConfiguration(bool i_scale_analog, bool internal_rsense, bool shaft, bool pdn_disable, bool mstep_reg_select, bool multistep_filt)
