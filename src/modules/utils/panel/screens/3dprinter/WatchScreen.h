@@ -22,6 +22,7 @@ public:
     void on_main_loop();
     void redraw();
     void display_menu_line(uint16_t line);
+    uint8_t fan_speed;
 
 private:
     void get_current_status();
@@ -31,6 +32,7 @@ private:
     const char *get_status();
     const char *get_network();
     void draw_graphics();
+    void draw_graphics_rrd();						  
 
     std::vector<uint16_t> temp_controllers;
 

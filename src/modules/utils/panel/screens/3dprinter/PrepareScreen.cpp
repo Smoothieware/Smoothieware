@@ -16,6 +16,7 @@
 #include "checksumm.h"
 #include "PublicDataRequest.h"
 #include "PublicData.h"
+#include "SwitchPublicAccess.h"							   
 #include "TemperatureControlPublicAccess.h"
 #include "ModifyValuesScreen.h"
 #include "TemperatureControlPool.h"
@@ -39,7 +40,7 @@ void PrepareScreen::on_enter()
 {
     THEPANEL->enter_menu_mode();
     // if no heaters or extruder then don't show related menu items
-    THEPANEL->setup_menu((this->extruder_screen != nullptr) ? 9 : 5);
+    THEPANEL->setup_menu((this->extruder_screen != nullptr) ? 10 : 5);
     this->refresh_menu();
 }
 
@@ -62,10 +63,11 @@ void PrepareScreen::display_menu_line(uint16_t line)
         case 3: THEPANEL->lcd->printf("Set Z0"         ); break;
         case 4: THEPANEL->lcd->printf("Motors off"     ); break;
         // these won't be accessed if no heaters or extruders
-        case 5: THEPANEL->lcd->printf("Pre Heat"       ); break;
-        case 6: THEPANEL->lcd->printf("Cool Down"      ); break;
-        case 7: THEPANEL->lcd->printf("Extruder..."    ); break;
-        case 8: THEPANEL->lcd->printf("Set Temperature"); break;
+        case 5: THEPANEL->lcd->printf("Fan Speed"       ); break;
+        case 6: THEPANEL->lcd->printf("Pre Heat"       ); break;
+        case 7: THEPANEL->lcd->printf("Cool Down"      ); break;
+        case 8: THEPANEL->lcd->printf("Extruder..."    ); break;
+        case 9: THEPANEL->lcd->printf("Set Temperature"); break;
     }
 }
 
@@ -77,10 +79,11 @@ void PrepareScreen::clicked_menu_entry(uint16_t line)
         case 2: send_command("G92 X0 Y0"); break;
         case 3: send_command("G92 Z0"); break;
         case 4: send_command("M84"); break;
-        case 5: this->preheat(); break;
-        case 6: this->cooldown(); break;
-        case 7: THEPANEL->enter_screen(this->extruder_screen); break;
-        case 8: setup_temperature_screen(); break;
+        case 5: fan_speed(); break;
+        case 6: this->preheat(); break;
+        case 7: this->cooldown(); break;
+        case 8: THEPANEL->enter_screen(this->extruder_screen); break;
+        case 9: setup_temperature_screen(); break;
     }
 }
 
@@ -114,6 +117,38 @@ static float getTargetTemperature(uint16_t heater_cs)
     }
 
     return 0.0F;
+}
+
+static int getFanSpeed()
+{
+  struct pad_switch s;
+    bool ok = PublicData::get_value( switch_checksum, fan_checksum, 0, &s );
+    if (ok) {	
+       return  s.value;
+	}
+}
+void PrepareScreen::fan_speed()
+{
+    // setup temperature screen
+    auto mvs= new ModifyValuesScreen(true); // delete itself on exit
+    mvs->set_parent(this);
+    int cnt= 0;
+    mvs->addMenuItem("Fan Speed",
+        []() -> uint8_t { return getFanSpeed(); },
+        [this](uint8_t v) { this -> send_gcode("M106", 'S', v); },
+        10,
+        0,
+        255,
+        false // instant update
+        );	
+		cnt++;
+     if(cnt > 0) {
+	
+        THEPANEL->enter_screen(mvs);
+    }else{
+        // no heaters and probably no extruders either
+        delete mvs;
+    }
 }
 
 void PrepareScreen::setup_temperature_screen()

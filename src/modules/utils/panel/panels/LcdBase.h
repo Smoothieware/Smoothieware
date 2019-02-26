@@ -54,6 +54,7 @@ class LcdBase {
         virtual void buzz(long,uint16_t){};
         virtual bool hasGraphics() { return false; }
         virtual bool hasFullGraphics() { return false; }     // Temporary. Remove this once RRDGLCD has more graphics functions implemented.
+        virtual bool hasFullGraphics_rrd() { return false; } //	Watch Screen RRDGLCD.
         virtual bool encoderReturnsDelta() { return false; } // set to true if the panel handles encoder clicks and returns a delta
         virtual uint8_t getContrast() { return 0; }
         virtual void setContrast(uint8_t c) { }
@@ -100,13 +101,24 @@ class LcdBase {
         virtual void pixel(int x, int y, int color = 1) {};
 
         /**
+         * Draws a line.
+         * 
+         * @param x X coordinate of start of line
+         * @param y Y coordinate of start of line
+         * @param x X coordinate of end of line
+         * @param y Y coordinate of end of line
+         * @param color Mode to use for drawing (0 or 1)
+         */
+        virtual void drawLine(int x0, int y0, int x1, int y1,int color = 1) {}; 
+
+        /**
          * Draws a horizontal line.
          * 
          * @param x X coordinate of start of line
          * @param y Y coordinate of start of line
          * @param w Width of the line
          * @param color Mode to use for drawing (see setColor() for options)
-         */
+         */		
         virtual void drawHLine(int x, int y, int w, int color = 1) {};
 
         /**

@@ -52,12 +52,18 @@ public:
     void renderGlyph(int x, int y, const uint8_t *g, int pixelWidth, int pixelHeight);
     // TODO: Implement new graphics functions for RRDGLCD
     // void setCursorPX(int x, int y);
+    void pixel(int x, int y, int color);
+    void drawLine(int x0, int y0, int x1, int y1,int color);
+    void drawHLine(int x, int y, int w, int color);
+    void drawVLine(int x, int y, int h, int color);
+    void drawBox(int x, int y, int w, int h, int color);
 
 private:
     Pin cs;
     mbed::SPI* spi;
     void renderChar(uint8_t *fb, char c, int ox, int oy);
     void displayChar(int row, int column,char inpChr);
+    uint8_t startRow, startCol, endRow, endCol; // coordinates of the dirty rectangle
 
     uint8_t *fb;
     bool inited;
