@@ -22,7 +22,6 @@ public:
     int idle_timeout_secs() { return 60; }
 
 private:
-    void fan_speed();
     void preheat();
     void cooldown();
     void setup_temperature_screen();

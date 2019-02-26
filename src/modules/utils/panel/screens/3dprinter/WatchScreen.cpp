@@ -143,7 +143,7 @@ void WatchScreen::on_refresh()
         THEPANEL->lcd->setLed(LED_FAN_ON, this->fan_state);
 
         // TODO: Remove this once RRDGLCD supports new graphics functions
-        if (THEPANEL->lcd->hasGraphics() && !THEPANEL->lcd->hasFullGraphics() && !THEPANEL->lcd->hasFullGraphics_rrd()) {
+        if (THEPANEL->lcd->hasGraphics() && !THEPANEL->lcd->hasFullGraphics()) {
             // display the graphical icons below the status are
             // for (int i = 0; i < 5; ++i) {
             //     THEPANEL->lcd->bltGlyph(i*24, 42, 16, 16, icons, 15, i*24, 0);
@@ -180,8 +180,7 @@ void WatchScreen::get_current_status()
     if (ok) {
         this->has_fan = true;
         this->fan_state = s.state;
-        this->fan_speed = s.value;
-		} else {
+    } else {
         // fan probably disabled
         this->has_fan = false;
         this->fan_state = false;
@@ -319,12 +318,7 @@ void WatchScreen::redraw()
         if (THEPANEL->lcd->hasFullGraphics()) {
             // Use the full graphic watch screen on supported displays
             this->draw_graphics();
-        }
-        if (THEPANEL->THEPANEL->lcd->hasFullGraphics_rrd()) {
-            // Use the full graphic watch screen on RRD_GLCD
-            this->draw_graphics_rrd();
-        }	
-		else {
+        } else {
             // Revert to old screen for RRD
             this->refresh_screen(true);
         }
@@ -427,86 +421,3 @@ void WatchScreen::draw_graphics()
 
     THEPANEL->lcd->setBackground(true);
 }
-void WatchScreen::draw_graphics_rrd()
-{
-    THEPANEL->lcd->clear();
-	THEPANEL->lcd->setCursor(4,7);
-	THEPANEL->lcd->printf("%.19s", this->get_status());
-    // Print the hotend temperatures
-    auto& tm= this->temp_controllers;
-    if(tm.size() > 0) {
-        for (size_t i = 0; i < tm.size(); i++) {
-            struct pad_temperature temp = getTemperatures(tm[i]);
-            int t = std::min(999, (int)roundf(temp.current_temperature));
-            int tt= roundf(temp.target_temperature);
-           if (temp.designator.front() == 'T') {
-                THEPANEL->lcd->setCursor(3,0);
-                THEPANEL->lcd->printf("%3d\xf8", tt);
-                THEPANEL->lcd->setCursor(3,1);
-                THEPANEL->lcd->printf("%3d\xf8", t);
-            } else if (temp.designator.front() == 'B') {
-                THEPANEL->lcd->setCursor(10,0);
-                THEPANEL->lcd->printf("%3d\xf8", tt);
-                THEPANEL->lcd->setCursor(10,1);
-                THEPANEL->lcd->printf("%3d\xf8", t);
-				}
-        }		
-    }	
-	     // for LCDs with leds set them according to heater status
-        bool bed_on= false, hotend_on= false;
-        for(auto id : temp_controllers) {
-            struct pad_temperature c= getTemperatures(id);
-            if(c.designator.front() == 'B' && c.target_temperature > 0) bed_on= true;   // bed on/off
-            if(c.designator.front() == 'T') { // a hotend by convention
-                if(c.target_temperature > 0){
-                    hotend_on= true;// hotend on/off (anyone)
-                }
-            }			
-        }
-	
-    // Print the fan speed
-    if (this->has_fan) {		
-        THEPANEL->lcd->setCursor(17,0);
-        if(this->fan_state)
-        THEPANEL->lcd->printf("%3i%%", (this->fan_speed*100)/255);			
-        THEPANEL->lcd->setCursor(18,1);
-        THEPANEL->lcd->printf("%3s", this->fan_state? "ON" : "OFF");
-		
-        THEPANEL->lcd->bltGlyph(86, 2, icon1_width, icon1_height, fan_off_icon1);		
-    if(this->fan_state)				
-        THEPANEL->lcd->bltGlyph(86, 2, icon1_width, icon1_height, fan_on_icon1);
-
-        THEPANEL->lcd->bltGlyph(2, 2, icon1_width, icon1_height, hot_off_icon1);
-    if (hotend_on)
-        THEPANEL->lcd->bltGlyph(2, 2, icon1_width, icon1_height, hot_on_icon1);
-	
-        THEPANEL->lcd->bltGlyph(44, 2, icon1_width, icon1_height, bed_off_icon1);
-    if (bed_on)
-        THEPANEL->lcd->bltGlyph(44, 2, icon1_width, icon1_height, bed_on_icon1);
-	
-    }
-	
-        THEPANEL->lcd->drawHLine(40, 48, 85);
-        THEPANEL->lcd->drawHLine(40, 54, 85);
-        THEPANEL->lcd->drawVLine(40, 48, 7);
-        THEPANEL->lcd->drawVLine(125, 48, 7);
-        THEPANEL->lcd->drawHLine(2, 20, 124);
-        THEPANEL->lcd->drawHLine(2, 33, 124);
-        THEPANEL->lcd->drawHLine(2, 21, 124);
-        THEPANEL->lcd->drawHLine(2, 34, 124);
-        THEPANEL->lcd->drawVLine(2, 22, 12);		
-        THEPANEL->lcd->drawVLine(125, 22, 12);
-        THEPANEL->lcd->setCursor(2,3);
-        THEPANEL->lcd->printf("X%3d Y%3d Z %3.2f", (int)round(this->pos[0]), (int)round(this->pos[1]), this->pos[2]);
-        THEPANEL->lcd->drawBox(41, 49, (this->sd_pcnt_played*84)/100, 5);
-        THEPANEL->lcd->bltGlyph(50, 40, icon_width, icon_height, time_icon);
-        THEPANEL->lcd->setCursor(10,5);
-        THEPANEL->lcd->printf("%02u:%02u:%02u", this->elapsed_time / 3600, (this->elapsed_time % 3600) / 60, this->elapsed_time % 60);
-        THEPANEL->lcd->bltGlyph(2, 40, icon_width, icon_height, fr_icon);
-        THEPANEL->lcd->setCursor(2,5);
-        THEPANEL->lcd->printf("%3d%%", this->current_speed);
-        THEPANEL->lcd->bltGlyph(2, 48, icon_width, icon_height, flash_icon);
-        THEPANEL->lcd->setCursor(2,6);
-        THEPANEL->lcd->printf("%3u%%", this->sd_pcnt_played);
-        THEPANEL->lcd->bltGlyph(2, 56, icon_width, icon_height, speed_icon);
-}									 

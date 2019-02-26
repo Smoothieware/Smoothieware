@@ -131,26 +131,6 @@ void ReprapDiscountGLCD::bltGlyph(int x, int y, int w, int h, const uint8_t *gly
     }
 }
 
-void ReprapDiscountGLCD::pixel(int x, int y, int color){
-    this->glcd->pixel( x,  y,  color);
-}
-
-void ReprapDiscountGLCD::drawLine(int x0, int y0, int x1, int y1,int color){
-    this->glcd->drawLine( x0,  y0,  x1,  y1, color);
-}
-
-void ReprapDiscountGLCD::drawHLine(int x, int y, int w, int color){
-    this->glcd->drawHLine( x,  y,  w,  color);
-}
-
-void ReprapDiscountGLCD::drawBox(int x, int y, int w, int h, int color){
-    this->glcd->drawBox( x,  y,  w,  h,  color);
-}
-
-void ReprapDiscountGLCD::drawVLine(int x, int y, int h, int color){
-    this->glcd->drawVLine( x,  y,  h,  color);
-}
-
 void ReprapDiscountGLCD::on_refresh(bool now){
     static int refresh_counts = 0;
     refresh_counts++;

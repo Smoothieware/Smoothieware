@@ -258,7 +258,6 @@ void Switch::on_gcode_received(void *argument)
                     THEKERNEL->conveyor->wait_for_idle();
                     this->sigmadelta_pin->pwm(v);
                     this->switch_state= (v > 0);
-                    this->switch_value = (v);
                 }
             } else {
                 // drain queue
