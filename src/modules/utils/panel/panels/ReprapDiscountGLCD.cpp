@@ -99,14 +99,12 @@ void ReprapDiscountGLCD::display() {
     // it is always on
 }
 
-void ReprapDiscountGLCD::setCursorPX(int x, int y)
-{ 
+void ReprapDiscountGLCD::setCursorPX(int x, int y){ 
     this->glcd->set_cursorPX(x, y);
 }
 
 void ReprapDiscountGLCD::setCursor(uint8_t col, uint8_t row){
-    this->glcd->set_cursor(col, row);
-				   
+    this->glcd->set_cursor(col, row);				   
 }
 
 void ReprapDiscountGLCD::init(){
@@ -135,12 +133,9 @@ void ReprapDiscountGLCD::bltGlyph(int x, int y, int w, int h, const uint8_t *gly
         this->glcd->renderGlyph(x, y, g, w, h);
     }
 }
+
 void ReprapDiscountGLCD::pixel(int x, int y, int color){
     this->glcd->pixel( x,  y,  color);
-}
-
-void ReprapDiscountGLCD::drawLine(int x0, int y0, int x1, int y1,int color){
-    this->glcd->drawLine( x0,  y0,  x1,  y1, color);
 }
 
 void ReprapDiscountGLCD::drawHLine(int x, int y, int w, int color){

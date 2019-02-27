@@ -65,7 +65,6 @@ private:
     mbed::SPI* spi;
     int renderChar(uint8_t *fb, char c, int x, int y);
     void displayChar(char c);
-    uint8_t startRow, startCol, endRow, endCol; // coordinates of the dirty rectangle
     uint8_t gx, gy;
 
     uint8_t *fb;

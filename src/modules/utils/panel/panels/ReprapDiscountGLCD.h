@@ -38,7 +38,6 @@ class ReprapDiscountGLCD : public LcdBase {
         void bltGlyph(int x, int y, int w, int h, const uint8_t *glyph, int span= 0, int x_offset=0, int y_offset=0);
         void on_refresh(bool now=false);
         void pixel(int x, int y, int color);
-        void drawLine(int x0, int y0, int x1, int y1,int color );
         void drawHLine(int x, int y, int w, int color);
         void drawVLine(int x, int y, int h, int color);
         void drawBox(int x, int y, int w, int h, int color);
