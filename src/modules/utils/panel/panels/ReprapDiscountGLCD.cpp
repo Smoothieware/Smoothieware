@@ -99,6 +99,10 @@ void ReprapDiscountGLCD::display() {
     // it is always on
 }
 
+void ReprapDiscountGLCD::setColor(int c){
+    this->glcd->set_color(c);
+}
+
 void ReprapDiscountGLCD::setCursorPX(int x, int y){ 
     this->glcd->set_cursorPX(x, y);
 }

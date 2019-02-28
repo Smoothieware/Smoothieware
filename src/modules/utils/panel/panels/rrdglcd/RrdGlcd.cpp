@@ -209,6 +209,10 @@ void RrdGlcd::clearScreen() {
     dirty= true;
 }
 
+void RrdGlcd::set_color(int c){
+    this->text_color = c;
+}
+
 void RrdGlcd::set_cursor(uint8_t col, uint8_t row){
     this->gx = col * 6;
     this->gy = row * 8;
@@ -226,7 +230,7 @@ void RrdGlcd::displayString(const char *ptr, int length) {
     }	
 }
 
-int RrdGlcd::renderChar(uint8_t *fb, char c, int x, int y) {
+int RrdGlcd::renderChar(int x, int y, unsigned char c, int color) {
     int rn = -1;
     if (c == '\n') {
         this->gy += 8;
@@ -243,12 +247,12 @@ int RrdGlcd::renderChar(uint8_t *fb, char c, int x, int y) {
     int mask2= ~0xF8 << (8-o); // mask off bottom bits
     for(int k=0;k<8;k++) {
         int b= font5x8[i+k]; // get font byte
-        fb[a] &= mask; // clear top bits for font
-        fb[a] |= (b>>o); // or in the fonts 1 bits
+    if (background) drawByte(a, mask, !color);
+        drawByte(a, (b>>o), color);		
         if(o >= 4) { // it spans two fb bytes
-            fb[a+1] &= mask2; // clear bottom bits for font
-            fb[a+1] |= (b<<(8-o)); // or in the fonts 1 bits
-        }
+    if (background) drawByte(a, mask2, !color);
+        drawByte(a+1, (b<<(8-o)), color);
+    }
         a+=16; // next line
     }
         rn = 6;
@@ -258,8 +262,18 @@ int RrdGlcd::renderChar(uint8_t *fb, char c, int x, int y) {
     return rn;
 }
 
+void RrdGlcd::drawByte(int index, uint8_t mask, int color){
+    if (color == 1) {
+        fb[index] |= mask;
+    } else if (color == 0) {
+        fb[index] &= ~mask;
+    } else {
+        fb[index] ^= mask;
+    }
+}
+
 void RrdGlcd::displayChar(char c) {	
-    renderChar(this->fb, c, this->gx, this->gy);	
+    renderChar(this->gx, this->gy, c, this->text_color);	
 }
 
 void RrdGlcd::renderGlyph(int xp, int yp, const uint8_t *g, int pixelWidth, int pixelHeight) {
@@ -316,13 +330,20 @@ void RrdGlcd::pixel(int x, int y, int color) {
     {
     unsigned char mask = 0x80 >> (x % 8);
     unsigned char *byte = &fb[y * (WIDTH/8) + (x/8)];
-    if ( color == 0 )
-        *byte &= ~mask; // clear pixel
-    else
-        *byte |= mask; // set pixel
+    switch(color)
+    {
+      case 0:
+        *byte &= ~mask;
+        break;
+      case 1:
+        *byte |= mask;
+        break;
+      case 2:
+        *byte ^= mask;
+        break;
+    }
     }
 }
-
 void RrdGlcd::drawHLine(int x, int y, int w, int color) {
     for (int i = 0; i < w; i++) {
 		pixel( x+i,  y,  color);

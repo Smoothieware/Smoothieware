@@ -38,9 +38,10 @@ public:
     void clearScreen(void);
     void displayString(const char *ptr, int length);
     void refresh();
+    void set_color(int c);
     void set_cursor(uint8_t col, uint8_t row);
     void set_cursorPX(int x, int y);
-   
+    void drawByte(int index, uint8_t mask, int color);   
      /**
     *@brief Fills the screen with the graphics described in a 1024-byte array
     *@
@@ -63,13 +64,15 @@ public:
 private:
     Pin cs;
     mbed::SPI* spi;
-    int renderChar(uint8_t *fb, char c, int x, int y);
+    int renderChar(int x, int y, unsigned char c, int color);
     void displayChar(char c);
     uint8_t gx, gy;
+    uint8_t text_color = 1;
 
     uint8_t *fb;
     bool inited;
     bool dirty;
+    bool background:1;
 };
 #endif
 

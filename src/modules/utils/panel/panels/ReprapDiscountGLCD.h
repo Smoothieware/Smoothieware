@@ -28,6 +28,7 @@ class ReprapDiscountGLCD : public LcdBase {
         void home();
         void clear();
         void display();
+        void setColor(int c);
         void setCursorPX(int x, int y);
         void setCursor(uint8_t col, uint8_t row);
         void init();
