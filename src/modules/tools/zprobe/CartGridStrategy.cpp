@@ -110,7 +110,7 @@
 #define mount_position_checksum      CHECKSUM("mount_position")
 #define only_by_two_corners_checksum CHECKSUM("only_by_two_corners")
 #define human_readable_checksum      CHECKSUM("human_readable")
-#define height_limit_checksum      CHECKSUM("height_limit") 
+#define height_limit_checksum      CHECKSUM("height_limit")
 #define dampening_start_checksum      CHECKSUM("dampening_start")
 
 #define GRIDFILE "/sd/cartesian.grid"
@@ -147,7 +147,7 @@ bool CartGridStrategy::handleConfig()
     } else {
         this->damping_interval = NAN;
     }
-	
+
     this->x_start = 0.0F;
     this->y_start = 0.0F;
     this->x_size = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, x_size_checksum)->by_default(0.0F)->as_number();
@@ -532,6 +532,7 @@ bool CartGridStrategy::doProbe(Gcode *gc)
         gc->stream->printf(" ************************************************************\n");
 
         while( !zprobe->getProbeStatus()) {
+            if(THEKERNEL->is_halted()) return(false);
             THEKERNEL->call_event(ON_IDLE);
         }
     }
