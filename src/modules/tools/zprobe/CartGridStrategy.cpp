@@ -106,6 +106,8 @@
 #define x_size_checksum              CHECKSUM("x_size")
 #define y_size_checksum              CHECKSUM("y_size")
 #define do_home_checksum             CHECKSUM("do_home")
+#define m_attach_checksum            CHECKSUM("m_attach")
+#define mount_position_checksum      CHECKSUM("mount_position")
 #define only_by_two_corners_checksum CHECKSUM("only_by_two_corners")
 #define human_readable_checksum      CHECKSUM("human_readable")
 #define height_limit_checksum      CHECKSUM("height_limit") 
@@ -135,7 +137,8 @@ bool CartGridStrategy::handleConfig()
     do_home = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, do_home_checksum)->by_default(true)->as_bool();
     only_by_two_corners = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, only_by_two_corners_checksum)->by_default(false)->as_bool();
     human_readable = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, human_readable_checksum)->by_default(false)->as_bool();
- 
+    do_manual_attach = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, m_attach_checksum)->by_default(false)->as_bool();
+
     this->height_limit = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, height_limit_checksum)->by_default(NAN)->as_number();
     this->dampening_start = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, dampening_start_checksum)->by_default(NAN)->as_number();
 
@@ -167,6 +170,16 @@ bool CartGridStrategy::handleConfig()
         }
     }
 
+    //  manual attachment point xxx,yyy,zzz
+    if (do_manual_attach)
+    {
+        std::string ap = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, mount_position_checksum)->by_default("0,0,50")->as_string();
+        std::vector<float> w = parse_number_list(ap.c_str());
+        if(w.size() >= 3) {
+            this->m_attach = std::make_tuple(w[0], w[1], w[2]);
+        }
+    }
+
     // allocate in AHB0
     grid = (float *)AHB0.alloc(configured_grid_x_size * configured_grid_y_size * sizeof(float));
 
@@ -175,7 +188,8 @@ bool CartGridStrategy::handleConfig()
         return false;
     }
 
-    reset_bed_level();
+    //reset_bed_level(); // Remove excessive program memory writes
+    grid_init = false;   // Indicates that grid is not initialised
 
     return true;
 }
@@ -187,7 +201,7 @@ void CartGridStrategy::save_grid(StreamOutput *stream)
         return;
     }
 
-    if(isnan(grid[0])) {
+    if(isnan(grid[0]) || !grid_init) {
         stream->printf("error:No grid to save\n");
         return;
     }
@@ -307,13 +321,21 @@ bool CartGridStrategy::load_grid(StreamOutput *stream)
 
     for (int y = 0; y < configured_grid_y_size; y++) {
         for (int x = 0; x < configured_grid_x_size; x++) {
-            if(fread(&grid[x + (configured_grid_x_size * y)], sizeof(float), 1, fp) != 1) {
+            float read_value;
+            if(fread(&read_value , sizeof(float), 1, fp) != 1) {
                 stream->printf("error:Failed to read grid\n");
                 fclose(fp);
                 return false;
+            } else {
+                if (read_value != grid[x + (configured_grid_x_size * y)]) {
+                    grid[x + (configured_grid_x_size * y)] = read_value;
+                } 
             }
         }
     }
+
+    grid_init = true;
+
     stream->printf("grid loaded, grid: (%f, %f), size: %d x %d\n", x_size, y_size, load_grid_x_size, load_grid_y_size);
     fclose(fp);
     return true;
@@ -458,7 +480,7 @@ void CartGridStrategy::setAdjustFunction(bool on)
 
 bool CartGridStrategy::findBed()
 {
-    if (do_home) zprobe->home();
+    if (do_home && !do_manual_attach) zprobe->home();
     float z = initial_height;
     zprobe->coordinated_move(NAN, NAN, z, zprobe->getFastFeedrate()); // move Z only to initial_height
     zprobe->coordinated_move(x_start - X_PROBE_OFFSET_FROM_EXTRUDER, y_start - Y_PROBE_OFFSET_FROM_EXTRUDER, NAN, zprobe->getFastFeedrate()); // move at initial_height to x_start, y_start
@@ -494,7 +516,7 @@ bool CartGridStrategy::doProbe(Gcode *gc)
     }
 
     setAdjustFunction(false);
-    reset_bed_level();
+    // reset_bed_level(); // trying to limit excessive program memory writes
 
     if(gc->has_letter('I')) current_grid_x_size = gc->get_value('I'); // override default grid x size
     if(gc->has_letter('J')) current_grid_y_size = gc->get_value('J'); // override default grid y size
@@ -504,6 +526,23 @@ bool CartGridStrategy::doProbe(Gcode *gc)
                             this->current_grid_x_size, this->current_grid_y_size, this->current_grid_x_size*this->current_grid_x_size,
                             this->configured_grid_x_size, this->configured_grid_y_size, this->configured_grid_x_size*this->configured_grid_y_size);
         return false;
+    }
+
+    if (do_manual_attach) {
+        // Move to the attachment point defined
+        if (do_home) zprobe->home();
+
+        float x, y, z;
+        std::tie(x, y, z) = m_attach;
+        zprobe->coordinated_move( x, y, z , zprobe->getFastFeedrate());
+
+        gc->stream->printf(" ************************************************************\n");
+        gc->stream->printf("     Ensure probe is attached and trigger probe when done\n");
+        gc->stream->printf(" ************************************************************\n");
+
+        while( !zprobe->getProbeStatus()) {
+            THEKERNEL->call_event(ON_IDLE);
+        }
     }
 
     // find bed, and leave probe probe height above bed
@@ -539,12 +578,26 @@ bool CartGridStrategy::doProbe(Gcode *gc)
 
             if(!zprobe->doProbeAt(mm, xProbe - X_PROBE_OFFSET_FROM_EXTRUDER, yProbe - Y_PROBE_OFFSET_FROM_EXTRUDER)) return false;
             float measured_z = zprobe->getProbeHeight() - mm - z_reference; // this is the delta z from bed at 0,0
-            gc->stream->printf("DEBUG: X%1.4f, Y%1.4f, Z%1.4f\n", xProbe, yProbe, measured_z);
+            // gc->stream->printf("DEBUG: X%1.4f, Y%1.4f, Z%1.4f\n", xProbe, yProbe, measured_z);
             grid[xCount + (this->current_grid_x_size * yCount)] = measured_z;
         }
     }
 
     print_bed_level(gc->stream);
+
+    if (do_manual_attach) {
+        // Move to the attachment point defined for removal of probe
+
+        float x, y, z;
+        std::tie(x, y, z) = m_attach;
+        zprobe->coordinated_move( x, y, z , zprobe->getFastFeedrate());
+
+        gc->stream->printf(" ********************\n");
+        gc->stream->printf("     Remove probe\n");
+        gc->stream->printf(" ********************\n");
+    }
+
+    grid_init = true;
 
     setAdjustFunction(true);
 
@@ -667,5 +720,7 @@ void CartGridStrategy::reset_bed_level()
         for (int x = 0; x < current_grid_x_size; x++) {
             grid[x + (current_grid_x_size * y)] = NAN;
         }
+
+        grid_init = false;
     }
 }
