@@ -39,6 +39,7 @@ private:
 	
     float *grid;
     std::tuple<float, float, float> probe_offsets;
+    std::tuple<float, float, float> m_attach;
     float x_start,y_start;
     float x_size,y_size;
 
@@ -52,7 +53,9 @@ private:
     struct {
         bool save:1;
         bool do_home:1;
+        bool do_manual_attach:1;
         bool only_by_two_corners:1;
         bool human_readable:1;
+        bool grid_init:1;
     };
 };
