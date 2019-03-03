@@ -315,6 +315,9 @@ void USBSerial::on_main_loop(void *argument)
             attached = true;
             THEKERNEL->streams->append_stream(this);
             puts("Smoothie\r\nok\r\n");
+            if(THEKERNEL->is_bad_mcu()) {
+                puts("WARNING: This is not a sanctioned board and may be unreliable and even dangerous. This MCU is deprecated, and cannot guarantee proper function\n");
+            }
         } else {
             attached = false;
             THEKERNEL->streams->remove_stream(this);
