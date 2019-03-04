@@ -433,6 +433,16 @@ Robot::wcs_t Robot::mcs2wcs(const Robot::wcs_t& pos) const
     );
 }
 
+// converts a position in work coordinate system to machine coordinate system (machine position)
+Robot::wcs_t Robot::wcs2mcs(const Robot::wcs_t& pos) const
+{
+    return std::make_tuple(
+        std::get<X_AXIS>(pos) + std::get<X_AXIS>(wcs_offsets[current_wcs]) - std::get<X_AXIS>(g92_offset) + std::get<X_AXIS>(tool_offset),
+        std::get<Y_AXIS>(pos) + std::get<Y_AXIS>(wcs_offsets[current_wcs]) - std::get<Y_AXIS>(g92_offset) + std::get<Y_AXIS>(tool_offset),
+        std::get<Z_AXIS>(pos) + std::get<Z_AXIS>(wcs_offsets[current_wcs]) - std::get<Z_AXIS>(g92_offset) + std::get<Z_AXIS>(tool_offset)
+    );
+}
+
 // this does a sanity check that actuator speeds do not exceed steps rate capability
 // we will override the actuator max_rate if the combination of max_rate and steps/sec exceeds base_stepping_frequency
 void Robot::check_max_actuator_speeds()

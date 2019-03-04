@@ -31,12 +31,12 @@ private:
     bool probe_grid(int n, int m, float _x_start, float _y_start, float _x_size, float _y_size, StreamOutput *stream);
 
     float initial_height;
-    float tolerance; 
-	
+    float tolerance;
+
     float height_limit;
-    float dampening_start; 
+    float dampening_start;
     float damping_interval;
-	
+
     float *grid;
     std::tuple<float, float, float> probe_offsets;
     std::tuple<float, float, float> m_attach;
@@ -56,5 +56,6 @@ private:
         bool do_manual_attach:1;
         bool only_by_two_corners:1;
         bool human_readable:1;
+        bool new_file_format:1;
     };
 };

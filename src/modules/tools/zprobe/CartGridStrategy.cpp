@@ -43,25 +43,28 @@
 
       Then when M500 is issued it will save M375 which will cause the grid to be loaded on boot. The default is to not autoload the grid on boot
 
-    Optionally an initial_height can be set that tell the intial probe where to stop the fast decent before it probes, this should be around 5-10mm above the bed
+    Optionally an initial_height can be set that tell the initial probe where to stop the fast decent before it probes, this should be around 5-10mm above the bed
       leveling-strategy.rectangular-grid.initial_height  10
 
     If two corners rectangular mode activated using "leveling-strategy.rectangular-grid.only_by_two_corners true" then G29/31/32 will not work without providing XYAB parameters
         XY - start point, AB rectangle size from starting point
         "Two corners"" not absolutely correct name for this mode, because it use only one corner and rectangle size.
+        can be turned off with G32 R0
 
-    Display mode of current grid can be changed to human redable mode (table with coordinates) by using
+    Display mode of current grid can be changed to human readable mode (table with coordinates) by using
        leveling-strategy.rectangular-grid.human_readable  true
 
     Usage
     -----
     G29 test probes a rectangle which defaults to the width and height, can be overidden with Xnnn and Ynnn
 
-    G31 probes the grid and turns the compensation on, this will remain in effect until reset or M561/M370
-        optional parameters {{Xn}} {{Yn}} sets the size for this rectangular probe, which gets saved with M375
-
+    G31/G32 probes the grid and turns the compensation on, this will remain in effect until reset or M561/M370
+        optional parameters Xn Yn sets the size for this rectangular probe, which gets saved with M375
+        if in two corners mode X and Y are the start position and A and B are the width and length of probe area
+        R1 forces two corners mode, using current position as the start position offset by X and Y
+        (R1 is sticky, use R0 to turn it off)
     M370 clears the grid and turns off compensation
-    M374 Save grid to /sd/cartesian.grid
+    M374 Save grid to /sd/cartesian.grid (Note grid cannot be saved in two corners mode)
     M374.1 delete /sd/cartesian.grid
     M375 Load the grid from /sd/cartesian.grid and enable compensation
     M375.1 display the current grid
@@ -110,8 +113,8 @@
 #define mount_position_checksum      CHECKSUM("mount_position")
 #define only_by_two_corners_checksum CHECKSUM("only_by_two_corners")
 #define human_readable_checksum      CHECKSUM("human_readable")
-#define height_limit_checksum      CHECKSUM("height_limit")
-#define dampening_start_checksum      CHECKSUM("dampening_start")
+#define height_limit_checksum        CHECKSUM("height_limit")
+#define dampening_start_checksum     CHECKSUM("dampening_start")
 
 #define GRIDFILE "/sd/cartesian.grid"
 #define GRIDFILE_NM "/sd/cartesian_nm.grid"
@@ -132,6 +135,10 @@ bool CartGridStrategy::handleConfig()
     uint8_t grid_size = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, grid_size_checksum)->by_default(7)->as_number();
     this->current_grid_x_size = this->configured_grid_x_size = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, grid_x_size_checksum)->by_default(grid_size)->as_number();
     this->current_grid_y_size = this->configured_grid_y_size = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, grid_y_size_checksum)->by_default(grid_size)->as_number();
+
+    // we use a different file format depending on whether it is square or not
+    this->new_file_format= (configured_grid_x_size != configured_grid_y_size);
+
     tolerance = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, tolerance_checksum)->by_default(0.03F)->as_number();
     save = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, save_checksum)->by_default(false)->as_bool();
     do_home = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, do_home_checksum)->by_default(true)->as_bool();
@@ -210,9 +217,11 @@ void CartGridStrategy::save_grid(StreamOutput *stream)
         return;
     }
 
-    FILE *fp = (configured_grid_x_size == configured_grid_y_size)?fopen(GRIDFILE, "w"):fopen(GRIDFILE_NM, "w");
+    // we use a different file format depending on whether it is square or not
+    const char *filename= (this->new_file_format) ? GRIDFILE_NM : GRIDFILE;
+    FILE *fp = fopen(filename, "w");
     if(fp == NULL) {
-        stream->printf("error:Failed to open grid file %s\n", GRIDFILE);
+        stream->printf("error:Failed to open grid file %s\n", filename);
         return;
     }
     uint8_t tmp_configured_grid_size = configured_grid_x_size;
@@ -223,7 +232,7 @@ void CartGridStrategy::save_grid(StreamOutput *stream)
     }
 
     tmp_configured_grid_size = configured_grid_y_size;
-    if(configured_grid_y_size != configured_grid_x_size){
+    if(this->new_file_format){
         if(fwrite(&tmp_configured_grid_size, sizeof(uint8_t), 1, fp) != 1) {
             stream->printf("error:Failed to write grid y size\n");
             fclose(fp);
@@ -252,7 +261,7 @@ void CartGridStrategy::save_grid(StreamOutput *stream)
             }
         }
     }
-    stream->printf("grid saved to %s\n", GRIDFILE);
+    stream->printf("grid saved to %s\n", filename);
     fclose(fp);
 }
 
@@ -263,9 +272,12 @@ bool CartGridStrategy::load_grid(StreamOutput *stream)
         return false;
     }
 
-    FILE *fp = (configured_grid_x_size == configured_grid_y_size)?fopen(GRIDFILE, "r"):fopen(GRIDFILE_NM, "r");
+    // we use a different file format depending on whether it is square or not
+    const char *filename= (this->new_file_format) ? GRIDFILE_NM : GRIDFILE;
+
+    FILE *fp = fopen(filename, "r");
     if(fp == NULL) {
-        stream->printf("error:Failed to open grid %s\n", GRIDFILE);
+        stream->printf("error:Failed to open grid %s\n", filename);
         return false;
     }
 
@@ -286,7 +298,7 @@ bool CartGridStrategy::load_grid(StreamOutput *stream)
 
     load_grid_y_size = load_grid_x_size;
 
-    if(configured_grid_x_size != configured_grid_y_size){
+    if(this->new_file_format){
         if(fread(&load_grid_y_size, sizeof(uint8_t), 1, fp) != 1) {
             stream->printf("error:Failed to read grid size\n");
             fclose(fp);
@@ -413,8 +425,10 @@ bool CartGridStrategy::handleGcode(Gcode *gcode)
 
         } else if(gcode->m == 374) { // M374: Save grid, M374.1: delete saved grid
             if(gcode->subcode == 1) {
-                remove(GRIDFILE);
-                gcode->stream->printf("%s deleted\n", GRIDFILE);
+                // we use a different file format depending on whether it is square or not
+                const char *filename= (this->new_file_format) ? GRIDFILE_NM : GRIDFILE;
+                remove(filename);
+                gcode->stream->printf("%s deleted\n", filename);
             } else {
                 save_grid(gcode->stream);
             }
@@ -489,14 +503,35 @@ bool CartGridStrategy::findBed()
 
 bool CartGridStrategy::doProbe(Gcode *gc)
 {
+    bool use_wcs= false;
     gc->stream->printf("Rectangular Grid Probe...\n");
+
+    // if R1 then force only_by_two_corners using current position for start point
+    // R0 turns off two corners mode
+    if(gc->has_letter('R')) {
+        if(gc->get_int('R') == 1) {
+            only_by_two_corners= true;
+            use_wcs= true;
+            gc->stream->printf("NOTE: only by two corners mode using current position for start, offset by XY\n");
+        }else{
+            only_by_two_corners= false;
+        }
+    }
 
     if(only_by_two_corners){
         if(gc->has_letter('X') && gc->has_letter('Y') && gc->has_letter('A') && gc->has_letter('B')){
-            this->x_start = gc->get_value('X'); // override default probe start point, will get saved
-            this->y_start = gc->get_value('Y'); // override default probe start point, will get saved
-            this->x_size = gc->get_value('A'); // override default probe width, will get saved
-            this->y_size = gc->get_value('B'); // override default probe length, will get saved
+            if(use_wcs) {
+                float xo = gc->get_value('X'); // offset current start position
+                float yo = gc->get_value('Y');
+                // NOTE as we are positioning the probe we need to reverse offset for the probe offset
+                this->x_start = THEROBOT->get_axis_position(X_AXIS) + xo + X_PROBE_OFFSET_FROM_EXTRUDER;
+                this->y_start = THEROBOT->get_axis_position(Y_AXIS) + yo + Y_PROBE_OFFSET_FROM_EXTRUDER;
+            }else{
+                this->x_start = gc->get_value('X'); // override default probe start point
+                this->y_start = gc->get_value('Y'); // override default probe start point
+            }
+            this->x_size = gc->get_value('A'); // override default probe width
+            this->y_size = gc->get_value('B'); // override default probe length
         } else {
             gc->stream->printf("In only_by_two_corners mode all XYAB parameters needed\n");
             return false;
@@ -543,7 +578,7 @@ bool CartGridStrategy::doProbe(Gcode *gc)
         return false;
     }
 
-    gc->stream->printf("Probe start ht is %f mm, rectangular bed width %fmm, height %fmm, grid size is %dx%d\n", zprobe->getProbeHeight(), x_size, y_size, current_grid_x_size, current_grid_y_size);
+    gc->stream->printf("Probe start ht: %f mm, start x,y: %f,%f, rectangular bed width,height in mm: %f,%f, grid size: %dx%d\n", zprobe->getProbeHeight(), x_start, y_start, x_size, y_size, current_grid_x_size, current_grid_y_size);
 
     // do first probe for 0,0
     float mm;
