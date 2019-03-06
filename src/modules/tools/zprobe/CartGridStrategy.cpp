@@ -538,6 +538,9 @@ bool CartGridStrategy::doProbe(Gcode *gc, bool scanonly)
     float z_reference = zprobe->getProbeHeight() - mm; // this should be zero
     gc->stream->printf("probe at 0,0 is %f mm\n", z_reference);
 
+    // keep track of worst case delta
+    float max_delta= z_reference;
+
     // probe all the points of the grid
     for (int yCount = 0; yCount < this->current_grid_y_size; yCount++) {
         float yProbe = this->y_start + (this->y_size / (this->current_grid_y_size - 1)) * yCount;
@@ -564,10 +567,13 @@ bool CartGridStrategy::doProbe(Gcode *gc, bool scanonly)
             if(!scanonly) {
                 grid[xCount + (this->current_grid_x_size * yCount)] = measured_z;
             }
+            if(measured_z > max_delta) max_delta= measured_z;
         }
     }
 
     print_bed_level(gc->stream);
+
+    gc->stream->printf("Maximum delta: %1.4f\n", max_delta);
 
     if (do_manual_attach) {
         // Move to the attachment point defined for removal of probe
