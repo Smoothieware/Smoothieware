@@ -350,11 +350,19 @@ bool CartGridStrategy::handleGcode(Gcode *gcode)
         if( gcode->g == 29 || gcode->g == 31 || gcode->g == 32) { // do a grid probe
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_idle();
+            bool scanonly= (gcode->g == 29);
 
-            if(!doProbe(gcode, gcode->g == 29)) {
+            // save grid settings as scan may change them
+            float xs= x_start, ys= y_start, xsz= x_size, ysz= y_size, xg= current_grid_x_size, yg= current_grid_y_size;
+
+            if(!doProbe(gcode, scanonly)) {
                 gcode->stream->printf("Probe failed to complete, check the initial probe height and/or initial_height settings\n");
             } else {
                 gcode->stream->printf("Probe completed\n");
+            }
+            if(scanonly) {
+                // restore settings
+                x_start= xs; y_start= ys; x_size= xsz; y_size= ysz; current_grid_x_size= xg; current_grid_y_size= yg;
             }
             return true;
         }
@@ -499,7 +507,7 @@ bool CartGridStrategy::doProbe(Gcode *gc, bool scanonly)
     if(gc->has_letter('I')) current_grid_x_size = gc->get_value('I'); // override default grid x size
     if(gc->has_letter('J')) current_grid_y_size = gc->get_value('J'); // override default grid y size
 
-    if((this->current_grid_x_size * this->current_grid_y_size)  > (this->configured_grid_x_size * this->configured_grid_y_size)){
+    if(!scanonly && (this->current_grid_x_size * this->current_grid_y_size)  > (this->configured_grid_x_size * this->configured_grid_y_size)){
         gc->stream->printf("Grid size (%d x %d = %d) bigger than configured (%d x %d = %d). Change configuration.\n",
                             this->current_grid_x_size, this->current_grid_y_size, this->current_grid_x_size*this->current_grid_x_size,
                             this->configured_grid_x_size, this->configured_grid_y_size, this->configured_grid_x_size*this->configured_grid_y_size);
@@ -539,7 +547,7 @@ bool CartGridStrategy::doProbe(Gcode *gc, bool scanonly)
     gc->stream->printf("probe at 0,0 is %f mm\n", z_reference);
 
     // keep track of worst case delta
-    float max_delta= z_reference;
+    float max_delta= fabs(z_reference);
 
     // probe all the points of the grid
     for (int yCount = 0; yCount < this->current_grid_y_size; yCount++) {
@@ -567,7 +575,7 @@ bool CartGridStrategy::doProbe(Gcode *gc, bool scanonly)
             if(!scanonly) {
                 grid[xCount + (this->current_grid_x_size * yCount)] = measured_z;
             }
-            if(measured_z > max_delta) max_delta= measured_z;
+            if(fabs(measured_z) > max_delta) max_delta= fabs(measured_z);
         }
     }
 
@@ -635,6 +643,9 @@ void CartGridStrategy::doCompensation(float *target, bool inverse)
     float left = (1 - ratio_y) * z1 + ratio_y * z2;
     float right = (1 - ratio_y) * z3 + ratio_y * z4;
     float offset = (1 - ratio_x) * left + ratio_x * right;
+
+    // handle case where the grid was incomplete
+    if(isnan(offset)) return;
 
     if (inverse) {
         target[Z_AXIS] -= offset * scale;
