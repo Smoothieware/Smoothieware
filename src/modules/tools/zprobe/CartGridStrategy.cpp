@@ -449,7 +449,7 @@ bool CartGridStrategy::doProbe(Gcode *gc, bool scanonly)
 {
     bool use_wcs= false;
     gc->stream->printf("Rectangular Grid Probe...\n");
-    if(scanonly) gc->stream->printf("Scan Only\n");
+    if(scanonly) gc->stream->printf("NOTE Scan Only\n");
 
     // if R1 then force only_by_two_corners using current position for start point
     // R0 turns off two corners mode
