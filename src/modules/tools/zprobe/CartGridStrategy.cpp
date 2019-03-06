@@ -368,7 +368,7 @@ bool CartGridStrategy::handleGcode(Gcode *gcode)
         }
 
     } else if(gcode->has_m) {
-        if(gcode->m == 370 || gcode->m == 561) { // M370: Clear bed, M561: Set Identity Transform
+        if(gcode->m == 370 || gcode->m == 561) { // M370, M561: Clear bed
             // delete the compensationTransform in robot
             setAdjustFunction(false);
             reset_bed_level();
