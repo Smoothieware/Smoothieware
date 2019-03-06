@@ -541,6 +541,11 @@ bool CartGridStrategy::doProbe(Gcode *gc)
         if(gc->has_letter('Y')) this->y_size = gc->get_value('Y'); // override default probe length, will get saved
     }
 
+    if(x_size == 0 || y_size == 0) {
+        gc->stream->printf("ERROR: Probe Size cannot be 0\n");
+        return false;
+    }
+
     setAdjustFunction(false);
     reset_bed_level();
 
@@ -578,7 +583,7 @@ bool CartGridStrategy::doProbe(Gcode *gc)
         return false;
     }
 
-    gc->stream->printf("Probe start ht: %f mm, start x,y: %f,%f, rectangular bed width,height in mm: %f,%f, grid size: %dx%d\n", zprobe->getProbeHeight(), x_start, y_start, x_size, y_size, current_grid_x_size, current_grid_y_size);
+    gc->stream->printf("Probe start ht: %0.4f mm, start MCS x,y: %0.4f,%0.4f, rectangular bed width,height in mm: %0.4f,%0.4f, grid size: %dx%d\n", zprobe->getProbeHeight(), x_start, y_start, x_size, y_size, current_grid_x_size, current_grid_y_size);
 
     // do first probe for 0,0
     float mm;
