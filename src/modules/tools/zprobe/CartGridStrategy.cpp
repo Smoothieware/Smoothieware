@@ -571,15 +571,22 @@ bool CartGridStrategy::doProbe(Gcode *gc, bool scanonly)
             }
 
             float measured_z = zprobe->getProbeHeight() - mm - z_reference; // this is the delta z from bed at 0,0
-            gc->stream->printf("DEBUG: X%1.4f, Y%1.4f, Z%1.4f\n", xProbe, yProbe, measured_z);
-            if(!scanonly) {
+            if(scanonly) {
+                gc->stream->printf("%1.4f ", measured_z);
+            }else{
+                gc->stream->printf("DEBUG: X%1.4f, Y%1.4f, Z%1.4f\n", xProbe, yProbe, measured_z);
                 grid[xCount + (this->current_grid_x_size * yCount)] = measured_z;
             }
             if(fabs(measured_z) > max_delta) max_delta= fabs(measured_z);
         }
+        if(scanonly) {
+            gc->stream->puts("\n");
+        }
     }
 
-    print_bed_level(gc->stream);
+    if(!scanonly) {
+        print_bed_level(gc->stream);
+    }
 
     gc->stream->printf("Maximum delta: %1.4f\n", max_delta);
 
