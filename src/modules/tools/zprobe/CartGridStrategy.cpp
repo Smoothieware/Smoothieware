@@ -575,7 +575,11 @@ bool CartGridStrategy::doProbe(Gcode *gc, bool scanonly)
             if(scanonly) {
                 char buf[16];
                 size_t n= snprintf(buf, sizeof(buf), "%0.4f ", measured_z);
-                scanline.append(buf, n);
+                if(xInc > 0) {
+                    scanline.append(buf, n);
+                }else{
+                    scanline.insert(0, buf, n);
+                }
             }else{
                 gc->stream->printf("DEBUG: X%1.4f, Y%1.4f, Z%1.4f\n", xProbe, yProbe, measured_z);
                 grid[xCount + (this->current_grid_x_size * yCount)] = measured_z;
