@@ -563,7 +563,7 @@ bool CartGridStrategy::doProbe(Gcode *gc, bool scanonly)
             xInc = 1;
         }
 
-        float scanline[this->current_grid_x_size];
+        std::string scanline;
         for (int xCount = xStart; xCount != xStop; xCount += xInc) {
             float xProbe = this->x_start + (this->x_size / (this->current_grid_x_size - 1)) * xCount;
 
@@ -573,7 +573,9 @@ bool CartGridStrategy::doProbe(Gcode *gc, bool scanonly)
 
             float measured_z = zprobe->getProbeHeight() - mm - z_reference; // this is the delta z from bed at 0,0
             if(scanonly) {
-                scanline[xCount]= measured_z;
+                char buf[16];
+                size_t n= snprintf(buf, sizeof(buf), "%0.4f ", measured_z);
+                scanline.append(buf, n);
             }else{
                 gc->stream->printf("DEBUG: X%1.4f, Y%1.4f, Z%1.4f\n", xProbe, yProbe, measured_z);
                 grid[xCount + (this->current_grid_x_size * yCount)] = measured_z;
@@ -581,10 +583,8 @@ bool CartGridStrategy::doProbe(Gcode *gc, bool scanonly)
             if(fabs(measured_z) > max_delta) max_delta= fabs(measured_z);
         }
         if(scanonly) {
-            for (int i = 0; i < current_grid_x_size; ++i) {
-                gc->stream->printf("%0.4f ", scanline[i]);
-            }
-            gc->stream->puts("\n");
+            gc->stream->printf("%s\n", scanline.c_str());
+            scanline.clear();
         }
     }
 
