@@ -538,13 +538,13 @@ bool CartGridStrategy::doProbe(Gcode *gc, bool scanonly)
         return false;
     }
 
-    gc->stream->printf("Probe start ht: %0.4f mm, start MCS x,y: %0.4f,%0.4f, rectangular bed width,height in mm: %0.4f,%0.4f, grid size: %dx%d\n", zprobe->getProbeHeight(), x_start, y_start, x_size, y_size, current_grid_x_size, current_grid_y_size);
+    gc->stream->printf("Probe start ht: %0.3f mm, start MCS x,y: %0.3f,%0.3f, rectangular bed width,height in mm: %0.3f,%0.3f, grid size: %dx%d\n", zprobe->getProbeHeight(), x_start, y_start, x_size, y_size, current_grid_x_size, current_grid_y_size);
 
     // do first probe for 0,0
     float mm;
     if(!zprobe->doProbeAt(mm, this->x_start - X_PROBE_OFFSET_FROM_EXTRUDER, this->y_start - Y_PROBE_OFFSET_FROM_EXTRUDER)) return false;
     float z_reference = zprobe->getProbeHeight() - mm; // this should be zero
-    gc->stream->printf("probe at 0,0 is %f mm\n", z_reference);
+    gc->stream->printf("probe at 0,0 is %1.3f mm\n", z_reference);
 
     // keep track of worst case delta
     float max_delta= fabs(z_reference);
@@ -563,6 +563,7 @@ bool CartGridStrategy::doProbe(Gcode *gc, bool scanonly)
             xInc = 1;
         }
 
+        std::string scanline;
         for (int xCount = xStart; xCount != xStop; xCount += xInc) {
             float xProbe = this->x_start + (this->x_size / (this->current_grid_x_size - 1)) * xCount;
 
@@ -571,17 +572,31 @@ bool CartGridStrategy::doProbe(Gcode *gc, bool scanonly)
             }
 
             float measured_z = zprobe->getProbeHeight() - mm - z_reference; // this is the delta z from bed at 0,0
-            gc->stream->printf("DEBUG: X%1.4f, Y%1.4f, Z%1.4f\n", xProbe, yProbe, measured_z);
-            if(!scanonly) {
+            if(scanonly) {
+                char buf[16];
+                size_t n= snprintf(buf, sizeof(buf), "%0.3f ", measured_z);
+                if(xInc > 0) {
+                    scanline.append(buf, n);
+                }else{
+                    scanline.insert(0, buf, n);
+                }
+            }else{
+                gc->stream->printf("DEBUG: X%1.3f, Y%1.3f, Z%1.3f\n", xProbe, yProbe, measured_z);
                 grid[xCount + (this->current_grid_x_size * yCount)] = measured_z;
             }
             if(fabs(measured_z) > max_delta) max_delta= fabs(measured_z);
         }
+        if(scanonly) {
+            gc->stream->printf("%s\n", scanline.c_str());
+            scanline.clear();
+        }
     }
 
-    print_bed_level(gc->stream);
+    if(!scanonly) {
+        print_bed_level(gc->stream);
+    }
 
-    gc->stream->printf("Maximum delta: %1.4f\n", max_delta);
+    gc->stream->printf("Maximum delta: %1.3f\n", max_delta);
 
     if (do_manual_attach) {
         // Move to the attachment point defined for removal of probe
