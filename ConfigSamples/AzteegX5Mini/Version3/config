@@ -1,8 +1,9 @@
 ﻿# Robot module configurations : general handling of movement G-codes and slicing into moves
 default_feed_rate                            4000             # Default rate ( mm/minute ) for G1/G2/G3 moves
 default_seek_rate                            4000             # Default rate ( mm/minute ) for G0 moves
-mm_per_arc_segment                           0.5              # Arcs are cut into segments ( lines ), this is the length for these segments.  Smaller values mean more resolution, higher values mean faster computation
-#mm_per_line_segment                          5                # Lines can be cut into segments ( not usefull with cartesian coordinates robots ).
+mm_per_arc_segment                           0.0              # Fixed length for line segments that divide arcs, 0 to disable
+#mm_per_line_segment                         5                # Cut lines into segments this size
+mm_max_arc_error                             0.01             # The maximum error for line segments that divide arcs 0 to disable
 
 # Arm solution configuration : Cartesian robot. Translates mm positions into stepper positions
 alpha_steps_per_mm                           80               # Steps per mm for alpha stepper

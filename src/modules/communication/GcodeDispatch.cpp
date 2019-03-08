@@ -284,6 +284,9 @@ try_again:
                                 new_message.stream->printf(", X-MSD:1");
                                 #endif
 
+                                if(THEKERNEL->is_bad_mcu()) {
+                                    new_message.stream->printf(", X-WARNING:This is not a sanctioned board and may be unreliable and even dangerous. This MCU is deprecated, and cannot guarantee proper function\n");
+                                }
                                 new_message.stream->printf("\nok\n");
                                 return;
                             }
