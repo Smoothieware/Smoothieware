@@ -39,14 +39,22 @@
 #include "checksumm.h"
 #include "StepTicker.h"
 
-#define motor_driver_control_checksum   CHECKSUM("motor_driver_control")
-#define sense_resistor_checksum         CHECKSUM("sense_resistor")
-#define chopper_mode_checksum           CHECKSUM("chopper_mode")
-#define stealthchop_tpwmthrs_checksum   CHECKSUM("stealthchop_tpwmthrs")
-#define spreadcycle_toff_checksum       CHECKSUM("spreadcycle_toff")
-#define spreadcycle_tbl_checksum        CHECKSUM("spreadcycle_tbl")
-#define spreadcycle_hstrt_checksum      CHECKSUM("spreadcycle_hstrt")
-#define spreadcycle_hend_checksum       CHECKSUM("spreadcycle_hend")
+#define motor_driver_control_checksum       CHECKSUM("motor_driver_control")
+#define sense_resistor_checksum             CHECKSUM("sense_resistor")
+#define chopper_mode_checksum               CHECKSUM("chopper_mode")
+#define spreadcycle_toff_checksum           CHECKSUM("spreadcycle_toff")
+#define spreadcycle_tbl_checksum            CHECKSUM("spreadcycle_tbl")
+#define spreadcycle_hstrt_checksum          CHECKSUM("spreadcycle_hstrt")
+#define spreadcycle_hend_checksum           CHECKSUM("spreadcycle_hend")
+#define stealthchop_pwm_lim_checksum        CHECKSUM("stealthchop_pwm_lim")
+#define stealthchop_pwm_reg_checksum        CHECKSUM("stealthchop_pwm_reg")
+#define stealthchop_freewheel_checksum      CHECKSUM("stealthchop_freewheel")
+#define stealthchop_pwm_autograd_checksum   CHECKSUM("stealthchop_pwm_autograd")
+#define stealthchop_pwm_autoscale_checksum  CHECKSUM("stealthchop_pwm_autoscale")
+#define stealthchop_pwm_freq_checksum       CHECKSUM("stealthchop_pwm_freq")
+#define stealthchop_pwm_grad_checksum       CHECKSUM("stealthchop_pwm_grad")
+#define stealthchop_pwm_ofs_checksum        CHECKSUM("stealthchop_pwm_ofs")
+#define stealthchop_tpwmthrs_checksum       CHECKSUM("stealthchop_tpwmthrs")
 
 
 //! return value for TMC22X.getOverTemperature() if there is a overtemperature situation in the TMC chip
@@ -589,27 +597,32 @@ void TMC22X::init(uint16_t cs)
     // Configure SpreadCycle (also uses in StealthChop when TPWMTHRS is set)
     // (default values come from the Quick Configuration Guide chapter in TMC2208 datasheet)
     int8_t toff  = THEKERNEL->config->value(motor_driver_control_checksum, cs, spreadcycle_toff_checksum)->by_default(5)->as_int();
-    int8_t tbl   = THEKERNEL->config->value(motor_driver_control_checksum, cs, spreadcycle_tbl_checksum)->by_default(2)->as_int();
+    int8_t tbl   = THEKERNEL->config->value(motor_driver_control_checksum, cs, spreadcycle_tbl_checksum)->by_default(32)->as_int();
     int8_t hstrt = THEKERNEL->config->value(motor_driver_control_checksum, cs, spreadcycle_hstrt_checksum)->by_default(4)->as_int(); 
     int8_t hend  = THEKERNEL->config->value(motor_driver_control_checksum, cs, spreadcycle_hend_checksum)->by_default(0)->as_int(); 
 
     setSpreadCycleChopper(toff, tbl, hstrt, hend);
 
+    // Configure StealthChop
+    uint8_t lim       = THEKERNEL->config->value(motor_driver_control_checksum, cs, stealthchop_pwm_lim_checksum)->by_default(12)->as_int();
+    uint8_t reg       = THEKERNEL->config->value(motor_driver_control_checksum, cs, stealthchop_pwm_reg_checksum)->by_default(1)->as_int();
+    uint8_t freewheel = THEKERNEL->config->value(motor_driver_control_checksum, cs, stealthchop_freewheel_checksum)->by_default(0)->as_int();
+    bool autograd     = THEKERNEL->config->value(motor_driver_control_checksum, cs, stealthchop_pwm_autograd_checksum)->by_default(true)->as_bool();
+    bool autoscale    = THEKERNEL->config->value(motor_driver_control_checksum, cs, stealthchop_pwm_autoscale_checksum)->by_default(true)->as_bool(); 
+    uint8_t freq      = THEKERNEL->config->value(motor_driver_control_checksum, cs, stealthchop_pwm_freq_checksum)->by_default(1)->as_int();
+    uint8_t grad      = THEKERNEL->config->value(motor_driver_control_checksum, cs, stealthchop_pwm_grad_checksum)->by_default(0)->as_int();
+    uint8_t ofs       = THEKERNEL->config->value(motor_driver_control_checksum, cs, stealthchop_pwm_ofs_checksum)->by_default(36)->as_int();
+    int tpwmthrs      = THEKERNEL->config->value(motor_driver_control_checksum, cs, stealthchop_tpwmthrs_checksum)->by_default(0)->as_int();
+
+    setStealthChop(lim, reg, freewheel, autograd, autoscale, freq, grad, ofs);
+
+    if (tpwmthrs > 0) {
+        setStealthChopthreshold(tpwmthrs);
+    }
+
     // Select mode (0 - spreadCycle, 1 - stealthChop)
-    if (chopper_mode == 1) {
-        // Enable StealthChop by disabling SpreadCycle function
+    if (this->chopper_mode == 1) {
         setSpreadCycleEnabled(false);
-
-        // Arguments order: lim, reg, freewheel, autograd, autoscale, freq, grad, ofs
-        // Default stealthChop configuration
-        setStealthChop(12,1,0,1,1,1,0,36);
-
-        // Set the upper velocity for stealthChop voltage PWM mode (TPWMTHRS)
-        int tpwmthrs = THEKERNEL->config->value(motor_driver_control_checksum, cs, stealthchop_tpwmthrs_checksum)->by_default(0)->as_int();
-
-        if (tpwmthrs > 0) {
-            setStealthChopthreshold(tpwmthrs);
-        } 
     } else {
         setSpreadCycleEnabled(true);
     }
@@ -1504,6 +1517,10 @@ bool TMC22X::set_options(const options_t& options)
             setSenddelay(GET('Z'));
             set = true;
 
+        } else if(s == 13 && HAS('Z')) {
+            setEnabled(GET('Z'));
+            set = true;
+            
         }
 
     }
