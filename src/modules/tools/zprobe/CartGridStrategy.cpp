@@ -56,7 +56,7 @@
 
     Usage
     -----
-    G29 test probes a rectangle which defaults to the width and height, can be overidden with Xnnn and Ynnn
+    G29 test probes a rectangle of width Xnnn and Ynnn starting at the current XY probe position, optionally Innn Jnnn can be used to change the grid size
 
     G31/G32 probes the grid and turns the compensation on, this will remain in effect until reset or M561/M370
         optional parameters Xn Yn sets the size for this rectangular probe, which gets saved with M375
