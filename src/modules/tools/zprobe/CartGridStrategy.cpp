@@ -645,8 +645,9 @@ void CartGridStrategy::doCompensation(float *target, bool inverse)
     float x_target = std::min(std::max(target[X_AXIS], min_x), max_x);
     float y_target = std::min(std::max(target[Y_AXIS], min_y), max_y);
 
-    float grid_x = std::max(0.001F, (x_target - this->x_start) / (this->x_size / (this->current_grid_x_size - 1)));
-    float grid_y = std::max(0.001F, (y_target - this->y_start) / (this->y_size / (this->current_grid_y_size - 1)));
+    // we need to make sure that floor_x and floor_y are always < grid_size-1
+    float grid_x = std::max(0.001F, std::min(this->current_grid_x_size - 1.001F, (x_target - this->x_start) / (this->x_size / (this->current_grid_x_size - 1))));
+    float grid_y = std::max(0.001F, std::min(this->current_grid_x_size - 1.001F, (y_target - this->y_start) / (this->y_size / (this->current_grid_y_size - 1))));
     int floor_x = floorf(grid_x);
     int floor_y = floorf(grid_y);
     float ratio_x = grid_x - floor_x;
@@ -668,22 +669,24 @@ void CartGridStrategy::doCompensation(float *target, bool inverse)
         target[Z_AXIS] += offset * scale;
     }
 
-    /*THEKERNEL->streams->printf("//DEBUG: TARGET: %f, %f, %f\n", target[0], target[1], target[2]);
-     THEKERNEL->streams->printf("//DEBUG: grid_x= %f\n", grid_x);
-     THEKERNEL->streams->printf("//DEBUG: grid_y= %f\n", grid_y);
-     THEKERNEL->streams->printf("//DEBUG: floor_x= %d\n", floor_x);
-     THEKERNEL->streams->printf("//DEBUG: floor_y= %d\n", floor_y);
-     THEKERNEL->streams->printf("//DEBUG: ratio_x= %f\n", ratio_x);
-     THEKERNEL->streams->printf("//DEBUG: ratio_y= %f\n", ratio_y);
-     THEKERNEL->streams->printf("//DEBUG: z1= %f\n", z1);
-     THEKERNEL->streams->printf("//DEBUG: z2= %f\n", z2);
-     THEKERNEL->streams->printf("//DEBUG: z3= %f\n", z3);
-     THEKERNEL->streams->printf("//DEBUG: z4= %f\n", z4);
-     THEKERNEL->streams->printf("//DEBUG: left= %f\n", left);
-     THEKERNEL->streams->printf("//DEBUG: right= %f\n", right);
-     THEKERNEL->streams->printf("//DEBUG: offset= %f\n", offset);
-     THEKERNEL->streams->printf("//DEBUG: scale= %f\n", scale);
-     */
+#if 0
+    THEKERNEL->streams->printf("//DEBUG: TARGET: %f, %f, %f\n", target[0], target[1], target[2]);
+    THEKERNEL->streams->printf("//DEBUG: grid_x= %f\n", grid_x);
+    THEKERNEL->streams->printf("//DEBUG: grid_y= %f\n", grid_y);
+    THEKERNEL->streams->printf("//DEBUG: floor_x= %d\n", floor_x);
+    THEKERNEL->streams->printf("//DEBUG: floor_y= %d\n", floor_y);
+    THEKERNEL->streams->printf("//DEBUG: ratio_x= %f\n", ratio_x);
+    THEKERNEL->streams->printf("//DEBUG: ratio_y= %f\n", ratio_y);
+    THEKERNEL->streams->printf("//DEBUG: z1= %f\n", z1);
+    THEKERNEL->streams->printf("//DEBUG: z2= %f\n", z2);
+    THEKERNEL->streams->printf("//DEBUG: z3= %f\n", z3);
+    THEKERNEL->streams->printf("//DEBUG: z4= %f\n", z4);
+    THEKERNEL->streams->printf("//DEBUG: left= %f\n", left);
+    THEKERNEL->streams->printf("//DEBUG: right= %f\n", right);
+    THEKERNEL->streams->printf("//DEBUG: offset= %f\n", offset);
+    THEKERNEL->streams->printf("//DEBUG: scale= %f\n", scale);
+    THEKERNEL->streams->printf("//DEBUG: adjustment= %f\n", offset*scale);
+#endif
 }
 
 
