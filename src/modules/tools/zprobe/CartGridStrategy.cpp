@@ -660,7 +660,7 @@ void CartGridStrategy::doCompensation(float *target, bool inverse)
     float right = (1 - ratio_y) * z3 + ratio_y * z4;
     float offset = (1 - ratio_x) * left + ratio_x * right;
 
-    // handle case where the grid was incomplete
+    // handle case where the grid was incomplete (should never happen)
     if(isnan(offset)) return;
 
     if (inverse) {
