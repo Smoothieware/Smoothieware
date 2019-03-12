@@ -347,24 +347,23 @@ bool CartGridStrategy::load_grid(StreamOutput *stream)
 bool CartGridStrategy::handleGcode(Gcode *gcode)
 {
     if(gcode->has_g) {
-        if( gcode->g == 29 || gcode->g == 31 || gcode->g == 32) { // do a grid probe
+        if(gcode->g == 31 || gcode->g == 32) { // do a grid probe
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_idle();
-            bool scanonly= (gcode->g == 29);
 
-            // save grid settings as scan may change them
-            float xs= x_start, ys= y_start, xsz= x_size, ysz= y_size, xg= current_grid_x_size, yg= current_grid_y_size;
-
-            if(!doProbe(gcode, scanonly)) {
+            if(!doProbe(gcode)) {
                 gcode->stream->printf("Probe failed to complete, check the initial probe height and/or initial_height settings\n");
             } else {
                 gcode->stream->printf("Probe completed\n");
             }
-            if(scanonly) {
-                // restore settings
-                x_start= xs; y_start= ys; x_size= xsz; y_size= ysz; current_grid_x_size= xg; current_grid_y_size= yg;
-            }
             return true;
+
+        }else if(gcode->g == 29) {
+            // first wait for an empty queue i.e. no moves left
+            THEKERNEL->conveyor->wait_for_idle();
+            if(!scan_bed(gcode)) {
+                gcode->stream->printf("scan failed to complete\n");
+            }
         }
 
     } else if(gcode->has_m) {
@@ -453,11 +452,55 @@ bool CartGridStrategy::findBed()
     return true;
 }
 
-bool CartGridStrategy::doProbe(Gcode *gc, bool scanonly)
+bool CartGridStrategy::scan_bed(Gcode *gc)
+{
+    float _x_start, _y_start, _x_size, _y_size;
+    int n = gc->has_letter('I') ? gc->get_value('I') : configured_grid_x_size;
+    int m = gc->has_letter('J') ? gc->get_value('J') : configured_grid_y_size;
+
+    if((n < 5)||(m < 5)) {
+        gc->stream->printf("Need at least a 5x5 grid to scan\n");
+        return false;
+    }
+
+    if(gc->has_letter('X') && gc->has_letter('Y')) {
+        _x_size = gc->get_value('X'); // override default probe width
+        _y_size = gc->get_value('Y'); // override default probe length
+    } else {
+        gc->stream->printf("X and Y parameters needed to specify x size and y size\n");
+        return false;
+    }
+
+    if(!findBed()) return false;
+
+    // NOTE as we are positioning the probe we need to reverse offset for the probe offset
+    _x_start = THEROBOT->get_axis_position(X_AXIS) + X_PROBE_OFFSET_FROM_EXTRUDER;
+    _y_start = THEROBOT->get_axis_position(Y_AXIS) + Y_PROBE_OFFSET_FROM_EXTRUDER;
+
+    float x_step = _x_size / n;
+    float y_step = _y_size / m;
+    for (int c = 0; c < m; ++c) {
+        std::string scanline;
+        float y = _y_start + y_step * c;
+        for (int r = 0; r < n; ++r) {
+            float x = _x_start + x_step * r;
+            float z = 0.0F;
+            float mm;
+            if(!zprobe->doProbeAt(mm, x - X_PROBE_OFFSET_FROM_EXTRUDER, y - Y_PROBE_OFFSET_FROM_EXTRUDER)) return false;
+            z = zprobe->getProbeHeight() - mm;
+            char buf[16];
+            size_t n= snprintf(buf, sizeof(buf), "%1.3f ", z);
+            scanline.append(buf, n);
+        }
+        gc->stream->printf("%s\n", scanline.c_str());
+    }
+    return true;
+}
+
+bool CartGridStrategy::doProbe(Gcode *gc)
 {
     bool use_wcs= false;
     gc->stream->printf("Rectangular Grid Probe...\n");
-    if(scanonly) gc->stream->printf("NOTE Scan Only\n");
 
     // if R1 then force only_by_two_corners using current position for start point
     // R0 turns off two corners mode
@@ -499,15 +542,13 @@ bool CartGridStrategy::doProbe(Gcode *gc, bool scanonly)
         return false;
     }
 
-    if(!scanonly) {
-        setAdjustFunction(false);
-        reset_bed_level();
-    }
+    setAdjustFunction(false);
+    reset_bed_level();
 
     if(gc->has_letter('I')) current_grid_x_size = gc->get_value('I'); // override default grid x size
     if(gc->has_letter('J')) current_grid_y_size = gc->get_value('J'); // override default grid y size
 
-    if(!scanonly && (this->current_grid_x_size * this->current_grid_y_size)  > (this->configured_grid_x_size * this->configured_grid_y_size)){
+    if((this->current_grid_x_size * this->current_grid_y_size)  > (this->configured_grid_x_size * this->configured_grid_y_size)){
         gc->stream->printf("Grid size (%d x %d = %d) bigger than configured (%d x %d = %d). Change configuration.\n",
                             this->current_grid_x_size, this->current_grid_y_size, this->current_grid_x_size*this->current_grid_x_size,
                             this->configured_grid_x_size, this->configured_grid_y_size, this->configured_grid_x_size*this->configured_grid_y_size);
@@ -563,7 +604,6 @@ bool CartGridStrategy::doProbe(Gcode *gc, bool scanonly)
             xInc = 1;
         }
 
-        std::string scanline;
         for (int xCount = xStart; xCount != xStop; xCount += xInc) {
             float xProbe = this->x_start + (this->x_size / (this->current_grid_x_size - 1)) * xCount;
 
@@ -572,29 +612,13 @@ bool CartGridStrategy::doProbe(Gcode *gc, bool scanonly)
             }
 
             float measured_z = zprobe->getProbeHeight() - mm - z_reference; // this is the delta z from bed at 0,0
-            if(scanonly) {
-                char buf[16];
-                size_t n= snprintf(buf, sizeof(buf), "%0.3f ", measured_z);
-                if(xInc > 0) {
-                    scanline.append(buf, n);
-                }else{
-                    scanline.insert(0, buf, n);
-                }
-            }else{
-                gc->stream->printf("DEBUG: X%1.3f, Y%1.3f, Z%1.3f\n", xProbe, yProbe, measured_z);
-                grid[xCount + (this->current_grid_x_size * yCount)] = measured_z;
-            }
+            gc->stream->printf("DEBUG: X%1.3f, Y%1.3f, Z%1.3f\n", xProbe, yProbe, measured_z);
+            grid[xCount + (this->current_grid_x_size * yCount)] = measured_z;
             if(fabs(measured_z) > max_delta) max_delta= fabs(measured_z);
-        }
-        if(scanonly) {
-            gc->stream->printf("%s\n", scanline.c_str());
-            scanline.clear();
         }
     }
 
-    if(!scanonly) {
-        print_bed_level(gc->stream);
-    }
+    print_bed_level(gc->stream);
 
     gc->stream->printf("Maximum delta: %1.3f\n", max_delta);
 
@@ -610,9 +634,7 @@ bool CartGridStrategy::doProbe(Gcode *gc, bool scanonly)
         gc->stream->printf(" ********************\n");
     }
 
-    if(!scanonly) {
-        setAdjustFunction(true);
-    }
+    setAdjustFunction(true);
 
     return true;
 }

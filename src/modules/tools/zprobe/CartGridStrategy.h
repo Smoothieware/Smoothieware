@@ -20,7 +20,8 @@ public:
 
 private:
 
-    bool doProbe(Gcode *gc, bool scanonly);
+    bool doProbe(Gcode *gc);
+    bool scan_bed(Gcode *gc);
     bool findBed();
     void setAdjustFunction(bool on);
     void print_bed_level(StreamOutput *stream);
