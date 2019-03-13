@@ -22,7 +22,7 @@ private:
 
     bool doProbe(Gcode *gc);
     bool scan_bed(Gcode *gc);
-    bool findBed();
+    bool findBed(float x, float y);
     void setAdjustFunction(bool on);
     void print_bed_level(StreamOutput *stream);
     void doCompensation(float *target, bool inverse);

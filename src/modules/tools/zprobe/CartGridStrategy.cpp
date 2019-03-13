@@ -364,6 +364,7 @@ bool CartGridStrategy::handleGcode(Gcode *gcode)
             if(!scan_bed(gcode)) {
                 gcode->stream->printf("scan failed to complete\n");
             }
+            return true;
         }
 
     } else if(gcode->has_m) {
@@ -434,12 +435,12 @@ void CartGridStrategy::setAdjustFunction(bool on)
     }
 }
 
-bool CartGridStrategy::findBed()
+bool CartGridStrategy::findBed(float x, float y)
 {
     if (do_home && !do_manual_attach) zprobe->home();
     float z = initial_height;
     zprobe->coordinated_move(NAN, NAN, z, zprobe->getFastFeedrate()); // move Z only to initial_height
-    zprobe->coordinated_move(x_start - X_PROBE_OFFSET_FROM_EXTRUDER, y_start - Y_PROBE_OFFSET_FROM_EXTRUDER, NAN, zprobe->getFastFeedrate()); // move at initial_height to x_start, y_start
+    zprobe->coordinated_move(x - X_PROBE_OFFSET_FROM_EXTRUDER, y - Y_PROBE_OFFSET_FROM_EXTRUDER, NAN, zprobe->getFastFeedrate()); // move at initial_height to x, y
 
     // find bed at 0,0 run at slow rate so as to not hit bed hard
     float mm;
@@ -471,17 +472,17 @@ bool CartGridStrategy::scan_bed(Gcode *gc)
         return false;
     }
 
-    if(!findBed()) return false;
-
     // NOTE as we are positioning the probe we need to reverse offset for the probe offset
     _x_start = THEROBOT->get_axis_position(X_AXIS) + X_PROBE_OFFSET_FROM_EXTRUDER;
     _y_start = THEROBOT->get_axis_position(Y_AXIS) + Y_PROBE_OFFSET_FROM_EXTRUDER;
 
+    if(!findBed(_x_start, _y_start)) return false;
+
     // do first reference probe at start
     float mm;
     if(!zprobe->doProbeAt(mm, _x_start - X_PROBE_OFFSET_FROM_EXTRUDER, _y_start - Y_PROBE_OFFSET_FROM_EXTRUDER)) return false;
-    float z_reference = zprobe->getProbeHeight() - mm; // this should be zero
-    gc->stream->printf("first probe at %1.3f, %1.3f is %1.3f mm\n", _x_start, _y_start, z_reference);
+    float z_reference = zprobe->getProbeHeight() - mm;
+    gc->stream->printf("first probe at X%1.3f, Y%1.3f is %1.3f mm\n", _x_start, _y_start, z_reference);
     float max_delta= fabs(z_reference);
 
     float x_step = _x_size / n;
@@ -581,7 +582,7 @@ bool CartGridStrategy::doProbe(Gcode *gc)
     }
 
     // find bed, and leave probe probe height above bed
-    if(!findBed()) {
+    if(!findBed(x_start, y_start)) {
         gc->stream->printf("Finding bed failed, check the initial height setting\n");
         return false;
     }
