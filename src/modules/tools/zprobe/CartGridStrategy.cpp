@@ -477,6 +477,13 @@ bool CartGridStrategy::scan_bed(Gcode *gc)
     _x_start = THEROBOT->get_axis_position(X_AXIS) + X_PROBE_OFFSET_FROM_EXTRUDER;
     _y_start = THEROBOT->get_axis_position(Y_AXIS) + Y_PROBE_OFFSET_FROM_EXTRUDER;
 
+    // do first reference probe at start
+    float mm;
+    if(!zprobe->doProbeAt(mm, _x_start - X_PROBE_OFFSET_FROM_EXTRUDER, _y_start - Y_PROBE_OFFSET_FROM_EXTRUDER)) return false;
+    float z_reference = zprobe->getProbeHeight() - mm; // this should be zero
+    gc->stream->printf("first probe at %1.3f, %1.3f is %1.3f mm\n", _x_start, _y_start, z_reference);
+    float max_delta= fabs(z_reference);
+
     float x_step = _x_size / n;
     float y_step = _y_size / m;
     for (int c = 0; c < m; ++c) {
@@ -484,16 +491,16 @@ bool CartGridStrategy::scan_bed(Gcode *gc)
         float y = _y_start + y_step * c;
         for (int r = 0; r < n; ++r) {
             float x = _x_start + x_step * r;
-            float z = 0.0F;
-            float mm;
             if(!zprobe->doProbeAt(mm, x - X_PROBE_OFFSET_FROM_EXTRUDER, y - Y_PROBE_OFFSET_FROM_EXTRUDER)) return false;
-            z = zprobe->getProbeHeight() - mm;
+            float z = zprobe->getProbeHeight() - mm - z_reference;
             char buf[16];
             size_t n= snprintf(buf, sizeof(buf), "%1.3f ", z);
             scanline.append(buf, n);
+            if(fabs(z) > max_delta) max_delta= fabs(z);
         }
         gc->stream->printf("%s\n", scanline.c_str());
     }
+    gc->stream->printf("Maximum delta: %1.3f\n", max_delta);
     return true;
 }
 
