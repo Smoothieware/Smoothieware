@@ -589,7 +589,7 @@ bool CartGridStrategy::doProbe(Gcode *gc)
 
     gc->stream->printf("Probe start ht: %0.3f mm, start MCS x,y: %0.3f,%0.3f, rectangular bed width,height in mm: %0.3f,%0.3f, grid size: %dx%d\n", zprobe->getProbeHeight(), x_start, y_start, x_size, y_size, current_grid_x_size, current_grid_y_size);
 
-    // do first probe for 0,0
+    // do first probe for at start point
     float mm;
     if(!zprobe->doProbeAt(mm, this->x_start - X_PROBE_OFFSET_FROM_EXTRUDER, this->y_start - Y_PROBE_OFFSET_FROM_EXTRUDER)) return false;
     float z_reference = zprobe->getProbeHeight() - mm; // this should be zero
