@@ -1211,13 +1211,12 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
         scale= strtof(parameters.substr(npos+1).c_str(), NULL);
     }
 
-    THEROBOT->push_state();
     float rate_mm_s= THEROBOT->actuators[a]->get_max_rate() * scale;
     THEROBOT->delta_move(delta, rate_mm_s, n_motors);
 
     // turn off queue delay and run it now
     THECONVEYOR->force_queue();
-    THEROBOT->pop_state();
+
     //stream->printf("Jog: %c%f F%f\n", ax, d, scale);
 }
 

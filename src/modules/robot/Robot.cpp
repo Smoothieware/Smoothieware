@@ -1369,7 +1369,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
         return true;
     }
 
-    // no actual move
+    // no actual move, should never happen
     return false;
 }
 
