@@ -848,7 +848,7 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
         grblDP_command("-v", stream);
 
     } else if (what == "state") {
-        // also $G
+        // also $G and $I
         // [G0 G54 G17 G21 G90 G94 M0 M5 M9 T0 F0.]
         stream->printf("[G%d %s G%d G%d G%d G94 M0 M5 M9 T%d F%1.4f S%1.4f]\n",
             THEKERNEL->gcode_dispatch->get_modal_command(),
