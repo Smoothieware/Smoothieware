@@ -337,13 +337,13 @@ void ZProbe::on_gcode_received(void *argument)
             return;
         }
 
+        // first wait for all moves to finish
+        THEKERNEL->conveyor->wait_for_idle();
+
         if(this->pin.get() ^ (gcode->subcode >= 4)) {
             gcode->stream->printf("error:ZProbe triggered before move, aborting command.\n");
             return;
         }
-
-        // first wait for all moves to finish
-        THEKERNEL->conveyor->wait_for_idle();
 
         float x= NAN, y=NAN, z=NAN;
         if(gcode->has_letter('X')) {
