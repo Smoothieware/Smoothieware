@@ -640,6 +640,7 @@ void Robot::on_gcode_received(void *argument)
             case 2: // M2 end of program
                 current_wcs = 0;
                 absolute_mode = true;
+                seconds_per_minute= 60;
                 break;
             case 17:
                 THEKERNEL->call_event(ON_ENABLE, (void*)1); // turn all enable pins on

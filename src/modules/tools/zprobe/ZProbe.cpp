@@ -484,8 +484,6 @@ void ZProbe::coordinated_move(float x, float y, float z, float feedrate, bool re
         snprintf(&cmd[n], CMDLEN-n, " F%1.1f", feedrate * 60); // feed rate is converted to mm/min
     }
 
-    if(relative) strcat(cmd, " G90");
-
     //THEKERNEL->streams->printf("DEBUG: move: %s: %u\n", cmd, strlen(cmd));
 
     // send as a command line as may have multiple G codes in it
