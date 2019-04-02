@@ -437,7 +437,7 @@ void CartGridStrategy::setAdjustFunction(bool on)
 
 bool CartGridStrategy::findBed(float x, float y)
 {
-    if (do_home && !do_manual_attach) zprobe->home();
+    if (do_home && !only_by_two_corners && !do_manual_attach) zprobe->home();
     float z = initial_height;
     zprobe->coordinated_move(NAN, NAN, z, zprobe->getFastFeedrate()); // move Z only to initial_height
     zprobe->coordinated_move(x - X_PROBE_OFFSET_FROM_EXTRUDER, y - Y_PROBE_OFFSET_FROM_EXTRUDER, NAN, zprobe->getFastFeedrate()); // move at initial_height to x, y
