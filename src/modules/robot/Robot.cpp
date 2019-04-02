@@ -654,6 +654,7 @@ void Robot::on_gcode_received(void *argument)
                         char axis= (i <= Z_AXIS ? 'X'+i : 'A'+(i-3));
                         if(gcode->has_letter(axis)) bm |= (0x02<<i); // set appropriate bit
                     }
+
                     // handle E parameter as currently selected extruder ABC
                     if(gcode->has_letter('E')) {
                         // find first selected extruder

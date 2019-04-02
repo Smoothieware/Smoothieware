@@ -557,8 +557,12 @@ void Player::suspend_part2()
 
     THEKERNEL->streams->printf("// Saving current state...\n");
 
-    // save current XYZ position
-    THEROBOT->get_axis_position(this->saved_position);
+    // save current XYZ position in WCS
+    Robot::wcs_t mpos= THEROBOT->get_axis_position();
+    Robot::wcs_t wpos= THEROBOT->mcs2wcs(mpos);
+    saved_position[0]= std::get<X_AXIS>(wpos);
+    saved_position[1]= std::get<Y_AXIS>(wpos);
+    saved_position[2]= std::get<Z_AXIS>(wpos);
 
     // save current extruder state
     PublicData::set_value( extruder_checksum, save_state_checksum, nullptr );
@@ -686,9 +690,9 @@ void Player::resume_command(string parameters, StreamOutput *stream )
     // force absolute mode for restoring position, then set to the saved relative/absolute mode
     THEROBOT->absolute_mode= true;
     {
-        // NOTE position was saved in MCS so must use G53 to restore position
+        // NOTE position was saved in WCS (for tool change which may change WCS expecially the Z)
         char buf[128];
-        snprintf(buf, sizeof(buf), "G53 G0 X%f Y%f Z%f", saved_position[0], saved_position[1], saved_position[2]);
+        snprintf(buf, sizeof(buf), "G0 X%f Y%f Z%f", saved_position[0], saved_position[1], saved_position[2]);
         struct SerialMessage message;
         message.message = buf;
         message.stream = &(StreamOutput::NullStream);
