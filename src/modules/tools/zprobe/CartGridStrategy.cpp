@@ -52,7 +52,7 @@
     If two corners rectangular mode activated using "leveling-strategy.rectangular-grid.only_by_two_corners true" then G29/31/32 will not work without providing XYAB parameters
         XY - start point, AB rectangle size from starting point
         "Two corners"" not absolutely correct name for this mode, because it use only one corner and rectangle size.
-        can be turned off with G32 R0
+        can be turned off with G32 R0 and turned on with G32 R1.
 
     Display mode of current grid can be changed to human readable mode (table with coordinates) by using
        leveling-strategy.rectangular-grid.human_readable  true
