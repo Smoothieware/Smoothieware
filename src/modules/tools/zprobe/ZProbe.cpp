@@ -345,31 +345,13 @@ void ZProbe::on_gcode_received(void *argument)
             return;
         }
 
-        float x= NAN, y=NAN, z=NAN;
-        if(gcode->has_letter('X')) {
-            x= gcode->get_value('X');
-        }
-
-        if(gcode->has_letter('Y')) {
-            y= gcode->get_value('Y');
-        }
-
-        if(gcode->has_letter('Z')) {
-            z= gcode->get_value('Z');
-        }
-
-        if(isnan(x) && isnan(y) && isnan(z)) {
-            gcode->stream->printf("error:at least one of X Y or Z must be specified\n");
-            return;
-        }
-
         if(gcode->subcode == 4 || gcode->subcode == 5) {
             invert_probe = true;
         } else {
             invert_probe = false;
         }
 
-        probe_XYZ(gcode, x, y, z);
+        probe_XYZ(gcode);
 
         invert_probe = false;
 
@@ -416,24 +398,41 @@ void ZProbe::on_gcode_received(void *argument)
 }
 
 // special way to probe in the X or Y or Z direction using planned moves, should work with any kinematics
-void ZProbe::probe_XYZ(Gcode *gcode, float x, float y, float z)
+void ZProbe::probe_XYZ(Gcode *gcode)
 {
     // enable the probe checking in the timer
     probing= true;
     probe_detected= false;
-    THEROBOT->disable_segmentation= true; // we must disable segmentation as this won't work with it enabled (beware on deltas probing in X or Y)
+
+    float x= 0, y= 0, z= 0;
+    if(gcode->has_letter('X')) {
+        x= gcode->get_value('X');
+    }
+
+    if(gcode->has_letter('Y')) {
+        y= gcode->get_value('Y');
+    }
+
+    if(gcode->has_letter('Z')) {
+        z= gcode->get_value('Z');
+    }
+
+    if(x == 0 && y == 0 && z == 0) {
+        gcode->stream->printf("error:at least one of X Y or Z must be specified, and be > or < 0\n");
+        return;
+    }
 
     // get probe feedrate in mm/min and convert to mm/sec if specified
     float rate = (gcode->has_letter('F')) ? gcode->get_value('F')/60 : this->slow_feedrate;
 
-    // do a regular move which will stop as soon as the probe is triggered, or the distance is reached
-    coordinated_move(x, y, z, rate, true);
+    // do a delta move which will stop as soon as the probe is triggered, or the distance is reached
+    float delta[3]= {x, y, z};
+    THEROBOT->delta_move(delta, rate, 3);
 
-    // coordinated_move returns when the move is finished
+    THEKERNEL->conveyor->wait_for_idle();
 
     // disable probe checking
     probing= false;
-    THEROBOT->disable_segmentation= false;
 
     // if the probe stopped the move we need to correct the last_milestone as it did not reach where it thought
     // this also sets last_milestone to the machine coordinates it stopped at
