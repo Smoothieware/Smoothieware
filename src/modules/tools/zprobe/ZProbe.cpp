@@ -263,14 +263,15 @@ void ZProbe::on_gcode_received(void *argument)
             return;
         }
 
+        // first wait for all moves to finish
+        THEKERNEL->conveyor->wait_for_idle();
+
         if(this->pin.get()) {
             gcode->stream->printf("ZProbe triggered before move, aborting command.\n");
             return;
         }
 
         if( gcode->g == 30 ) { // simple Z probe
-            // first wait for all moves to finish
-            THEKERNEL->conveyor->wait_for_idle();
 
             bool set_z= (gcode->has_letter('Z') && !is_rdelta);
             bool probe_result;
@@ -334,14 +335,6 @@ void ZProbe::on_gcode_received(void *argument)
         // make sure the probe is defined and not already triggered before moving motors
         if(!this->pin.connected()) {
             gcode->stream->printf("error:ZProbe not connected.\n");
-            return;
-        }
-
-        // first wait for all moves to finish
-        THEKERNEL->conveyor->wait_for_idle();
-
-        if(this->pin.get() ^ (gcode->subcode >= 4)) {
-            gcode->stream->printf("error:ZProbe triggered before move, aborting command.\n");
             return;
         }
 
@@ -419,6 +412,14 @@ void ZProbe::probe_XYZ(Gcode *gcode)
 
     if(x == 0 && y == 0 && z == 0) {
         gcode->stream->printf("error:at least one of X Y or Z must be specified, and be > or < 0\n");
+        return;
+    }
+
+    // first wait for all moves to finish
+    THEKERNEL->conveyor->wait_for_idle();
+
+    if(this->pin.get() != invert_probe) {
+        gcode->stream->printf("error:ZProbe triggered before move, aborting command.\n");
         return;
     }
 
