@@ -204,7 +204,7 @@ void Switch::on_config_reload(void *argument)
         if(this->switch_state) {
             this->swpwm_pin->write(this->switch_value/100.0F);
         } else {
-            this->pwm_pin->write(0);
+            this->swpwm_pin->write(0);
         }
 
     } else if(this->output_type == DIGITAL){
