@@ -43,13 +43,16 @@
 
       Then when M500 is issued it will save M375 which will cause the grid to be loaded on boot. The default is to not autoload the grid on boot
 
-    Optionally an initial_height can be set that tell the initial probe where to stop the fast decent before it probes, this should be around 5-10mm above the bed
+    An initial_height can be set that moves the Z to that Z position before the initial probe, this should be around 5-10mm above the bed.
+    NOTE this is the ABSOLUTE Z machine position and presumes the Z axis home has been set correctly. The default is disabled.
+    If this is not set the probe will start from the current position.
+
       leveling-strategy.rectangular-grid.initial_height  10
 
     If two corners rectangular mode activated using "leveling-strategy.rectangular-grid.only_by_two_corners true" then G29/31/32 will not work without providing XYAB parameters
         XY - start point, AB rectangle size from starting point
         "Two corners"" not absolutely correct name for this mode, because it use only one corner and rectangle size.
-        can be turned off with G32 R0
+        can be turned off with G32 R0 and turned on with G32 R1.
 
     Display mode of current grid can be changed to human readable mode (table with coordinates) by using
        leveling-strategy.rectangular-grid.human_readable  true
@@ -166,7 +169,8 @@ bool CartGridStrategy::handleConfig()
 
     // the initial height above the bed we stop the intial move down after home to find the bed
     // this should be a height that is enough that the probe will not hit the bed and is an offset from max_z (can be set to 0 if max_z takes into account the probe offset)
-    this->initial_height = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, initial_height_checksum)->by_default(10)->as_number();
+    this->initial_height = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, initial_height_checksum)->by_default(NAN)->as_number();
+    if(initial_height <= 0) initial_height= NAN;
 
     // Probe offsets xxx,yyy,zzz
     {
@@ -437,9 +441,10 @@ void CartGridStrategy::setAdjustFunction(bool on)
 
 bool CartGridStrategy::findBed(float x, float y)
 {
-    if (do_home && !do_manual_attach) zprobe->home();
-    float z = initial_height;
-    zprobe->coordinated_move(NAN, NAN, z, zprobe->getFastFeedrate()); // move Z only to initial_height
+    if (do_home && !only_by_two_corners && !do_manual_attach) zprobe->home();
+    if(!isnan(initial_height)) {
+        zprobe->coordinated_move(NAN, NAN, initial_height, zprobe->getFastFeedrate()); // move Z only to initial_height
+    }
     zprobe->coordinated_move(x - X_PROBE_OFFSET_FROM_EXTRUDER, y - Y_PROBE_OFFSET_FROM_EXTRUDER, NAN, zprobe->getFastFeedrate()); // move at initial_height to x, y
 
     // find bed at 0,0 run at slow rate so as to not hit bed hard

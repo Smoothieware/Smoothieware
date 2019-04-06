@@ -640,6 +640,7 @@ void Robot::on_gcode_received(void *argument)
             case 2: // M2 end of program
                 current_wcs = 0;
                 absolute_mode = true;
+                seconds_per_minute= 60;
                 break;
             case 17:
                 THEKERNEL->call_event(ON_ENABLE, (void*)1); // turn all enable pins on
@@ -653,6 +654,7 @@ void Robot::on_gcode_received(void *argument)
                         char axis= (i <= Z_AXIS ? 'X'+i : 'A'+(i-3));
                         if(gcode->has_letter(axis)) bm |= (0x02<<i); // set appropriate bit
                     }
+
                     // handle E parameter as currently selected extruder ABC
                     if(gcode->has_letter('E')) {
                         // find first selected extruder
