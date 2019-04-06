@@ -5,13 +5,12 @@
       you should have received a copy of the gnu general public license along with smoothie. if not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SWITCH_H
-#define SWITCH_H
-
+#pragma once
 #include "Pin.h"
 #include "Pwm.h"
-#include <math.h>
+#include "SoftPWM.h"
 
+#include <math.h>
 #include <string>
 
 class Gcode;
@@ -35,7 +34,7 @@ class Switch : public Module {
         void on_halt(void *arg);
 
         uint32_t pinpoll_tick(uint32_t dummy);
-        enum OUTPUT_TYPE {NONE, SIGMADELTA, DIGITAL, HWPWM};
+        enum OUTPUT_TYPE {NONE, SIGMADELTA, DIGITAL, HWPWM, SWPWM};
 
     private:
         void flip();
@@ -50,6 +49,7 @@ class Switch : public Module {
             Pin          *digital_pin;
             Pwm          *sigmadelta_pin;
             mbed::PwmOut *pwm_pin;
+            SoftPWM      *swpwm_pin;
         };
         std::string    output_on_command;
         std::string    output_off_command;
@@ -68,5 +68,3 @@ class Switch : public Module {
             uint8_t   failsafe:1;
         };
 };
-
-#endif // SWITCH_H

@@ -369,6 +369,7 @@ void ZProbe::on_gcode_received(void *argument)
                 if (gcode->has_letter('I')) { // NOTE this is temporary and toggles the invertion status of the pin
                     invert_override= (gcode->get_value('I') != 0);
                     pin.set_inverting(pin.is_inverting() != invert_override); // XOR so inverted pin is not inverted and vice versa
+                    gcode->stream->printf("// Invert override set: %d\n", pin.is_inverting());
                 }
                 if (gcode->has_letter('D')) this->dwell_before_probing = gcode->get_value('D');
                 break;
@@ -393,10 +394,6 @@ void ZProbe::on_gcode_received(void *argument)
 // special way to probe in the X or Y or Z direction using planned moves, should work with any kinematics
 void ZProbe::probe_XYZ(Gcode *gcode)
 {
-    // enable the probe checking in the timer
-    probing= true;
-    probe_detected= false;
-
     float x= 0, y= 0, z= 0;
     if(gcode->has_letter('X')) {
         x= gcode->get_value('X');
@@ -415,6 +412,9 @@ void ZProbe::probe_XYZ(Gcode *gcode)
         return;
     }
 
+    // get probe feedrate in mm/min and convert to mm/sec if specified
+    float rate = (gcode->has_letter('F')) ? gcode->get_value('F')/60 : this->slow_feedrate;
+
     // first wait for all moves to finish
     THEKERNEL->conveyor->wait_for_idle();
 
@@ -423,12 +423,18 @@ void ZProbe::probe_XYZ(Gcode *gcode)
         return;
     }
 
-    // get probe feedrate in mm/min and convert to mm/sec if specified
-    float rate = (gcode->has_letter('F')) ? gcode->get_value('F')/60 : this->slow_feedrate;
+    // enable the probe checking in the timer
+    probing= true;
+    probe_detected= false;
+    debounce= 0;
 
     // do a delta move which will stop as soon as the probe is triggered, or the distance is reached
     float delta[3]= {x, y, z};
-    THEROBOT->delta_move(delta, rate, 3);
+    if(!THEROBOT->delta_move(delta, rate, 3)) {
+        gcode->stream->printf("error:No move detected or too small\n");
+        probing= false;
+        return;
+    }
 
     THEKERNEL->conveyor->wait_for_idle();
 
