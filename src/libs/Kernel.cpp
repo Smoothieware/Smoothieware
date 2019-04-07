@@ -134,6 +134,7 @@ Kernel::Kernel()
     NVIC_SetPriority(TIMER0_IRQn, 2);
     NVIC_SetPriority(TIMER1_IRQn, 1);
     NVIC_SetPriority(TIMER2_IRQn, 4);
+    NVIC_SetPriority(TIMER3_IRQn, 4);
     NVIC_SetPriority(PendSV_IRQn, 3);
 
     // Set other priorities lower than the timers
