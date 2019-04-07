@@ -65,6 +65,7 @@ void Switch::on_halt(void *arg)
             case DIGITAL: this->digital_pin->set(this->failsafe); break;
             case SIGMADELTA: this->sigmadelta_pin->set(this->failsafe); break;
             case HWPWM: this->pwm_pin->write(0); break;
+            case SWPWM: this->swpwm_pin->write(0); break;
             case NONE: break;
         }
         this->switch_state= this->failsafe;
@@ -150,6 +151,23 @@ void Switch::on_config_reload(void *argument)
             this->output_type= NONE;
         }
 
+    }else if(type == "swpwm"){
+        this->output_type= SWPWM;
+        Pin *pin= new Pin();
+        pin->from_string(THEKERNEL->config->value(switch_checksum, this->name_checksum, output_pin_checksum )->by_default("nc")->as_string())->as_output();
+        if(pin->connected()) {
+            this->swpwm_pin= new SoftPWM(pin, !pin->is_inverting());
+            if(failsafe == 1) {
+                set_high_on_debug(pin->port_number, pin->pin);
+            }else{
+                set_low_on_debug(pin->port_number, pin->pin);
+            }
+        }else{
+            this->output_type= NONE;
+            delete pin;
+        }
+
+
     } else {
         this->output_type= NONE;
     }
@@ -174,6 +192,19 @@ void Switch::on_config_reload(void *argument)
             this->pwm_pin->write(this->switch_value/100.0F);
         } else {
             this->pwm_pin->write(0);
+        }
+
+    } else if(this->output_type == SWPWM) {
+        // default is 50Hz
+        float p= THEKERNEL->config->value(switch_checksum, this->name_checksum, pwm_period_ms_checksum )->by_default(20)->as_number(); // ms fractions are not allowed
+        this->swpwm_pin->period_ms(p);
+
+        // default is 0% duty cycle
+        this->switch_value = THEKERNEL->config->value(switch_checksum, this->name_checksum, startup_value_checksum )->by_default(0)->as_number();
+        if(this->switch_state) {
+            this->swpwm_pin->write(this->switch_value/100.0F);
+        } else {
+            this->swpwm_pin->write(0);
         }
 
     } else if(this->output_type == DIGITAL){
@@ -281,6 +312,21 @@ void Switch::on_gcode_received(void *argument)
                 this->switch_state= (this->switch_value != 0);
             }
 
+       } else if (this->output_type == SWPWM) {
+            // drain queue
+            THEKERNEL->conveyor->wait_for_idle();
+            // PWM output pin set duty cycle 0 - 100
+            if(gcode->has_letter('S')) {
+                float v = gcode->get_value('S');
+                if(v > 100) v= 100;
+                else if(v < 0) v= 0;
+                this->swpwm_pin->write(v/100.0F);
+                this->switch_state= (v != 0);
+            } else {
+                this->swpwm_pin->write(this->switch_value);
+                this->switch_state= (this->switch_value != 0);
+            }
+
         } else if (this->output_type == DIGITAL) {
             // drain queue
             THEKERNEL->conveyor->wait_for_idle();
@@ -299,6 +345,9 @@ void Switch::on_gcode_received(void *argument)
 
         } else if (this->output_type == HWPWM) {
             this->pwm_pin->write(0);
+
+        } else if (this->output_type == HWPWM) {
+            this->swpwm_pin->write(0);
 
         } else if (this->output_type == DIGITAL) {
             // logic pin turn off
@@ -363,6 +412,9 @@ void Switch::on_main_loop(void *argument)
             } else if (this->output_type == HWPWM) {
                 this->pwm_pin->write(this->switch_value/100.0F);
 
+            } else if (this->output_type == SWPWM) {
+                this->swpwm_pin->write(this->switch_value/100.0F);
+
             } else if (this->output_type == DIGITAL) {
                 this->digital_pin->set(true);
             }
@@ -376,6 +428,9 @@ void Switch::on_main_loop(void *argument)
 
             } else if (this->output_type == HWPWM) {
                 this->pwm_pin->write(0);
+
+            } else if (this->output_type == SWPWM) {
+                this->swpwm_pin->write(0);
 
             } else if (this->output_type == DIGITAL) {
                 this->digital_pin->set(false);
