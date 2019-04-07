@@ -346,7 +346,7 @@ void Switch::on_gcode_received(void *argument)
         } else if (this->output_type == HWPWM) {
             this->pwm_pin->write(0);
 
-        } else if (this->output_type == HWPWM) {
+        } else if (this->output_type == SWPWM) {
             this->swpwm_pin->write(0);
 
         } else if (this->output_type == DIGITAL) {
