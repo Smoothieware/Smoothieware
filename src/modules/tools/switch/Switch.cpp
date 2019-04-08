@@ -64,8 +64,8 @@ void Switch::on_halt(void *arg)
         switch(this->output_type) {
             case DIGITAL: this->digital_pin->set(this->failsafe); break;
             case SIGMADELTA: this->sigmadelta_pin->set(this->failsafe); break;
-            case HWPWM: this->pwm_pin->write(switch_value); break;
-            case SWPWM: this->swpwm_pin->write(switch_value); break;
+            case HWPWM: this->pwm_pin->write(switch_value/100.0F); break;
+            case SWPWM: this->swpwm_pin->write(switch_value/100.0F); break;
             case NONE: break;
         }
         this->switch_state= this->failsafe;
@@ -308,7 +308,7 @@ void Switch::on_gcode_received(void *argument)
                 this->pwm_pin->write(v/100.0F);
                 this->switch_state= (v != 0);
             } else {
-                this->pwm_pin->write(this->switch_value);
+                this->pwm_pin->write(this->switch_value/100.0F);
                 this->switch_state= (this->switch_value != 0);
             }
 
@@ -323,7 +323,7 @@ void Switch::on_gcode_received(void *argument)
                 this->swpwm_pin->write(v/100.0F);
                 this->switch_state= (v != 0);
             } else {
-                this->swpwm_pin->write(this->switch_value);
+                this->swpwm_pin->write(this->switch_value/100.0F);
                 this->switch_state= (this->switch_value != 0);
             }
 
