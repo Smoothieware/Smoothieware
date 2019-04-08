@@ -47,6 +47,8 @@
 #define    failsafe_checksum            CHECKSUM("failsafe_set_to")
 #define    ignore_onhalt_checksum       CHECKSUM("ignore_on_halt")
 
+#define ROUND2DP(x) (roundf(x * 1e2F) / 1e2F)
+
 Switch::Switch() {}
 
 Switch::Switch(uint16_t name)
@@ -327,10 +329,10 @@ void Switch::on_gcode_received(void *argument)
                 if(v > 100) v= 100;
                 else if(v < 0) v= 0;
                 this->pwm_pin->write(v/100.0F);
-                this->switch_state= (v != 0);
+                this->switch_state= (ROUND2DP(v) != ROUND2DP(this->switch_value));
             } else {
                 this->pwm_pin->write(this->default_on_value/100.0F);
-                this->switch_state= (this->default_on_value != 0);
+                this->switch_state= true;
             }
 
        } else if (this->output_type == SWPWM) {
@@ -342,10 +344,10 @@ void Switch::on_gcode_received(void *argument)
                 if(v > 100) v= 100;
                 else if(v < 0) v= 0;
                 this->swpwm_pin->write(v/100.0F);
-                this->switch_state= (v != 0);
+                this->switch_state= (ROUND2DP(v) != ROUND2DP(this->switch_value));
             } else {
                 this->swpwm_pin->write(this->default_on_value/100.0F);
-                this->switch_state= (this->default_on_value != 0);
+                this->switch_state= true;
             }
 
         } else if (this->output_type == DIGITAL) {
@@ -412,12 +414,6 @@ void Switch::on_set_public_data(void *argument)
         // if there is no gcode to be sent then we can do this now (in on_idle)
         // Allows temperature switch to turn on a fan even if main loop is blocked with heat and wait
         if(this->output_on_command.empty() && this->output_off_command.empty()) on_main_loop(nullptr);
-
-    } else if(pdr->third_element_is(value_checksum)) {
-        float t = *static_cast<float *>(pdr->get_data_ptr());
-        this->switch_value = t;
-        this->switch_changed= true;
-        pdr->set_taken();
     }
 }
 

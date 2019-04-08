@@ -985,12 +985,8 @@ void SimpleShell::switch_command( string parameters, StreamOutput *stream)
             bool b = value == "on";
             ok = PublicData::set_value( switch_checksum, get_checksum(type), state_checksum, &b );
         } else {
-            float v = strtof(value.c_str(), NULL);
-            bool b = v != 0;
-            ok = PublicData::set_value( switch_checksum, get_checksum(type), state_checksum, &b );
-            if(ok && b) {
-                ok = PublicData::set_value( switch_checksum, get_checksum(type), value_checksum, &v );
-            }
+            stream->printf("must be either on or off\n");
+            return;
         }
         if (ok) {
             stream->printf("switch %s set to: %s\n", type.c_str(), value.c_str());
