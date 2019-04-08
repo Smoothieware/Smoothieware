@@ -191,6 +191,9 @@ switch.fan.output_type                       pwm              # PWM output setta
 #switch.bltouch.input_off_command         M281         #
 #switch.bltouch.output_type               swpwm        # sw pwm must be low frequency
 #switch.bltouch.pwm_period_ms             20           # 50Hz
+#switch.bltouch.startup_state             true         #
+#switch.bltouch.startup_value             7.43         #  On boot it will go into stow mode
+
 
 ## Temperatureswitch
 # See http://smoothieware.org/temperatureswitch
