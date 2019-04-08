@@ -986,7 +986,11 @@ void SimpleShell::switch_command( string parameters, StreamOutput *stream)
             ok = PublicData::set_value( switch_checksum, get_checksum(type), state_checksum, &b );
         } else {
             float v = strtof(value.c_str(), NULL);
-            ok = PublicData::set_value( switch_checksum, get_checksum(type), value_checksum, &v );
+            bool b = v != 0;
+            ok = PublicData::set_value( switch_checksum, get_checksum(type), state_checksum, &b );
+            if(ok && b) {
+                ok = PublicData::set_value( switch_checksum, get_checksum(type), value_checksum, &v );
+            }
         }
         if (ok) {
             stream->printf("switch %s set to: %s\n", type.c_str(), value.c_str());
