@@ -42,10 +42,12 @@ class Switch : public Module {
         bool match_input_on_gcode(const Gcode* gcode) const;
         bool match_input_off_gcode(const Gcode* gcode) const;
 
-        Pin       input_pin;
-        float     switch_value;
+        float switch_value;
+        float default_off_value;
+
         OUTPUT_TYPE output_type;
         union {
+            Pin          *input_pin;
             Pin          *digital_pin;
             Pwm          *sigmadelta_pin;
             mbed::PwmOut *pwm_pin;
