@@ -53,13 +53,13 @@ class Switch : public Module {
         };
         std::string    output_on_command;
         std::string    output_off_command;
-        uint16_t  name_checksum;
-        uint16_t  input_pin_behavior;
-        uint16_t  input_on_command_code;
-        uint16_t  input_off_command_code;
-        char      input_on_command_letter;
-        char      input_off_command_letter;
         struct {
+            uint16_t  name_checksum:16;
+            uint16_t  input_pin_behavior:16;
+            uint16_t  input_on_command_code:16;
+            uint16_t  input_off_command_code:16;
+            char      input_on_command_letter:8;
+            char      input_off_command_letter:8;
             uint8_t   subcode:4;
             bool      switch_changed:1;
             bool      input_pin_state:1;
