@@ -30,7 +30,7 @@
 
 #define    startup_state_checksum       CHECKSUM("startup_state")
 #define    startup_value_checksum       CHECKSUM("startup_value")
-#define    default_off_value_checksum   CHECKSUM("default_off_value")
+#define    default_on_value_checksum    CHECKSUM("default_on_value")
 #define    input_pin_checksum           CHECKSUM("input_pin")
 #define    input_pin_behavior_checksum  CHECKSUM("input_pin_behavior")
 #define    toggle_checksum              CHECKSUM("toggle")
@@ -212,11 +212,11 @@ void Switch::on_config_reload(void *argument)
 
             // default is 0% duty cycle
             this->switch_value = THEKERNEL->config->value(switch_checksum, this->name_checksum, startup_value_checksum )->by_default(0)->as_number();
-            this->default_off_value = THEKERNEL->config->value(switch_checksum, this->name_checksum, default_off_value_checksum )->by_default(0)->as_number();
+            this->default_on_value = THEKERNEL->config->value(switch_checksum, this->name_checksum, default_on_value_checksum )->by_default(0)->as_number();
             if(this->switch_state) {
-                this->pwm_pin->write(this->switch_value/100.0F);
+                this->pwm_pin->write(this->default_on_value/100.0F);
             } else {
-                this->pwm_pin->write(this->default_off_value/100.0F);
+                this->pwm_pin->write(this->switch_value/100.0F);
             }
 
         } else if(this->output_type == SWPWM) {
@@ -226,11 +226,11 @@ void Switch::on_config_reload(void *argument)
 
             // default is 0% duty cycle
             this->switch_value = THEKERNEL->config->value(switch_checksum, this->name_checksum, startup_value_checksum )->by_default(0)->as_number();
-            this->default_off_value = THEKERNEL->config->value(switch_checksum, this->name_checksum, default_off_value_checksum )->by_default(0)->as_number();
+            this->default_on_value = THEKERNEL->config->value(switch_checksum, this->name_checksum, default_on_value_checksum )->by_default(0)->as_number();
            if(this->switch_state) {
-                this->swpwm_pin->write(this->switch_value/100.0F);
+                this->swpwm_pin->write(this->default_on_value/100.0F);
             } else {
-                this->swpwm_pin->write(this->default_off_value/100.0F);
+                this->swpwm_pin->write(this->switch_value/100.0F);
             }
 
         } else if(this->output_type == DIGITAL){
@@ -329,8 +329,8 @@ void Switch::on_gcode_received(void *argument)
                 this->pwm_pin->write(v/100.0F);
                 this->switch_state= (v != 0);
             } else {
-                this->pwm_pin->write(this->switch_value/100.0F);
-                this->switch_state= (this->switch_value != 0);
+                this->pwm_pin->write(this->default_on_value/100.0F);
+                this->switch_state= (this->default_on_value != 0);
             }
 
        } else if (this->output_type == SWPWM) {
@@ -344,8 +344,8 @@ void Switch::on_gcode_received(void *argument)
                 this->swpwm_pin->write(v/100.0F);
                 this->switch_state= (v != 0);
             } else {
-                this->swpwm_pin->write(this->switch_value/100.0F);
-                this->switch_state= (this->switch_value != 0);
+                this->swpwm_pin->write(this->default_on_value/100.0F);
+                this->switch_state= (this->default_on_value != 0);
             }
 
         } else if (this->output_type == DIGITAL) {
@@ -365,10 +365,10 @@ void Switch::on_gcode_received(void *argument)
             this->sigmadelta_pin->set(false);
 
         } else if (this->output_type == HWPWM) {
-            this->pwm_pin->write(this->default_off_value/100.0F);
+            this->pwm_pin->write(this->switch_value/100.0F);
 
         } else if (this->output_type == SWPWM) {
-            this->swpwm_pin->write(this->default_off_value/100.0F);
+            this->swpwm_pin->write(this->switch_value/100.0F);
 
         } else if (this->output_type == DIGITAL) {
             // logic pin turn off
@@ -431,10 +431,10 @@ void Switch::on_main_loop(void *argument)
                 this->sigmadelta_pin->pwm(this->switch_value); // this requires the value has been set otherwise it switches on to whatever it last was
 
             } else if (this->output_type == HWPWM) {
-                this->pwm_pin->write(this->switch_value/100.0F);
+                this->pwm_pin->write(this->default_on_value/100.0F);
 
             } else if (this->output_type == SWPWM) {
-                this->swpwm_pin->write(this->switch_value/100.0F);
+                this->swpwm_pin->write(this->default_on_value/100.0F);
 
             } else if (this->output_type == DIGITAL) {
                 this->digital_pin->set(true);
@@ -448,10 +448,10 @@ void Switch::on_main_loop(void *argument)
                 this->sigmadelta_pin->set(false);
 
             } else if (this->output_type == HWPWM) {
-                this->pwm_pin->write(this->default_off_value);
+                this->pwm_pin->write(this->switch_value/100.0F);
 
             } else if (this->output_type == SWPWM) {
-                this->swpwm_pin->write(this->default_off_value);
+                this->swpwm_pin->write(this->switch_value/100.0F);
 
             } else if (this->output_type == DIGITAL) {
                 this->digital_pin->set(false);

@@ -43,7 +43,7 @@ class Switch : public Module {
         bool match_input_off_gcode(const Gcode* gcode) const;
 
         float switch_value;
-        float default_off_value;
+        float default_on_value;
 
         OUTPUT_TYPE output_type;
         union {
