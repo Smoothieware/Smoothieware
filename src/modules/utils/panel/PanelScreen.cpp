@@ -143,9 +143,9 @@ void PanelScreen::drawWindow(const char* title)
 }
 
 void PanelScreen::drawScrollBar(int pos, int vis, int max) {
-    int top = 9 + (54 * pos) / max;
-    int len = 54 * vis / max;
-    if (54 * vis % max > 0) len++;
+    int top = 10 + (52 * pos) / max;
+    int len = 52 * vis / max;
+    if (52 * vis % max > 0) len++;
     THEPANEL->lcd->drawVLine(122, 9, 54);
-    THEPANEL->lcd->drawBox(123, top, 4, len);
+    THEPANEL->lcd->drawBox(124, top, 2, len);
 }
