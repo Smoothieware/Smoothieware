@@ -191,8 +191,9 @@ switch.fan.output_type                       pwm              # PWM output setta
 #switch.bltouch.input_off_command         M281         #
 #switch.bltouch.output_type               swpwm        # sw pwm must be low frequency
 #switch.bltouch.pwm_period_ms             20           # 50Hz
-#switch.bltouch.startup_state             true         #
-#switch.bltouch.startup_value             7.43         #  On boot it will go into stow mode
+#switch.bltouch.startup_state             false        # start up in the stow state
+#switch.bltouch.startup_value             7.43         # On boot it will go into stow mode, also set with the M281
+#switch.bltouch.default_on_value          3.3          # if M280 is issued without S this is the value it will set it to
 
 
 ## Temperatureswitch
