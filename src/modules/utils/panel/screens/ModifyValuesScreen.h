@@ -29,12 +29,16 @@ public:
     void display_menu_line(uint16_t line);
     void clicked_menu_entry(uint16_t line);
     int idle_timeout_secs(){ return 60; }
+    const char* getTitle() { return menuTitle; }
+    void setTitle(const char* title) { menuTitle = title; }
 
     typedef std::tuple<char *, std::function<float()>, std::function<void(float)>, float, float, float, bool> MenuItemType;
     void addMenuItem(const char *name, std::function<float()> getter, std::function<void(float)> setter, float inc= 1.0F, float min= NAN, float max= NAN, bool instant= false);
 
 private:
     void addMenuItem(const MenuItemType& item);
+
+    const char* menuTitle = "";
 
     int execute_function;
     float new_value, min_value, max_value;

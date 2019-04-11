@@ -69,6 +69,7 @@ void ExtruderScreen::setupConfigSettings()
 {
     auto mvs= new ModifyValuesScreen(true);  // self delete on exit
     mvs->set_parent(this);
+    mvs->setTitle("E Settings");
 
     mvs->addMenuItem("E steps/mm",
         // gets steps/mm for currently active extruder

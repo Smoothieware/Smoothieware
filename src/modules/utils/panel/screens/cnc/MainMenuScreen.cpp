@@ -48,6 +48,7 @@ void MainMenuScreen::setupConfigureScreen()
 {
     auto mvs= new ModifyValuesScreen(true); // delete itself on exit
     mvs->set_parent(this);
+    mvs->setTitle("Configure");
 
    // acceleration
     mvs->addMenuItem("def Acceleration", // menu name
