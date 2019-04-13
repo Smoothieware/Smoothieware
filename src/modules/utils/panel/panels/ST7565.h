@@ -29,7 +29,7 @@ public:
     uint8_t readButtons();
     int readEncoderDelta();
     int getEncoderResolution() { return is_viki2 ? 4 : 2; }
-    uint16_t get_screen_lines() { return 8; }
+    uint16_t get_screen_lines() { return 6; }
     bool hasGraphics() { return true; }
     bool hasFullGraphics() { return true; }
 

@@ -20,6 +20,7 @@ public:
     void display_menu_line(uint16_t line);
     void set_jog_increment(float i) { jog_increment = i;}
     int idle_timeout_secs() { return 120; }
+    const char* getTitle() { return "Jog"; }
 
 private:
     void clicked_menu_entry(uint16_t line);

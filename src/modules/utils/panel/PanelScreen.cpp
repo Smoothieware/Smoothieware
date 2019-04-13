@@ -30,13 +30,29 @@ void PanelScreen::on_enter() {}
 
 void PanelScreen::refresh_menu(bool clear)
 {
-    if (clear) THEPANEL->lcd->clear();
-    for (uint16_t i = THEPANEL->menu_start_line; i < THEPANEL->menu_start_line + min( THEPANEL->menu_rows, THEPANEL->panel_lines ); i++ ) {
-        THEPANEL->lcd->setCursor(2, i - THEPANEL->menu_start_line );
-        this->display_menu_line(i);
+    if (THEPANEL->lcd->hasFullGraphics() ) {
+        THEPANEL->lcd->clear();
+        this->drawWindow(this->getTitle());
+        for (uint16_t i = THEPANEL->menu_start_line; i < THEPANEL->menu_start_line + min( THEPANEL->menu_rows, THEPANEL->panel_lines ); i++ ) {
+            THEPANEL->lcd->setCursorPX(2, 10 + 9 * (i - THEPANEL->menu_start_line) );
+            this->display_menu_line(i);
+        }
+        // Draw scroll bar
+        if (THEPANEL->menu_rows > THEPANEL->panel_lines) {
+            this->drawScrollBar(THEPANEL->menu_start_line, THEPANEL->panel_lines, THEPANEL->menu_rows);
+            THEPANEL->lcd->drawBox(1, 9 + 9 * (THEPANEL->menu_current_line - THEPANEL->menu_start_line), 121, 9, 2);
+        } else {
+            THEPANEL->lcd->drawBox(1, 9 + 9 * (THEPANEL->menu_current_line - THEPANEL->menu_start_line), 126, 9, 2);
+        }
+    } else {
+        if (clear) THEPANEL->lcd->clear();
+        for (uint16_t i = THEPANEL->menu_start_line; i < THEPANEL->menu_start_line + min( THEPANEL->menu_rows, THEPANEL->panel_lines ); i++ ) {
+            THEPANEL->lcd->setCursor(2, i - THEPANEL->menu_start_line );
+            this->display_menu_line(i);
+        }
+        THEPANEL->lcd->setCursor(0, THEPANEL->menu_current_line - THEPANEL->menu_start_line );
+        THEPANEL->lcd->printf(">");
     }
-    THEPANEL->lcd->setCursor(0, THEPANEL->menu_current_line - THEPANEL->menu_start_line );
-    THEPANEL->lcd->printf(">");
 }
 
 void PanelScreen::refresh_screen(bool clear)
@@ -108,4 +124,28 @@ void PanelScreen::on_main_loop()
             break;
         }
     }
+}
+
+void PanelScreen::drawWindow(const char* title)
+{
+    // Draw borders
+    THEPANEL->lcd->drawBox(0, 0, 128, 9);
+    THEPANEL->lcd->drawVLine(0, 9, 54);
+    THEPANEL->lcd->drawVLine(127, 9, 54);
+    THEPANEL->lcd->drawHLine(1, 63, 126);
+    THEPANEL->lcd->pixel(0, 0, 0);
+    THEPANEL->lcd->pixel(127, 0, 0);
+    // Print title
+    THEPANEL->lcd->setColor(0);
+    THEPANEL->lcd->setCursorPX(2, 1);
+    THEPANEL->lcd->printf(title);
+    THEPANEL->lcd->setColor(1);
+}
+
+void PanelScreen::drawScrollBar(int pos, int vis, int max) {
+    int top = 9 + (54 * pos) / max;
+    int len = 54 * vis / max;
+    if (54 * vis % max > 0) len++;
+    THEPANEL->lcd->drawVLine(122, 9, 54);
+    THEPANEL->lcd->drawBox(123, top, 4, len);
 }
