@@ -33,9 +33,9 @@
 
    Optionally probe offsets from the nozzle or tool head can be defined with...
 
-      leveling-strategy.rectangular-grid.probe_offsets  0,0,0  # probe offsetrs x,y,z
+      leveling-strategy.rectangular-grid.probe_offsets  0,0,0  # probe offsets x,y (z is always 0)
 
-      they may also be set with M565 X0 Y0 Z0
+      they may also be set with M565 X0 Y0
 
     If the saved grid is to be loaded on boot then this must be set in the config...
 
@@ -49,13 +49,18 @@
 
       leveling-strategy.rectangular-grid.initial_height  10
 
-    If two corners rectangular mode activated using "leveling-strategy.rectangular-grid.only_by_two_corners true" then G29/31/32 will not work without providing XYAB parameters
+    If two corners rectangular mode is activated using "leveling-strategy.rectangular-grid.only_by_two_corners true" then G29/31/32 will not work without providing XYAB parameters
         XY - start point, AB rectangle size from starting point
-        "Two corners"" not absolutely correct name for this mode, because it use only one corner and rectangle size.
-        can be turned off with G32 R0 and turned on with G32 R1.
+        "Two corners"" is not absolutely the correct name for this mode, because it uses only one corner and rectangle size.
+        It can be turned off with G32 R0 and turned on with G32 R1.
 
     Display mode of current grid can be changed to human readable mode (table with coordinates) by using
        leveling-strategy.rectangular-grid.human_readable  true
+
+    For probes like the bltouch yo ucan define a before probe a d after probne GCode sequence (to deploy and stow the probe)
+        leveling-strategy.rectangular-grid.before_probe_gcode M280
+        leveling-strategy.rectangular-grid.after_probe_gcode M281
+
 
     Usage
     -----
@@ -118,6 +123,8 @@
 #define human_readable_checksum      CHECKSUM("human_readable")
 #define height_limit_checksum        CHECKSUM("height_limit")
 #define dampening_start_checksum     CHECKSUM("dampening_start")
+#define before_probe_gcode_checksum  CHECKSUM("before_probe_gcode")
+#define after_probe_gcode_checksum   CHECKSUM("after_probe_gcode")
 
 #define GRIDFILE "/sd/cartesian.grid"
 #define GRIDFILE_NM "/sd/cartesian_nm.grid"
@@ -190,6 +197,9 @@ bool CartGridStrategy::handleConfig()
             this->m_attach = std::make_tuple(w[0], w[1], w[2]);
         }
     }
+
+    this->before_probe = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, before_probe_gcode_checksum)->by_default("")->as_string();
+    this->after_probe = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, after_probe_gcode_checksum)->by_default("")->as_string();
 
     // allocate in AHB0
     grid = (float *)AHB0.alloc(configured_grid_x_size * configured_grid_y_size * sizeof(float));
@@ -548,6 +558,8 @@ bool CartGridStrategy::doProbe(Gcode *gc)
     } else {
         if(gc->has_letter('X')) this->x_size = gc->get_value('X'); // override default probe width, will get saved
         if(gc->has_letter('Y')) this->y_size = gc->get_value('Y'); // override default probe length, will get saved
+        this->x_start= 0;
+        this->y_start= 0;
     }
 
     if(x_size == 0 || y_size == 0) {
@@ -566,6 +578,11 @@ bool CartGridStrategy::doProbe(Gcode *gc)
                             this->current_grid_x_size, this->current_grid_y_size, this->current_grid_x_size*this->current_grid_x_size,
                             this->configured_grid_x_size, this->configured_grid_y_size, this->configured_grid_x_size*this->configured_grid_y_size);
         return false;
+    }
+
+    if(!before_probe.empty()) {
+        Gcode gc(before_probe, &(StreamOutput::NullStream));
+        THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
     }
 
     if (do_manual_attach) {
@@ -634,6 +651,11 @@ bool CartGridStrategy::doProbe(Gcode *gc)
     print_bed_level(gc->stream);
 
     gc->stream->printf("Maximum delta: %1.3f\n", max_delta);
+
+    if(!after_probe.empty()) {
+        Gcode gc(after_probe, &(StreamOutput::NullStream));
+        THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
+    }
 
     if (do_manual_attach) {
         // Move to the attachment point defined for removal of probe
