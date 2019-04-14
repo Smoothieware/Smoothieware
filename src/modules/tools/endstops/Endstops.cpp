@@ -64,6 +64,7 @@ enum DEFNS {MIN_PIN, MAX_PIN, MAX_TRAVEL, FAST_RATE, SLOW_RATE, RETRACT, DIRECTI
 #define home_z_first_checksum            CHECKSUM("home_z_first")
 #define homing_order_checksum            CHECKSUM("homing_order")
 #define move_to_origin_checksum          CHECKSUM("move_to_origin_after_home")
+#define park_after_home_checksum         CHECKSUM("park_after_home")
 
 #define alpha_trim_checksum              CHECKSUM("alpha_trim_mm")
 #define beta_trim_checksum               CHECKSUM("beta_trim_mm")
@@ -416,6 +417,11 @@ void Endstops::get_global_configs()
 
     // set to true by default for deltas due to trim, false on cartesians
     this->move_to_origin_after_home = THEKERNEL->config->value(move_to_origin_checksum)->by_default(is_delta)->as_bool();
+    if(!this->move_to_origin_after_home) {
+        this->park_after_home = THEKERNEL->config->value(park_after_home_checksum)->by_default(false)->as_bool();
+    }else{
+        this->park_after_home= false;
+    }
 }
 
 bool Endstops::debounced_get(Pin *pin)
@@ -531,10 +537,16 @@ void Endstops::move_to_origin(axis_bitmap_t axis)
 {
     if(!is_delta && (!axis[X_AXIS] || !axis[Y_AXIS])) return; // ignore if X and Y not homing, unless delta
 
+    this->status = MOVE_TO_ORIGIN;
+    if(park_after_home) {
+        // do park instead of goto origin
+        handle_park();
+        this->status = NOT_HOMING;
+        return;
+    }
     // Do we need to check if we are already at 0,0? probably not as the G0 will not do anything if we are
     // float pos[3]; THEROBOT->get_axis_position(pos); if(pos[0] == 0 && pos[1] == 0) return;
 
-    this->status = MOVE_TO_ORIGIN;
     // Move to center using a regular move, use slower of X and Y fast rate in mm/sec
     float rate = std::min(homing_axis[X_AXIS].fast_rate, homing_axis[Y_AXIS].fast_rate) * 60.0F;
     char buf[32];
@@ -973,7 +985,7 @@ void Endstops::set_homing_offset(Gcode *gcode)
     gcode->stream->printf("Homing Offset: X %5.3f Y %5.3f Z %5.3f will take effect next home\n", homing_axis[X_AXIS].home_offset, homing_axis[Y_AXIS].home_offset, homing_axis[Z_AXIS].home_offset);
 }
 
-void Endstops::handle_park(Gcode * gcode)
+void Endstops::handle_park()
 {
     // TODO: spec says if XYZ specified move to them first then move to MCS of specifed axis
     THEROBOT->push_state();
@@ -998,7 +1010,7 @@ void Endstops::on_gcode_received(void *argument)
         switch(gcode->subcode) {
             case 0: // G28 in grbl mode will do a rapid to the predefined position otherwise it is home command
                 if(THEKERNEL->is_grbl_mode()){
-                    handle_park(gcode);
+                    handle_park();
                 }else{
                     process_home_command(gcode);
                 }
@@ -1017,7 +1029,7 @@ void Endstops::on_gcode_received(void *argument)
                 if(THEKERNEL->is_grbl_mode()) {
                     process_home_command(gcode);
                 }else{
-                    handle_park(gcode);
+                    handle_park();
                 }
                 break;
 
