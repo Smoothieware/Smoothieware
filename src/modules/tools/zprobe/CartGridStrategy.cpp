@@ -364,19 +364,39 @@ bool CartGridStrategy::handleGcode(Gcode *gcode)
         if(gcode->g == 31 || gcode->g == 32) { // do a grid probe
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_idle();
+            if(!before_probe.empty()) {
+                Gcode gc(before_probe, &(StreamOutput::NullStream));
+                THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
+            }
 
             if(!doProbe(gcode)) {
                 gcode->stream->printf("Probe failed to complete, check the initial probe height and/or initial_height settings\n");
             } else {
                 gcode->stream->printf("Probe completed. Enter M374 to save this grid\n");
             }
+
+            if(!after_probe.empty()) {
+                Gcode gc(after_probe, &(StreamOutput::NullStream));
+                THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
+            }
+
             return true;
 
         }else if(gcode->g == 29) {
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_idle();
+            if(!before_probe.empty()) {
+                Gcode gc(before_probe, &(StreamOutput::NullStream));
+                THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
+            }
+
             if(!scan_bed(gcode)) {
                 gcode->stream->printf("scan failed to complete\n");
+            }
+
+            if(!after_probe.empty()) {
+                Gcode gc(after_probe, &(StreamOutput::NullStream));
+                THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
             }
             return true;
         }
@@ -580,11 +600,6 @@ bool CartGridStrategy::doProbe(Gcode *gc)
         return false;
     }
 
-    if(!before_probe.empty()) {
-        Gcode gc(before_probe, &(StreamOutput::NullStream));
-        THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
-    }
-
     if (do_manual_attach) {
         // Move to the attachment point defined
         if (do_home) zprobe->home();
@@ -651,11 +666,6 @@ bool CartGridStrategy::doProbe(Gcode *gc)
     print_bed_level(gc->stream);
 
     gc->stream->printf("Maximum delta: %1.3f\n", max_delta);
-
-    if(!after_probe.empty()) {
-        Gcode gc(after_probe, &(StreamOutput::NullStream));
-        THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
-    }
 
     if (do_manual_attach) {
         // Move to the attachment point defined for removal of probe
