@@ -201,6 +201,10 @@ bool CartGridStrategy::handleConfig()
     this->before_probe = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, before_probe_gcode_checksum)->by_default("")->as_string();
     this->after_probe = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, after_probe_gcode_checksum)->by_default("")->as_string();
 
+    // for the gcode commands we need to replace _ for space
+    std::replace(before_probe.begin(), before_probe.end(), '_', ' '); // replace _ with space
+    std::replace(after_probe.begin(), after_probe.end(), '_', ' '); // replace _ with space
+
     // allocate in AHB0
     grid = (float *)AHB0.alloc(configured_grid_x_size * configured_grid_y_size * sizeof(float));
 
