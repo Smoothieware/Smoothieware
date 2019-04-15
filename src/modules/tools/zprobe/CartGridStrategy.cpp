@@ -443,7 +443,9 @@ bool CartGridStrategy::handleGcode(Gcode *gcode)
                 remove(filename);
                 gcode->stream->printf("%s deleted\n", filename);
             } else {
+                __disable_irq();
                 save_grid(gcode->stream);
+                __enable_irq();
             }
 
             return true;
