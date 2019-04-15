@@ -939,7 +939,7 @@ void Endstops::process_home_command(Gcode* gcode)
     }
 
     // on some systems where 0,0 is bed center it is nice to have home goto 0,0 after homing
-    // default is off for cartesian on for deltas
+    // default is off for cartesian and on for deltas
     if(!is_delta) {
         // NOTE a rotary delta usually has optical or hall-effect endstops so it is safe to go past them a little bit
         move_to_origin(haxis);

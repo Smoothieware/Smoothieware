@@ -194,8 +194,17 @@ bool CartGridStrategy::handleConfig()
         std::string ap = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, mount_position_checksum)->by_default("0,0,50")->as_string();
         std::vector<float> w = parse_number_list(ap.c_str());
         if(w.size() >= 3) {
-            this->m_attach = std::make_tuple(w[0], w[1], w[2]);
+            m_attach = new float[3];
+            m_attach[0]= w[0];
+            m_attach[1]= w[1];
+            m_attach[2]= w[2];
+        }else{
+            // error
+            m_attach= nullptr;
+            do_manual_attach= false;
         }
+    }else{
+        m_attach= nullptr;
     }
 
     this->before_probe = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, before_probe_gcode_checksum)->by_default("")->as_string();
@@ -368,6 +377,12 @@ bool CartGridStrategy::handleGcode(Gcode *gcode)
         if(gcode->g == 31 || gcode->g == 32) { // do a grid probe
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_idle();
+
+            // home if needed
+            if (do_home && !only_by_two_corners && !(gcode->has_letter('R') && gcode->get_int('R') == 1)){
+                zprobe->home();
+            }
+
             if(!before_probe.empty()) {
                 Gcode gc(before_probe, &(StreamOutput::NullStream));
                 THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
@@ -389,6 +404,12 @@ bool CartGridStrategy::handleGcode(Gcode *gcode)
         }else if(gcode->g == 29) {
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_idle();
+
+            // home if needed
+            if (do_home && !only_by_two_corners && !(gcode->has_letter('R') && gcode->get_int('R') == 1)){
+                zprobe->home();
+            }
+
             if(!before_probe.empty()) {
                 Gcode gc(before_probe, &(StreamOutput::NullStream));
                 THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
@@ -475,7 +496,6 @@ void CartGridStrategy::setAdjustFunction(bool on)
 
 bool CartGridStrategy::findBed(float x, float y)
 {
-    if (do_home && !only_by_two_corners && !do_manual_attach) zprobe->home();
     if(!isnan(initial_height)) {
         zprobe->coordinated_move(NAN, NAN, initial_height, zprobe->getFastFeedrate()); // move Z only to initial_height
     }
@@ -606,11 +626,7 @@ bool CartGridStrategy::doProbe(Gcode *gc)
 
     if (do_manual_attach) {
         // Move to the attachment point defined
-        if (do_home) zprobe->home();
-
-        float x, y, z;
-        std::tie(x, y, z) = m_attach;
-        zprobe->coordinated_move( x, y, z , zprobe->getFastFeedrate());
+        zprobe->coordinated_move( m_attach[0], m_attach[1], m_attach[2], zprobe->getFastFeedrate());
 
         gc->stream->printf(" ************************************************************\n");
         gc->stream->printf("     Ensure probe is attached and trigger probe when done\n");
@@ -622,7 +638,7 @@ bool CartGridStrategy::doProbe(Gcode *gc)
         }
     }
 
-    // find bed, and leave probe probe height above bed
+    // find bed, and leave probe probe_height above bed
     if(!findBed(x_start, y_start)) {
         gc->stream->printf("Finding bed failed, check the initial height setting\n");
         return false;
@@ -673,10 +689,7 @@ bool CartGridStrategy::doProbe(Gcode *gc)
 
     if (do_manual_attach) {
         // Move to the attachment point defined for removal of probe
-
-        float x, y, z;
-        std::tie(x, y, z) = m_attach;
-        zprobe->coordinated_move( x, y, z , zprobe->getFastFeedrate());
+        zprobe->coordinated_move( m_attach[0], m_attach[1], m_attach[2], zprobe->getFastFeedrate());
 
         gc->stream->printf(" ********************\n");
         gc->stream->printf("     Remove probe\n");
