@@ -693,6 +693,7 @@ void Endstops::home(axis_bitmap_t a)
             if((axis_to_home[i] || this->is_delta || this->is_rdelta) && !homing_axis[i].pin_info->triggered) {
                 this->status = NOT_HOMING;
                 THEKERNEL->call_event(ON_HALT, nullptr);
+                THEROBOT->disable_segmentation= false;
                 return;
             }
         }
@@ -704,6 +705,7 @@ void Endstops::home(axis_bitmap_t a)
             if(axis_to_home[i] && !homing_axis[i].pin_info->triggered) {
                 this->status = NOT_HOMING;
                 THEKERNEL->call_event(ON_HALT, nullptr);
+                THEROBOT->disable_segmentation= false;
                 return;
             }
         }

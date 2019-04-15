@@ -258,8 +258,8 @@ void CartGridStrategy::save_grid(StreamOutput *stream)
         return;
     }
 
-    tmp_configured_grid_size = configured_grid_y_size;
     if(this->new_file_format){
+        tmp_configured_grid_size = configured_grid_y_size;
         if(fwrite(&tmp_configured_grid_size, sizeof(uint8_t), 1, fp) != 1) {
             stream->printf("error:Failed to write grid y size\n");
             fclose(fp);
@@ -388,11 +388,13 @@ bool CartGridStrategy::handleGcode(Gcode *gcode)
                 THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
             }
 
+            THEROBOT->disable_segmentation= true;
             if(!doProbe(gcode)) {
                 gcode->stream->printf("Probe failed to complete, check the initial probe height and/or initial_height settings\n");
             } else {
                 gcode->stream->printf("Probe completed. Enter M374 to save this grid\n");
             }
+            THEROBOT->disable_segmentation= false;
 
             if(!after_probe.empty()) {
                 Gcode gc(after_probe, &(StreamOutput::NullStream));
