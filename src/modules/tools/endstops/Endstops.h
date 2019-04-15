@@ -40,7 +40,7 @@ class Endstops : public Module{
         void process_home_command(Gcode* gcode);
         void set_homing_offset(Gcode* gcode);
         uint32_t read_endstops(uint32_t dummy);
-        void handle_park(Gcode * gcode);
+        void handle_park();
 
         // global settings
         float saved_position[3]{0}; // save G28 (in grbl mode)
@@ -95,5 +95,6 @@ class Endstops : public Module{
             bool is_scara:1;
             bool home_z_first:1;
             bool move_to_origin_after_home:1;
+            bool park_after_home:1;
         };
 };

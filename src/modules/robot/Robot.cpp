@@ -1394,6 +1394,7 @@ bool Robot::delta_move(const float *delta, float rate_mm_s, uint8_t naxis)
         target[i] += delta[i];
     }
 
+    is_g123= false; // we don't want the laser to fire
     // submit for planning and if moved update machine_position
     if(append_milestone(target, rate_mm_s)) {
          memcpy(machine_position, target, n_motors*sizeof(float));

@@ -344,7 +344,9 @@ bool DeltaGridStrategy::handleGcode(Gcode *gcode)
                 remove(GRIDFILE);
                 gcode->stream->printf("%s deleted\n", GRIDFILE);
             } else {
+                __disable_irq();
                 save_grid(gcode->stream);
+                __enable_irq();
             }
 
             return true;

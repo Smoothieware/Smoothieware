@@ -36,10 +36,11 @@ private:
     float height_limit;
     float dampening_start;
     float damping_interval;
+    std::string before_probe, after_probe;
 
     float *grid;
     std::tuple<float, float, float> probe_offsets;
-    std::tuple<float, float, float> m_attach;
+    float *m_attach;
     float x_start,y_start;
     float x_size,y_size;
 

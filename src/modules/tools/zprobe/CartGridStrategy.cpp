@@ -33,9 +33,9 @@
 
    Optionally probe offsets from the nozzle or tool head can be defined with...
 
-      leveling-strategy.rectangular-grid.probe_offsets  0,0,0  # probe offsetrs x,y,z
+      leveling-strategy.rectangular-grid.probe_offsets  0,0,0  # probe offsets x,y (z is always 0)
 
-      they may also be set with M565 X0 Y0 Z0
+      they may also be set with M565 X0 Y0
 
     If the saved grid is to be loaded on boot then this must be set in the config...
 
@@ -49,13 +49,18 @@
 
       leveling-strategy.rectangular-grid.initial_height  10
 
-    If two corners rectangular mode activated using "leveling-strategy.rectangular-grid.only_by_two_corners true" then G29/31/32 will not work without providing XYAB parameters
+    If two corners rectangular mode is activated using "leveling-strategy.rectangular-grid.only_by_two_corners true" then G29/31/32 will not work without providing XYAB parameters
         XY - start point, AB rectangle size from starting point
-        "Two corners"" not absolutely correct name for this mode, because it use only one corner and rectangle size.
-        can be turned off with G32 R0 and turned on with G32 R1.
+        "Two corners"" is not absolutely the correct name for this mode, because it uses only one corner and rectangle size.
+        It can be turned off with G32 R0 and turned on with G32 R1.
 
     Display mode of current grid can be changed to human readable mode (table with coordinates) by using
        leveling-strategy.rectangular-grid.human_readable  true
+
+    For probes like the bltouch yo ucan define a before probe a d after probne GCode sequence (to deploy and stow the probe)
+        leveling-strategy.rectangular-grid.before_probe_gcode M280
+        leveling-strategy.rectangular-grid.after_probe_gcode M281
+
 
     Usage
     -----
@@ -118,6 +123,8 @@
 #define human_readable_checksum      CHECKSUM("human_readable")
 #define height_limit_checksum        CHECKSUM("height_limit")
 #define dampening_start_checksum     CHECKSUM("dampening_start")
+#define before_probe_gcode_checksum  CHECKSUM("before_probe_gcode")
+#define after_probe_gcode_checksum   CHECKSUM("after_probe_gcode")
 
 #define GRIDFILE "/sd/cartesian.grid"
 #define GRIDFILE_NM "/sd/cartesian_nm.grid"
@@ -187,9 +194,25 @@ bool CartGridStrategy::handleConfig()
         std::string ap = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, mount_position_checksum)->by_default("0,0,50")->as_string();
         std::vector<float> w = parse_number_list(ap.c_str());
         if(w.size() >= 3) {
-            this->m_attach = std::make_tuple(w[0], w[1], w[2]);
+            m_attach = new float[3];
+            m_attach[0]= w[0];
+            m_attach[1]= w[1];
+            m_attach[2]= w[2];
+        }else{
+            // error
+            m_attach= nullptr;
+            do_manual_attach= false;
         }
+    }else{
+        m_attach= nullptr;
     }
+
+    this->before_probe = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, before_probe_gcode_checksum)->by_default("")->as_string();
+    this->after_probe = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, after_probe_gcode_checksum)->by_default("")->as_string();
+
+    // for the gcode commands we need to replace _ for space
+    std::replace(before_probe.begin(), before_probe.end(), '_', ' '); // replace _ with space
+    std::replace(after_probe.begin(), after_probe.end(), '_', ' '); // replace _ with space
 
     // allocate in AHB0
     grid = (float *)AHB0.alloc(configured_grid_x_size * configured_grid_y_size * sizeof(float));
@@ -235,8 +258,8 @@ void CartGridStrategy::save_grid(StreamOutput *stream)
         return;
     }
 
-    tmp_configured_grid_size = configured_grid_y_size;
     if(this->new_file_format){
+        tmp_configured_grid_size = configured_grid_y_size;
         if(fwrite(&tmp_configured_grid_size, sizeof(uint8_t), 1, fp) != 1) {
             stream->printf("error:Failed to write grid y size\n");
             fclose(fp);
@@ -355,18 +378,52 @@ bool CartGridStrategy::handleGcode(Gcode *gcode)
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_idle();
 
+            // home if needed
+            if (do_home && !only_by_two_corners && !(gcode->has_letter('R') && gcode->get_int('R') == 1)){
+                zprobe->home();
+            }
+
+            if(!before_probe.empty()) {
+                Gcode gc(before_probe, &(StreamOutput::NullStream));
+                THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
+            }
+
+            THEROBOT->disable_segmentation= true;
             if(!doProbe(gcode)) {
                 gcode->stream->printf("Probe failed to complete, check the initial probe height and/or initial_height settings\n");
             } else {
                 gcode->stream->printf("Probe completed. Enter M374 to save this grid\n");
             }
+            THEROBOT->disable_segmentation= false;
+
+            if(!after_probe.empty()) {
+                Gcode gc(after_probe, &(StreamOutput::NullStream));
+                THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
+            }
+
             return true;
 
         }else if(gcode->g == 29) {
             // first wait for an empty queue i.e. no moves left
             THEKERNEL->conveyor->wait_for_idle();
+
+            // home if needed
+            if (do_home && !only_by_two_corners && !(gcode->has_letter('R') && gcode->get_int('R') == 1)){
+                zprobe->home();
+            }
+
+            if(!before_probe.empty()) {
+                Gcode gc(before_probe, &(StreamOutput::NullStream));
+                THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
+            }
+
             if(!scan_bed(gcode)) {
                 gcode->stream->printf("scan failed to complete\n");
+            }
+
+            if(!after_probe.empty()) {
+                Gcode gc(after_probe, &(StreamOutput::NullStream));
+                THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
             }
             return true;
         }
@@ -386,7 +443,9 @@ bool CartGridStrategy::handleGcode(Gcode *gcode)
                 remove(filename);
                 gcode->stream->printf("%s deleted\n", filename);
             } else {
+                __disable_irq();
                 save_grid(gcode->stream);
+                __enable_irq();
             }
 
             return true;
@@ -441,7 +500,6 @@ void CartGridStrategy::setAdjustFunction(bool on)
 
 bool CartGridStrategy::findBed(float x, float y)
 {
-    if (do_home && !only_by_two_corners && !do_manual_attach) zprobe->home();
     if(!isnan(initial_height)) {
         zprobe->coordinated_move(NAN, NAN, initial_height, zprobe->getFastFeedrate()); // move Z only to initial_height
     }
@@ -548,6 +606,8 @@ bool CartGridStrategy::doProbe(Gcode *gc)
     } else {
         if(gc->has_letter('X')) this->x_size = gc->get_value('X'); // override default probe width, will get saved
         if(gc->has_letter('Y')) this->y_size = gc->get_value('Y'); // override default probe length, will get saved
+        this->x_start= 0;
+        this->y_start= 0;
     }
 
     if(x_size == 0 || y_size == 0) {
@@ -570,11 +630,7 @@ bool CartGridStrategy::doProbe(Gcode *gc)
 
     if (do_manual_attach) {
         // Move to the attachment point defined
-        if (do_home) zprobe->home();
-
-        float x, y, z;
-        std::tie(x, y, z) = m_attach;
-        zprobe->coordinated_move( x, y, z , zprobe->getFastFeedrate());
+        zprobe->coordinated_move( m_attach[0], m_attach[1], m_attach[2], zprobe->getFastFeedrate());
 
         gc->stream->printf(" ************************************************************\n");
         gc->stream->printf("     Ensure probe is attached and trigger probe when done\n");
@@ -586,7 +642,7 @@ bool CartGridStrategy::doProbe(Gcode *gc)
         }
     }
 
-    // find bed, and leave probe probe height above bed
+    // find bed, and leave probe probe_height above bed
     if(!findBed(x_start, y_start)) {
         gc->stream->printf("Finding bed failed, check the initial height setting\n");
         return false;
@@ -637,10 +693,7 @@ bool CartGridStrategy::doProbe(Gcode *gc)
 
     if (do_manual_attach) {
         // Move to the attachment point defined for removal of probe
-
-        float x, y, z;
-        std::tie(x, y, z) = m_attach;
-        zprobe->coordinated_move( x, y, z , zprobe->getFastFeedrate());
+        zprobe->coordinated_move( m_attach[0], m_attach[1], m_attach[2], zprobe->getFastFeedrate());
 
         gc->stream->printf(" ********************\n");
         gc->stream->printf("     Remove probe\n");
