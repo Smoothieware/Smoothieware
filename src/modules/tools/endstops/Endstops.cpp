@@ -537,13 +537,18 @@ void Endstops::move_to_origin(axis_bitmap_t axis)
 {
     if(!is_delta && (!axis[X_AXIS] || !axis[Y_AXIS])) return; // ignore if X and Y not homing, unless delta
 
-    this->status = MOVE_TO_ORIGIN;
     if(park_after_home) {
         // do park instead of goto origin
+        this->status = MOVE_TO_ORIGIN;
         handle_park();
         this->status = NOT_HOMING;
         return;
     }
+
+    // ignore if disabled
+    if(!this->move_to_origin_after_home) return;
+
+    this->status = MOVE_TO_ORIGIN;
     // Do we need to check if we are already at 0,0? probably not as the G0 will not do anything if we are
     // float pos[3]; THEROBOT->get_axis_position(pos); if(pos[0] == 0 && pos[1] == 0) return;
 
@@ -937,7 +942,7 @@ void Endstops::process_home_command(Gcode* gcode)
     // default is off for cartesian on for deltas
     if(!is_delta) {
         // NOTE a rotary delta usually has optical or hall-effect endstops so it is safe to go past them a little bit
-        if(this->move_to_origin_after_home) move_to_origin(haxis);
+        move_to_origin(haxis);
         // if limit switches are enabled we must back off endstop after setting home
         back_off_home(haxis);
 
@@ -945,7 +950,7 @@ void Endstops::process_home_command(Gcode* gcode)
         // deltas are not left at 0,0 because of the trim settings, so move to 0,0 if requested, but we need to back off endstops first
         // also need to back off endstops if limits are enabled
         back_off_home(haxis);
-        if(this->move_to_origin_after_home) move_to_origin(haxis);
+        move_to_origin(haxis);
     }
 }
 
