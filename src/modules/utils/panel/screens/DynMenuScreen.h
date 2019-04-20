@@ -27,6 +27,8 @@ public:
     void clicked_menu_entry(uint16_t line);
     int idle_timeout_secs(){ return timeout; }
     void set_timeout(int n) { timeout= n; }
+    const char* getTitle() { return menuTitle; }
+    void setTitle(const char* title) { menuTitle = title; }
     void addMenuItem(const char *name, std::function<void()> fnc);
     void addMenuItem(const char *name, const char *gcode);
     void on_exit_action(const char *);
@@ -36,6 +38,7 @@ private:
     using MenuItemType = std::tuple<char *, std::function<void()>, char *, bool>;
     void addMenuItem(const MenuItemType& item);
     int timeout{60};
+    const char* menuTitle = "";
 
     // name, function, command, type
     std::vector<MenuItemType> menu_items;

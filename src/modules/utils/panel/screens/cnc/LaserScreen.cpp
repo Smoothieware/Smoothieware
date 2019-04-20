@@ -76,6 +76,7 @@ void LaserScreen::testFireScreen()
 {
     auto dms= new DynMenuScreen();  // self delete on exit
     dms->set_parent(this->parent); // because this will have been deleted when it exits
+    dms->setTitle("Test Fire");
     dms->set_timeout(10); // 10 seconds and it will turn off
     dms->on_exit_action("fire off");
 
@@ -94,6 +95,7 @@ void LaserScreen::setPowerScreen(int type)
 {
     auto mvs= new ModifyValuesScreen(true);  // self delete on exit
     mvs->set_parent(this->parent); // because this will have been deleted when it exits
+    mvs->setTitle("Power");
 
     if(type == 0) {
         #ifndef NO_TOOLS_LASER
