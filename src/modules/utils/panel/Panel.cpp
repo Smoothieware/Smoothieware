@@ -511,16 +511,18 @@ void Panel::enter_menu_mode(bool force)
     encoder_cb_fnc= nullptr;
 }
 
-void Panel::setup_menu(uint16_t rows)
+void Panel::setup_menu(uint16_t rows, bool reset_pos)
 {
-    this->setup_menu(rows, min(rows, this->max_screen_lines()));
+    this->setup_menu(rows, min(rows, this->max_screen_lines()), reset_pos);
 }
 
-void Panel::setup_menu(uint16_t rows, uint16_t lines)
+void Panel::setup_menu(uint16_t rows, uint16_t lines, bool reset_pos)
 {
-    this->menu_selected_line = 0;
-    this->menu_current_line = 0;
-    this->menu_start_line = 0;
+    if (reset_pos) {
+        this->menu_selected_line = 0;
+        this->menu_current_line = 0;
+        this->menu_start_line = 0;
+    }
     this->menu_rows = rows;
     this->panel_lines = lines;
 }

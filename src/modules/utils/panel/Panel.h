@@ -52,8 +52,8 @@ class Panel : public Module {
         // Menu
         void enter_nop_mode();
         void enter_menu_mode(bool force= false);
-        void setup_menu(uint16_t rows, uint16_t lines);
-        void setup_menu(uint16_t rows);
+        void setup_menu(uint16_t rows, uint16_t lines, bool reset_pos = true);
+        void setup_menu(uint16_t rows, bool reset_pos = true);
         void menu_update();
         bool menu_change();
         uint16_t max_screen_lines() { return screen_lines; }

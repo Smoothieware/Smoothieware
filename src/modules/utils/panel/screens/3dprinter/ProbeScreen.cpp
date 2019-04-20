@@ -44,18 +44,17 @@ void ProbeScreen::on_enter()
 
 void ProbeScreen::on_refresh()
 {
-    if ( THEPANEL->menu_change() ) {
+    if ( THEPANEL->menu_change() or this->new_result ) {
+        if(this->new_result) {
+            this->new_result = false;
+            int lines = this->result.length() / 20;
+            if (this->result.length() % 20 > 0) lines++;
+            THEPANEL->setup_menu(3+lines,false);
+        }
         this->refresh_menu();
     }
     if ( THEPANEL->click() ) {
         this->clicked_menu_entry(THEPANEL->get_menu_current_line());
-    }
-    if(this->new_result) {
-        this->new_result= false;
-        for ( uint8_t l=0; (l < THEPANEL->get_screen_lines()-3) && (this->result.size() > l*20); l++ ) {
-            THEPANEL->lcd->setCursor(0, l+3);
-            THEPANEL->lcd->printf("%-20s", this->result.substr(l*20,20).c_str());
-        }
     }
 }
 
@@ -65,6 +64,9 @@ void ProbeScreen::display_menu_line(uint16_t line)
         case 0: THEPANEL->lcd->printf("Back");  break;
         case 1: THEPANEL->lcd->printf("Status");  break;
         case 2: THEPANEL->lcd->printf("Z Probe");  break;
+        default:
+            THEPANEL->lcd->printf("%-20s", this->result.substr((line-3)*20,20).c_str());
+            break;
     }
 }
 
