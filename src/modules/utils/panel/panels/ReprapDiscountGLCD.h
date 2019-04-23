@@ -19,7 +19,6 @@ class ReprapDiscountGLCD : public LcdBase {
 
         int getEncoderResolution() { return 2; }
         bool hasGraphics() { return true; }
-        bool hasFullGraphics() { return true; }		
         uint16_t get_screen_lines() { return 8; }
 
         uint8_t readButtons();

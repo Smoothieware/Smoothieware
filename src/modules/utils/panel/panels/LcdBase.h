@@ -53,7 +53,6 @@ class LcdBase {
         virtual void setLedBrightness(int led, int val){};
         virtual void buzz(long,uint16_t){};
         virtual bool hasGraphics() { return false; }
-        virtual bool hasFullGraphics() { return false; }     // Temporary. Remove this once RRDGLCD has more graphics functions implemented.
         virtual bool encoderReturnsDelta() { return false; } // set to true if the panel handles encoder clicks and returns a delta
         virtual uint8_t getContrast() { return 0; }
         virtual void setContrast(uint8_t c) { }

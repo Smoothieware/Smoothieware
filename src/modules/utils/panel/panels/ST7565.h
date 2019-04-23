@@ -31,7 +31,6 @@ public:
     int getEncoderResolution() { return is_viki2 ? 4 : 2; }
     uint16_t get_screen_lines() { return 8; }
     bool hasGraphics() { return true; }
-    bool hasFullGraphics() { return true; }
 
     //added ST7565 commands
     void send_commands(const unsigned char* buf, size_t size);
