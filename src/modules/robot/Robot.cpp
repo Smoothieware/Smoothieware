@@ -1329,28 +1329,31 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     // use default acceleration to start with
     float acceleration = default_acceleration;
 
+    // NOTE this is only relevant for primary axis unless it is an auxilliary move
     float isecs = rate_mm_s / distance;
 
-    // check per-actuator speed limits
+    // check per-actuator speed limits for Primary axis only unless it is an auxilliary move
     for (size_t actuator = 0; actuator < n_motors; actuator++) {
         float d = fabsf(actuator_pos[actuator] - actuators[actuator]->get_last_milestone());
         if(d == 0 || !actuators[actuator]->is_selected()) continue; // no movement for this actuator
+        if(actuator >= N_PRIMARY_AXIS && !auxilliary_move) continue;
 
+        // only for primary axis
+        // TODO we may need to check extruder max rate separately, but it is very unlikely
+        // we will exceed it under normal conditions
         float actuator_rate= d * isecs;
         if (actuator_rate > actuators[actuator]->get_max_rate()) {
             rate_mm_s *= (actuators[actuator]->get_max_rate() / actuator_rate);
             isecs = rate_mm_s / distance;
         }
 
-        // adjust acceleration to lowest found, for now just primary axis unless it is an auxiliary move
-        // TODO we may need to do all of them, check E won't limit XYZ.. it does on long E moves, but not checking it could exceed the E acceleration.
-        if(auxilliary_move || actuator < N_PRIMARY_AXIS) {
-            float ma =  actuators[actuator]->get_acceleration(); // in mm/sec²
-            if(!isnan(ma)) {  // if axis does not have acceleration set then it uses the default_acceleration
-                float ca = fabsf((d/distance) * acceleration);
-                if (ca > ma) {
-                    acceleration *= ( ma / ca );
-                }
+        // adjust acceleration to lowest found, just for primary axis unless it is an auxiliary move
+        // TODO we may need to check E acceleration separately
+        float ma =  actuators[actuator]->get_acceleration(); // in mm/sec²
+        if(!isnan(ma)) {  // if axis does not have acceleration set then it uses the default_acceleration
+            float ca = fabsf((d/distance) * acceleration);
+            if (ca > ma) {
+                acceleration *= ( ma / ca );
             }
         }
     }
