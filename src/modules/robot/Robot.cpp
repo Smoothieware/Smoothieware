@@ -1330,27 +1330,26 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     // use default acceleration to start with
     float acceleration = default_acceleration;
 
-    // this is the inverse time it should take to execute this move, it is approximate
+    // this is the time it should take to execute this cartesian move, it is approximate
     // as it does not take into account accel/decel
-    float isecs = rate_mm_s / distance;
+    float secs = distance / rate_mm_s;
 
-    // check per-actuator speed limits, this does not work too well when mixing rotary axis
-    // and linear axis when the linear move is tiny and the rotary move is large. These should
-    // really be handled in the gcode generation and separated into solo moves
+    // check per-actuator speed limits by looking at the minimum time each axis can move its specified amount
+    // this is regardless of whether it is mm/sec or deg/sec for a rotary axis
     for (size_t actuator = 0; actuator < n_motors; actuator++) {
         // actual distance moved for this actuator
         // NOTE for a rotary axis this will be degrees turned not distance
         float d = fabsf(actuator_pos[actuator] - actuators[actuator]->get_last_milestone());
         if(d == 0 || !actuators[actuator]->is_selected()) continue; // no movement for this actuator
 
-        // find approximate rate in whatever units (should work for rotary axis)
-        // this will be mm/s for linear axis, and degrees/sec for rotary
-        float actuator_rate= d * isecs;
-        if (actuator_rate > actuators[actuator]->get_max_rate()) {
-            // we decrease the overall feed rate by the ratio over which it is too fast
-            rate_mm_s *= (actuators[actuator]->get_max_rate() / actuator_rate);
-            // recalculate inverse time from new rate
-            isecs = rate_mm_s / distance;
+        // find approximate min time this axis needs to move its distance
+        float actuator_min_time= d / actuators[actuator]->get_max_rate();
+        if (secs < actuator_min_time ) {
+            // this move at the default rate will move too quickly for this actuator
+            // so we decrease the overall feed rate so it can complete within the min time for this actuator
+            rate_mm_s= distance / actuator_min_time;
+            // recalculate time from new rate
+            secs = distance / rate_mm_s;
         }
 
         // we cannot handle acceleration for non linear (ie rotary) actuators the same way
