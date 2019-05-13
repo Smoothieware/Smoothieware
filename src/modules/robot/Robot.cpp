@@ -1352,19 +1352,11 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
             secs = distance / rate_mm_s;
         }
 
-        // we cannot handle acceleration for non linear (ie rotary) actuators the same way
-        // if limiting acceleration for a rotary axis is needed then issue it as a solo move
-        if(actuator >= N_PRIMARY_AXIS && !(auxilliary_move || actuators[actuator]->is_extruder())) continue;
-
-        // adjust acceleration to not exceed the actuators acceleration, based on the ratio it
-        // presents for the overall move (NOTE this may be incorrect)
-        float ma =  actuators[actuator]->get_acceleration(); // in mm/sec²
+        // select the lowest acceleration of the axis in motion
+        float ma = actuators[actuator]->get_acceleration(); // in mm/sec²
         if(!isnan(ma)) {  // if axis does not have acceleration set then it uses the default_acceleration
-            // this is the proportion of the total move scaling the acceleration
-            float ca = fabsf((d/distance) * acceleration);
-            // if it exceeds the axis acceleration then we reduce the acceleration by the ratio it is over
-            if (ca > ma) {
-                acceleration *= ( ma / ca );
+            if (acceleration > ma) {
+                acceleration= ma;
             }
         }
     }
