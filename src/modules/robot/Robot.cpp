@@ -1042,7 +1042,8 @@ void Robot::process_move(Gcode *gcode, enum MOTION_MODE_T motion_mode)
         }
     }
 
-    // process ABC axis, this is mutually exclusive to using E for an extruder, so if E is used and A then the results are undefined
+    // process ABC axis, this is mutually exclusive to using E for an extruder, so if E is used and A
+    // then the results are undefined
     for (int i = A_AXIS; i < n_motors; ++i) {
         char letter= 'A'+i-A_AXIS;
         if(gcode->has_letter(letter)) {
@@ -1336,19 +1337,17 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     for (size_t actuator = 0; actuator < n_motors; actuator++) {
         float d = fabsf(actuator_pos[actuator] - actuators[actuator]->get_last_milestone());
         if(d == 0 || !actuators[actuator]->is_selected()) continue; // no movement for this actuator
-        if(actuator >= N_PRIMARY_AXIS && !auxilliary_move) continue;
 
-        // only for primary axis
-        // TODO we may need to check extruder max rate separately, but it is very unlikely
-        // we will exceed it under normal conditions
+        if(actuator >= N_PRIMARY_AXIS && !(auxilliary_move || actuators[actuator]->is_extruder())) continue;
+
+        // only for primary axis or selected e or auxillary
         float actuator_rate= d * isecs;
         if (actuator_rate > actuators[actuator]->get_max_rate()) {
             rate_mm_s *= (actuators[actuator]->get_max_rate() / actuator_rate);
             isecs = rate_mm_s / distance;
         }
 
-        // adjust acceleration to lowest found, just for primary axis unless it is an auxiliary move
-        // TODO we may need to check E acceleration separately
+        // adjust acceleration to lowest found
         float ma =  actuators[actuator]->get_acceleration(); // in mm/sec²
         if(!isnan(ma)) {  // if axis does not have acceleration set then it uses the default_acceleration
             float ca = fabsf((d/distance) * acceleration);
@@ -1358,7 +1357,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
         }
     }
 
-    // if we are in feed hold wait here until it is released, this means that even segemnted lines will pause
+    // if we are in feed hold wait here until it is released, this means that even segmented lines will pause
     while(THEKERNEL->get_feed_hold()) {
         THEKERNEL->call_event(ON_IDLE, this);
         // if we also got a HALT then break out of this
@@ -1427,7 +1426,7 @@ bool Robot::append_line(Gcode *gcode, const float target[], float rate_mm_s, flo
 
     /*
         For extruders, we need to do some extra work to limit the volumetric rate if specified...
-        If using volumetric limts we need to be using volumetric extrusion for this to work as Ennn needs to be in mm³ not mm
+        If using volumetric limits we need to be using volumetric extrusion for this to work as Ennn needs to be in mm³ not mm
         We ask Extruder to do all the work but we need to pass in the relevant data.
         NOTE we need to do this before we segment the line (for deltas)
     */
