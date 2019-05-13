@@ -1334,7 +1334,9 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     // as it does not take into account accel/decel
     float isecs = rate_mm_s / distance;
 
-    // check per-actuator speed limits for Primary axis only unless it is an auxilliary move
+    // check per-actuator speed limits, this does not work too well when mixing rotary axis
+    // and linear axis when the linear move is tiny and the rotary move is large. These should
+    // really be handled in the gcode generation and separated into solo moves
     for (size_t actuator = 0; actuator < n_motors; actuator++) {
         // actual distance moved for this actuator
         // NOTE for a rotary axis this will be degrees turned not distance
@@ -1342,21 +1344,26 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
         if(d == 0 || !actuators[actuator]->is_selected()) continue; // no movement for this actuator
 
         // find approximate rate in whatever units (should work for rotary axis)
+        // this will be mm/s for linear axis, and degrees/sec for rotary
         float actuator_rate= d * isecs;
         if (actuator_rate > actuators[actuator]->get_max_rate()) {
-            // we decrease the speed by the ratio over which it is too fast
+            // we decrease the overall feed rate by the ratio over which it is too fast
             rate_mm_s *= (actuators[actuator]->get_max_rate() / actuator_rate);
             // recalculate inverse time from new rate
             isecs = rate_mm_s / distance;
         }
 
         // we cannot handle acceleration for non linear (ie rotary) actuators the same way
+        // if limiting acceleration for a rotary axis is needed then issue it as a solo move
         if(actuator >= N_PRIMARY_AXIS && !(auxilliary_move || actuators[actuator]->is_extruder())) continue;
 
-        // adjust acceleration to lowest found
+        // adjust acceleration to not exceed the actuators acceleration, based on the ratio it
+        // presents for the overall move (NOTE this may be incorrect)
         float ma =  actuators[actuator]->get_acceleration(); // in mm/sec²
         if(!isnan(ma)) {  // if axis does not have acceleration set then it uses the default_acceleration
+            // this is the proportion of the total move scaling the acceleration
             float ca = fabsf((d/distance) * acceleration);
+            // if it exceeds the axis acceleration then we reduce the acceleration by the ratio it is over
             if (ca > ma) {
                 acceleration *= ( ma / ca );
             }
