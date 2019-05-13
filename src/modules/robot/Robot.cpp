@@ -1323,29 +1323,35 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     }
     if(auxilliary_move) {
         distance= sqrtf(sos); // distance in mm of the e move
-        if(distance < 0.00001F) return false;
+        if(distance < 0.00001F) return false; // avoid divide by zero furter on
     }
 #endif
 
     // use default acceleration to start with
     float acceleration = default_acceleration;
 
-    // NOTE this is only relevant for primary axis unless it is an auxilliary move
+    // this is the inverse time it should take to execute this move, it is approximate
+    // as it does not take into account accel/decel
     float isecs = rate_mm_s / distance;
 
     // check per-actuator speed limits for Primary axis only unless it is an auxilliary move
     for (size_t actuator = 0; actuator < n_motors; actuator++) {
+        // actual distance moved for this actuator
+        // NOTE for a rotary axis this will be degrees turned not distance
         float d = fabsf(actuator_pos[actuator] - actuators[actuator]->get_last_milestone());
         if(d == 0 || !actuators[actuator]->is_selected()) continue; // no movement for this actuator
 
-        if(actuator >= N_PRIMARY_AXIS && !(auxilliary_move || actuators[actuator]->is_extruder())) continue;
-
-        // only for primary axis or selected e or auxillary
+        // find approximate rate in whatever units (should work for rotary axis)
         float actuator_rate= d * isecs;
         if (actuator_rate > actuators[actuator]->get_max_rate()) {
+            // we decrease the speed by the ratio over which it is too fast
             rate_mm_s *= (actuators[actuator]->get_max_rate() / actuator_rate);
+            // recalculate inverse time from new rate
             isecs = rate_mm_s / distance;
         }
+
+        // we cannot handle acceleration for non linear (ie rotary) actuators the same way
+        if(actuator >= N_PRIMARY_AXIS && !(auxilliary_move || actuators[actuator]->is_extruder())) continue;
 
         // adjust acceleration to lowest found
         float ma =  actuators[actuator]->get_acceleration(); // in mm/sec²
