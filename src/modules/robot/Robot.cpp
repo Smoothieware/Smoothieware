@@ -1042,7 +1042,8 @@ void Robot::process_move(Gcode *gcode, enum MOTION_MODE_T motion_mode)
         }
     }
 
-    // process ABC axis, this is mutually exclusive to using E for an extruder, so if E is used and A then the results are undefined
+    // process ABC axis, this is mutually exclusive to using E for an extruder, so if E is used and A
+    // then the results are undefined
     for (int i = A_AXIS; i < n_motors; ++i) {
         char letter= 'A'+i-A_AXIS;
         if(gcode->has_letter(letter)) {
@@ -1322,40 +1323,53 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     }
     if(auxilliary_move) {
         distance= sqrtf(sos); // distance in mm of the e move
-        if(distance < 0.00001F) return false;
+        if(distance < 0.00001F) return false; // avoid divide by zero furter on
     }
 #endif
 
     // use default acceleration to start with
     float acceleration = default_acceleration;
 
-    float isecs = rate_mm_s / distance;
+    // this is the time it should take to execute this cartesian move, it is approximate
+    // as it does not take into account accel/decel
+    float secs = distance / rate_mm_s;
 
-    // check per-actuator speed limits
+    // check per-actuator speed limits by looking at the minimum time each axis can move its specified amount
+    // this is regardless of whether it is mm/sec or deg/sec for a rotary axis
     for (size_t actuator = 0; actuator < n_motors; actuator++) {
+        // actual distance moved for this actuator
+        // NOTE for a rotary axis this will be degrees turned not distance
         float d = fabsf(actuator_pos[actuator] - actuators[actuator]->get_last_milestone());
         if(d == 0 || !actuators[actuator]->is_selected()) continue; // no movement for this actuator
 
-        float actuator_rate= d * isecs;
-        if (actuator_rate > actuators[actuator]->get_max_rate()) {
-            rate_mm_s *= (actuators[actuator]->get_max_rate() / actuator_rate);
-            isecs = rate_mm_s / distance;
+        // find approximate min time this axis needs to move its distance
+        float actuator_min_time= d / actuators[actuator]->get_max_rate();
+        if (secs < actuator_min_time ) {
+            // this move at the default rate will move too quickly for this actuator
+            // so we decrease the overall feed rate so it can complete within the min time for this actuator
+            rate_mm_s= distance / actuator_min_time;
+            // recalculate time from new rate
+            secs = distance / rate_mm_s;
         }
 
-        // adjust acceleration to lowest found, for now just primary axis unless it is an auxiliary move
-        // TODO we may need to do all of them, check E won't limit XYZ.. it does on long E moves, but not checking it could exceed the E acceleration.
-        if(auxilliary_move || actuator < N_PRIMARY_AXIS) {
-            float ma =  actuators[actuator]->get_acceleration(); // in mm/sec²
-            if(!isnan(ma)) {  // if axis does not have acceleration set then it uses the default_acceleration
-                float ca = fabsf((d/distance) * acceleration);
-                if (ca > ma) {
-                    acceleration *= ( ma / ca );
-                }
+        // we cannot handle acceleration for non linear (ie rotary) actuators the same way
+        // if limiting acceleration for a rotary axis is needed then issue it as a solo move
+        if(actuator >= N_PRIMARY_AXIS && !(auxilliary_move || actuators[actuator]->is_extruder())) continue;
+
+        // adjust acceleration to not exceed the actuators acceleration, based on the ratio it
+        // presents for the overall move (NOTE this may be incorrect)
+        float ma =  actuators[actuator]->get_acceleration(); // in mm/sec²
+        if(!isnan(ma)) {  // if axis does not have acceleration set then it uses the default_acceleration
+            // this is the proportion of the total move scaling the acceleration
+            float ca = fabsf((d/distance) * acceleration);
+            // if it exceeds the axis acceleration then we reduce the acceleration by the ratio it is over
+            if (ca > ma) {
+                acceleration *= ( ma / ca );
             }
         }
     }
 
-    // if we are in feed hold wait here until it is released, this means that even segemnted lines will pause
+    // if we are in feed hold wait here until it is released, this means that even segmented lines will pause
     while(THEKERNEL->get_feed_hold()) {
         THEKERNEL->call_event(ON_IDLE, this);
         // if we also got a HALT then break out of this
@@ -1424,7 +1438,7 @@ bool Robot::append_line(Gcode *gcode, const float target[], float rate_mm_s, flo
 
     /*
         For extruders, we need to do some extra work to limit the volumetric rate if specified...
-        If using volumetric limts we need to be using volumetric extrusion for this to work as Ennn needs to be in mm³ not mm
+        If using volumetric limits we need to be using volumetric extrusion for this to work as Ennn needs to be in mm³ not mm
         We ask Extruder to do all the work but we need to pass in the relevant data.
         NOTE we need to do this before we segment the line (for deltas)
     */
