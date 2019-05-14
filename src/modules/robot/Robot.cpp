@@ -1348,6 +1348,12 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
         if (secs < actuator_min_time ) {
             // this move at the default rate will move too quickly for this actuator
             // so we decrease the overall feed rate so it can complete within the min time for this actuator
+            if(actuator >= N_PRIMARY_AXIS && !actuators[actuator]->is_extruder()) {
+                // if this is a rotary axis we check what the time would be if the given feedrate was
+                // for a solo move in degrees/sec so we do not go faster than that
+                // this is for rotary engraving
+                actuator_min_time= std::max(actuator_min_time, d/rate_mm_s);
+            }
             rate_mm_s= distance / actuator_min_time;
             // recalculate time from new rate
             float new_secs = distance / rate_mm_s;
@@ -1368,6 +1374,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
                 // if it exceeds the axis acceleration then we reduce the acceleration by the ratio it is over
                 if (ca > ma) {
                     acceleration *= ( ma / ca );
+                    THEKERNEL->streams->printf("new acceleration: %f\n", acceleration);
                 }
             } else {
                 // for rotary axis we just select the lowest acceleration as we can't compare the distances
