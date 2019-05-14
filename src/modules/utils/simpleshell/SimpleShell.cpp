@@ -705,6 +705,28 @@ static bool get_spindle_state()
     return pad.state;
 }
 
+static bool get_mist_state()    // TODO How to combine in the same printf var ???
+{
+    // get light switch state
+    struct pad_switch pad;
+    bool ok = PublicData::get_value(switch_checksum, get_checksum("mist"), 0, &pad);
+    if (!ok) {
+        return false;
+    }
+    return pad.state;
+}
+
+//static bool get_flood_state()
+//{
+//    // get light switch state
+//    struct pad_switch pad;
+//    bool ok = PublicData::get_value(switch_checksum, get_checksum("flood"), 0, &pad);
+//    if (!ok) {
+//        return false;
+//    }
+//    return pad.state;
+//}
+
 void SimpleShell::grblDP_command( string parameters, StreamOutput *stream)
 {
     /*
@@ -861,7 +883,7 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
     } else if (what == "state") {
         // also $G and $I
         // [G0 G54 G17 G21 G90 G94 M0 M5 M9 T0 F0.]
-        stream->printf("[G%d %s G%d G%d G%d G94 M0 M%c M9 T%d F%1.4f S%1.4f]\n",
+        stream->printf("[G%d %s G%d G%d G%d G94 M0 M%c M%c T%d F%1.4f S%1.4f]\n",
             THEKERNEL->gcode_dispatch->get_modal_command(),
             wcs2gcode(THEROBOT->get_current_wcs()).c_str(),
             THEROBOT->plane_axis_0 == X_AXIS && THEROBOT->plane_axis_1 == Y_AXIS && THEROBOT->plane_axis_2 == Z_AXIS ? 17 :
@@ -870,6 +892,8 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
             THEROBOT->inch_mode ? 20 : 21,
             THEROBOT->absolute_mode ? 90 : 91,
             get_spindle_state()?'3':'5',
+            get_mist_state()?'7':'9',
+//            get_flood_state()?'8':'9',     // TODO How to combine in the same printf var ???
             get_active_tool(),
             THEROBOT->from_millimeters(THEROBOT->get_feed_rate()),
             THEROBOT->get_s_value());
