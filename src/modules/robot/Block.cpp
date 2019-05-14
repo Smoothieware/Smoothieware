@@ -139,14 +139,16 @@ void Block::calculate_trapezoid( float entryspeed, float exitspeed )
 
     float initial_rate = this->nominal_rate * (entryspeed / this->nominal_speed); // steps/sec
     float final_rate = this->nominal_rate * (exitspeed / this->nominal_speed);
-    //printf("Initial rate: %f, final_rate: %f\n", initial_rate, final_rate);
+
+    THEKERNEL->streams->printf("Initial rate: %f, final_rate: %f\n", initial_rate, final_rate);
+
     // How many steps ( can be fractions of steps, we need very precise values ) to accelerate and decelerate
     // This is a simplification to get rid of rate_delta and get the steps/s² accel directly from the mm/s² accel
     float acceleration_per_second = (this->acceleration * this->steps_event_count) / this->millimeters;
 
     float maximum_possible_rate = sqrtf( ( this->steps_event_count * acceleration_per_second ) + ( ( powf(initial_rate, 2) + powf(final_rate, 2) ) / 2.0F ) );
 
-    //printf("id %d: acceleration_per_second: %f, maximum_possible_rate: %f steps/sec, %f mm/sec\n", this->id, acceleration_per_second, maximum_possible_rate, maximum_possible_rate/100);
+    THEKERNEL->streams->printf("acceleration_per_second: %f, maximum_possible_rate: %f steps/sec, %f mm/sec\n", acceleration_per_second, maximum_possible_rate, maximum_possible_rate/100);
 
     // Now this is the maximum rate we'll achieve this move, either because
     // it's the higher we can achieve, or because it's the higher we are
@@ -348,7 +350,7 @@ void Block::prepare(float acceleration_in_steps, float deceleration_in_steps)
         this->tick_info[m].deceleration_change= -(int64_t)round(deceleration_per_tick * aratio);
         this->tick_info[m].plateau_rate= (int64_t)round(((this->maximum_rate * aratio) / STEP_TICKER_FREQUENCY) * STEPTICKER_FPSCALE);
 
-        #if 0
+        #if 1
         THEKERNEL->streams->printf("spt: %08lX %08lX, ac: %08lX %08lX, dc: %08lX %08lX, pr: %08lX %08lX\n",
             (uint32_t)(this->tick_info[m].steps_per_tick>>32), // 2.62 fixed point
             (uint32_t)(this->tick_info[m].steps_per_tick&0xFFFFFFFF), // 2.62 fixed point

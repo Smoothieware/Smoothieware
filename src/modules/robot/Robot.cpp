@@ -1349,21 +1349,26 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
             // so we decrease the overall feed rate so it can complete within the min time for this actuator
             rate_mm_s= distance / actuator_min_time;
             // recalculate time from new rate
-            secs = distance / rate_mm_s;
+            float new_secs = distance / rate_mm_s;
+            // we need to reduce the acceleration by the same ratio
+            acceleration *= secs/new_secs;
+            secs= new_secs;
         }
+
+        THEKERNEL->streams->printf("act: %d, d: %f, min: %f, rate: %f, secs: %f, acc: %f\n", actuator, d, actuator_min_time, rate_mm_s, secs, acceleration);
 
         // we do not bother with extruder acceleration, becuase if we did in a 3d printer we would always
         // be using the extruders acceleration and not the XY acceleration which is usually a lot higher
         // and extruder moves are usually tiny
-        if(!auxilliary_move && actuators[actuator]->is_extruder()) continue;
+        // if(!auxilliary_move && actuators[actuator]->is_extruder()) continue;
 
-        // select the lowest acceleration of the axis in motion
-        float ma = actuators[actuator]->get_acceleration(); // in mm/sec²
-        if(!isnan(ma)) {  // if axis does not have acceleration set then it uses the default_acceleration
-            if (acceleration > ma) {
-                acceleration= ma;
-            }
-        }
+        // // select the lowest acceleration of the axis in motion
+        // float ma = actuators[actuator]->get_acceleration(); // in mm/sec²
+        // if(!isnan(ma)) {  // if axis does not have acceleration set then it uses the default_acceleration
+        //     if (acceleration > ma) {
+        //         acceleration= ma;
+        //     }
+        // }
     }
 
     // if we are in feed hold wait here until it is released, this means that even segmented lines will pause
