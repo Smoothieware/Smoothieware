@@ -350,7 +350,7 @@ void Block::prepare(float acceleration_in_steps, float deceleration_in_steps)
         this->tick_info[m].deceleration_change= -(int64_t)round(deceleration_per_tick * aratio);
         this->tick_info[m].plateau_rate= (int64_t)round(((this->maximum_rate * aratio) / STEP_TICKER_FREQUENCY) * STEPTICKER_FPSCALE);
 
-        #if 1
+        #if 0
         THEKERNEL->streams->printf("spt: %08lX %08lX, ac: %08lX %08lX, dc: %08lX %08lX, pr: %08lX %08lX\n",
             (uint32_t)(this->tick_info[m].steps_per_tick>>32), // 2.62 fixed point
             (uint32_t)(this->tick_info[m].steps_per_tick&0xFFFFFFFF), // 2.62 fixed point
