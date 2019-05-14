@@ -1344,6 +1344,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
 
         // find approximate min time this axis needs to move its distance
         float actuator_min_time= d / actuators[actuator]->get_max_rate();
+        float ratio= 1.0F;
         if (secs < actuator_min_time ) {
             // this move at the default rate will move too quickly for this actuator
             // so we decrease the overall feed rate so it can complete within the min time for this actuator
@@ -1351,24 +1352,33 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
             // recalculate time from new rate
             float new_secs = distance / rate_mm_s;
             // we need to reduce the acceleration by the same ratio
-            acceleration *= secs/new_secs;
+            ratio=  secs/new_secs;
+            acceleration *= ratio;
             secs= new_secs;
         }
 
-        THEKERNEL->streams->printf("act: %d, d: %f, min: %f, rate: %f, secs: %f, acc: %f\n", actuator, d, actuator_min_time, rate_mm_s, secs, acceleration);
+        THEKERNEL->streams->printf("act: %d, d: %f, min: %f, rate: %f, secs: %f, acc: %f, ratio: %f\n", actuator, d, actuator_min_time, rate_mm_s, secs, acceleration, ratio);
 
-        // we do not bother with extruder acceleration, becuase if we did in a 3d printer we would always
-        // be using the extruders acceleration and not the XY acceleration which is usually a lot higher
-        // and extruder moves are usually tiny
-        // if(!auxilliary_move && actuators[actuator]->is_extruder()) continue;
-
-        // // select the lowest acceleration of the axis in motion
-        // float ma = actuators[actuator]->get_acceleration(); // in mm/sec²
-        // if(!isnan(ma)) {  // if axis does not have acceleration set then it uses the default_acceleration
-        //     if (acceleration > ma) {
-        //         acceleration= ma;
-        //     }
-        // }
+        // adjust acceleration to not exceed the actuators acceleration, based on the ratio above
+        float ma =  actuators[actuator]->get_acceleration(); // in mm/sec²
+        if(!isnan(ma)) {  // if axis does not have acceleration set then it uses the default_acceleration
+            if(actuator < N_PRIMARY_AXIS || actuators[actuator]->is_extruder()) {
+                // for primary axis and extruder (which is a linear travel) we use the ratio of the cartesian distances
+                float ca = fabsf((d/distance) * acceleration);
+                // if it exceeds the axis acceleration then we reduce the acceleration by the ratio it is over
+                if (ca > ma) {
+                    acceleration *= ( ma / ca );
+                }
+            } else {
+                // for rotary axis we just select the lowest acceleration as we can't compare the distances
+                // as they are in degrees not mm
+                if (acceleration > ma) {
+                    // if it exceeds the axis acceleration then we set accleration to the lower one
+                    acceleration = ma;
+                    THEKERNEL->streams->printf("new acceleration: %f\n", acceleration);
+                }
+            }
+        }
     }
 
     // if we are in feed hold wait here until it is released, this means that even segmented lines will pause
