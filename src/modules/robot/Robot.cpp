@@ -1355,7 +1355,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
         // we do not bother with extruder acceleration, becuase if we did in a 3d printer we would always
         // be using the extruders acceleration and not the XY acceleration which is usually a lot higher
         // and extruder moves are usually tiny
-        if(actuators[actuator]->is_extruder()) continue;
+        if(!auxilliary_move && actuators[actuator]->is_extruder()) continue;
 
         // select the lowest acceleration of the axis in motion
         float ma = actuators[actuator]->get_acceleration(); // in mm/sec²
