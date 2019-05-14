@@ -1323,7 +1323,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     }
     if(auxilliary_move) {
         distance= sqrtf(sos); // distance in mm of the e move
-        if(distance < 0.00001F) return false; // avoid divide by zero furter on
+        if(distance < 0.00001F) return false; // avoid divide by zero further on
     }
 #endif
 
@@ -1340,7 +1340,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
         // actual distance moved for this actuator
         // NOTE for a rotary axis this will be degrees turned not distance
         float d = fabsf(actuator_pos[actuator] - actuators[actuator]->get_last_milestone());
-        if(d == 0 || !actuators[actuator]->is_selected()) continue; // no movement for this actuator
+        if(d < 0.00001F || !actuators[actuator]->is_selected()) continue; // no perceptible movement for this actuator
 
         // find approximate min time this axis needs to move its distance
         float actuator_min_time= d / actuators[actuator]->get_max_rate();
