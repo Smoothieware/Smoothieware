@@ -1278,10 +1278,24 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     DEBUG_PRINTF("major axis is : %d\n", major_axis);
 
     // find the major axis which is the one with the most steps, if
-    // this is a non extruder but non primary axis then treat this as an auxilliary move
-    bool auxilliary_move = (major_axis >= N_PRIMARY_AXIS);
+    // this is an extruder solo move or an ABC move then treat this as an auxilliary move
+    // if it is an extruder move but ther eis any XYZ move it is not treated as an auxillairy
+    // move to maintain the old behavior
+    bool auxilliary_move= false;
+    if(major_axis < N_PRIMARY_AXIS) {
+        auxilliary_move= false;
+
+    }else if(actuators[major_axis]->is_extruder() && sos > 0.00001F) {
+        // if it is an extruder but there is any significant XYZ move then not an auxilliary move
+        auxilliary_move= false;
+
+    }else{
+        // ABC axis is major axis or a solo extruder move then it is an auxilliary move
+        auxilliary_move= true;
+    }
 
     // total movement, use XYZ if a primary axis otherwise we calculate distance for E after scaling to mm
+    // or ABC
     float distance= auxilliary_move ? 0 : sqrtf(sos);
 
     // it is unlikely but we need to protect against divide by zero, so ignore insanely small moves here
@@ -1332,12 +1346,12 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
             actuator_pos[i] *= get_e_scale_fnc();
         }
         if(auxilliary_move) {
-            // for E and rotary axis moves we need to use the scaled E or ABC to calculate the distance
+            // for solo E and rotary axis moves we need to use the scaled E or ABC to calculate the distance
             sos += powf(actuator_pos[i] - actuators[i]->get_last_milestone(), 2);
         }
     }
     if(auxilliary_move) {
-        distance= sqrtf(sos); // distance in mm of the e move
+        distance= sqrtf(sos); // distance in mm of the e or ABC move
         if(distance < 0.00001F) return false; // avoid divide by zero further on
     }
 #endif
