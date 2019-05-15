@@ -1264,7 +1264,6 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     // do this by finding the major axis based on steps moved not distance
     // if we find a non primary axis (other than E) is moving more than the primary axis
     // we treat it as an auxilliary move
-    bool auxilliary_move= false;
     int major_axis= 0;
     uint32_t max_steps= 0;
     for (int i = 0; i < n_motors; ++i) {
@@ -1280,7 +1279,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
 
     // find the major axis which is the one with the most steps, if
     // this is a non extruder but non primary axis then treat this as an auxilliary move
-    auxilliary_move = (major_axis >= N_PRIMARY_AXIS);
+    bool auxilliary_move = (major_axis >= N_PRIMARY_AXIS);
 
     // total movement, use XYZ if a primary axis otherwise we calculate distance for E after scaling to mm
     float distance= auxilliary_move ? 0 : sqrtf(sos);
