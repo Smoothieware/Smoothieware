@@ -100,6 +100,9 @@
 
 #define PI 3.14159265358979323846F // force to be float, do not use M_PI
 
+#define DEBUG_PRINTF THEKERNEL->streams->printf
+//#define DEBUG_PRINTF(...)
+
 // The Robot converts GCodes into actual movements, and then adds them to the Planner, which passes them to the Conveyor so they can be added to the queue
 // It takes care of cutting arcs into segments, same thing for line that are too long
 
@@ -1354,24 +1357,23 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
                 // a certain speed over the surface.
                 actuator_min_time= std::max(actuator_min_time, d/rate_mm_s);
             }
-            if(actuator >= N_PRIMARY_AXIS) {
+            if(!auxilliary_move && actuator >= N_PRIMARY_AXIS) {
                 // if this is a rotary axis we need to increase the distance
                 distance *= actuator_min_time/secs;
                 secs= actuator_min_time;
-                THEKERNEL->streams->printf("new distance: %f\n", distance);
+                DEBUG_PRINTF("new distance: %f - %d\n", distance, actuator);
             }else{
                 // primary axis we just change the feed rate
                 rate_mm_s= distance / actuator_min_time;
-                THEKERNEL->streams->printf("new rate: %f\n", rate_mm_s);
+                DEBUG_PRINTF("new rate: %f - %d\n", rate_mm_s, actuator);
                 // recalculate time from new rate
-                float new_secs = distance / rate_mm_s;
-                secs= new_secs;
+                secs = distance / rate_mm_s;
             }
         }
 
-        THEKERNEL->streams->printf("act: %d, d: %f, distance: %f, min: %f, rate: %f, secs: %f, acc: %f\n", actuator, d, distance, actuator_min_time, rate_mm_s, secs, acceleration);
+        DEBUG_PRINTF("act: %d, d: %f, distance: %f, min: %f, rate: %f, secs: %f, acc: %f\n", actuator, d, distance, actuator_min_time, rate_mm_s, secs, acceleration);
 
-        // adjust acceleration to not exceed the actuators acceleration, based on the ratio above
+        // adjust acceleration to not exceed the actuators acceleration
         float ma =  actuators[actuator]->get_acceleration(); // in mm/sec²
         if(!isnan(ma)) {  // if axis does not have acceleration set then it uses the default_acceleration
             float ca = fabsf((d/distance) * acceleration);

@@ -21,6 +21,9 @@
 #include "mri.h"
 #include <inttypes.h>
 
+#define DEBUG_PRINTF THEKERNEL->streams->printf
+//#define DEBUG_PRINTF(...)
+
 using std::string;
 
 #define STEP_TICKER_FREQUENCY THEKERNEL->step_ticker->get_frequency()
@@ -140,7 +143,7 @@ void Block::calculate_trapezoid( float entryspeed, float exitspeed )
     float initial_rate = this->nominal_rate * (entryspeed / this->nominal_speed); // steps/sec
     float final_rate = this->nominal_rate * (exitspeed / this->nominal_speed);
 
-    THEKERNEL->streams->printf("Initial rate: %f, final_rate: %f\n", initial_rate, final_rate);
+    DEBUG_PRINTF("Initial rate: %f, final_rate: %f\n", initial_rate, final_rate);
 
     // How many steps ( can be fractions of steps, we need very precise values ) to accelerate and decelerate
     // This is a simplification to get rid of rate_delta and get the steps/s² accel directly from the mm/s² accel
@@ -148,7 +151,7 @@ void Block::calculate_trapezoid( float entryspeed, float exitspeed )
 
     float maximum_possible_rate = sqrtf( ( this->steps_event_count * acceleration_per_second ) + ( ( powf(initial_rate, 2) + powf(final_rate, 2) ) / 2.0F ) );
 
-    THEKERNEL->streams->printf("acceleration_per_second: %f, maximum_possible_rate: %f steps/sec, %f mm/sec\n", acceleration_per_second, maximum_possible_rate, maximum_possible_rate/100);
+    DEBUG_PRINTF("acceleration_per_second: %f, maximum_possible_rate: %f steps/sec, %f mm/sec\n", acceleration_per_second, maximum_possible_rate, maximum_possible_rate/100);
 
     // Now this is the maximum rate we'll achieve this move, either because
     // it's the higher we can achieve, or because it's the higher we are
@@ -181,7 +184,8 @@ void Block::calculate_trapezoid( float entryspeed, float exitspeed )
 
     // Figure out how long the move takes total ( in seconds )
     float total_move_time = time_to_accelerate + time_to_decelerate + plateau_time;
-    //puts "total move time: #{total_move_time}s time to accelerate: #{time_to_accelerate}, time to decelerate: #{time_to_decelerate}"
+
+    DEBUG_PRINTF("total move time: %f s, time to accelerate: %f, time to decelerate: %f\n", total_move_time, time_to_accelerate, time_to_decelerate);
 
     // We now have the full timing for acceleration, plateau and deceleration,
     // yay \o/ Now this is very important these are in seconds, and we need to
@@ -351,7 +355,7 @@ void Block::prepare(float acceleration_in_steps, float deceleration_in_steps)
         this->tick_info[m].plateau_rate= (int64_t)round(((this->maximum_rate * aratio) / STEP_TICKER_FREQUENCY) * STEPTICKER_FPSCALE);
 
         #if 0
-        THEKERNEL->streams->printf("spt: %08lX %08lX, ac: %08lX %08lX, dc: %08lX %08lX, pr: %08lX %08lX\n",
+        DEBUG_PRINTF("spt: %08lX %08lX, ac: %08lX %08lX, dc: %08lX %08lX, pr: %08lX %08lX\n",
             (uint32_t)(this->tick_info[m].steps_per_tick>>32), // 2.62 fixed point
             (uint32_t)(this->tick_info[m].steps_per_tick&0xFFFFFFFF), // 2.62 fixed point
             (uint32_t)(this->tick_info[m].acceleration_change>>32), // 2.62 fixed point signed
