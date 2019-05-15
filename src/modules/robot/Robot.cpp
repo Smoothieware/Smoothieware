@@ -1260,6 +1260,30 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     // nothing moved
     if(!move) return false;
 
+    // find actuator position given the machine position, use actual adjusted target
+    ActuatorCoordinates actuator_pos;
+    if(!disable_arm_solution) {
+        arm_solution->cartesian_to_actuator( transformed_target, actuator_pos );
+
+    }else{
+        // basically the same as cartesian, would be used for special homing situations like for scara
+        for (size_t i = X_AXIS; i <= Z_AXIS; i++) {
+            actuator_pos[i] = transformed_target[i];
+        }
+    }
+
+    // for the extruders and rotary axis just copy the position, and possibly scale it from mm³ to mm
+    for (size_t i = E_AXIS; i < n_motors; i++) {
+        actuator_pos[i]= transformed_target[i];
+        if(actuators[i]->is_extruder() && get_e_scale_fnc) {
+            // NOTE this relies on the fact only one extruder is active at a time
+            // scale for volumetric or flow rate
+            // TODO is this correct? scaling the absolute target? what if the scale changes?
+            // for volumetric it basically converts mm³ to mm, but what about flow rate?
+            actuator_pos[i] *= get_e_scale_fnc();
+        }
+    }
+
     // see if this is a primary axis move or not
     // do this by finding the major axis based on steps moved not distance
     // if we find a non primary axis (other than E) is moving more than the primary axis
@@ -1267,15 +1291,17 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     int major_axis= 0;
     uint32_t max_steps= 0;
     for (int i = 0; i < n_motors; ++i) {
+        if(deltas[i] == 0) continue;
         // collect the number of steps for each actuator and remember the major axis
-        uint32_t s= labs(actuators[i]->steps_to_target(deltas[i]));
+        uint32_t s= labs(actuators[i]->steps_to_target(actuator_pos[i]));
+        DEBUG_PRINTF("acc: %d, delta: %f, steps: %lu\n", i, deltas[i], s);
         if(s > max_steps) {
             max_steps= s;
             major_axis= i;
         }
     }
 
-    DEBUG_PRINTF("major axis is : %d\n", major_axis);
+    DEBUG_PRINTF("major axis is : %d, sos: %f\n", major_axis, sos);
 
     // find the major axis which is the one with the most steps, if
     // this is an extruder solo move or an ABC move then treat this as an auxilliary move
@@ -1298,12 +1324,13 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     // or ABC
     float distance= auxilliary_move ? 0 : sqrtf(sos);
 
-    // it is unlikely but we need to protect against divide by zero, so ignore insanely small moves here
-    // as the last milestone won't be updated we do not actually lose any moves as they will be accounted for in the next move
-    if(!auxilliary_move && distance < 0.00001F) return false;
-
     if(!auxilliary_move) {
-         for (size_t i = X_AXIS; i < N_PRIMARY_AXIS; i++) {
+        // it is unlikely but we need to protect against divide by zero, so ignore insanely small moves here
+        // as the last milestone won't be updated we do not actually lose any moves as they will be accounted
+        // for in the next move
+        if(distance < 0.00001F) return false;
+
+        for (size_t i = X_AXIS; i < N_PRIMARY_AXIS; i++) {
             // find distance unit vector for primary axis only
             unit_vec[i] = deltas[i] / distance;
 
@@ -1319,42 +1346,16 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
         if(this->max_speed > 0 && rate_mm_s > this->max_speed) {
             rate_mm_s= this->max_speed;
         }
-    }
 
-    // find actuator position given the machine position, use actual adjusted target
-    ActuatorCoordinates actuator_pos;
-    if(!disable_arm_solution) {
-        arm_solution->cartesian_to_actuator( transformed_target, actuator_pos );
-
-    }else{
-        // basically the same as cartesian, would be used for special homing situations like for scara
-        for (size_t i = X_AXIS; i <= Z_AXIS; i++) {
-            actuator_pos[i] = transformed_target[i];
-        }
-    }
-
-#if MAX_ROBOT_ACTUATORS > 3
-    sos= 0;
-    // for the extruders and rotary axis just copy the position, and possibly scale it from mm³ to mm
-    for (size_t i = E_AXIS; i < n_motors; i++) {
-        actuator_pos[i]= transformed_target[i];
-        if(actuators[i]->is_extruder() && get_e_scale_fnc) {
-            // NOTE this relies on the fact only one extruder is active at a time
-            // scale for volumetric or flow rate
-            // TODO is this correct? scaling the absolute target? what if the scale changes?
-            // for volumetric it basically converts mm³ to mm, but what about flow rate?
-            actuator_pos[i] *= get_e_scale_fnc();
-        }
-        if(auxilliary_move) {
-            // for solo E and rotary axis moves we need to use the scaled E or ABC to calculate the distance
+    } else {
+        // for solo E and rotary axis moves we need to use the scaled E or ABC to calculate the distance
+        sos= 0;
+        for (size_t i = E_AXIS; i < n_motors; i++) {
             sos += powf(actuator_pos[i] - actuators[i]->get_last_milestone(), 2);
         }
-    }
-    if(auxilliary_move) {
         distance= sqrtf(sos); // distance in mm of the e or ABC move
         if(distance < 0.00001F) return false; // avoid divide by zero further on
     }
-#endif
 
     // use default acceleration to start with
     float acceleration = default_acceleration;
