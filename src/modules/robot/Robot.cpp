@@ -1301,8 +1301,6 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
         }
     }
 
-    DEBUG_PRINTF("major axis is : %d, sos: %f\n", major_axis, sos);
-
     // find the major axis which is the one with the most steps, if
     // this is an extruder solo move or an ABC move then treat this as an auxilliary move
     // if it is an extruder move but ther eis any XYZ move it is not treated as an auxillairy
@@ -1319,6 +1317,8 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
         // ABC axis is major axis or a solo extruder move then it is an auxilliary move
         auxilliary_move= true;
     }
+
+    DEBUG_PRINTF("major axis is : %d, sos: %f, aux_move: %d\n", major_axis, sos, auxilliary_move);
 
     // total movement, use XYZ if a primary axis otherwise we calculate distance for E after scaling to mm
     // or ABC

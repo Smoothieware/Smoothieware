@@ -84,26 +84,13 @@ bool Planner::append_block( ActuatorCoordinates &actuator_pos, uint8_t n_motors,
     // use default JD
     float junction_deviation = this->junction_deviation;
 
-    // use either regular junction deviation or z specific and see if a primary axis move
-    block->primary_axis = true;
-    if(block->steps[ALPHA_STEPPER] == 0 && block->steps[BETA_STEPPER] == 0) {
-        if(block->steps[GAMMA_STEPPER] != 0) {
-            // z only move
-            if(!isnan(this->z_junction_deviation)) junction_deviation = this->z_junction_deviation;
+    // record if this is a primary axis move
+    block->primary_axis = (unit_vec != nullptr);
 
-        } else {
-            // is not a primary axis move
-            block->primary_axis= false;
-            #if N_PRIMARY_AXIS > 3
-                for (int i = 3; i < N_PRIMARY_AXIS; ++i) {
-                    if(block->steps[i] != 0){
-                        block->primary_axis= true;
-                        break;
-                    }
-                }
-            #endif
-
-        }
+    // use either regular junction deviation or z specific
+    if(block->steps[ALPHA_STEPPER] == 0 && block->steps[BETA_STEPPER] == 0 && block->steps[GAMMA_STEPPER] != 0) {
+        // z only move
+        if(!isnan(this->z_junction_deviation)) junction_deviation = this->z_junction_deviation;
     }
 
     block->acceleration = acceleration; // save in block
