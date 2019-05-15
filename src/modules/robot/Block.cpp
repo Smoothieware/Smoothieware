@@ -21,8 +21,8 @@
 #include "mri.h"
 #include <inttypes.h>
 
-#define DEBUG_PRINTF THEKERNEL->streams->printf
-//#define DEBUG_PRINTF(...)
+//#define DEBUG_PRINTF THEKERNEL->streams->printf
+#define DEBUG_PRINTF(...)
 
 using std::string;
 

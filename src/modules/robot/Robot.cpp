@@ -100,8 +100,8 @@
 
 #define PI 3.14159265358979323846F // force to be float, do not use M_PI
 
-#define DEBUG_PRINTF THEKERNEL->streams->printf
-//#define DEBUG_PRINTF(...)
+//#define DEBUG_PRINTF THEKERNEL->streams->printf
+#define DEBUG_PRINTF(...)
 
 // The Robot converts GCodes into actual movements, and then adds them to the Planner, which passes them to the Conveyor so they can be added to the queue
 // It takes care of cutting arcs into segments, same thing for line that are too long
@@ -1392,7 +1392,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
             // if it exceeds the axis acceleration then we reduce the acceleration by the ratio it is over
             if (ca > ma) {
                 acceleration *= ( ma / ca );
-                THEKERNEL->streams->printf("new acceleration: %f\n", acceleration);
+                DEBUG_PRINTF("new acceleration: %f\n", acceleration);
             }
         }
     }
