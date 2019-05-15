@@ -1344,7 +1344,6 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
 
         // find approximate min time this axis needs to move its distance
         float actuator_min_time= d / actuators[actuator]->get_max_rate();
-        float ratio= 1.0F;
         if (secs < actuator_min_time ) {
             // this move at the default rate will move too quickly for this actuator
             // so we decrease the overall feed rate so it can complete within the min time for this actuator
@@ -1355,39 +1354,31 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
                 // a certain speed over the surface.
                 actuator_min_time= std::max(actuator_min_time, d/rate_mm_s);
             }
-            rate_mm_s= distance / actuator_min_time;
-            // recalculate time from new rate
-            float new_secs = distance / rate_mm_s;
-            ratio=  secs/new_secs;
-            secs= new_secs;
-            // we need to reduce the acceleration by the same ratio
-            // FIXME This is wrong if it is a primary axis or solo move
-            acceleration *= ratio;
-            THEKERNEL->streams->printf("new acceleration: %f\n", acceleration);
+            if(actuator >= N_PRIMARY_AXIS) {
+                // if this is a rotary axis we need to increase the distance
+                distance *= actuator_min_time/secs;
+                secs= actuator_min_time;
+                THEKERNEL->streams->printf("new distance: %f\n", distance);
+            }else{
+                // primary axis we just change the feed rate
+                rate_mm_s= distance / actuator_min_time;
+                THEKERNEL->streams->printf("new rate: %f\n", rate_mm_s);
+                // recalculate time from new rate
+                float new_secs = distance / rate_mm_s;
+                secs= new_secs;
+            }
         }
 
-        THEKERNEL->streams->printf("act: %d, d: %f, min: %f, rate: %f, secs: %f, acc: %f, ratio: %f\n", actuator, d, actuator_min_time, rate_mm_s, secs, acceleration, ratio);
+        THEKERNEL->streams->printf("act: %d, d: %f, distance: %f, min: %f, rate: %f, secs: %f, acc: %f\n", actuator, d, distance, actuator_min_time, rate_mm_s, secs, acceleration);
 
         // adjust acceleration to not exceed the actuators acceleration, based on the ratio above
         float ma =  actuators[actuator]->get_acceleration(); // in mm/sec²
         if(!isnan(ma)) {  // if axis does not have acceleration set then it uses the default_acceleration
-            if(actuator < N_PRIMARY_AXIS || actuators[actuator]->is_extruder()) {
-                // for primary axis and extruder (which is a linear travel) we use the ratio of the cartesian distances
-                float ca = fabsf((d/distance) * acceleration);
-                // if it exceeds the axis acceleration then we reduce the acceleration by the ratio it is over
-                if (ca > ma) {
-                    acceleration *= ( ma / ca );
-                    THEKERNEL->streams->printf("new acceleration: %f\n", acceleration);
-                }
-            } else {
-                // for rotary axis we just select the lowest acceleration as we can't compare the distances
-                // as they are in degrees not mm
-                // FIXME this is also wrong
-                if (acceleration > ma) {
-                    // if it exceeds the axis acceleration then we set accleration to the lower one
-                    acceleration = ma;
-                    THEKERNEL->streams->printf("new acceleration: %f\n", acceleration);
-                }
+            float ca = fabsf((d/distance) * acceleration);
+            // if it exceeds the axis acceleration then we reduce the acceleration by the ratio it is over
+            if (ca > ma) {
+                acceleration *= ( ma / ca );
+                THEKERNEL->streams->printf("new acceleration: %f\n", acceleration);
             }
         }
     }
