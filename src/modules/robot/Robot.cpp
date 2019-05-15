@@ -1261,13 +1261,26 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     if(!move) return false;
 
     // see if this is a primary axis move or not
-    bool auxilliary_move= true;
-    for (int i = 0; i < N_PRIMARY_AXIS; ++i) {
-        if(deltas[i] != 0) {
-            auxilliary_move= false;
-            break;
+    // do this by finding the major axis based on steps moved not distance
+    // if we find a non primary axis (other than E) is moving more than the primary axis
+    // we treat it as an auxilliary move
+    bool auxilliary_move= false;
+    int major_axis= 0;
+    uint32_t max_steps= 0;
+    for (int i = 0; i < n_motors; ++i) {
+        // collect the number of steps for each actuator and remember the major axis
+        uint32_t s= labs(actuators[i]->steps_to_target(deltas[i]));
+        if(s > max_steps) {
+            max_steps= s;
+            major_axis= i;
         }
     }
+
+    DEBUG_PRINTF("major axis is : %d\n", major_axis);
+
+    // find the major axis which is the one with the most steps, if
+    // this is a non extruder but non primary axis then treat this as an auxilliary move
+    auxilliary_move = (major_axis >= N_PRIMARY_AXIS);
 
     // total movement, use XYZ if a primary axis otherwise we calculate distance for E after scaling to mm
     float distance= auxilliary_move ? 0 : sqrtf(sos);
@@ -1309,7 +1322,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
 
 #if MAX_ROBOT_ACTUATORS > 3
     sos= 0;
-    // for the extruders just copy the position, and possibly scale it from mm³ to mm
+    // for the extruders and rotary axis just copy the position, and possibly scale it from mm³ to mm
     for (size_t i = E_AXIS; i < n_motors; i++) {
         actuator_pos[i]= transformed_target[i];
         if(actuators[i]->is_extruder() && get_e_scale_fnc) {
@@ -1320,7 +1333,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
             actuator_pos[i] *= get_e_scale_fnc();
         }
         if(auxilliary_move) {
-            // for E only moves we need to use the scaled E to calculate the distance
+            // for E and rotary axis moves we need to use the scaled E or ABC to calculate the distance
             sos += powf(actuator_pos[i] - actuators[i]->get_last_milestone(), 2);
         }
     }
@@ -1350,25 +1363,10 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
         if (secs < actuator_min_time ) {
             // this move at the default rate will move too quickly for this actuator
             // so we decrease the overall feed rate so it can complete within the min time for this actuator
-            if(actuator >= N_PRIMARY_AXIS && !actuators[actuator]->is_extruder()) {
-                // if this is a rotary axis we check what the time would be if the given feedrate was
-                // for a solo move in degrees/sec so we do not go faster than that
-                // this is for rotary engraving where the feedrate is calculated to maintain
-                // a certain speed over the surface.
-                actuator_min_time= std::max(actuator_min_time, d/rate_mm_s);
-            }
-            if(!auxilliary_move && actuator >= N_PRIMARY_AXIS) {
-                // if this is a rotary axis we need to increase the distance
-                distance *= actuator_min_time/secs;
-                secs= actuator_min_time;
-                DEBUG_PRINTF("new distance: %f - %d\n", distance, actuator);
-            }else{
-                // primary axis we just change the feed rate
-                rate_mm_s= distance / actuator_min_time;
-                DEBUG_PRINTF("new rate: %f - %d\n", rate_mm_s, actuator);
-                // recalculate time from new rate
-                secs = distance / rate_mm_s;
-            }
+            rate_mm_s= distance / actuator_min_time;
+            DEBUG_PRINTF("new rate: %f - %d\n", rate_mm_s, actuator);
+            // recalculate time from new rate
+            secs = distance / rate_mm_s;
         }
 
         DEBUG_PRINTF("act: %d, d: %f, distance: %f, min: %f, rate: %f, secs: %f, acc: %f\n", actuator, d, distance, actuator_min_time, rate_mm_s, secs, acceleration);
