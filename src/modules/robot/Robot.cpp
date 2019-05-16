@@ -1308,7 +1308,9 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
 
     // total movement, use XYZ if a primary axis otherwise we calculate distance for E after scaling to mm
     // or ABC
-    float distance= 0.0F;
+    float p_distance= sqrtf(xyz_sos);
+    float a_distance= sqrtf(abc_sos);
+    float distance;
 
     // find the major axis which is the one with the most steps, if
     // this is an extruder solo move or an ABC move then treat this as an auxilliary move
@@ -1317,23 +1319,23 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     bool auxilliary_move= false;
     if(major_axis < N_PRIMARY_AXIS) {
         auxilliary_move= false;
-        distance= sqrtf(xyz_sos);
+        distance= p_distance;
 
     }else if(actuators[major_axis]->is_extruder() && xyz_sos > 0.00001F) {
         // if it is an extruder but there is any XYZ move then not an auxilliary move
         auxilliary_move= false;
-        distance= sqrtf(xyz_sos);
+        distance= p_distance;
 
-    }else if(xyz_sos > 1.0F) {
+    }else if(xyz_sos >= 0.25F) { // this is about 0.5mm
         // it is a ABC axis move but there is a significant XYZ move so not an auxilliary move
         // but we use the ABC movement as distance
         auxilliary_move= false;
-        distance= sqrtf(abc_sos);
+        distance= a_distance;
 
     }else{
         // if ABC axis is a major axis or a solo move then it is an auxilliary move
         auxilliary_move= true;
-        distance= sqrtf(abc_sos);
+        distance= a_distance;
     }
 
     DEBUG_PRINTF("major axis is : %d, distance: %f, aux_move: %d\n", major_axis, distance, auxilliary_move);
@@ -1347,7 +1349,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
         // calculate unit vector for junction deviation if a primary axis move
         for (size_t i = X_AXIS; i < N_PRIMARY_AXIS; i++) {
             // find distance unit vector for primary axis only
-            unit_vec[i] = deltas[i] / distance;
+            unit_vec[i] = deltas[i] / p_distance;
 
             // Do not move faster than the configured cartesian limits for XYZ
             if ( i <= Z_AXIS && max_speeds[i] > 0 ) {
