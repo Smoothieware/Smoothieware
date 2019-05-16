@@ -1387,7 +1387,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
         // adjust acceleration to not exceed the actuators acceleration
         float ma =  actuators[actuator]->get_acceleration(); // in mm/sec²
         if(!isnan(ma)) {  // if axis does not have acceleration set then it uses the default_acceleration
-            float ca = fabsf((d/distance) * acceleration);
+            float ca = (d/distance) * acceleration;
             // if it exceeds the axis acceleration then we reduce the acceleration by the ratio it is over
             if (ca > ma) {
                 acceleration *= ( ma / ca );
