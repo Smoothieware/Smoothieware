@@ -100,8 +100,8 @@
 
 #define PI 3.14159265358979323846F // force to be float, do not use M_PI
 
-//#define DEBUG_PRINTF THEKERNEL->streams->printf
-#define DEBUG_PRINTF(...)
+#define DEBUG_PRINTF THEKERNEL->streams->printf
+//#define DEBUG_PRINTF(...)
 
 // The Robot converts GCodes into actual movements, and then adds them to the Planner, which passes them to the Conveyor so they can be added to the queue
 // It takes care of cutting arcs into segments, same thing for line that are too long
@@ -1244,7 +1244,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
 
 
     bool move= false;
-    float sos= 0; // sum of squares for just primary axis (XYZ usually)
+    float xyz_sos= 0; // sum of squares for just primary axis (XYZ usually)
 
     // find distance moved by each axis, use transformed target from the current compensated machine position
     for (size_t i = 0; i < n_motors; i++) {
@@ -1253,7 +1253,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
         // at least one non zero delta
         move = true;
         if(i < N_PRIMARY_AXIS) {
-            sos += powf(deltas[i], 2);
+            xyz_sos += powf(deltas[i], 2);
         }
     }
 
@@ -1300,6 +1300,16 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
         }
     }
 
+    // for solo E and rotary axis moves we may need to use the scaled E or ABC to calculate the distance
+    float abc_sos= 0;
+    for (size_t i = E_AXIS; i < n_motors; i++) {
+        abc_sos += powf(actuator_pos[i] - actuators[i]->get_last_milestone(), 2);
+    }
+
+    // total movement, use XYZ if a primary axis otherwise we calculate distance for E after scaling to mm
+    // or ABC
+    float distance= 0.0F;
+
     // find the major axis which is the one with the most steps, if
     // this is an extruder solo move or an ABC move then treat this as an auxilliary move
     // if it is an extruder move but ther eis any XYZ move it is not treated as an auxillairy
@@ -1307,28 +1317,34 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     bool auxilliary_move= false;
     if(major_axis < N_PRIMARY_AXIS) {
         auxilliary_move= false;
+        distance= sqrtf(xyz_sos);
 
-    }else if(actuators[major_axis]->is_extruder() && sos > 0.00001F) {
-        // if it is an extruder but there is any significant XYZ move then not an auxilliary move
+    }else if(actuators[major_axis]->is_extruder() && xyz_sos > 0.00001F) {
+        // if it is an extruder but there is any XYZ move then not an auxilliary move
         auxilliary_move= false;
+        distance= sqrtf(xyz_sos);
+
+    }else if(xyz_sos > 1.0F) {
+        // it is a ABC axis move but there is a significant XYZ move so not an auxilliary move
+        // but we use the ABC movement as distance
+        auxilliary_move= false;
+        distance= sqrtf(abc_sos);
 
     }else{
-        // ABC axis is major axis or a solo extruder move then it is an auxilliary move
+        // if ABC axis is a major axis or a solo move then it is an auxilliary move
         auxilliary_move= true;
+        distance= sqrtf(abc_sos);
     }
 
-    DEBUG_PRINTF("major axis is : %d, sos: %f, aux_move: %d\n", major_axis, sos, auxilliary_move);
+    DEBUG_PRINTF("major axis is : %d, distance: %f, aux_move: %d\n", major_axis, distance, auxilliary_move);
 
-    // total movement, use XYZ if a primary axis otherwise we calculate distance for E after scaling to mm
-    // or ABC
-    float distance= auxilliary_move ? 0 : sqrtf(sos);
+    // it is unlikely but we need to protect against divide by zero, so ignore insanely small moves here
+    // as the last milestone won't be updated we do not actually lose any moves as they will be accounted
+    // for in the next move
+    if(distance < 0.00001F) return false;
 
     if(!auxilliary_move) {
-        // it is unlikely but we need to protect against divide by zero, so ignore insanely small moves here
-        // as the last milestone won't be updated we do not actually lose any moves as they will be accounted
-        // for in the next move
-        if(distance < 0.00001F) return false;
-
+        // calculate unit vector for junction deviation if a primary axis move
         for (size_t i = X_AXIS; i < N_PRIMARY_AXIS; i++) {
             // find distance unit vector for primary axis only
             unit_vec[i] = deltas[i] / distance;
@@ -1345,15 +1361,6 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
         if(this->max_speed > 0 && rate_mm_s > this->max_speed) {
             rate_mm_s= this->max_speed;
         }
-
-    } else {
-        // for solo E and rotary axis moves we need to use the scaled E or ABC to calculate the distance
-        sos= 0;
-        for (size_t i = E_AXIS; i < n_motors; i++) {
-            sos += powf(actuator_pos[i] - actuators[i]->get_last_milestone(), 2);
-        }
-        distance= sqrtf(sos); // distance in mm of the e or ABC move
-        if(distance < 0.00001F) return false; // avoid divide by zero further on
     }
 
     // use default acceleration to start with
