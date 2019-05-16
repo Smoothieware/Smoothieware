@@ -1291,7 +1291,6 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     int major_axis= 0;
     uint32_t max_steps= 0;
     for (int i = 0; i < n_motors; ++i) {
-        if(deltas[i] == 0) continue;
         // collect the number of steps for each actuator and remember the major axis
         uint32_t s= labs(actuators[i]->steps_to_target(actuator_pos[i]));
         DEBUG_PRINTF("acc: %d, delta: %f, steps: %lu\n", i, deltas[i], s);
