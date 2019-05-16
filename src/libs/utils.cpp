@@ -20,16 +20,18 @@
 
 using std::string;
 
-uint16_t get_checksum(const string &to_check)
+uint16_t get_checksum(const string &to_check, uint16_t basesum /* =0 */)
 {
-    return get_checksum(to_check.c_str());
+    return get_checksum(to_check.c_str(), basesum);
 }
 
-uint16_t get_checksum(const char *to_check)
+// Basesum (other than 0) allows appending a substring onto a precalculated base string (hashed as basesum)
+// (e.g., allows easy iteration through unknown number of config subkeys such as basekey0, basekey1, basekey2, ...)
+uint16_t get_checksum(const char *to_check, uint16_t basesum /* =0 */)
 {
     // From: http://en.wikipedia.org/wiki/Fletcher%27s_checksum
-    uint16_t sum1 = 0;
-    uint16_t sum2 = 0;
+    uint16_t sum1 = basesum & 0xFF;
+    uint16_t sum2 = basesum >> 8;
     const char *p = to_check;
     char c;
     while((c = *p++) != 0) {
