@@ -694,33 +694,11 @@ static int get_active_tool()
     }
 }
 
-static bool get_spindle_state()
+static bool get_switch_state(const char *sw)
 {
-    // get spindle switch state
+    // get sw switch state
     struct pad_switch pad;
-    bool ok = PublicData::get_value(switch_checksum, get_checksum("spindle"), 0, &pad);
-    if (!ok) {
-        return false;
-    }
-    return pad.state;
-}
-
-static bool get_mist_state()    // TODO How to combine in the same printf var ???
-{
-    // get mist switch state
-    struct pad_switch pad;
-    bool ok = PublicData::get_value(switch_checksum, get_checksum("mist"), 0, &pad);
-    if (!ok) {
-        return false;
-    }
-    return pad.state;
-}
-
-static bool get_flood_state()
-{
-    // get flood switch state
-    struct pad_switch pad;
-    bool ok = PublicData::get_value(switch_checksum, get_checksum("flood"), 0, &pad);
+    bool ok = PublicData::get_value(switch_checksum, get_checksum(sw), 0, &pad);
     if (!ok) {
         return false;
     }
@@ -891,8 +869,8 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
               THEROBOT->plane_axis_0 == Y_AXIS && THEROBOT->plane_axis_1 == Z_AXIS && THEROBOT->plane_axis_2 == X_AXIS ? 19 : 17,
             THEROBOT->inch_mode ? 20 : 21,
             THEROBOT->absolute_mode ? 90 : 91,
-            get_spindle_state() ? '3' : '5',
-            get_mist_state() ? '7' : get_flood_state() ? '8' : '9',
+            get_switch_state("spindle") ? '3' : '5',
+            get_switch_state("mist") ? '7' : get_switch_state("flood") ? '8' : '9',
             get_active_tool(),
             THEROBOT->from_millimeters(THEROBOT->get_feed_rate()),
             THEROBOT->get_s_value());
