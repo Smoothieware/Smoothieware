@@ -1308,6 +1308,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
 
     // total movement, use XYZ if a primary axis otherwise we calculate distance for E after scaling to mm
     // or ABC
+    // TODO optimize this to avoid doing both sqrts and taking sqrt of 0
     float p_distance= sqrtf(xyz_sos);
     float a_distance= sqrtf(abc_sos);
     float distance;
@@ -1328,7 +1329,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
 
     }else if(xyz_sos >= 0.25F) { // this is about 0.5mm
         // it is a ABC axis move but there is a significant XYZ move so not an auxilliary move
-        // but we use the ABC movement as distance
+        // but we use the ABC movement as distance (as A is the major axis)
         auxilliary_move= false;
         distance= a_distance;
 
