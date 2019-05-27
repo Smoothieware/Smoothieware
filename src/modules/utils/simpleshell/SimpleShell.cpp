@@ -12,6 +12,7 @@
 #include "libs/utils.h"
 #include "libs/SerialMessage.h"
 #include "libs/StreamOutput.h"
+#include "libs/StreamOutputPool.h"
 #include "Conveyor.h"
 #include "DirHandle.h"
 #include "mri.h"
@@ -65,6 +66,7 @@ const SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {"cd",       SimpleShell::cd_command},
     {"pwd",      SimpleShell::pwd_command},
     {"cat",      SimpleShell::cat_command},
+    {"echo",     SimpleShell::echo_command},
     {"rm",       SimpleShell::rm_command},
     {"mv",       SimpleShell::mv_command},
     {"mkdir",    SimpleShell::mkdir_command},
@@ -452,6 +454,13 @@ void SimpleShell::cat_command( string parameters, StreamOutput *stream )
     if(send_eof) {
         stream->puts("\032"); // ^Z terminates the upload
     }
+}
+
+// echo commands
+void SimpleShell::echo_command( string parameters, StreamOutput *stream )
+{
+    //send to all streams
+    THEKERNEL->streams->printf("echo: %s\r\n", parameters.c_str());
 }
 
 void SimpleShell::upload_command( string parameters, StreamOutput *stream )
