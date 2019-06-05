@@ -113,10 +113,13 @@ bool MotorDriverControl::config_module(uint16_t cs)
         chip= TMC2660;
         tmc26x= new TMC26X(std::bind( &MotorDriverControl::sendSPI, this, _1, _2, _3), axis);
 
+    }else if(str == "SPIDRVR") {
+        // Generic SPI driver (allows for initialization of unsupported chips using raw hex data).
+        chip= SPIDRVR;
+
     }else{
-        chip=SPIDRVR;
-        //THEKERNEL->streams->printf("MotorDriverControl %c ERROR: Unknown chip type: %s\n", axis, str.c_str());
-        //return false;
+        THEKERNEL->streams->printf("MotorDriverControl %c ERROR: Unknown chip type: %s\n", axis, str.c_str());
+        return false;
     }
 
     // select which SPI channel to use
@@ -517,7 +520,7 @@ void MotorDriverControl::set_options(Gcode *gcode)
 
 // Parse a raw hexadecimal data string and write to SPI, then optionally print received data.
 // String format:  [p]hexdata[xN][_hexdata[xN]][,hexdata[xN][_hexdata[xN]]],...]
-// Writes arbitrary hexdata bytes/words.  Assumes hexadecimal -- do not prefix with '0x' or postfix with 'h'.
+// Writes arbitrary hexdata bytes/words.  Assumes hexadecimal (upper case) -- do not prefix with '0x' or postfix with 'h'.
 // Leading zeros in hexdata are significant since they are used to determine word length; i.e., number of bits to shift onto the SPI.
 // If first char is 'p', then prints received data after write. If first char is 'P', then prints received data after writing hexdata twice.
 //     ('p' is typically for use with a no-op/status command to view the result of a previously written command.)
