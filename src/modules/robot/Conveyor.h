@@ -21,6 +21,7 @@ public:
     void on_module_loaded(void);
     void on_idle(void *);
     void on_halt(void *);
+    void on_suspend(void *);
 
     void wait_for_idle(bool wait_for_motors=true);
     bool is_queue_empty() { return queue.is_empty(); };

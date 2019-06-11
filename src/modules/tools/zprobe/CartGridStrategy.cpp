@@ -57,7 +57,7 @@
     Display mode of current grid can be changed to human readable mode (table with coordinates) by using
        leveling-strategy.rectangular-grid.human_readable  true
 
-    For probes like the bltouch you can define a before probe and after probe GCode sequence (to deploy and stow the probe)
+    For probes like the bltouch yo ucan define a before probe a d after probne GCode sequence (to deploy and stow the probe)
         leveling-strategy.rectangular-grid.before_probe_gcode M280
         leveling-strategy.rectangular-grid.after_probe_gcode M281
 
@@ -650,7 +650,7 @@ bool CartGridStrategy::doProbe(Gcode *gc)
 
     gc->stream->printf("Probe start ht: %0.3f mm, start MCS x,y: %0.3f,%0.3f, rectangular bed width,height in mm: %0.3f,%0.3f, grid size: %dx%d\n", zprobe->getProbeHeight(), x_start, y_start, x_size, y_size, current_grid_x_size, current_grid_y_size);
 
-    // do first probe at start point
+    // do first probe for at start point
     float mm;
     if(!zprobe->doProbeAt(mm, this->x_start - X_PROBE_OFFSET_FROM_EXTRUDER, this->y_start - Y_PROBE_OFFSET_FROM_EXTRUDER)) return false;
     float z_reference = zprobe->getProbeHeight() - mm; // this should be zero

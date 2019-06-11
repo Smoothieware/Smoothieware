@@ -258,7 +258,21 @@ try_again:
                                     THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc2);
                                 }
                                 break;
-
+                            case 111: // emergency stop, do the best we can with this
+                                // this is also handled out-of-band (it is now with ^X in the serial driver)
+                                // disables heaters and motors, ignores further incoming Gcode and clears block queue
+                                THEKERNEL->call_event(ON_SUSPEND, nullptr);
+                                THEKERNEL->streams->printf("ok Emergency Suspend Requested - reset or M998 required to exit HALT state\r\n");
+                                delete gcode;
+                                return;
+                            case 998:
+                                if(THEKERNEL->is_halted()) {
+                                    THEKERNEL->call_event(ON_SUSPEND, (void *)1); // clears on_halt
+                                    new_message.stream->printf("WARNING: After SUSPEND it will resume from current position\n");
+                                }
+                                new_message.stream->printf("ok\n");
+                                delete gcode;
+                                return;
                             case 112: // emergency stop, do the best we can with this
                                 // this is also handled out-of-band (it is now with ^X in the serial driver)
                                 // disables heaters and motors, ignores further incoming Gcode and clears block queue

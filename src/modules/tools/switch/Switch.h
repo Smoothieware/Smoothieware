@@ -32,6 +32,7 @@ class Switch : public Module {
         void on_get_public_data(void* argument);
         void on_set_public_data(void* argument);
         void on_halt(void *arg);
+        void on_suspend(void *arg);
 
         uint32_t pinpoll_tick(uint32_t dummy);
         enum OUTPUT_TYPE {NONE, SIGMADELTA, DIGITAL, HWPWM, SWPWM};

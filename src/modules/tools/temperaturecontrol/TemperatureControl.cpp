@@ -104,6 +104,7 @@ void TemperatureControl::on_module_loaded()
         this->register_for_event(ON_MAIN_LOOP);
         this->register_for_event(ON_SET_PUBLIC_DATA);
         this->register_for_event(ON_HALT);
+        this->register_for_event(ON_SUSPEND);
     }
 }
 
@@ -117,6 +118,15 @@ void TemperatureControl::on_halt(void *arg)
     }
 }
 
+void TemperatureControl::on_suspend(void *arg)
+{
+    if(arg == nullptr) {
+        // turn off heater
+        this->o = 0;
+        this->heater_pin.set(0);
+        this->target_temperature = UNDEFINED;
+    }
+}
 void TemperatureControl::on_idle(void *arg)
 {
     sensor->on_idle();

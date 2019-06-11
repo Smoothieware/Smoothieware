@@ -41,6 +41,7 @@ class SerialConsole : public Module, public StreamOutput {
         struct {
           bool query_flag:1;
           bool halt_flag:1;
+          bool suspend_flag:1;
         };
 };
 

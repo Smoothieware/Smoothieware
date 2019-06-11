@@ -35,6 +35,7 @@ StepperMotor::StepperMotor(Pin &step, Pin &dir, Pin &en) : step_pin(step), dir_p
     set_direction(false); // initialize dir pin
 
     this->register_for_event(ON_HALT);
+    this->register_for_event(ON_SUSPEND);
     this->register_for_event(ON_ENABLE);
 }
 
@@ -45,6 +46,14 @@ StepperMotor::~StepperMotor()
 }
 
 void StepperMotor::on_halt(void *argument)
+{
+    if(argument == nullptr) {
+        enable(false);
+        moving= false;
+    }
+}
+
+void StepperMotor::on_suspend(void *argument)
 {
     if(argument == nullptr) {
         enable(false);

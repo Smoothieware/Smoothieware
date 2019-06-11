@@ -69,6 +69,7 @@ void Conveyor::on_module_loaded()
 {
     register_for_event(ON_IDLE);
     register_for_event(ON_HALT);
+    register_for_event(ON_SUSPEND);
 
     // Attach to the end_of_move stepper event
     //THEKERNEL->step_ticker->finished_fnc = std::bind( &Conveyor::all_moves_finished, this);
@@ -91,6 +92,12 @@ void Conveyor::on_halt(void* argument)
     }
 }
 
+void Conveyor::on_suspend(void* argument)
+{
+    if(argument == nullptr) {
+        flush_queue();
+    }
+}
 void Conveyor::on_idle(void*)
 {
     if (running) {

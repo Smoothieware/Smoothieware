@@ -12,7 +12,6 @@
 #include "libs/utils.h"
 #include "libs/SerialMessage.h"
 #include "libs/StreamOutput.h"
-#include "libs/StreamOutputPool.h"
 #include "Conveyor.h"
 #include "DirHandle.h"
 #include "mri.h"
@@ -66,7 +65,6 @@ const SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {"cd",       SimpleShell::cd_command},
     {"pwd",      SimpleShell::pwd_command},
     {"cat",      SimpleShell::cat_command},
-    {"echo",     SimpleShell::echo_command},
     {"rm",       SimpleShell::rm_command},
     {"mv",       SimpleShell::mv_command},
     {"mkdir",    SimpleShell::mkdir_command},
@@ -456,13 +454,6 @@ void SimpleShell::cat_command( string parameters, StreamOutput *stream )
     }
 }
 
-// echo commands
-void SimpleShell::echo_command( string parameters, StreamOutput *stream )
-{
-    //send to all streams
-    THEKERNEL->streams->printf("echo: %s\r\n", parameters.c_str());
-}
-
 void SimpleShell::upload_command( string parameters, StreamOutput *stream )
 {
     // this needs to be a hack. it needs to read direct from serial and not allow on_main_loop run until done
@@ -703,11 +694,11 @@ static int get_active_tool()
     }
 }
 
-static bool get_switch_state(const char *sw)
+static bool get_spindle_state()
 {
-    // get sw switch state
+    // get spindle switch state
     struct pad_switch pad;
-    bool ok = PublicData::get_value(switch_checksum, get_checksum(sw), 0, &pad);
+    bool ok = PublicData::get_value(switch_checksum, get_checksum("spindle"), 0, &pad);
     if (!ok) {
         return false;
     }
@@ -870,7 +861,7 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
     } else if (what == "state") {
         // also $G and $I
         // [G0 G54 G17 G21 G90 G94 M0 M5 M9 T0 F0.]
-        stream->printf("[G%d %s G%d G%d G%d G94 M0 M%c M%c T%d F%1.4f S%1.4f]\n",
+        stream->printf("[G%d %s G%d G%d G%d G94 M0 M%c M9 T%d F%1.4f S%1.4f]\n",
             THEKERNEL->gcode_dispatch->get_modal_command(),
             wcs2gcode(THEROBOT->get_current_wcs()).c_str(),
             THEROBOT->plane_axis_0 == X_AXIS && THEROBOT->plane_axis_1 == Y_AXIS && THEROBOT->plane_axis_2 == Z_AXIS ? 17 :
@@ -878,8 +869,7 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
               THEROBOT->plane_axis_0 == Y_AXIS && THEROBOT->plane_axis_1 == Z_AXIS && THEROBOT->plane_axis_2 == X_AXIS ? 19 : 17,
             THEROBOT->inch_mode ? 20 : 21,
             THEROBOT->absolute_mode ? 90 : 91,
-            get_switch_state("spindle") ? '3' : '5',
-            get_switch_state("mist") ? '7' : get_switch_state("flood") ? '8' : '9',
+            get_spindle_state()?'3':'5',
             get_active_tool(),
             THEROBOT->from_millimeters(THEROBOT->get_feed_rate()),
             THEROBOT->get_s_value());
@@ -1195,73 +1185,51 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
 
 void SimpleShell::jog(string parameters, StreamOutput *stream)
 {
-    // $J X0.1 [Y0.2] [F0.5]
+    // $J X0.1 F0.5
     int n_motors= THEROBOT->get_number_registered_motors();
 
     // get axis to move and amount (X0.1)
-    // may specify multiple axis
+    // for now always 1 axis
+    size_t npos= parameters.find_first_of("XYZABC");
+    if(npos == string::npos) {
+        stream->printf("usage: $J X0.01 [F0.5] - axis can be one of XYZABC, optional speed is scale of max_rate\n");
+        return;
+    }
 
-    float rate_mm_s= NAN;
-    float scale= 1.0F;
+    string s = parameters.substr(npos);
+    if(s.empty() || s.size() < 2) {
+        stream->printf("usage: $J X0.01 [F0.5]\n");
+        return;
+    }
+    char ax= toupper(s[0]);
+    uint8_t a= ax >= 'X' ? ax - 'X' : ax - 'A' + 3;
+    if(a >= n_motors) {
+        stream->printf("error:bad axis\n");
+        return;
+    }
+
+    float d= strtof(s.substr(1).c_str(), NULL);
+
     float delta[n_motors];
     for (int i = 0; i < n_motors; ++i) {
         delta[i]= 0;
     }
+    delta[a]= d;
 
-    // $J is first parameter
-    shift_parameter(parameters);
-    if(parameters.empty()) {
-        stream->printf("usage: $J X0.01 [F0.5] - axis can be XYZABC, optional speed is scale of max_rate\n");
-        return;
+    // get speed scale
+    float scale= 1.0F;
+    npos= parameters.find_first_of("F");
+    if(npos != string::npos && npos+1 < parameters.size()) {
+        scale= strtof(parameters.substr(npos+1).c_str(), NULL);
     }
 
-    while(!parameters.empty()) {
-        string p= shift_parameter(parameters);
+    float rate_mm_s= THEROBOT->actuators[a]->get_max_rate() * scale;
+    THEROBOT->delta_move(delta, rate_mm_s, n_motors);
 
-        char ax= toupper(p[0]);
-        if(ax == 'F') {
-            // get speed scale
-            scale= strtof(p.substr(1).c_str(), NULL);
-            continue;
-        }
-
-        if(!((ax >= 'X' && ax <= 'Z') || (ax >= 'A' && ax <= 'C'))) {
-            stream->printf("error:bad axis %c\n", ax);
-            return;
-        }
-
-        uint8_t a= ax >= 'X' ? ax - 'X' : ax - 'A' + 3;
-        if(a >= n_motors) {
-            stream->printf("error:axis out of range %c\n", ax);
-            return;
-        }
-
-        delta[a]= strtof(p.substr(1).c_str(), NULL);
-    }
-
-    // select slowest axis rate to use
-    bool ok= false;
-    for (int i = 0; i < n_motors; ++i) {
-        if(delta[i] != 0) {
-            ok= true;
-            if(isnan(rate_mm_s)) {
-                rate_mm_s= THEROBOT->actuators[i]->get_max_rate();
-            }else{
-                rate_mm_s = std::min(rate_mm_s, THEROBOT->actuators[i]->get_max_rate());
-            }
-            //hstream->printf("%d %f F%f\n", i, delta[i], rate_mm_s);
-        }
-    }
-    if(!ok) {
-        stream->printf("error:no delta jog specified\n");
-        return;
-    }
-
-    //stream->printf("F%f\n", rate_mm_s*scale);
-
-    THEROBOT->delta_move(delta, rate_mm_s*scale, n_motors);
     // turn off queue delay and run it now
     THECONVEYOR->force_queue();
+
+    //stream->printf("Jog: %c%f F%f\n", ax, d, scale);
 }
 
 void SimpleShell::help_command( string parameters, StreamOutput *stream )

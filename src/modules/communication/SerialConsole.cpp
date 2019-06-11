@@ -31,6 +31,7 @@ void SerialConsole::on_module_loaded() {
     this->serial->attach(this, &SerialConsole::on_serial_char_received, mbed::Serial::RxIrq);
     query_flag= false;
     halt_flag= false;
+    suspend_flag=false;
 
     // We only call the command dispatcher in the main loop, nowhere else
     this->register_for_event(ON_MAIN_LOOP);
@@ -52,6 +53,10 @@ void SerialConsole::on_serial_char_received(){
             halt_flag= true;
             continue;
         }
+        if(received == '.') { // .
+            suspend_flag= true;
+            continue;
+        }
         // convert CR to NL (for host OSs that don't send NL)
         if( received == '\r' ){ received = '\n'; }
         this->buffer.push_back(received);
@@ -63,6 +68,12 @@ void SerialConsole::on_idle(void * argument)
     if(query_flag) {
         query_flag= false;
         puts(THEKERNEL->get_query_string().c_str());
+    }
+    if(suspend_flag){
+        suspend_flag=false;
+        THEKERNEL->call_event(ON_SUSPEND, nullptr);
+        puts("SUSPENDED, M998 or $X to exit HALT state\r\n");
+
     }
     if(halt_flag) {
         halt_flag= false;

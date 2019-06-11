@@ -22,6 +22,7 @@ const ModuleCallback kernel_callback_functions[NUMBER_OF_DEFINED_EVENTS] = {
     &Module::on_get_public_data,
     &Module::on_set_public_data,
     &Module::on_halt,
+    &Module::on_suspend,
     &Module::on_enable
 
 };

@@ -23,6 +23,7 @@ class Laser : public Module{
         virtual ~Laser() {};
         void on_module_loaded();
         void on_halt(void* argument);
+        void on_suspend(void* argument);
         void on_gcode_received(void *argument);
         void on_console_line_received(void *argument);
         void on_get_public_data(void* argument);

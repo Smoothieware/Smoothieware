@@ -109,6 +109,7 @@ void Laser::on_module_loaded()
 
     //register for events
     this->register_for_event(ON_HALT);
+    this->register_for_event(ON_SUSPEND);
     this->register_for_event(ON_GCODE_RECEIVED);
     this->register_for_event(ON_CONSOLE_LINE_RECEIVED);
     this->register_for_event(ON_GET_PUBLIC_DATA);
@@ -299,6 +300,13 @@ void Laser::on_halt(void *argument)
     }
 }
 
+void Laser::on_suspend(void *argument)
+{
+    if(argument == nullptr) {
+        set_laser_power(0);
+        manual_fire = false;
+    }
+}
 float Laser::get_current_power() const
 {
     float p = pwm_pin->read();

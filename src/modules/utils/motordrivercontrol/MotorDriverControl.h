@@ -22,6 +22,7 @@ class MotorDriverControl : public Module {
         void on_module_loaded();
         void on_gcode_received(void *);
         void on_halt(void *argument);
+        void on_suspend(void *argument);
         void on_enable(void *argument);
         void on_idle(void *argument);
         void on_second_tick(void *argument);

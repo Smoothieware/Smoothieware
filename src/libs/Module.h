@@ -20,6 +20,7 @@ enum _EVENT_ENUM {
     ON_GET_PUBLIC_DATA,
     ON_SET_PUBLIC_DATA,
     ON_HALT,
+    ON_SUSPEND,
     ON_ENABLE,
     NUMBER_OF_DEFINED_EVENTS
 };
@@ -49,6 +50,7 @@ public:
     virtual void on_get_public_data(void *) {};
     virtual void on_set_public_data(void *) {};
     virtual void on_halt(void *) {};
+    virtual void on_suspend(void *) {};
     virtual void on_enable(void *) {};
 
 };

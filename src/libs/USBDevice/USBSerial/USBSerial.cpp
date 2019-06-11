@@ -202,7 +202,11 @@ bool USBSerial::USBEvent_EPOut(uint8_t bEP, uint8_t bEPStatus)
             halt_flag = true;
             continue;
         }
-
+        if(c[i] == '.') { // ^X
+            //THEKERNEL->set_feed_hold(false); // required to free stuff up
+            suspend_flag = true;
+            continue;
+        }
         if(c[i] == '?') { // ?
             query_flag = true;
             continue;
@@ -291,12 +295,17 @@ void USBSerial::on_idle(void *argument)
         if(THEKERNEL->is_grbl_mode()) {
             puts("ALARM: Abort during cycle\r\n");
         } else {
-            puts("HALTED, M999 or $X to exit HALT state\r\n");
+            puts("HALTED, M999 or $X to exit SUSPEND state\r\n");
         }
         rxbuf.flush(); // flush the recieve buffer, hopefully upstream has stopped sending
         nl_in_rx = 0;
     }
+    if(suspend_flag){
+        suspend_flag=false;
+         THEKERNEL->call_event(ON_SUSPEND, nullptr);            
+         puts("SUSPENDED, M998 or $X to exit SUSPEND state\r\n");
 
+    }
     if(query_flag) {
         query_flag = false;
         puts(THEKERNEL->get_query_string().c_str());

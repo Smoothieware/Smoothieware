@@ -180,6 +180,7 @@ bool MotorDriverControl::config_module(uint16_t cs)
 
     this->register_for_event(ON_GCODE_RECEIVED);
     this->register_for_event(ON_HALT);
+    this->register_for_event(ON_SUSPEND);
     this->register_for_event(ON_ENABLE);
     this->register_for_event(ON_IDLE);
 
@@ -228,6 +229,13 @@ void MotorDriverControl::on_halt(void *argument)
     }
 }
 
+void MotorDriverControl::on_suspend(void *argument)
+{
+    if(argument == nullptr) {
+        // we are being safe here and makign sure this gets called in on_idle not when on_halt is called
+        on_enable(nullptr);
+    }
+}
 // runs in on_idle, does SPI transaction
 void MotorDriverControl::on_second_tick(void *argument)
 {

@@ -100,9 +100,6 @@
 
 #define PI 3.14159265358979323846F // force to be float, do not use M_PI
 
-//#define DEBUG_PRINTF THEKERNEL->streams->printf
-#define DEBUG_PRINTF(...)
-
 // The Robot converts GCodes into actual movements, and then adds them to the Planner, which passes them to the Conveyor so they can be added to the queue
 // It takes care of cutting arcs into segments, same thing for line that are too long
 
@@ -1248,7 +1245,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     // find distance moved by each axis, use transformed target from the current compensated machine position
     for (size_t i = 0; i < n_motors; i++) {
         deltas[i] = transformed_target[i] - compensated_machine_position[i];
-        if(fabsf(deltas[i]) < 0.00001F) continue;
+        if(deltas[i] == 0) continue;
         // at least one non zero delta
         move = true;
         if(i < N_PRIMARY_AXIS) {
@@ -1262,7 +1259,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     // see if this is a primary axis move or not
     bool auxilliary_move= true;
     for (int i = 0; i < N_PRIMARY_AXIS; ++i) {
-        if(fabsf(deltas[i]) >= 0.00001F) {
+        if(deltas[i] != 0) {
             auxilliary_move= false;
             break;
         }
@@ -1329,8 +1326,6 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     }
 #endif
 
-    DEBUG_PRINTF("distance: %f, aux_move: %d\n", distance, auxilliary_move);
-
     // use default acceleration to start with
     float acceleration = default_acceleration;
 
@@ -1339,30 +1334,28 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     // check per-actuator speed limits
     for (size_t actuator = 0; actuator < n_motors; actuator++) {
         float d = fabsf(actuator_pos[actuator] - actuators[actuator]->get_last_milestone());
-        if(d < 0.00001F || !actuators[actuator]->is_selected()) continue; // no realistic movement for this actuator
+        if(d == 0 || !actuators[actuator]->is_selected()) continue; // no movement for this actuator
 
         float actuator_rate= d * isecs;
         if (actuator_rate > actuators[actuator]->get_max_rate()) {
             rate_mm_s *= (actuators[actuator]->get_max_rate() / actuator_rate);
             isecs = rate_mm_s / distance;
-            DEBUG_PRINTF("new rate: %f - %d\n", rate_mm_s, actuator);
         }
 
-        DEBUG_PRINTF("act: %d, d: %f, distance: %f, actrate: %f, rate: %f, secs: %f, acc: %f\n", actuator, d, distance, actuator_rate, rate_mm_s, 1/isecs, acceleration);
-
-        // adjust acceleration to lowest found, for all actuators as this also corrects
-        // the math for a tiny X move and large A move
-        float ma =  actuators[actuator]->get_acceleration(); // in mm/sec²
-        if(!isnan(ma)) {  // if axis does not have acceleration set then it uses the default_acceleration
-            float ca = (d/distance) * acceleration;
-            if (ca > ma) {
-                acceleration *= ( ma / ca );
-                DEBUG_PRINTF("new acceleration: %f\n", acceleration);
+        // adjust acceleration to lowest found, for now just primary axis unless it is an auxiliary move
+        // TODO we may need to do all of them, check E won't limit XYZ.. it does on long E moves, but not checking it could exceed the E acceleration.
+        if(auxilliary_move || actuator < N_PRIMARY_AXIS) {
+            float ma =  actuators[actuator]->get_acceleration(); // in mm/sec²
+            if(!isnan(ma)) {  // if axis does not have acceleration set then it uses the default_acceleration
+                float ca = fabsf((d/distance) * acceleration);
+                if (ca > ma) {
+                    acceleration *= ( ma / ca );
+                }
             }
         }
     }
 
-    // if we are in feed hold wait here until it is released, this means that even segmented lines will pause
+    // if we are in feed hold wait here until it is released, this means that even segemnted lines will pause
     while(THEKERNEL->get_feed_hold()) {
         THEKERNEL->call_event(ON_IDLE, this);
         // if we also got a HALT then break out of this

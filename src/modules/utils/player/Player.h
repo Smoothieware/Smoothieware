@@ -30,12 +30,14 @@ class Player : public Module {
         void on_set_public_data(void* argument);
         void on_gcode_received(void *argument);
         void on_halt(void *argument);
+        void on_suspend(void *argument);
 
     private:
         void play_command( string parameters, StreamOutput* stream );
         void progress_command( string parameters, StreamOutput* stream );
         void abort_command( string parameters, StreamOutput* stream );
         void suspend_command( string parameters, StreamOutput* stream );
+        void suspend_command_brm( string parameters, StreamOutput* stream );
         void resume_command( string parameters, StreamOutput* stream );
         string extract_options(string& args);
         void suspend_part2();

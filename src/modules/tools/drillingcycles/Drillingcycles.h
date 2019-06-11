@@ -39,7 +39,7 @@ class Drillingcycles : public Module
         float sticky_f;     // feedrate
 
         float sticky_q;     // depth increment
-        float sticky_p;     // dwell pause
+        int   sticky_p;     // dwell pause
 
         int   dwell_units;  // units for dwell
 };

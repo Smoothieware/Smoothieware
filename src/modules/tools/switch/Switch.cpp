@@ -74,7 +74,23 @@ void Switch::on_halt(void *arg)
         this->switch_state= this->failsafe;
     }
 }
+// set the pin to the fail safe value on halt
+void Switch::on_suspend(void *arg)
+{
+    if(arg == nullptr) {
+        if(this->ignore_on_halt) return;
 
+        // set pin to failsafe value
+        switch(this->output_type) {
+            case DIGITAL: this->digital_pin->set(this->failsafe); break;
+            case SIGMADELTA: this->sigmadelta_pin->set(this->failsafe); break;
+            case HWPWM: this->pwm_pin->write(switch_value/100.0F); break;
+            case SWPWM: this->swpwm_pin->write(switch_value/100.0F); break;
+            case NONE: return;
+        }
+        this->switch_state= this->failsafe;
+    }
+}
 void Switch::on_module_loaded()
 {
     this->switch_changed = false;
@@ -84,6 +100,7 @@ void Switch::on_module_loaded()
     this->register_for_event(ON_GET_PUBLIC_DATA);
     this->register_for_event(ON_SET_PUBLIC_DATA);
     this->register_for_event(ON_HALT);
+    this->register_for_event(ON_SUSPEND);
 
     // Settings
     this->on_config_reload(this);

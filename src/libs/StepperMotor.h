@@ -59,6 +59,7 @@ class StepperMotor  : public Module {
 
     private:
         void on_halt(void *argument);
+        void on_suspend(void *argument);
         void on_enable(void *argument);
 
         Pin step_pin;

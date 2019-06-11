@@ -5,7 +5,7 @@ Smoothie is a free, opensource, high performance G-code interpreter and CNC cont
 
 Documentation can be found here : [[http://smoothieware.org/]]
 
-NOTE it is not necessary to build Smoothie yourself unless you want to. prebuilt binaries are available here: [[https://github.com/Smoothieware/Smoothieware/blob/edge/FirmwareBin/firmware.bin?raw=true|recent stable build]]
+NOTE it is not necessary to build Smoothie yourself unless you want to. prebuilt binaries are available here: [[http://triffid-hunter.no-ip.info/Smoothie.html|Nightly builds]] and here: [[https://github.com/Smoothieware/Smoothieware/blob/edge/FirmwareBin/firmware.bin?raw=true|recent stable build]]
 
 ==Quick Start
 These are the quick steps to get Smoothie dependencies installed on your computer:

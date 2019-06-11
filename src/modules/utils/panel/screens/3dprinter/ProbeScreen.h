@@ -30,7 +30,6 @@ class ProbeScreen : public PanelScreen {
         bool do_probe:1;
         bool do_status:1;
         bool new_result:1;
-        bool busy:1;
       };
 };
 

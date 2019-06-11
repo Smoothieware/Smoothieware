@@ -71,3 +71,12 @@ void SpindleControl::on_halt(void *argument)
         }
     }
 }
+
+void SpindleControl::on_suspend(void *argument)
+{
+    if (argument == nullptr) {
+        if(spindle_on) {
+            turn_off();
+        }
+    }
+}
