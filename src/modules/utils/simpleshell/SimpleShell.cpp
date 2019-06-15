@@ -12,6 +12,7 @@
 #include "libs/utils.h"
 #include "libs/SerialMessage.h"
 #include "libs/StreamOutput.h"
+#include "libs/StreamOutputPool.h"
 #include "Conveyor.h"
 #include "DirHandle.h"
 #include "mri.h"
@@ -65,6 +66,7 @@ const SimpleShell::ptentry_t SimpleShell::commands_table[] = {
     {"cd",       SimpleShell::cd_command},
     {"pwd",      SimpleShell::pwd_command},
     {"cat",      SimpleShell::cat_command},
+    {"echo",     SimpleShell::echo_command},
     {"rm",       SimpleShell::rm_command},
     {"mv",       SimpleShell::mv_command},
     {"mkdir",    SimpleShell::mkdir_command},
@@ -457,6 +459,13 @@ void SimpleShell::cat_command( string parameters, StreamOutput *stream )
     }
 }
 
+// echo commands
+void SimpleShell::echo_command( string parameters, StreamOutput *stream )
+{
+    //send to all streams
+    THEKERNEL->streams->printf("echo: %s\r\n", parameters.c_str());
+}
+
 void SimpleShell::upload_command( string parameters, StreamOutput *stream )
 {
     // this needs to be a hack. it needs to read direct from serial and not allow on_main_loop run until done
@@ -697,11 +706,11 @@ static int get_active_tool()
     }
 }
 
-static bool get_spindle_state()
+static bool get_switch_state(const char *sw)
 {
-    // get spindle switch state
+    // get sw switch state
     struct pad_switch pad;
-    bool ok = PublicData::get_value(switch_checksum, get_checksum("spindle"), 0, &pad);
+    bool ok = PublicData::get_value(switch_checksum, get_checksum(sw), 0, &pad);
     if (!ok) {
         return false;
     }
@@ -864,7 +873,7 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
     } else if (what == "state") {
         // also $G and $I
         // [G0 G54 G17 G21 G90 G94 M0 M5 M9 T0 F0.]
-        stream->printf("[G%d %s G%d G%d G%d G94 M0 M%c M9 T%d F%1.4f S%1.4f]\n",
+        stream->printf("[G%d %s G%d G%d G%d G94 M0 M%c M%c T%d F%1.4f S%1.4f]\n",
             THEKERNEL->gcode_dispatch->get_modal_command(),
             wcs2gcode(THEROBOT->get_current_wcs()).c_str(),
             THEROBOT->plane_axis_0 == X_AXIS && THEROBOT->plane_axis_1 == Y_AXIS && THEROBOT->plane_axis_2 == Z_AXIS ? 17 :
@@ -872,7 +881,8 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
               THEROBOT->plane_axis_0 == Y_AXIS && THEROBOT->plane_axis_1 == Z_AXIS && THEROBOT->plane_axis_2 == X_AXIS ? 19 : 17,
             THEROBOT->inch_mode ? 20 : 21,
             THEROBOT->absolute_mode ? 90 : 91,
-            get_spindle_state()?'3':'5',
+            get_switch_state("spindle") ? '3' : '5',
+            get_switch_state("mist") ? '7' : get_switch_state("flood") ? '8' : '9',
             get_active_tool(),
             THEROBOT->from_millimeters(THEROBOT->get_feed_rate()),
             THEROBOT->get_s_value());
