@@ -41,6 +41,7 @@ class ReprapDiscountGLCD : public LcdBase {
         void drawHLine(int x, int y, int w, int color);
         void drawVLine(int x, int y, int h, int color);
         void drawBox(int x, int y, int w, int h, int color);
+        void setBackground(bool bg);
 
     private:
         RrdGlcd* glcd;

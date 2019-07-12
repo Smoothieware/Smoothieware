@@ -103,6 +103,10 @@ void ReprapDiscountGLCD::setColor(int c){
     this->glcd->set_color(c);
 }
 
+void ReprapDiscountGLCD::setBackground(bool bg){
+    this->glcd->set_background(bg);
+}
+
 void ReprapDiscountGLCD::setCursorPX(int x, int y){ 
     this->glcd->set_cursorPX(x, y);
 }

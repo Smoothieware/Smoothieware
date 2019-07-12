@@ -38,6 +38,7 @@ public:
     void clearScreen(void);
     void displayString(const char *ptr, int length);
     void refresh();
+    void set_background(bool bg);
     void set_color(int c);
     void set_cursor(uint8_t col, uint8_t row);
     void set_cursorPX(int x, int y);
@@ -64,15 +65,16 @@ public:
 private:
     Pin cs;
     mbed::SPI* spi;
-    int renderChar(int x, int y, unsigned char c, int color);
-    void displayChar(char c);
-    uint8_t gx, gy;
+    int drawChar(int x, int y, unsigned char c, int color, bool bg);
+    uint8_t tx, ty;
     uint8_t text_color = 1;
 
     uint8_t *fb;
-    bool inited;
-    bool dirty;
-    bool background:1;
+    struct {
+        bool inited:1;
+        bool dirty:1;
+        bool text_background:1;
+    };
 };
 #endif
 
