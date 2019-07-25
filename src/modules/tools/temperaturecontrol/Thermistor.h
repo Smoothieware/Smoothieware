@@ -16,6 +16,33 @@
 
 #define QUEUE_LEN 32
 
+struct thermistor_t
+{
+	const char *name;
+    // on board resistor settings
+	int r1;
+	int r2;
+    // this saves memory as we only use either beta or SHH
+	union {
+		struct {
+			float c1;
+			float c2;
+			float c3;
+		};
+		struct {
+			float beta;
+			float r0;
+			float t0;
+		};
+		struct {
+			float cc0;
+			float cc1;
+			float cc2;
+		};
+	};
+	float(*calc_fn)(thermistor_t *, float);
+};
+
 class StreamOutput;
 
 class Thermistor : public TempSensor
@@ -36,38 +63,12 @@ class Thermistor : public TempSensor
     private:
         int new_thermistor_reading();
         float adc_value_to_temperature(uint32_t adc_value);
-        void calc_jk();
-
-        // Thermistor computation settings using beta, not used if using Steinhart-Hart
-        float r0;
-        float t0;
-
-        // on board resistor settings
-        int r1;
-        int r2;
-
-        union {
-            // this saves memory as we only use either beta or SHH
-            struct{
-                float beta;
-                float j;
-                float k;
-            };
-            struct{
-                float c1;
-                float c2;
-                float c3;
-            };
-        };
-
         Pin  thermistor_pin;
 
         float min_temp, max_temp;
-        struct {
-            bool bad_config:1;
-            bool use_steinhart_hart:1;
-        };
+        bool bad_config;
         uint8_t thermistor_number;
+        thermistor_t thermistor;
 };
 
 #endif
