@@ -213,7 +213,7 @@ std::string Kernel::get_query_string()
         // deal with the ABC axis (E will be A)
         for (int i = A_AXIS; i < robot->get_number_registered_motors(); ++i) {
             // current actuator position
-            n = snprintf(buf, sizeof(buf), ",%1.4f", robot->from_millimeters(robot->actuators[i]->get_current_position()));
+            n = snprintf(buf, sizeof(buf), ",%1.4f", robot->actuators[i]->get_current_position());
             if(n > sizeof(buf)) n= sizeof(buf);
             str.append(buf, n);
         }
@@ -264,7 +264,7 @@ std::string Kernel::get_query_string()
         // deal with the ABC axis (E will be A)
         for (int i = A_AXIS; i < robot->get_number_registered_motors(); ++i) {
             // current actuator position
-            n = snprintf(buf, sizeof(buf), ",%1.4f", robot->from_millimeters(robot->actuators[i]->get_current_position()));
+            n = snprintf(buf, sizeof(buf), ",%1.4f", robot->actuators[i]->get_current_position());
             if(n > sizeof(buf)) n= sizeof(buf);
             str.append(buf, n);
         }
