@@ -44,6 +44,8 @@ class Player : public Module {
         string after_suspend_gcode;
         string before_resume_gcode;
         string on_boot_gcode;
+        uint16_t block_susp_gcode_height;
+
         StreamOutput* current_stream;
         StreamOutput* reply_stream;
 

@@ -41,6 +41,7 @@
 #define after_suspend_gcode_checksum      CHECKSUM("after_suspend_gcode")
 #define before_resume_gcode_checksum      CHECKSUM("before_resume_gcode")
 #define leave_heaters_on_suspend_checksum CHECKSUM("leave_heaters_on_suspend")
+#define block_susp_gcode_height_checksum  CHECKSUM("block_susp_gcode_height")
 
 extern SDFAT mounter;
 
@@ -70,6 +71,9 @@ void Player::on_module_loaded()
 
     this->after_suspend_gcode = THEKERNEL->config->value(after_suspend_gcode_checksum)->by_default("")->as_string();
     this->before_resume_gcode = THEKERNEL->config->value(before_resume_gcode_checksum)->by_default("")->as_string();
+    this->block_susp_gcode_height = THEKERNEL->config->value(block_susp_gcode_height_checksum)->by_default(65000)->as_int();
+
+
     std::replace( this->after_suspend_gcode.begin(), this->after_suspend_gcode.end(), '_', ' '); // replace _ with space
     std::replace( this->before_resume_gcode.begin(), this->before_resume_gcode.end(), '_', ' '); // replace _ with space
     this->leave_heaters_on = THEKERNEL->config->value(leave_heaters_on_suspend_checksum)->by_default(false)->as_bool();
@@ -518,6 +522,18 @@ void Player::suspend_command(string parameters, StreamOutput *stream )
 {
     if(suspended) {
         stream->printf("Already suspended\n");
+        return;
+    }
+
+    // get  current Z position in WCS and check max height
+    Robot::wcs_t mpos= THEROBOT->get_axis_position();
+    Robot::wcs_t wpos= THEROBOT->mcs2wcs(mpos);
+    if (std::get<Z_AXIS>(wpos) >= this->block_susp_gcode_height) {
+        // On delta printers, if suspend Gcode is run (and the gcode moves the head)
+        // the movement can take the carriages out of bounds, damaging the printer.
+        //
+        // if printhead is above block_susp_gcode_height, do not run suspsend gcode
+        stream->printf("Printhead is too high. Cannot suspend");
         return;
     }
 
