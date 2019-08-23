@@ -76,6 +76,7 @@ class Endstops : public Module{
                 uint8_t axis_index:3;
                 bool home_direction:1; // true min or false max
                 bool homed:1;
+                bool release_first_enable:1;
             };
         };
 

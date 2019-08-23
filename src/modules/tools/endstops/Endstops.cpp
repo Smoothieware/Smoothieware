@@ -85,6 +85,7 @@ enum DEFNS {MIN_PIN, MAX_PIN, MAX_TRAVEL, FAST_RATE, SLOW_RATE, RETRACT, DIRECTI
 #define fast_rate_checksum                 CHECKSUM("fast_rate")
 #define slow_rate_checksum                 CHECKSUM("slow_rate")
 #define max_travel_checksum                CHECKSUM("max_travel")
+#define release_first_checksum             CHECKSUM("release_first")
 #define retract_checksum                   CHECKSUM("retract")
 #define limit_checksum                     CHECKSUM("limit_enable")
 
@@ -95,9 +96,10 @@ enum DEFNS {MIN_PIN, MAX_PIN, MAX_TRAVEL, FAST_RATE, SLOW_RATE, RETRACT, DIRECTI
 
 // Homing States
 enum STATES {
-    MOVING_TO_ENDSTOP_FAST, // homing move
-    MOVING_TO_ENDSTOP_SLOW, // homing move
-    MOVING_BACK,            // homing move
+    MOVING_TO_ENDSTOP_FAST,  // homing move
+    MOVING_TO_ENDSTOP_SLOW,  // homing move
+    MOVING_FROM_ENDSTOP_FAST,// homing move
+    MOVING_BACK,             // homing move
     NOT_HOMING,
     BACK_OFF_HOME,
     MOVE_TO_ORIGIN,
@@ -321,6 +323,9 @@ bool Endstops::load_config()
         hinfo.fast_rate= THEKERNEL->config->value(endstop_checksum, cs, fast_rate_checksum)->by_default(100)->as_number();
         hinfo.slow_rate= THEKERNEL->config->value(endstop_checksum, cs, slow_rate_checksum)->by_default(10)->as_number();
 
+        // first move away from endstop until released
+        hinfo.release_first_enable = THEKERNEL->config->value(endstop_checksum, cs, release_first_checksum)->by_default(false)->as_bool();
+        
         // retract in mm
         hinfo.retract= THEKERNEL->config->value(endstop_checksum, cs, retract_checksum)->by_default(5)->as_number();
 
@@ -571,8 +576,9 @@ void Endstops::move_to_origin(axis_bitmap_t axis)
 // Called every millisecond in an ISR
 uint32_t Endstops::read_endstops(uint32_t dummy)
 {
-    if(this->status != MOVING_TO_ENDSTOP_SLOW && this->status != MOVING_TO_ENDSTOP_FAST) return 0; // not doing anything we need to monitor for
-
+    if(this->status != MOVING_TO_ENDSTOP_SLOW && this->status != MOVING_TO_ENDSTOP_FAST && this->status != MOVING_FROM_ENDSTOP_FAST) return 0; // not doing anything we need to monitor for
+    // when MOVING_FROM_ENDSTOP_FAST the endstop logic is inverted
+    bool pin_logic_state = (this->status != MOVING_FROM_ENDSTOP_FAST);
     // check each homing endstop
     for(auto& e : homing_axis) { // check all axis homing endstops
         if(e.pin_info == nullptr) continue; // ignore if not a homing endstop
@@ -583,7 +589,7 @@ uint32_t Endstops::read_endstops(uint32_t dummy)
 
         if(STEPPER[m]->is_moving()) {
             // if it is moving then we check the associated endstop, and debounce it
-            if(e.pin_info->pin.get()) {
+            if(pin_logic_state == (e.pin_info->pin.get() != 0)) {
                 if(e.pin_info->debounce < debounce_ms) {
                     e.pin_info->debounce++;
 
@@ -651,10 +657,46 @@ void Endstops::home(axis_bitmap_t a)
 
     this->axis_to_home= a;
 
+    THEROBOT->disable_segmentation = true; // we must disable segmentation as this won't work with it enabled
+
+    // If "release_first" is enabled, start moving the axes away from the endstops until the switches are released
+    this->status = MOVING_FROM_ENDSTOP_FAST;
+    
+    float delta[homing_axis.size()];
+    for (size_t i = 0; i < homing_axis.size(); ++i) delta[i] = 0;
+    
+    float feed_rate = homing_axis[X_AXIS].fast_rate;
+    bool do_retract = false;
+    for (auto& i : homing_axis) {
+      int c = i.axis_index;
+      if (axis_to_home[c] && i.release_first_enable) {
+        delta[c] = i.max_travel; // we go the max
+        if (!i.home_direction) delta[c] = -delta[c];
+        feed_rate = std::min(i.fast_rate, feed_rate);
+        do_retract = true;
+      }
+    }
+
+    if (do_retract) {
+      THEROBOT->delta_move(delta, feed_rate, homing_axis.size());
+      // wait until finished
+      THECONVEYOR->wait_for_idle();
+
+      // check that the endstops were released 
+      // if the endstop is still not triggered (inverted logic) then enter ALARM state
+      for (auto& i : homing_axis) {
+        int c = i.axis_index;
+        if (axis_to_home[c] && i.release_first_enable && !homing_axis[c].pin_info->triggered) {
+          this->status = NOT_HOMING;
+          THEKERNEL->call_event(ON_HALT, nullptr);
+          THEROBOT->disable_segmentation = false;
+          return;
+        }
+      }
+    }
+
     // Start moving the axes to the origin
     this->status = MOVING_TO_ENDSTOP_FAST;
-
-    THEROBOT->disable_segmentation= true; // we must disable segmentation as this won't work with it enabled
 
     if(!home_z_first) home_xy();
 
@@ -720,11 +762,10 @@ void Endstops::home(axis_bitmap_t a)
 
     // Move back a small distance for all homing axis
     this->status = MOVING_BACK;
-    float delta[homing_axis.size()];
     for (size_t i = 0; i < homing_axis.size(); ++i) delta[i]= 0;
 
     // use minimum feed rate of all axes that are being homed (sub optimal, but necessary)
-    float feed_rate= homing_axis[X_AXIS].slow_rate;
+    feed_rate= homing_axis[X_AXIS].slow_rate;
     for (auto& i : homing_axis) {
         int c= i.axis_index;
         if(axis_to_home[c]) {
