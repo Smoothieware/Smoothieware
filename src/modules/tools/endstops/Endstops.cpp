@@ -657,6 +657,7 @@ void Endstops::home(axis_bitmap_t a)
 
     this->axis_to_home= a;
 
+    // Check if any of the axes have  "release_first" enabled and prepare to move these
     float delta[homing_axis.size()];
     for (size_t i = 0; i < homing_axis.size(); ++i) delta[i] = 0;
     
@@ -673,7 +674,7 @@ void Endstops::home(axis_bitmap_t a)
     }
 
     if (do_release) {
-      // If "release_first" is enabled, start moving the axes away from the endstops until the switches are released
+      // If "release_first" was enabled for any one axis, start moving these axes away from the endstops until the switches are released
       this->status = MOVING_FROM_ENDSTOP_FAST;
 
       THEROBOT->disable_segmentation = true; // we must disable segmentation as this won't work with it enabled
