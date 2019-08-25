@@ -657,11 +657,6 @@ void Endstops::home(axis_bitmap_t a)
 
     this->axis_to_home= a;
 
-    THEROBOT->disable_segmentation = true; // we must disable segmentation as this won't work with it enabled
-
-    // If "release_first" is enabled, start moving the axes away from the endstops until the switches are released
-    this->status = MOVING_FROM_ENDSTOP_FAST;
-    
     float delta[homing_axis.size()];
     for (size_t i = 0; i < homing_axis.size(); ++i) delta[i] = 0;
     
@@ -678,6 +673,11 @@ void Endstops::home(axis_bitmap_t a)
     }
 
     if (do_retract) {
+      // If "release_first" is enabled, start moving the axes away from the endstops until the switches are released
+      this->status = MOVING_FROM_ENDSTOP_FAST;
+
+      THEROBOT->disable_segmentation = true; // we must disable segmentation as this won't work with it enabled
+
       THEROBOT->delta_move(delta, feed_rate, homing_axis.size());
       // wait until finished
       THECONVEYOR->wait_for_idle();
@@ -697,6 +697,8 @@ void Endstops::home(axis_bitmap_t a)
 
     // Start moving the axes to the origin
     this->status = MOVING_TO_ENDSTOP_FAST;
+
+    THEROBOT->disable_segmentation= true; // we must disable segmentation as this won't work with it enabled
 
     if(!home_z_first) home_xy();
 
