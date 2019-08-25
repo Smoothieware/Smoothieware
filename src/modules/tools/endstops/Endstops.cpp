@@ -589,7 +589,7 @@ uint32_t Endstops::read_endstops(uint32_t dummy)
 
         if(STEPPER[m]->is_moving()) {
             // if it is moving then we check the associated endstop, and debounce it
-            if(pin_logic_state == (e.pin_info->pin.get() != 0)) {
+            if(pin_logic_state == e.pin_info->pin.get()) {
                 if(e.pin_info->debounce < debounce_ms) {
                     e.pin_info->debounce++;
 
