@@ -661,18 +661,18 @@ void Endstops::home(axis_bitmap_t a)
     for (size_t i = 0; i < homing_axis.size(); ++i) delta[i] = 0;
     
     float feed_rate = homing_axis[X_AXIS].fast_rate;
-    bool do_retract = false;
+    bool do_release = false;
     for (auto& i : homing_axis) {
       int c = i.axis_index;
       if (axis_to_home[c] && i.release_first_enable) {
         delta[c] = i.max_travel; // we go the max
         if (!i.home_direction) delta[c] = -delta[c];
         feed_rate = std::min(i.fast_rate, feed_rate);
-        do_retract = true;
+        do_release = true;
       }
     }
 
-    if (do_retract) {
+    if (do_release) {
       // If "release_first" is enabled, start moving the axes away from the endstops until the switches are released
       this->status = MOVING_FROM_ENDSTOP_FAST;
 
@@ -692,6 +692,12 @@ void Endstops::home(axis_bitmap_t a)
           THEROBOT->disable_segmentation = false;
           return;
         }
+      }
+
+      // after this, again reset debounce counts for all endstops
+      for (auto& e : endstops) {
+        e->debounce = 0;
+        e->triggered = false;
       }
     }
 
