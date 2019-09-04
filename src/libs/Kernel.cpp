@@ -26,6 +26,7 @@
 #include "StepperMotor.h"
 #include "BaseSolution.h"
 #include "EndstopsPublicAccess.h"
+#include "KillButtonPublicAccess.h"
 #include "Configurator.h"
 #include "SimpleShell.h"
 #include "TemperatureControlPublicAccess.h"
@@ -321,7 +322,27 @@ void Kernel::call_event(_EVENT_ENUM id_event, void * argument)
 {
     bool was_idle = true;
     if(id_event == ON_HALT) {
-        this->halted = (argument == nullptr);
+        // requested new halted state:
+        bool request_halt = (argument == nullptr);
+        
+        if ((this->halted) && (!request_halt)){
+            // in halted state and request wants to leave this state
+            // check if killbutton pressed
+            void *returned_data;
+            bool ok = PublicData::get_value( killbutton_checksum, killbutton_is_pressed_checksum, &returned_data );
+            bool killbutton_pressed = *static_cast<bool *>(returned_data);
+            
+            if ((ok) && (killbutton_pressed)){
+                // but query response said the kill button is pressed
+                // -> do not leave halted state, overwrite request!
+                streams->printf("ALARM: Kill button pressed - can not leave halted state\r\n");
+                request_halt = true;
+            }
+        }
+        
+        // set the halted state
+        this->halted = request_halt;
+        // before change
         if(!this->halted && this->feed_hold) this->feed_hold= false; // also clear feed hold
         was_idle = conveyor->is_idle(); // see if we were doing anything like printing
     }

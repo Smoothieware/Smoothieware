@@ -8,6 +8,8 @@ class KillButton : public Module {
 
         void on_module_loaded();
         void on_idle(void *argument);
+        void on_get_public_data(void* argument);
+        
         uint32_t button_tick(uint32_t dummy);
 
     private:

@@ -6,6 +6,8 @@
 #include "SlowTicker.h"
 #include "libs/SerialMessage.h"
 #include "libs/StreamOutput.h"
+#include "PublicDataRequest.h"
+#include "KillButtonPublicAccess.h"
 #include "checksumm.h"
 #include "ConfigValue.h"
 #include "StreamOutputPool.h"
@@ -51,6 +53,8 @@ void KillButton::on_module_loaded()
     }
 
     this->register_for_event(ON_IDLE);
+    // register for event in order to share the kill button state with the world
+    this->register_for_event(ON_GET_PUBLIC_DATA);
 
     this->poll_frequency = THEKERNEL->config->value( poll_frequency_checksum )->by_default(5)->as_number();
     THEKERNEL->slow_ticker->attach( this->poll_frequency, this, &KillButton::button_tick );
@@ -69,6 +73,22 @@ void KillButton::on_idle(void *argument)
             THEKERNEL->call_event(ON_HALT, (void *)1); // clears on_halt
             THEKERNEL->streams->printf("UnKill button pressed Halt cleared\r\n");
         }
+    }
+}
+
+
+void KillButton::on_get_public_data(void* argument)
+{
+    PublicDataRequest* pdr = static_cast<PublicDataRequest*>(argument);
+
+    if(!pdr->starts_with(killbutton_checksum)) return;
+
+    if (pdr->second_element_is(killbutton_is_pressed_checksum)) {
+        // return true if button is pressed
+        static bool bool_data;
+        bool_data = !this->kill_button.get();
+        pdr->set_data_ptr(&bool_data);
+        pdr->set_taken();
     }
 }
 
