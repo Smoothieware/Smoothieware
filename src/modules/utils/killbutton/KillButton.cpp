@@ -89,7 +89,13 @@ uint32_t KillButton::button_tick(uint32_t dummy)
                 if(killed) state= KILLED_BUTTON_DOWN;
                 break;
             case KILLED_BUTTON_DOWN:
-                if(this->kill_button.get()) state= KILLED_BUTTON_UP;
+                if (this->kill_button.get()) {
+                    state= KILLED_BUTTON_UP;
+                } else if ((toggle_enable) && (!killed)) {
+                    // button is still pressed but the halted state was left
+                    // re-trigger the halted state
+                    state= KILL_BUTTON_DOWN;
+                }                    
                 break;
             case KILLED_BUTTON_UP:
                 if(!killed) state= IDLE;
