@@ -152,14 +152,14 @@ bool MotorDriverControl::config_module(uint16_t cs)
 
         if(sw_uart_rx_pin->connected()) {
             // Read/Write mode
-            PinName txd = port_pin((PortName)(sw_uart_tx_pin->port_number<<8), sw_uart_tx_pin->pin);
-            PinName rxd = port_pin((PortName)(sw_uart_rx_pin->port_number<<8), sw_uart_rx_pin->pin);
+            PinName txd = port_pin((PortName)(sw_uart_tx_pin->port_number), sw_uart_tx_pin->pin);
+            PinName rxd = port_pin((PortName)(sw_uart_rx_pin->port_number), sw_uart_rx_pin->pin);
 
             write_only   = false;
             this->serial = new BufferedSoftSerial(txd, rxd);
         } else {
             // Write only mode
-            PinName txd = port_pin((PortName)(sw_uart_tx_pin->port_number<<8), sw_uart_tx_pin->pin);
+            PinName txd = port_pin((PortName)(sw_uart_tx_pin->port_number), sw_uart_tx_pin->pin);
             PinName rxd = NC;
 
             write_only   = true;
