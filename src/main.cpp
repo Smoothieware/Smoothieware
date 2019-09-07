@@ -18,6 +18,7 @@
 #include "modules/tools/switch/SwitchPool.h"
 #include "modules/tools/temperatureswitch/TemperatureSwitch.h"
 #include "modules/tools/drillingcycles/Drillingcycles.h"
+#include "modules/tools/switchwatchdog/SwitchWatchdogPool.h"
 #include "FilamentDetector.h"
 #include "MotorDriverControl.h"
 
@@ -185,6 +186,11 @@ void init() {
     #endif
     #ifndef NO_TOOLS_FILAMENTDETECTOR
     kernel->add_module( new(AHB0) FilamentDetector() );
+    #endif
+    #ifndef NO_TOOLS_SWITCHWATCHDOG
+    SwitchWatchdogPool *swp= new SwitchWatchdogPool();
+    swp->load_tools();
+    delete swp;
     #endif
     #ifndef NO_UTILS_MOTORDRIVERCONTROL
     kernel->add_module( new MotorDriverControl(0) );
