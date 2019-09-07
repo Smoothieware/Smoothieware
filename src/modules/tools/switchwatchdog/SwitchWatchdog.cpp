@@ -26,12 +26,6 @@
 #define exec_command_checksum       CHECKSUM("exec_command")
 #define clear_command_checksum      CHECKSUM("clear_command")
  
-// switchwatchdog.laser.enable        true
-// switchwatchdog.laser.pin           0.12!
-// switchwatchdog.laser.timeout       5
-// switchwatchdog.laser.exec_command  suspend
-// switchwatchdog.laser.clear_command M777
-
 SwitchWatchdog::SwitchWatchdog(uint16_t name)
 {
     this->timed_out     = false;
