@@ -24,7 +24,8 @@ private:
     uint32_t button_tick(uint32_t dummy);
     void reset_timer(void);
     void send_command(std::string msg, StreamOutput *stream);
-    bool match_clear_gcode(const Gcode *gcode) const;
+    void init_command(uint16_t checksum, uint16_t *code, char *letter);
+    bool match_gcode(const Gcode *gcode, uint16_t code, char letter) const;
     /*void on_pin_rise();
     void check_encoder();
     void send_command(std::string msg, StreamOutput *stream);
@@ -50,10 +51,16 @@ private:
     
     Pin pin;
     
+    uint16_t  enable_command_code;
+    uint16_t  disable_command_code;
+    uint16_t  clear_command_code;
+    char      enable_command_letter;
+    char      disable_command_letter;
+    char      clear_command_letter;
+    
     struct {
             uint16_t  name_checksum:16;
-            uint16_t  clear_command_code:16;
-            char      clear_command_letter:8;
+            bool      activated:1;
             bool      timed_out:1;
             bool      command_sent:1;
     };

@@ -24,17 +24,38 @@
 #define pin_checksum                CHECKSUM("pin")
 #define timeout_checksum            CHECKSUM("timeout")
 #define exec_command_checksum       CHECKSUM("exec_command")
-#define clear_command_checksum      CHECKSUM("clear_command")
+#define enable_gcode_checksum     CHECKSUM("enable_gcode")
+#define disable_gcode_checksum   CHECKSUM("disable_gcode")
+#define clear_gcode_checksum        CHECKSUM("clear_gcode")
+
  
 SwitchWatchdog::SwitchWatchdog(uint16_t name)
 {
     this->timed_out     = false;
     this->command_sent  = false;
     this->name_checksum = name;
+    this->activated     = false;
 }
 
 SwitchWatchdog::~SwitchWatchdog()
 {
+}
+    
+void SwitchWatchdog::init_command(uint16_t checksum, uint16_t *code, char *letter)
+{
+    std::string command_string = THEKERNEL->config->value(switchwatchdog_checksum, this->name_checksum, checksum)->by_default("")->as_string();
+    
+    *letter = 0;
+    if(!command_string.empty()) {
+        Gcode gc(command_string , NULL);
+        if(gc.has_g) {
+            *letter = 'G';
+            *code   = gc.g;
+        } else if(gc.has_m) {
+            *letter = 'M';
+            *code   = gc.m;
+        }
+    }
 }
 
 void SwitchWatchdog::on_module_loaded()
@@ -60,23 +81,11 @@ void SwitchWatchdog::on_module_loaded()
     // this command will be executed on watchdog timeout
     this->exec_command = THEKERNEL->config->value(switchwatchdog_checksum, this->name_checksum, exec_command_checksum )->by_default("")->as_string();
     std::replace(exec_command.begin(), exec_command.end(), '_', ' '); // replace _ with space
-    
-    // this gcode will clear the watchdog
-    std::string clear_command = THEKERNEL->config->value(switchwatchdog_checksum, this->name_checksum, clear_command_checksum )->by_default("")->as_string();
-    
-    // Set the on/off command codes, Use GCode to do the parsing
-    clear_command_letter = 0;
 
-    if(!clear_command.empty()) {
-        Gcode gc(clear_command , NULL);
-        if(gc.has_g) {
-            clear_command_letter = 'G';
-            clear_command_code   = gc.g;
-        } else if(gc.has_m) {
-            clear_command_letter = 'M';
-            clear_command_code   = gc.m;
-        }
-    }
+    // init control gcodes:
+    init_command(enable_gcode_checksum, &enable_command_code, &enable_command_letter);
+    init_command(disable_gcode_checksum, &disable_command_code, &disable_command_letter);
+    init_command(clear_gcode_checksum, &clear_command_code, &clear_command_letter);
     
     // register event-handlers
     register_for_event(ON_SECOND_TICK);
@@ -86,10 +95,10 @@ void SwitchWatchdog::on_module_loaded()
     //THEKERNEL->streams->printf("// SwitchWatchdog: init done\n");
 }
 
-bool SwitchWatchdog::match_clear_gcode(const Gcode *gcode) const
+bool SwitchWatchdog::match_gcode(const Gcode *gcode, uint16_t code, char letter) const
 {
-    bool b= ((clear_command_letter == 'M' && gcode->has_m && gcode->m == clear_command_code) ||
-            (clear_command_letter == 'G' && gcode->has_g && gcode->g == clear_command_code));
+    bool b= ((letter == 'M' && gcode->has_m && gcode->m == code) ||
+            (letter == 'G' && gcode->has_g && gcode->g == code));
 
     return (b);
 }
@@ -107,10 +116,25 @@ void SwitchWatchdog::on_gcode_received(void *argument)
 {
     Gcode *gcode = static_cast<Gcode *>(argument);
  
-    // check if this resets the timeout
-    if(match_clear_gcode(gcode)) {
+    // check command gcodes
+    if (match_gcode(gcode, enable_command_code, enable_command_letter)) {
+        // reset timer
+        reset_timer();
+        // enable this!
+        this->activated = true;
+        // debug info 
+        THEKERNEL->streams->printf("// SwitchWatchdog: ACTIVATED\r\n");
+    } else if (match_gcode(gcode, disable_command_code, disable_command_letter)) {
+        // disable
+        this->activated = false;
         // clear timeout 
         reset_timer();
+        // debug info
+        THEKERNEL->streams->printf("// SwitchWatchdog: DEACTIVATED\r\n");
+    } else if (match_gcode(gcode, clear_command_code, clear_command_letter)) {
+        // clear timeout 
+        reset_timer();
+        // debug info
         THEKERNEL->streams->printf("// SwitchWatchdog: CLEAR GCODE received... cleared timer\r\n");
     }
     
@@ -142,7 +166,11 @@ void SwitchWatchdog::on_console_line_received( void *argument )
 
 void SwitchWatchdog::on_second_tick(void *argument)
 {
+    // timed out? 
     if(timed_out) return;
+    
+    // not activated? do not count
+    if (!activated) return;
 
     timer--;
     
