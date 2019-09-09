@@ -24,8 +24,8 @@
 #define pin_checksum                CHECKSUM("pin")
 #define timeout_checksum            CHECKSUM("timeout")
 #define exec_command_checksum       CHECKSUM("exec_command")
-#define enable_gcode_checksum     CHECKSUM("enable_gcode")
-#define disable_gcode_checksum   CHECKSUM("disable_gcode")
+#define enable_gcode_checksum       CHECKSUM("enable_gcode")
+#define disable_gcode_checksum      CHECKSUM("disable_gcode")
 #define clear_gcode_checksum        CHECKSUM("clear_gcode")
 
  
@@ -118,6 +118,10 @@ void SwitchWatchdog::on_gcode_received(void *argument)
  
     // check command gcodes
     if (match_gcode(gcode, enable_command_code, enable_command_letter)) {
+        // this gcode can configure the timeout:
+        if(gcode->has_letter('T')){
+            this->configured_timeout = gcode->get_value('T');
+        }
         // reset timer
         reset_timer();
         // enable this!
