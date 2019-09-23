@@ -71,14 +71,12 @@ void StepperMotor::change_steps_per_mm(float new_steps)
     steps_per_mm = new_steps;
     mm_per_step = 1.0F / steps_per_mm;
     // we need to adjust the last_milestone_steps to be the same position it currently is in mm
-    last_milestone_steps = lroundf(apos * steps_per_mm);
-    current_position_steps = last_milestone_steps;
+    change_last_milestone(apos);
 }
 
 void StepperMotor::change_last_milestone(float new_milestone)
 {
-    last_milestone_steps = lroundf(new_milestone * steps_per_mm);
-    current_position_steps = last_milestone_steps;
+    set_last_milestones(lroundf(new_milestone * steps_per_mm));
 }
 
 void StepperMotor::set_last_milestones(int32_t steps)
