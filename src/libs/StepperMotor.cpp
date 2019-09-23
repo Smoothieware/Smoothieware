@@ -19,11 +19,11 @@ StepperMotor::StepperMotor(Pin &step, Pin &dir, Pin &en) : step_pin(step), dir_p
         set_high_on_debug(en.port_number, en.pin);
     }
 
-    steps_per_mm         = 1.0F;
-    max_rate             = 50.0F;
+    steps_per_mm = 1.0F;
+    mm_per_step = 1.0F;
+    max_rate = 50.0F;
 
     last_milestone_steps = 0;
-    last_milestone_mm    = 0.0F;
     current_position_steps= 0;
     moving= false;
     acceleration= NAN;
@@ -67,35 +67,36 @@ void StepperMotor::on_enable(void *argument)
 
 void StepperMotor::change_steps_per_mm(float new_steps)
 {
+    float apos = get_last_milestone(); // actual actuator position in mm as of last milestone
     steps_per_mm = new_steps;
-    last_milestone_steps = lroundf(last_milestone_mm * steps_per_mm);
+    mm_per_step = 1.0F / steps_per_mm;
+    // we need to adjust the last_milestone_steps to be the same position it currently is in mm
+    last_milestone_steps = lroundf(apos * steps_per_mm);
     current_position_steps = last_milestone_steps;
 }
 
 void StepperMotor::change_last_milestone(float new_milestone)
 {
-    last_milestone_mm = new_milestone;
-    last_milestone_steps = lroundf(last_milestone_mm * steps_per_mm);
+    last_milestone_steps = lroundf(new_milestone * steps_per_mm);
     current_position_steps = last_milestone_steps;
 }
 
-void StepperMotor::set_last_milestones(float mm, int32_t steps)
+void StepperMotor::set_last_milestones(int32_t steps)
 {
-    last_milestone_mm= mm;
     last_milestone_steps= steps;
     current_position_steps= last_milestone_steps;
 }
 
-void StepperMotor::update_last_milestones(float mm, int32_t steps)
+void StepperMotor::update_last_milestones(int32_t steps)
 {
     last_milestone_steps += steps;
-    last_milestone_mm = mm;
 }
 
 int32_t StepperMotor::steps_to_target(float target)
 {
-    int32_t target_steps = lroundf(target * steps_per_mm);
-    return target_steps - last_milestone_steps;
+    float apos = get_last_milestone(); // actual actuator position in mm as of last milestone
+    float delta = target - apos; // the delta move in mm
+    return lroundf(delta * steps_per_mm); // the number of steps needed for that move rounded up to nearest step
 }
 
 // Does a manual step pulse, used for direct encoder control of a stepper

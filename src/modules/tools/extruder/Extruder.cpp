@@ -201,7 +201,7 @@ void Extruder::save_position()
 void Extruder::restore_position()
 {
     THEROBOT->reset_axis_position(std::get<0>(this->saved_position), motor_id);
-    stepper_motor->set_last_milestones(std::get<1>(this->saved_position), std::get<2>(this->saved_position));
+    stepper_motor->set_last_milestones(std::get<2>(this->saved_position));
 }
 
 // check against maximum speeds and return the rate modifier

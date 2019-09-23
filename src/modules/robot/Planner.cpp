@@ -60,7 +60,7 @@ bool Planner::append_block( ActuatorCoordinates &actuator_pos, uint8_t n_motors,
         int32_t steps = THEROBOT->actuators[i]->steps_to_target(actuator_pos[i]);
         // Update current position
         if(steps != 0) {
-            THEROBOT->actuators[i]->update_last_milestones(actuator_pos[i], steps);
+            THEROBOT->actuators[i]->update_last_milestones(steps);
             has_steps = true;
         }
 
