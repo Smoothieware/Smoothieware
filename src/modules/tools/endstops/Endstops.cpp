@@ -584,44 +584,40 @@ uint32_t Endstops::read_endstops(uint32_t dummy)
         // for corexy homing in X or Y we must only check the associated endstop, works as we only home one axis at a time for corexy
         if(is_corexy && (m == X_AXIS || m == Y_AXIS) && !axis_to_home[m]) continue;
 
-        if(STEPPER[m]->is_moving() || ( STEPPER[m]->has_slave() && STEPPER[m]->get_slave()->is_moving() ) ) {
+        if(STEPPER[m]->is_moving()) {
             // if it is moving then we check the associated endstop, and debounce it
-            bool pinTriggered = false;
-            bool slavePinTriggered = false;
 
             // If we don't have a slave endstop, just simulate it being triggered.
-            if (!e.pin_info->slavePin.connected()) slavePinTriggered = true;
+            if (!e.pin_info->slavePin.connected()) e.pin_info->slave_triggered = true;
 
-            if(e.pin_info->pin.get()) {
+            if(!e.pin_info->master_triggered && e.pin_info->pin.get()) {
                 if(e.pin_info->debounce < debounce_ms) {
                     e.pin_info->debounce++;
 
                 } else {
                     if(is_corexy && (m == X_AXIS || m == Y_AXIS)) {
                         // corexy when moving in X or Y we need to stop both the X and Y motors
-                        STEPPER[X_AXIS]->stop_moving();
-                        STEPPER[Y_AXIS]->stop_moving();
+                        STEPPER[X_AXIS]->stop_master();
+                        STEPPER[Y_AXIS]->stop_master();
 
                         // I don't know in what senario this would make sense, but it's here.
-                        if (STEPPER[X_AXIS]->has_slave() && slavePinTriggered) 
+                        if (STEPPER[X_AXIS]->has_slave() && e.pin_info->slave_triggered) 
                             STEPPER[X_AXIS]->get_slave()->stop_moving();
-                        if (STEPPER[Y_AXIS]->has_slave() && slavePinTriggered) 
+                        if (STEPPER[Y_AXIS]->has_slave() && e.pin_info->slave_triggered) 
                             STEPPER[Y_AXIS]->get_slave()->stop_moving();
 
                     }else{
                         // we signal the motor to stop, which will preempt any moves on that axis
-                        STEPPER[m]->stop_moving();
+                        STEPPER[m]->stop_master();
 
                         // Basically, if we have a slave motor, but no slave endstop, stop both motors
-                        if (STEPPER[m]->has_slave() && slavePinTriggered) 
+                        if (STEPPER[m]->has_slave() && e.pin_info->slave_triggered) 
                             STEPPER[m]->get_slave()->stop_moving();
                     }
                     // If our slave is already triggered, no need for a second check, just move on.
-                    if (slavePinTriggered)
+                    e.pin_info->master_triggered = true;
+                    if (e.pin_info->slave_triggered)
                         e.pin_info->triggered= true;
-                    // otherwise, don't stop homing until both switches are pressed. 
-                    else
-                        pinTriggered = true;
                 }
 
             } else {
@@ -630,7 +626,7 @@ uint32_t Endstops::read_endstops(uint32_t dummy)
             }
 
             // Do the same thing, but for the slave pin, only if we haven't triggered it already (like if we don't have one).
-            if(!slavePinTriggered && e.pin_info->slavePin.get()) {
+            if(!e.pin_info->slave_triggered && e.pin_info->slavePin.get()) {
                 if(e.pin_info->slaveDebounce < debounce_ms) {
                     e.pin_info->slaveDebounce++;
 
@@ -651,18 +647,18 @@ uint32_t Endstops::read_endstops(uint32_t dummy)
                         if (STEPPER[m]->has_slave()) 
                             STEPPER[m]->get_slave()->stop_moving();
                     }
+                    e.pin_info->slave_triggered = true;
                     // If our slave is already triggered, no need for a second check, just move on.
-                    if (pinTriggered)
+                    if (e.pin_info->master_triggered)
                         e.pin_info->triggered= true;
                     // otherwise, don't stop homing until both switches are pressed. 
-                    else
-                        slavePinTriggered = true;
                 }
 
             } else {
                 // The endstop was not hit yet
                 e.pin_info->slaveDebounce= 0;
             }
+
         }
     }
 
@@ -702,6 +698,8 @@ void Endstops::home(axis_bitmap_t a)
     for(auto& e : endstops) {
        e->debounce= 0;
        e->triggered= false;
+       e->master_triggered= false;
+       e->slave_triggered= false;
     }
 
     if (is_scara) {
@@ -748,8 +746,8 @@ void Endstops::home(axis_bitmap_t a)
     // if the endstop is not triggered then enter ALARM state
     // with deltas we check all three axis were triggered, but at least one of XYZ must be set to home
     if(axis_to_home[X_AXIS] || axis_to_home[Y_AXIS] || axis_to_home[Z_AXIS]) {
-        for (size_t i = X_AXIS; i <= Z_AXIS; ++i) {
-            if((axis_to_home[i] || this->is_delta || this->is_rdelta) && !homing_axis[i].pin_info->triggered) {
+        for (size_t i = X_AXIS; i <= Z_AXIS; ++i) { 
+            if((axis_to_home[i] || this->is_delta || this->is_rdelta) && !homing_axis[i].pin_info->triggered) { 
                 this->status = NOT_HOMING;
                 THEKERNEL->call_event(ON_HALT, nullptr);
                 THEROBOT->disable_segmentation= false;
@@ -759,9 +757,9 @@ void Endstops::home(axis_bitmap_t a)
     }
 
     // also check ABC
-    if(homing_axis.size() > 3){
-        for (size_t i = A_AXIS; i < homing_axis.size(); ++i) {
-            if(axis_to_home[i] && !homing_axis[i].pin_info->triggered) {
+    if(homing_axis.size() > 3){ 
+        for (size_t i = A_AXIS; i < homing_axis.size(); ++i) { 
+            if(axis_to_home[i] && !homing_axis[i].pin_info->triggered) { 
                 this->status = NOT_HOMING;
                 THEKERNEL->call_event(ON_HALT, nullptr);
                 THEROBOT->disable_segmentation= false;
@@ -783,7 +781,7 @@ void Endstops::home(axis_bitmap_t a)
     for (size_t i = 0; i < homing_axis.size(); ++i) delta[i]= 0;
 
     // use minimum feed rate of all axes that are being homed (sub optimal, but necessary)
-    float feed_rate= homing_axis[X_AXIS].slow_rate;
+    float feed_rate= homing_axis[X_AXIS].slow_rate; 
     for (auto& i : homing_axis) {
         int c= i.axis_index;
         if(axis_to_home[c]) {
@@ -792,6 +790,7 @@ void Endstops::home(axis_bitmap_t a)
             feed_rate= std::min(i.slow_rate, feed_rate);
         }
     }
+
 
     THEROBOT->delta_move(delta, feed_rate, homing_axis.size());
     // wait until finished

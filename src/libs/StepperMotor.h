@@ -23,7 +23,19 @@ class StepperMotor  : public Module {
         void set_slave(StepperMotor* s) { slave = s; }
 
         // called from step ticker ISR
-        inline bool step() { step_pin.set(1); if (has_slave()) slave->step(); current_position_steps += (direction?-1:1); return moving; }
+        inline bool step() { 
+            if(moving)
+                step_pin.set(1); 
+            if (has_slave()) 
+                slave->step(); 
+            current_position_steps += (direction?-1:1);
+
+            // I didn't originally see this and spent some time pulling my hair out.
+            if (slave != NULL)
+                return (moving || slave->is_moving());
+            else
+                return moving;
+        }
         // called from unstep ISR
         inline void unstep() { step_pin.set(0); if (has_slave()) slave->unstep(); }
         // called from step ticker ISR
@@ -31,9 +43,16 @@ class StepperMotor  : public Module {
 
         void enable(bool state) { en_pin.set(!state); if (has_slave()) slave->enable(state); };
         bool is_enabled() const { return !en_pin.get(); };
-        bool is_moving() const { return moving; };
-        void start_moving() { moving= true; }
-        void stop_moving() { moving= false; }
+        bool is_moving() const { 
+            if (slave != NULL)
+                return (moving || slave->is_moving());
+            else
+                return moving;
+        };
+        void start_moving() { moving= true; if (has_slave()) slave->start_moving(); }
+        void stop_moving() { moving= false; if (has_slave()) slave->stop_moving(); }
+
+        void stop_master() {moving= false; }
 
         void manual_step(bool dir);
 
