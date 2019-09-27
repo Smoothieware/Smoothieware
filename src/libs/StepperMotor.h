@@ -23,13 +23,13 @@ class StepperMotor  : public Module {
         void set_slave(StepperMotor* s) { slave = s; }
 
         // called from step ticker ISR
-        inline bool step() { step_pin.set(1); if (has_slave) slave->step(); current_position_steps += (direction?-1:1); return moving; }
+        inline bool step() { step_pin.set(1); if (has_slave()) slave->step(); current_position_steps += (direction?-1:1); return moving; }
         // called from unstep ISR
-        inline void unstep() { step_pin.set(0); if (has_slave) slave->unstep(); }
+        inline void unstep() { step_pin.set(0); if (has_slave()) slave->unstep(); }
         // called from step ticker ISR
-        inline void set_direction(bool f) { dir_pin.set(f); if (has_slave) slave->set_direction(f); direction= f; }
+        inline void set_direction(bool f) { dir_pin.set(f); if (has_slave()) slave->set_direction(f); direction= f; }
 
-        void enable(bool state) { en_pin.set(!state); if (has_slave) slave->enable(state); };
+        void enable(bool state) { en_pin.set(!state); if (has_slave()) slave->enable(state); };
         bool is_enabled() const { return !en_pin.get(); };
         bool is_moving() const { return moving; };
         void start_moving() { moving= true; }
