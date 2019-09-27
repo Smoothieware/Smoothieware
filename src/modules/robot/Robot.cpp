@@ -142,10 +142,10 @@ void Robot::on_module_loaded()
     CHECKSUM(X "_en_pin"),          \
     CHECKSUM(X "_steps_per_mm"),    \
     CHECKSUM(X "_max_rate"),        \
-    CHECKSUM(X "_acceleration")     \
+    CHECKSUM(X "_acceleration"),     \
     CHECKSUM(X "_slave_step_pin"),  \
     CHECKSUM(X "_slave_dir_pin"),   \
-    CHECKSUM(X "_slave_en_pin"),    \
+    CHECKSUM(X "_slave_en_pin")    \
 }
 
 void Robot::load_config()
@@ -212,7 +212,7 @@ void Robot::load_config()
     this->s_value             = THEKERNEL->config->value(laser_module_default_power_checksum)->by_default(0.8F)->as_number();
 
      // Make our Primary XYZ StepperMotors, and potentially A B C
-    uint16_t const motor_checksums[][6] = {
+    uint16_t const motor_checksums[][9] = {
         ACTUATOR_CHECKSUMS("alpha"), // X
         ACTUATOR_CHECKSUMS("beta"),  // Y
         ACTUATOR_CHECKSUMS("gamma"), // Z
@@ -250,8 +250,8 @@ void Robot::load_config()
 
         // does this motor have a slave?
         Pin slave_pins[3]; //step, dir, enable
-        for (size_t i = 6; i < 9; i++) {
-            slave_pins[i].from_string(THEKERNEL->config->value(motor_checksums[a][i])->by_default("nc")->as_string())->as_output();
+        for (size_t i = 0; i < 3; i++) {
+            slave_pins[i].from_string(THEKERNEL->config->value(motor_checksums[a][i+6])->by_default("nc")->as_string())->as_output();
         }
 
         if(slave_pins[0].connected() && slave_pins[1].connected()) { // step and dir must be defined, but enable is optional
