@@ -18,14 +18,18 @@ class StepperMotor  : public Module {
         void set_motor_id(uint8_t id) { motor_id= id; }
         uint8_t get_motor_id() const { return motor_id; }
 
-        // called from step ticker ISR
-        inline bool step() { step_pin.set(1); current_position_steps += (direction?-1:1); return moving; }
-        // called from unstep ISR
-        inline void unstep() { step_pin.set(0); }
-        // called from step ticker ISR
-        inline void set_direction(bool f) { dir_pin.set(f); direction= f; }
+        bool has_slave() { return slave != NULL; }
+        StepperMotor* get_slave() { return slave; }
+        void set_slave(StepperMotor* s) { slave = s; }
 
-        void enable(bool state) { en_pin.set(!state); };
+        // called from step ticker ISR
+        inline bool step() { step_pin.set(1); if (has_slave) slave->step(); current_position_steps += (direction?-1:1); return moving; }
+        // called from unstep ISR
+        inline void unstep() { step_pin.set(0); if (has_slave) slave->unstep(); }
+        // called from step ticker ISR
+        inline void set_direction(bool f) { dir_pin.set(f); if (has_slave) slave->set_direction(f); direction= f; }
+
+        void enable(bool state) { en_pin.set(!state); if (has_slave) slave->enable(state); };
         bool is_enabled() const { return !en_pin.get(); };
         bool is_moving() const { return moving; };
         void start_moving() { moving= true; }
@@ -81,5 +85,8 @@ class StepperMotor  : public Module {
             bool selected:1;
             bool extruder:1;
         };
+
+        StepperMotor* slave = NULL;
+
 };
 

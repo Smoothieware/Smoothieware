@@ -79,6 +79,7 @@ enum DEFNS {MIN_PIN, MAX_PIN, MAX_TRAVEL, FAST_RATE, SLOW_RATE, RETRACT, DIRECTI
 #define endstop_checksum                   CHECKSUM("endstop")
 #define enable_checksum                    CHECKSUM("enable")
 #define pin_checksum                       CHECKSUM("pin")
+#define slave_pin_checksum                 CHECKSUM("slave_pin")
 #define axis_checksum                      CHECKSUM("axis")
 #define direction_checksum                 CHECKSUM("homing_direction")
 #define position_checksum                  CHECKSUM("homing_position")
@@ -251,12 +252,14 @@ bool Endstops::load_config()
         if(!THEKERNEL->config->value(endstop_checksum, cs, enable_checksum )->as_bool()) continue;
 
         endstop_info_t *pin_info= new endstop_info_t;
-        pin_info->pin.from_string(THEKERNEL->config->value(endstop_checksum, cs, pin_checksum)->by_default("nc" )->as_string())->as_input();
+        pin_info->pin.from_string(THEKERNEL->config->value(endstop_checksum, cs, pin_checksum)->by_default("nc")->as_string())->as_input();
         if(!pin_info->pin.connected()){
             // no pin defined try next
             delete pin_info;
             continue;
         }
+
+        pin_info->slavePin.from_string(THEKERNEL->config->value(endstop_checksum, cs, slave_pin_checksum)->by_default("nc")->as_string())->as_input();
 
         string axis= THEKERNEL->config->value(endstop_checksum, cs, axis_checksum)->by_default("")->as_string();
         if(axis.empty()){
@@ -581,8 +584,14 @@ uint32_t Endstops::read_endstops(uint32_t dummy)
         // for corexy homing in X or Y we must only check the associated endstop, works as we only home one axis at a time for corexy
         if(is_corexy && (m == X_AXIS || m == Y_AXIS) && !axis_to_home[m]) continue;
 
-        if(STEPPER[m]->is_moving()) {
+        if(STEPPER[m]->is_moving() || ( STEPPER[m]->has_slave() && STEPPER[m]->get_slave()->is_moving() ) ) {
             // if it is moving then we check the associated endstop, and debounce it
+            bool pinTriggered = false;
+            bool slavePinTriggered = false;
+
+            // If we don't have a slave endstop, just simulate it being triggered.
+            if (!e.pin_info->slavePin.connected()) slavePinTriggered = true;
+
             if(e.pin_info->pin.get()) {
                 if(e.pin_info->debounce < debounce_ms) {
                     e.pin_info->debounce++;
@@ -593,16 +602,66 @@ uint32_t Endstops::read_endstops(uint32_t dummy)
                         STEPPER[X_AXIS]->stop_moving();
                         STEPPER[Y_AXIS]->stop_moving();
 
+                        // I don't know in what senario this would make sense, but it's here.
+                        if (STEPPER[X_AXIS]->has_slave() && slavePinTriggered) 
+                            STEPPER[X_AXIS]->get_slave()->stop_moving();
+                        if (STEPPER[Y_AXIS]->has_slave() && slavePinTriggered) 
+                            STEPPER[Y_AXIS]->get_slave()->stop_moving();
+
                     }else{
                         // we signal the motor to stop, which will preempt any moves on that axis
                         STEPPER[m]->stop_moving();
+
+                        // Basically, if we have a slave motor, but no slave endstop, stop both motors
+                        if (STEPPER[m]->has_slave() && slavePinTriggered) 
+                            STEPPER[m]->get_slave()->stop_moving();
                     }
-                    e.pin_info->triggered= true;
+                    // If our slave is already triggered, no need for a second check, just move on.
+                    if (slavePinTriggered)
+                        e.pin_info->triggered= true;
+                    // otherwise, don't stop homing until both switches are pressed. 
+                    else
+                        pinTriggered = true;
                 }
 
             } else {
                 // The endstop was not hit yet
                 e.pin_info->debounce= 0;
+            }
+
+            // Do the same thing, but for the slave pin, only if we haven't triggered it already (like if we don't have one).
+            if(!slavePinTriggered && e.pin_info->slavePin.get()) {
+                if(e.pin_info->slaveDebounce < debounce_ms) {
+                    e.pin_info->slaveDebounce++;
+
+                } else {
+                    if(is_corexy && (m == X_AXIS || m == Y_AXIS)) {
+                        // corexy when moving in X or Y we need to stop both the X and Y motors
+                        // I don't know in what senario this would make sense, but it's here.
+                        if (STEPPER[X_AXIS]->has_slave()) 
+                            STEPPER[X_AXIS]->get_slave()->stop_moving();
+                        if (STEPPER[Y_AXIS]->has_slave()) 
+                            STEPPER[Y_AXIS]->get_slave()->stop_moving();
+
+                    }else{
+                        // we signal the motor to stop, which will preempt any moves on that axis
+                        // We don't have to check the master pin like we do above because this code
+                        // only runs if we have both a master and slave, whereas the above code must
+                        // compensate for only having a master.
+                        if (STEPPER[m]->has_slave()) 
+                            STEPPER[m]->get_slave()->stop_moving();
+                    }
+                    // If our slave is already triggered, no need for a second check, just move on.
+                    if (pinTriggered)
+                        e.pin_info->triggered= true;
+                    // otherwise, don't stop homing until both switches are pressed. 
+                    else
+                        slavePinTriggered = true;
+                }
+
+            } else {
+                // The endstop was not hit yet
+                e.pin_info->slaveDebounce= 0;
             }
         }
     }

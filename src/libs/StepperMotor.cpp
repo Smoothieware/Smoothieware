@@ -42,6 +42,10 @@ StepperMotor::~StepperMotor()
 {
     THEKERNEL->unregister_for_event(ON_HALT, this);
     THEKERNEL->unregister_for_event(ON_ENABLE, this);
+
+    if(has_slave) {
+        slave->~StepperMotor();
+    }
 }
 
 void StepperMotor::on_halt(void *argument)
@@ -70,6 +74,9 @@ void StepperMotor::change_steps_per_mm(float new_steps)
     steps_per_mm = new_steps;
     last_milestone_steps = lroundf(last_milestone_mm * steps_per_mm);
     current_position_steps = last_milestone_steps;
+    if (has_slave) {
+        slave->change_steps_per_mm(new_steps);
+    }
 }
 
 void StepperMotor::change_last_milestone(float new_milestone)
@@ -77,6 +84,9 @@ void StepperMotor::change_last_milestone(float new_milestone)
     last_milestone_mm = new_milestone;
     last_milestone_steps = lroundf(last_milestone_mm * steps_per_mm);
     current_position_steps = last_milestone_steps;
+    if (has_slave) {
+        slave->change_last_milestone(new_milestone);
+    }
 }
 
 void StepperMotor::set_last_milestones(float mm, int32_t steps)
@@ -84,12 +94,18 @@ void StepperMotor::set_last_milestones(float mm, int32_t steps)
     last_milestone_mm= mm;
     last_milestone_steps= steps;
     current_position_steps= last_milestone_steps;
+    if (has_slave) {
+        slave->set_last_milestones(mm, steps);
+    }
 }
 
 void StepperMotor::update_last_milestones(float mm, int32_t steps)
 {
     last_milestone_steps += steps;
     last_milestone_mm = mm;
+    if (has_slave) {
+        slave->update_last_milestones(mm, steps);
+    }
 }
 
 int32_t StepperMotor::steps_to_target(float target)
@@ -120,4 +136,8 @@ void StepperMotor::manual_step(bool dir)
 
     // keep track of actuators actual position in steps
     this->current_position_steps += (dir ? -1 : 1);
+
+    if (has_slave) {
+        slave->manual_step(dir);
+    }
 }

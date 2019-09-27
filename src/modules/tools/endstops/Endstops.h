@@ -53,8 +53,10 @@ class Endstops : public Module{
         // per endstop settings
         using endstop_info_t = struct {
             Pin pin;
+            Pin slavePin;
             struct {
                 uint16_t debounce:16;
+                uint16_t slaveDebounce:16;
                 char axis:8; // one of XYZABC
                 uint8_t axis_index:3;
                 bool limit_enable:1;

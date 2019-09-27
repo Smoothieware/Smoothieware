@@ -143,6 +143,9 @@ void Robot::on_module_loaded()
     CHECKSUM(X "_steps_per_mm"),    \
     CHECKSUM(X "_max_rate"),        \
     CHECKSUM(X "_acceleration")     \
+    CHECKSUM(X "_slave_step_pin"),  \
+    CHECKSUM(X "_slave_dir_pin"),   \
+    CHECKSUM(X "_slave_en_pin"),    \
 }
 
 void Robot::load_config()
@@ -244,6 +247,18 @@ void Robot::load_config()
         }
 
         StepperMotor *sm = new StepperMotor(pins[0], pins[1], pins[2]);
+
+        // does this motor have a slave?
+        Pin slave_pins[3]; //step, dir, enable
+        for (size_t i = 6; i < 9; i++) {
+            slave_pins[i].from_string(THEKERNEL->config->value(motor_checksums[a][i])->by_default("nc")->as_string())->as_output();
+        }
+
+        if(slave_pins[0].connected() && slave_pins[1].connected()) { // step and dir must be defined, but enable is optional
+            StepperMotor *slaveMotor = new StepperMotor(slave_pins[0], slave_pins[1], slave_pins[2]);
+            sm->set_slave(slaveMotor);
+        }
+
         // register this motor (NB This must be 0,1,2) of the actuators array
         uint8_t n= register_motor(sm);
         if(n != a) {
