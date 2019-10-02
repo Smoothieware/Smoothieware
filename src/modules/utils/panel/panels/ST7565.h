@@ -89,6 +89,7 @@ private:
         bool is_viki2:1;
         bool is_mini_viki2:1;
         bool is_ssd1306:1;
+        bool is_sh1106:1;
         bool use_pause:1;
         bool use_back:1;
         bool text_background:1;
