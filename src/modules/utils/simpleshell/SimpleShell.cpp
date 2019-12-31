@@ -1282,7 +1282,6 @@ void SimpleShell::help_command( string parameters, StreamOutput *stream )
     stream->printf("reset - reset smoothie\r\n");
     stream->printf("dfu - enter dfu boot loader\r\n");
     stream->printf("break - break into debugger\r\n");
-    stream->printf("config-get [<configuration_source>] <configuration_setting>\r\n");
     stream->printf("config-set [<configuration_source>] <configuration_setting> <value>\r\n");
     stream->printf("get [pos|wcs|state|status|fk|ik]\r\n");
     stream->printf("get temp [bed|hotend]\r\n");

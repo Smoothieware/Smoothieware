@@ -193,6 +193,10 @@ void Switch::on_config_reload(void *argument)
         this->output_type= NONE;
         // set to initial state
         this->input_pin_state = this->input_pin->get();
+        if(this->input_pin_behavior == momentary_checksum) {
+            // initialize switch state to same as current pin level
+            this->switch_state = this->input_pin_state;
+        }
         // input pin polling
         THEKERNEL->slow_ticker->attach( 100, this, &Switch::pinpoll_tick);
     }
