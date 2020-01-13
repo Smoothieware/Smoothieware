@@ -192,8 +192,9 @@ bool ZProbe::run_probe(float& mm, float feedrate, float max_dist, bool reverse)
     probe_detected= false;
     debounce= 0;
 
-    // save current actuator position so we can report how far we moved
-    float z_start_pos= THEROBOT->actuators[Z_AXIS]->get_current_position();
+    // save current position so we can report how far we moved
+    float start_pos[3];
+    THEROBOT->get_current_machine_position(start_pos);
 
     // move Z down
     bool dir= (!reverse_z != reverse); // xor
@@ -206,8 +207,10 @@ bool ZProbe::run_probe(float& mm, float feedrate, float max_dist, bool reverse)
     if(THEKERNEL->is_halted()) return false;
 
     // now see how far we moved, get delta in z we moved
-    // NOTE this works for deltas as well as all three actuators move the same amount in Z
-    mm= z_start_pos - THEROBOT->actuators[2]->get_current_position();
+    // NOTE for rotatable delta we have to translate actuator position into cartesian to know how far we moved
+    float end_pos[3];
+    THEROBOT->get_current_machine_position(end_pos);
+    mm = start_pos[Z_AXIS] - end_pos[Z_AXIS];
 
     // set the last probe position to the actuator units moved during this home
     THEROBOT->set_last_probe_position(std::make_tuple(0, 0, mm, probe_detected?1:0));
