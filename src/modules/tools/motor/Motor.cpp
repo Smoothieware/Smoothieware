@@ -10,11 +10,19 @@
 #include "Kernel.h"
 #include "nuts_bolts.h"
 #include "Config.h"
+#include "ConfigValue.h"
+#include "utils.h"
+#include "checksumm.h"
 
 #include "Pin.h"
 #include "Gcode.h"
 
-#define motor_module_tick_pin_checksum           CHECKSUM("tick_pin")
+#define motor_checksum                           CHECKSUM("motor")
+#define enable_checksum                          CHECKSUM("enable")
+#define tick_pin_checksum                        CHECKSUM("tick_pin")
+#define home_pin_checksum                        CHECKSUM("home_pin")
+#define clockwise_pin_checksum                   CHECKSUM("clockwise_pin")
+#define counter_clockwise_pin_checksum           CHECKSUM("counter_clockwise_pin")
 
 Motor::Motor(){
 
@@ -22,6 +30,11 @@ Motor::Motor(){
 
 void Motor::on_module_loaded(){
 
+  // Read module configuration
+
+  // Tick pin is used to count each time the motor moves by one unit of movement
+  //this->tick_pin.from_string( THEKERNEL->config->value(motor_checksum, tick_pin_checksum)->by_default("nc" )->as_string())->as_input();
+  this->tick_pin.from_string( THEKERNEL->config->value(motor_checksum, tick_pin_checksum)->by_default("nc" )->as_string())->as_input();
 
 }
 

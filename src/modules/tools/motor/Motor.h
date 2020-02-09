@@ -8,6 +8,10 @@
 #pragma once
 
 #include "libs/Module.h"
+#include "Pin.h"
+#include "utils.h"
+
+
 
 #include <stdint.h>
 
@@ -21,6 +25,6 @@ class Motor : public Module{
         void on_gcode_received(void *argument);
 
     private:
-        Pin *tick_pin;				// Pin for rotation tick
+        Pin tick_pin;				// Pin for rotation tick
 
 };
