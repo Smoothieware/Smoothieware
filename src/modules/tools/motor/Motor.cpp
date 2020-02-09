@@ -31,10 +31,25 @@ Motor::Motor(){
 void Motor::on_module_loaded(){
 
   // Read module configuration
+  // If the module is disabled -> do nothing
+  if(!THEKERNEL->config->value( motor_checksum, enable_checksum )->by_default(false)->as_bool()) {
+      // As this module is not needed free up the resource
+      delete this;
+      return;
+  }
 
   // Tick pin is used to count each time the motor moves by one unit of movement
-  //this->tick_pin.from_string( THEKERNEL->config->value(motor_checksum, tick_pin_checksum)->by_default("nc" )->as_string())->as_input();
   this->tick_pin.from_string( THEKERNEL->config->value(motor_checksum, tick_pin_checksum)->by_default("nc" )->as_string())->as_input();
+
+  // Home pin is used to detect/seek the origin of the motor movement, so we can go back to a known position in absolute space
+  this->home_pin.from_string( THEKERNEL->config->value(motor_checksum, home_pin_checksum)->by_default("nc" )->as_string())->as_input();
+
+  // Clockwise pin is used to instruct the motor to move in the clockwise direction
+  this->clockwise_pin.from_string( THEKERNEL->config->value(motor_checksum, clockwise_pin_checksum)->by_default("nc" )->as_string())->as_output();
+
+  // Counter clockwise pin is used to instruct the motor to move in the counter clockwise direction
+  this->counter_clockwise_pin.from_string( THEKERNEL->config->value(motor_checksum, counter_clockwise_pin_checksum)->by_default("nc" )->as_string())->as_output();
+
 
 }
 

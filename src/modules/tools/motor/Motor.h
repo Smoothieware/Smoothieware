@@ -25,6 +25,9 @@ class Motor : public Module{
         void on_gcode_received(void *argument);
 
     private:
-        Pin tick_pin;				// Pin for rotation tick
+        Pin tick_pin;				      // Pin for rotation tick
+        Pin home_pin;				      // Pin for homing
+        Pin clockwise_pin;        // Pin for moving clockwise
+        Pin counter_clockwise_pin;// Pin for moving counter clockwise
 
 };
