@@ -16,6 +16,7 @@
 #include "modules/tools/scaracal/SCARAcal.h"
 #include "RotaryDeltaCalibration.h"
 #include "modules/tools/switch/SwitchPool.h"
+#include "modules/tools/motor/Motor.h"
 #include "modules/tools/temperatureswitch/TemperatureSwitch.h"
 #include "modules/tools/drillingcycles/Drillingcycles.h"
 #include "FilamentDetector.h"
@@ -166,6 +167,9 @@ void init() {
     #endif
     #ifndef NO_TOOLS_ZPROBE
     kernel->add_module( new(AHB0) ZProbe() );
+    #endif
+    #ifndef NO_TOOLS_MOTOR
+    kernel->add_module( new(AHB0) Motor() );
     #endif
     #ifndef NO_TOOLS_SCARACAL
     kernel->add_module( new(AHB0) SCARAcal() );
