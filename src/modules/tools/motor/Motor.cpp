@@ -112,6 +112,36 @@ void Motor::on_gcode_received(void *argument){
       }
     }
     // M572 is used to set the motor moving in one direction or another ( or to stop it )
+    if( gcode->has_m && gcode->m == 572 && this->status == NONE ){
+      // Determine which Direction we need to move in
+      if( gcode->has_letter('D') ){
+        // Move clockwise forever
+        if( gcode->get_value('D') == 1 ){
+          // Set the new status
+          this->status = MOVING_FOREVER;
+
+          // Change the pin to start moving
+          this->clockwise_pin.set(HIGH);
+
+        // Move counterclockwise forever
+        }else if( gcode->get_value('D') == -1 ){
+          // Set the new status
+          this->status = MOVING_FOREVER;
+
+          // Change the pin to start moving
+          this->counter_clockwise_pin.set(HIGH);
+
+        }else if( gcode->get_value('D') == 0 ){
+          // Set the new status
+          this->status = NONE;
+
+          // Change the pins to stop moving
+          this->counter_clockwise_pin.set(LOW);
+          this->clockwise_pin.set(LOW);
+        }
+      }
+
+    }
     // M579 is used to read the current status ( active action, absolute position ) of this module
 }
 
