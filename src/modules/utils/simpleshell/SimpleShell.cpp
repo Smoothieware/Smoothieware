@@ -1031,6 +1031,11 @@ void SimpleShell::md5sum_command( string parameters, StreamOutput *stream )
 // runs several types of test on the mechanisms
 void SimpleShell::test_command( string parameters, StreamOutput *stream)
 {
+    if(!THECONVEYOR->is_idle()) {
+        stream->printf("error: tests are not allowed while printing or busy\n");
+        return;
+    }
+
     AutoPushPop app; // this will save the state and restore it on exit
     string what = shift_parameter( parameters );
 
@@ -1185,11 +1190,56 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
 
         //stream->printf("done\n");
 
+    }else if (what == "pulse") {
+        // issues a step pulse then wqiats then unsteps, for testing when stepper moves
+        string axis = shift_parameter( parameters );
+        string reps = shift_parameter( parameters );
+        if(axis.empty()) {
+            stream->printf("error: Need axis [iterations]\n");
+            return;
+        }
+
+        char ax= toupper(axis[0]);
+        uint8_t a= ax >= 'X' ? ax - 'X' : ax - 'A' + 3;
+
+        if(a > C_AXIS) {
+            stream->printf("error: axis must be x, y, z, a, b, c\n");
+            return;
+        }
+
+        if(a >= THEROBOT->get_number_registered_motors()) {
+            stream->printf("error: axis is out of range\n");
+            return;
+        }
+
+        int nreps= 1;
+        if(!reps.empty()) {
+            nreps= strtol(reps.c_str(), NULL, 10);
+        }
+
+        uint32_t delayms= 5000.0F; // step every five seconds
+        for(int s= 0;s<nreps;s++) {
+            if(THEKERNEL->is_halted()) break;
+            stream->printf("// leading edge\n");
+            THEROBOT->actuators[a]->step();
+            safe_delay_ms(delayms);
+            stream->printf("// trailing edge\n");
+            THEROBOT->actuators[a]->unstep();
+            if(THEKERNEL->is_halted()) break;
+            safe_delay_ms(delayms);
+        }
+
+        // reset the position based on current actuator position
+        THEROBOT->reset_position_from_current_actuator_position();
+
+        stream->printf("done\n");
+
     }else {
         stream->printf("usage:\n test jog axis distance iterations [feedrate]\n");
         stream->printf(" test square size iterations [feedrate]\n");
         stream->printf(" test circle radius iterations [feedrate]\n");
         stream->printf(" test raw axis steps steps/sec\n");
+        stream->printf(" test pulse axis iterations\n");
     }
 }
 
