@@ -10,10 +10,10 @@
 #include "libs/Module.h"
 #include "Pin.h"
 #include "utils.h"
-
-
-
 #include <stdint.h>
+
+#define HIGH 1
+#define LOW  0
 
 class Pin;
 
@@ -23,11 +23,18 @@ class Motor : public Module{
         virtual ~Motor() {};
         void on_module_loaded();
         void on_gcode_received(void *argument);
+        uint32_t tick(uint32_t dummy);
+
+        enum STATUS {NONE, HOMING, MOVING_TO, MOVING_FOREVER};
 
     private:
         Pin tick_pin;				      // Pin for rotation tick
         Pin home_pin;				      // Pin for homing
         Pin clockwise_pin;        // Pin for moving clockwise
         Pin counter_clockwise_pin;// Pin for moving counter clockwise
+
+        bool current_home_pin_value; // Current value of the home pin, so we can check if it changes
+
+        STATUS status;
 
 };

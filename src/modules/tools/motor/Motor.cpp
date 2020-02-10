@@ -13,6 +13,8 @@
 #include "ConfigValue.h"
 #include "utils.h"
 #include "checksumm.h"
+#include "SlowTicker.h"
+
 
 #include "Pin.h"
 #include "Gcode.h"
@@ -24,7 +26,10 @@
 #define clockwise_pin_checksum                   CHECKSUM("clockwise_pin")
 #define counter_clockwise_pin_checksum           CHECKSUM("counter_clockwise_pin")
 
+
 Motor::Motor(){
+  // Set the status to the default value
+  this->status = NONE;
 
 }
 
@@ -38,6 +43,9 @@ void Motor::on_module_loaded(){
       return;
   }
 
+  // Register for events we want to listen on
+  register_for_event(ON_GCODE_RECEIVED);
+
   // Tick pin is used to count each time the motor moves by one unit of movement
   this->tick_pin.from_string( THEKERNEL->config->value(motor_checksum, tick_pin_checksum)->by_default("nc" )->as_string())->as_input();
 
@@ -50,6 +58,8 @@ void Motor::on_module_loaded(){
   // Counter clockwise pin is used to instruct the motor to move in the counter clockwise direction
   this->counter_clockwise_pin.from_string( THEKERNEL->config->value(motor_checksum, counter_clockwise_pin_checksum)->by_default("nc" )->as_string())->as_output();
 
+  // Set up a regular tick to read pins and do things
+  THEKERNEL->slow_ticker->attach(1000, this, &Motor::tick);
 
 }
 
@@ -57,7 +67,50 @@ void Motor::on_gcode_received(void *argument){
     Gcode *gcode = static_cast<Gcode *>(argument);
 
     // M codes execute immediately
-    if (gcode->has_m && 0) {
 
+    // M570 is used to find the origin by moving counter-clockwise until the home pin gets to a high value
+    // When the home pin is hit, the absolute position (count) of the tick pin is reset
+    if (gcode->has_m && gcode->m == 570 ){
+      // Only if we actually have a counterclockwise pin
+      if( this->counter_clockwise_pin.connected() ){
+        // Set the current status to 'homing'
+        this->status = HOMING;
+
+        // Start moving towards the home button, counterclockwise
+        this->counter_clockwise_pin.set(HIGH);
+      }
     }
+    // M571 is used to move the motor to a specific position (count) of the tick pin
+    // M572 is used to set the motor moving in one direction or another ( or to stop it )
+    // M579 is used to read the current status ( active action, absolute position ) of this module
 }
+
+// Executed 1000 times a second, to check the various pins, and do actions as needed
+uint32_t Motor::tick(uint32_t dummy){
+
+  // If we are homing, and the value of the home pin changes
+  if( this->status == HOMING && this->current_home_pin_value != this->home_pin.get() ){
+    // We have succesfully homed, stop homing
+    this->status = NONE;
+    this->counter_clockwise_pin.set(LOW);
+  }
+
+
+  // Remember the home pin current value so we can check if it changed or not
+  this->current_home_pin_value = this->home_pin.get();
+  return dummy;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+// End of file
