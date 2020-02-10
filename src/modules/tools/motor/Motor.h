@@ -34,7 +34,10 @@ class Motor : public Module{
         Pin counter_clockwise_pin;// Pin for moving counter clockwise
 
         bool current_home_pin_value; // Current value of the home pin, so we can check if it changes
+        bool current_tick_pin_value; // Current value of the tick pin, so we can check if it changes
 
+        uint16_t position;        // Current position on the axis, in tick pin counts
+        uint16_t target_position; // Target position when moving to a new position
         STATUS status;
 
 };

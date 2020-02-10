@@ -31,6 +31,9 @@ Motor::Motor(){
   // Set the status to the default value
   this->status = NONE;
 
+  // When we start, the current position is 0
+  this->position = 0;
+
 }
 
 void Motor::on_module_loaded(){
@@ -70,7 +73,7 @@ void Motor::on_gcode_received(void *argument){
 
     // M570 is used to find the origin by moving counter-clockwise until the home pin gets to a high value
     // When the home pin is hit, the absolute position (count) of the tick pin is reset
-    if (gcode->has_m && gcode->m == 570 ){
+    if (gcode->has_m && gcode->m == 570 && this->status == NONE ){
       // Only if we actually have a counterclockwise pin
       if( this->counter_clockwise_pin.connected() ){
         // Set the current status to 'homing'
@@ -81,6 +84,33 @@ void Motor::on_gcode_received(void *argument){
       }
     }
     // M571 is used to move the motor to a specific position (count) of the tick pin
+    if (gcode->has_m && gcode->m == 571 && this->status == NONE ){
+      // Read the target position, as either absolute or relative
+
+      // A is for Absolute positionning
+      if( gcode->has_letter('A') ){
+        this->target_position = gcode->get_value('A');
+
+      // R is for Relative positionning
+      }else if( gcode->has_letter('R') ){
+        this->target_position = this->position + gcode->get_value('R');
+      }
+
+      // Set the current status to MOVING_TO
+      if( this->position != this->target_position){
+        // Change status to say we are currently moving to a new position
+        this->status = MOVING_TO;
+
+        // Start moving in the right direction
+        if( this->target_position > this->position ){
+          // If moving to a positive position relative to the current one, start moving clockwise
+          this->clockwise_pin.set(HIGH);
+        }else{
+          // Otherwise, move counter clockwise
+          this->counter_clockwise_pin.set(HIGH);
+        }
+      }
+    }
     // M572 is used to set the motor moving in one direction or another ( or to stop it )
     // M579 is used to read the current status ( active action, absolute position ) of this module
 }
@@ -90,14 +120,42 @@ uint32_t Motor::tick(uint32_t dummy){
 
   // If we are homing, and the value of the home pin changes
   if( this->status == HOMING && this->current_home_pin_value != this->home_pin.get() ){
-    // We have succesfully homed, stop homing
+    // We have succesfully homed
+    // Change the status to not homing
     this->status = NONE;
+
+    // Stop the motor movement
     this->counter_clockwise_pin.set(LOW);
+
+    // The positon is now 0, as we are at the beginning of the axis
+    this->position = 0;
   }
 
+  // If we are moving, and the value of the tick pin changes from LOW to HIGH
+  if( this->status == MOVING_TO && this->current_tick_pin_value != this->tick_pin.get() && this->current_tick_pin_value == LOW ){
+    // We have hit a tick, a marker along the way, act depending on the direction we are moving towards
+    // If moving clockwise
+    if( this->target_position > this->position ){
+      this->position++;
+    // If moving counter clockwise
+    }else{
+      this->position--;
+    }
+
+    // If we have arrived
+    if( this->position == this->target_position ){
+      this->status = NONE;
+      this->clockwise_pin.set(LOW);
+      this->counter_clockwise_pin.set(LOW);
+    }
+  }
 
   // Remember the home pin current value so we can check if it changed or not
   this->current_home_pin_value = this->home_pin.get();
+
+  // Remember the tick pin current value so we can check if it changed or not
+  this->current_tick_pin_value = this->tick_pin.get();
+
   return dummy;
 }
 
