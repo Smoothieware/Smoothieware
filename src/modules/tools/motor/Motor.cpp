@@ -14,6 +14,7 @@
 #include "utils.h"
 #include "checksumm.h"
 #include "SlowTicker.h"
+#include "StreamOutputPool.h"
 
 
 #include "Pin.h"
@@ -140,9 +141,25 @@ void Motor::on_gcode_received(void *argument){
           this->clockwise_pin.set(LOW);
         }
       }
-
     }
+
     // M579 is used to read the current status ( active action, absolute position ) of this module
+    if( gcode->has_m && gcode->m == 579 ){
+      switch(this->status) {
+        case NONE:
+          gcode->stream->printf("Motor: Not moving, Position: %d\n", this->position);
+          break;
+        case MOVING_TO:
+          gcode->stream->printf("Motor: Moving to new position, Position: %d, Target: %d\n", this->position, this->target_position);
+          break;
+        case MOVING_FOREVER:
+          gcode->stream->printf("Motor: Moving forever\n");
+          break;
+        case HOMING:
+          gcode->stream->printf("Motor: Homing\n");
+          break;
+        }
+    }
 }
 
 // Executed 1000 times a second, to check the various pins, and do actions as needed
