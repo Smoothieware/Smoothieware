@@ -89,8 +89,8 @@ void Motor::on_gcode_received(void *argument){
       // Read the target position, as either absolute or relative
 
       // A is for Absolute positionning
-      if( gcode->has_letter('A') ){
-        this->target_position = gcode->get_value('A');
+      if( gcode->has_letter('S') ){
+        this->target_position = gcode->get_value('S');
 
       // R is for Relative positionning
       }else if( gcode->has_letter('R') ){
@@ -115,9 +115,9 @@ void Motor::on_gcode_received(void *argument){
     // M572 is used to set the motor moving in one direction or another ( or to stop it )
     if( gcode->has_m && gcode->m == 572 && this->status == NONE ){
       // Determine which Direction we need to move in
-      if( gcode->has_letter('D') ){
+      if( gcode->has_letter('S') ){
         // Move clockwise forever
-        if( gcode->get_value('D') == 1 ){
+        if( gcode->get_value('S') == 1 ){
           // Set the new status
           this->status = MOVING_FOREVER;
 
@@ -125,14 +125,14 @@ void Motor::on_gcode_received(void *argument){
           this->clockwise_pin.set(HIGH);
 
         // Move counterclockwise forever
-        }else if( gcode->get_value('D') == -1 ){
+      }else if( gcode->get_value('S') == -1 ){
           // Set the new status
           this->status = MOVING_FOREVER;
 
           // Change the pin to start moving
           this->counter_clockwise_pin.set(HIGH);
 
-        }else if( gcode->get_value('D') == 0 ){
+        }else if( gcode->get_value('S') == 0 ){
           // Set the new status
           this->status = NONE;
 
