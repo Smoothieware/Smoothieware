@@ -176,12 +176,19 @@ void Drillingcycles::make_hole(Gcode *gcode)
 
     // if dwell, wait for x seconds
     if (this->sticky_p > 0) {
-        // dwell exprimed in seconds
-        if (this->dwell_units == DWELL_UNITS_S)
-            this->send_gcode("G4 S%u", this->sticky_p);
-        // dwell exprimed in milliseconds
-        else
-            this->send_gcode("G4 P%f", this->sticky_p);
+        if (this->dwell_units == DWELL_UNITS_S){
+            // dwell exprimed in seconds
+            this->send_gcode("G4 S%f", this->sticky_p);
+        }else{
+            // dwell exprimed in milliseconds
+            if(THEKERNEL->is_grbl_mode()) {
+                // in grbl mode (and linuxcnc) P is decimal seconds
+                this->send_gcode("G4 P%f", this->sticky_p * 1000.0);
+            }else{
+                // in reprap P is milliseconds, they always have to be different!
+                this->send_gcode("G4 P%f", this->sticky_p);
+            }
+        }
     }
 
     // rapids retract at R-Plane (Initial-Z or R)
