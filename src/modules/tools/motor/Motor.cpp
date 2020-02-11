@@ -117,7 +117,7 @@ void Motor::on_gcode_received(void *argument){
       }
     }
     // M572 is used to set the motor moving in one direction or another ( or to stop it )
-    if( gcode->has_m && gcode->m == 572 && this->status == NONE ){
+    if( gcode->has_m && gcode->m == 572 && ( this->status == NONE || this->status == MOVING_FOREVER ) ){
       // Determine which Direction we need to move in
       if( gcode->has_letter('U') ){
         // Move clockwise forever
@@ -127,6 +127,7 @@ void Motor::on_gcode_received(void *argument){
 
           // Change the pin to start moving
           this->clockwise_pin.set(HIGH);
+          this->counter_clockwise_pin.set(LOW);
 
         // Move counterclockwise forever
       }else if( gcode->get_value('U') == -1 ){
@@ -135,6 +136,7 @@ void Motor::on_gcode_received(void *argument){
 
           // Change the pin to start moving
           this->counter_clockwise_pin.set(HIGH);
+          this->clockwise_pin.set(LOW);
 
         }else if( gcode->get_value('U') == 0 ){
           // Set the new status
