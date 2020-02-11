@@ -65,6 +65,10 @@ void Motor::on_module_loaded(){
   // Set up a regular tick to read pins and do things
   THEKERNEL->slow_ticker->attach(1000, this, &Motor::tick);
 
+  // Set the pins to their default values so they don't float
+  this->counter_clockwise_pin.set(LOW);
+  this->clockwise_pin.set(LOW);
+
 }
 
 void Motor::on_gcode_received(void *argument){
