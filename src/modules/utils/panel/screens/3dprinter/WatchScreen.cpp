@@ -141,23 +141,6 @@ void WatchScreen::on_refresh()
         THEPANEL->lcd->setLed(LED_HOT, is_hot);
 
         THEPANEL->lcd->setLed(LED_FAN_ON, this->fan_state);
-
-        // TODO: Remove this once RRDGLCD supports new graphics functions
-        if (THEPANEL->lcd->hasGraphics() && !THEPANEL->lcd->hasFullGraphics()) {
-            // display the graphical icons below the status are
-            // for (int i = 0; i < 5; ++i) {
-            //     THEPANEL->lcd->bltGlyph(i*24, 42, 16, 16, icons, 15, i*24, 0);
-            // }
-            if(heon&0x01) THEPANEL->lcd->bltGlyph(0, 42, 16, 16, large_icons, 2, 0, 0);
-            if(heon&0x02) THEPANEL->lcd->bltGlyph(27, 42, 16, 16, large_icons, 2, 0, 16);
-            if(heon&0x04) THEPANEL->lcd->bltGlyph(55, 42, 16, 16, large_icons, 2, 0, 32);
-
-            if (bed_on)
-                THEPANEL->lcd->bltGlyph(83, 42, 16, 16, large_icons, 2, 0, 48);
-
-            if(this->fan_state)
-                THEPANEL->lcd->bltGlyph(111, 42, 16, 16, large_icons, 2, 0, 64);
-        }
     }
 }
 
@@ -314,14 +297,8 @@ const char *WatchScreen::get_network()
 void WatchScreen::redraw()
 {
     if (THEPANEL->lcd->hasGraphics()) {
-        // TODO: Remove this check once additional graphics functions have been implemented for RRDGLCD
-        if (THEPANEL->lcd->hasFullGraphics()) {
-            // Use the full graphic watch screen on supported displays
-            this->draw_graphics();
-        } else {
-            // Revert to old screen for RRD
-            this->refresh_screen(true);
-        }
+        // Use the full graphic watch screen on supported displays
+        this->draw_graphics();
     } else {
         // Use the text based menu system for text only displays
         this->refresh_screen(false);

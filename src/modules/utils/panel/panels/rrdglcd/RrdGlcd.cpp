@@ -130,7 +130,7 @@ static const uint8_t font5x8[] = {
     0x40,0x20,0x10,0x20,0x40,0x00,0xF8,0x00, 0x10,0x20,0x40,0x20,0x10,0x00,0xF8,0x00, // 0xF2, 0xF3
     0x38,0x28,0x20,0x20,0x20,0x20,0x20,0x20, 0x20,0x20,0x20,0x20,0x20,0xA0,0xA0,0xE0, // 0xF4, 0xF5
     0x30,0x30,0x00,0xF8,0x00,0x30,0x30,0x00, 0x00,0xE8,0xB8,0x00,0xE8,0xB8,0x00,0x00, // 0xF6, 0xF7
-    0x70,0xD8,0xD8,0x70,0x00,0x00,0x00,0x00, 0x50,0x20,0x00,0x00,0x00,0x00,0x08,0x00, // 0xF8, 0xF9
+    0x40,0xA0,0x40,0x00,0x00,0x00,0x00,0x00, 0x50,0x20,0x00,0x00,0x00,0x00,0x08,0x00, // 0xF8, 0xF9 //(0xF8) changed the deg symbol
     0x00,0x00,0x00,0x00,0x30,0x00,0x00,0x00, 0x38,0x20,0x20,0x20,0xA0,0xA0,0x60,0x20, // 0xFA, 0xFB
     0x70,0x48,0x48,0x48,0x48,0x00,0x00,0x00, 0x70,0x18,0x30,0x60,0x78,0x00,0x00,0x00, // 0xFC, 0xFD
     0x00,0x00,0x78,0x78,0x78,0x78,0x00,0x00
@@ -207,45 +207,85 @@ void RrdGlcd::clearScreen() {
     if(fb == NULL) return;
     memset(this->fb, 0, FB_SIZE);
     dirty= true;
+    this->tx = 0;
+    this->ty = 0;
+    this->text_color = 1;
+    this->text_background = true;
+}
+
+void RrdGlcd::set_background(bool bg) {
+    this->text_background = bg;
+}
+
+void RrdGlcd::set_color(int c){
+    this->text_color = c;
+}
+
+void RrdGlcd::set_cursor(uint8_t col, uint8_t row){
+    this->tx = col * 6;
+    this->ty = row * 8;
+}
+
+void RrdGlcd::set_cursorPX(int x, int y){
+    this->tx = x;
+    this->ty = y;
 }
 
 // render into local screenbuffer
-void RrdGlcd::displayString(int row, int col, const char *ptr, int length) {
+void RrdGlcd::displayString(const char *ptr, int length) {
     for (int i = 0; i < length; ++i) {
-        displayChar(row, col, ptr[i]);
-        col+=1;
-    }
-    dirty= true;
+    drawChar(this->tx, this->ty, ptr[i], this->text_color, this->text_background);	
+    }	
 }
 
-void RrdGlcd::renderChar(uint8_t *fb, char c, int ox, int oy) {
-    if(fb == NULL) return;
-    // using the specific font data where x is in one byte and y is in consecutive bytes
-    // the x bits are left aligned and right padded
-    int i= c*8; // character offset in font array
-    int o= ox%8; // where in fb byte does it go
-    int a= oy*16 + ox/8; // start address in frame buffer
-    int mask= ~0xF8 >> o; // mask off top bits
-    int mask2= ~0xF8 << (8-o); // mask off bottom bits
-    for(int y=0;y<8;y++) {
-        int b= font5x8[i+y]; // get font byte
-        fb[a] &= mask; // clear top bits for font
-        fb[a] |= (b>>o); // or in the fonts 1 bits
-        if(o >= 4) { // it spans two fb bytes
-            fb[a+1] &= mask2; // clear bottom bits for font
-            fb[a+1] |= (b<<(8-o)); // or in the fonts 1 bits
+/**
+* @brief Draws a character to the screen buffer
+* @param x   X coordinate
+* @param y   Y coordinate
+* @param c   Character to print
+* @param color Drawing mode for foreground.
+* @param bg  True: Draw background, False: Transparent background)
+*/
+int RrdGlcd::drawChar(int x, int y, unsigned char c, int color, bool bg) {
+    int retVal = -1;
+    if (c == '\n') {
+        this->ty += 8;
+        retVal = -tx;
+    } else if (c == '\r') {
+        retVal = -tx;
+    } else {
+        // using the specific font data where x is in one byte and y is in consecutive bytes
+        // the x bits are left aligned and right padded
+        int i= c*8; // character offset in font array
+        int o= x%8; // where in fb byte does it go
+        int a= y*16 + x/8; // start address in frame buffer
+        int mask= 0b11111000 >> o; // mask off top bits
+        int mask2= 0b11111000 << (8-o); // mask off bottom bits
+        for(int k=0;k<8;k++) {
+            int b= font5x8[i+k]; // get font byte
+            if (bg) drawByte(a, mask, !color);
+            drawByte(a, (b>>o), color);		
+            if(o >= 4) { // it spans two fb bytes
+                if (bg) drawByte(a+1, mask2, !color);
+                drawByte(a+1, (b<<(8-o)), color);
+            }
+            a+=16; // next line
         }
-        a+=16; // next line
+        retVal = 6;
+        this->tx += 6;
     }
+
+    return retVal;
 }
 
-void RrdGlcd::displayChar(int row, int col, char c) {
-    int x= col*6;
-    // if this wraps the line ignore it
-    if(x+6 > WIDTH) return;
-
-    // convert row/column into y and x pixel positions based on font size
-    renderChar(this->fb, c, x, row*8);
+void RrdGlcd::drawByte(int index, uint8_t mask, int color){
+    if (color == 1) {
+        fb[index] |= mask;
+    } else if (color == 0) {
+        fb[index] &= ~mask;
+    } else {
+        fb[index] ^= mask;
+    }
 }
 
 void RrdGlcd::renderGlyph(int xp, int yp, const uint8_t *g, int pixelWidth, int pixelHeight) {
@@ -294,6 +334,29 @@ void RrdGlcd::renderGlyph(int xp, int yp, const uint8_t *g, int pixelWidth, int 
                 b= *g++;
             }
         }
+    }
+}
+
+void RrdGlcd::pixel(int x, int y, int color) {
+    if (y < HEIGHT && x < WIDTH) {
+        unsigned char mask = 0x80 >> (x % 8);
+        drawByte(y * (WIDTH/8) + (x/8), mask, color);
+    }
+}
+void RrdGlcd::drawHLine(int x, int y, int w, int color) {
+    for (int i = 0; i < w; i++) {
+		pixel( x+i,  y,  color);
+    }
+}
+
+void RrdGlcd::drawVLine(int x, int y, int h, int color) {
+    for (int i = 0; i < h; i++) {
+		pixel( x,  y+i,  color);
+    }
+}
+void RrdGlcd::drawBox(int x, int y, int w, int h, int color) {
+    for (int i = 0; i < w; i++) {
+        drawVLine(x + i, y, h, color);
     }
 }
 
