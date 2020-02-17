@@ -666,7 +666,7 @@ void SimpleShell::version_command( string parameters, StreamOutput *stream)
     #endif
     stream->printf("%d axis\n", MAX_ROBOT_ACTUATORS);
     if(!(dev & 0x00100000)) {
-        stream->printf("WARNING: This is not a sanctioned board and may be unreliable and even dangerous.\nThis MCU is deprecated, and cannot guarantee proper function\n");
+        stream->printf("NOTICE: This MCU is deprecated, and cannot guarantee proper function\n");
         THEKERNEL->set_bad_mcu(true);
     }else{
         THEKERNEL->set_bad_mcu(false);
@@ -1034,6 +1034,11 @@ void SimpleShell::md5sum_command( string parameters, StreamOutput *stream )
 // runs several types of test on the mechanisms
 void SimpleShell::test_command( string parameters, StreamOutput *stream)
 {
+    if(!THECONVEYOR->is_idle()) {
+        stream->printf("error: tests are not allowed while printing or busy\n");
+        return;
+    }
+
     AutoPushPop app; // this will save the state and restore it on exit
     string what = shift_parameter( parameters );
 
@@ -1188,11 +1193,56 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
 
         //stream->printf("done\n");
 
+    }else if (what == "pulse") {
+        // issues a step pulse then wqiats then unsteps, for testing when stepper moves
+        string axis = shift_parameter( parameters );
+        string reps = shift_parameter( parameters );
+        if(axis.empty()) {
+            stream->printf("error: Need axis [iterations]\n");
+            return;
+        }
+
+        char ax= toupper(axis[0]);
+        uint8_t a= ax >= 'X' ? ax - 'X' : ax - 'A' + 3;
+
+        if(a > C_AXIS) {
+            stream->printf("error: axis must be x, y, z, a, b, c\n");
+            return;
+        }
+
+        if(a >= THEROBOT->get_number_registered_motors()) {
+            stream->printf("error: axis is out of range\n");
+            return;
+        }
+
+        int nreps= 1;
+        if(!reps.empty()) {
+            nreps= strtol(reps.c_str(), NULL, 10);
+        }
+
+        uint32_t delayms= 5000.0F; // step every five seconds
+        for(int s= 0;s<nreps;s++) {
+            if(THEKERNEL->is_halted()) break;
+            stream->printf("// leading edge\n");
+            THEROBOT->actuators[a]->step();
+            safe_delay_ms(delayms);
+            stream->printf("// trailing edge\n");
+            THEROBOT->actuators[a]->unstep();
+            if(THEKERNEL->is_halted()) break;
+            safe_delay_ms(delayms);
+        }
+
+        // reset the position based on current actuator position
+        THEROBOT->reset_position_from_current_actuator_position();
+
+        stream->printf("done\n");
+
     }else {
         stream->printf("usage:\n test jog axis distance iterations [feedrate]\n");
         stream->printf(" test square size iterations [feedrate]\n");
         stream->printf(" test circle radius iterations [feedrate]\n");
         stream->printf(" test raw axis steps steps/sec\n");
+        stream->printf(" test pulse axis iterations\n");
     }
 }
 
@@ -1285,7 +1335,6 @@ void SimpleShell::help_command( string parameters, StreamOutput *stream )
     stream->printf("reset - reset smoothie\r\n");
     stream->printf("dfu - enter dfu boot loader\r\n");
     stream->printf("break - break into debugger\r\n");
-    stream->printf("config-get [<configuration_source>] <configuration_setting>\r\n");
     stream->printf("config-set [<configuration_source>] <configuration_setting> <value>\r\n");
     stream->printf("get [pos|wcs|state|status|fk|ik]\r\n");
     stream->printf("get temp [bed|hotend]\r\n");

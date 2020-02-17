@@ -285,7 +285,7 @@ try_again:
                                 #endif
 
                                 if(THEKERNEL->is_bad_mcu()) {
-                                    new_message.stream->printf(", X-WARNING:This is not a sanctioned board and may be unreliable and even dangerous. This MCU is deprecated, and cannot guarantee proper function\n");
+                                    new_message.stream->printf(", X-WARNING:deprecated_MCU");
                                 }
                                 new_message.stream->printf("\nok\n");
                                 return;
