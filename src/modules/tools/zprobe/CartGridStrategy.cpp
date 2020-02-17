@@ -454,7 +454,9 @@ bool CartGridStrategy::handleGcode(Gcode *gcode)
             if(gcode->subcode == 1) {
                 print_bed_level(gcode->stream);
             } else {
+                __disable_irq();
                 if(load_grid(gcode->stream)) setAdjustFunction(true);
+                __enable_irq();
             }
             return true;
 
