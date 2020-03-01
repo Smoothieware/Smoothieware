@@ -1149,7 +1149,7 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
         stream->printf("done\n");
 
     }else if (what == "raw" || what == "acc") {
-        // issues raw steps (or acctuator units) to the specified axis usage: axis steps steps/sec
+        // issues raw steps (or actuator units) to the specified axis usage: axis steps steps/sec
         string axis = shift_parameter( parameters );
         string stepstr = shift_parameter( parameters );
         string stepspersec = shift_parameter( parameters );
@@ -1178,9 +1178,9 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
 
         if(what == "acc") {
             // convert actuator units to steps
-            steps= THEROBOT->actuators[a]->get_steps_per_mm() * steps;
+            steps= lroundf(THEROBOT->actuators[a]->get_steps_per_mm() * steps);
             // convert steps per unit to steps/sec
-            sps= THEROBOT->actuators[a]->get_steps_per_mm() * sps;
+            sps= lroundf(THEROBOT->actuators[a]->get_steps_per_mm() * sps);
         }
         sps= std::max(sps, 1UL);
 
