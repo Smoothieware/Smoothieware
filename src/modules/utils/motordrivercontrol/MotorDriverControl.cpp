@@ -16,6 +16,7 @@
 #include "mbed.h" // for SPI
 #include "libs/SoftSerial/BufferedSoftSerial.h" //for UART
 
+#include "drivers/StepperDrv.h"
 #include "drivers/TMC26X/TMC26X.h"
 #include "drivers/TMC22X/TMC22X.h"
 #include "drivers/DRV8711/drv8711.h"
@@ -49,7 +50,7 @@
 
 MotorDriverControl::MotorDriverControl(uint8_t id) : id(id)
 {
-    write_only=false;
+    write_only= false;
     enable_event= false;
     current_override= false;
     microstep_override= false;
@@ -121,56 +122,62 @@ bool MotorDriverControl::config_module(uint16_t cs)
 
     if(str == "DRV8711") {
         chip= DRV8711;
-        drv8711= new DRV8711DRV(std::bind( &MotorDriverControl::sendSPI, this, _1, _2, _3), axis);
+        DRV= new DRV8711DRV(std::bind( &MotorDriverControl::sendSPI, this, _1, _2, _3), axis);
 
     }else if(str == "TMC2660") {
         chip= TMC2660;
-        tmc26x= new TMC26X(std::bind( &MotorDriverControl::sendSPI, this, _1, _2, _3), axis);
+        DRV= new TMC26X(std::bind( &MotorDriverControl::sendSPI, this, _1, _2, _3), axis);
 
     }else if(str == "TMC2208") {
         chip= TMC2208;
-        tmc22x= new TMC22X(std::bind( &MotorDriverControl::sendUART, this, _1, _2, _3), axis);
+        DRV= new TMC22X(std::bind( &MotorDriverControl::sendUART, this, _1, _2, _3), axis);
 
     }else{
         THEKERNEL->streams->printf("MotorDriverControl %c ERROR: Unknown chip type: %s\n", axis, str.c_str());
         return false;
     }
 
-    if(chip == TMC2208) {
-        //Configure soft UART
+    //Configure soft UART
+    if(DRV->connection_method == stepper_connection_methods::UART) {
     		
         //select TX and RX pins
         sw_uart_tx_pin = new Pin();
         sw_uart_rx_pin = new Pin();
+        
         sw_uart_tx_pin->from_string(THEKERNEL->config->value(motor_driver_control_checksum, cs, sw_uart_tx_pin_checksum)->by_default("nc")->as_string())->as_output();
-        sw_uart_rx_pin->from_string(THEKERNEL->config->value(motor_driver_control_checksum, cs, sw_uart_rx_pin_checksum)->by_default("nc")->as_string())->as_input();
-
+        
         if(!sw_uart_tx_pin->connected()) {
             THEKERNEL->streams->printf("MotorDriverControl %c ERROR: uart tx pin not defined\n", axis);
             return false; 
         }
-
-        if(sw_uart_rx_pin->connected()) {
-            // Read/Write mode
-            PinName txd = port_pin((PortName)(sw_uart_tx_pin->port_number), sw_uart_tx_pin->pin);
-            PinName rxd = port_pin((PortName)(sw_uart_rx_pin->port_number), sw_uart_rx_pin->pin);
-
-            write_only   = false;
-            this->serial = new BufferedSoftSerial(txd, rxd);
-        } else {
-            // Write only mode
-            PinName txd = port_pin((PortName)(sw_uart_tx_pin->port_number), sw_uart_tx_pin->pin);
-            PinName rxd = NC;
-
-            write_only   = true;
-            this->serial = new BufferedSoftSerial(txd, rxd);
+        
+        PinName txd = port_pin((PortName)(sw_uart_tx_pin->port_number), sw_uart_tx_pin->pin);
+        PinName rxd = NC;
+        
+        // Read/Write or Write-only mode?
+        if (THEKERNEL->config->value(motor_driver_control_checksum, cs, sw_uart_rx_pin_checksum)->by_default("nc")->as_string() != "NC" ) {            
+            sw_uart_rx_pin->from_string(THEKERNEL->config->value(motor_driver_control_checksum, cs, sw_uart_rx_pin_checksum)->by_default("nc")->as_string())->as_input();
+            if(!sw_uart_rx_pin->connected()) {
+                THEKERNEL->streams->printf("MotorDriverControl %c ERROR: cannot open RX PIN, falling back to writeonly!\n", axis);
+                write_only = true;
+            } else {
+                rxd = port_pin((PortName)(sw_uart_rx_pin->port_number), sw_uart_rx_pin->pin);
+                write_only = false;
+            }
         }
+
+        DRV->set_write_only(write_only);
+        this->serial = new BufferedSoftSerial(txd, rxd);
 
         //select soft UART baudrate
         int sw_uart_baudrate = THEKERNEL->config->value(motor_driver_control_checksum, cs, sw_uart_baudrate_checksum)->by_default(9600)->as_number();
 
+        if (sw_uart_baudrate < 9600 || sw_uart_baudrate > 115200) {
+            sw_uart_baudrate = 9600;
+        }
+
         this->serial->baud(sw_uart_baudrate);
-    } else {
+    } else if(DRV->connection_method == stepper_connection_methods::SPI ) {
         //Configure SPI
     		
         //select chip select pin
@@ -200,16 +207,12 @@ bool MotorDriverControl::config_module(uint16_t cs)
         this->spi = new mbed::SPI(mosi, miso, sclk);
         this->spi->frequency(spi_frequency);
         this->spi->format(8, 3); // 8bit, mode3
+    } else {
+        THEKERNEL->streams->printf("MotorDriverControl %c ERROR: Unsupported connection method! Only SPI and UART supported.\n", axis);
+        return false;
     }
 
-    // set default max currents for each chip, can be overidden in config
-    switch(chip) {
-        case DRV8711: max_current= 4000; break;
-        case TMC2660: max_current= 3000; break;
-        case TMC2208: max_current= 3000; break;
-    }
-
-    max_current= THEKERNEL->config->value(motor_driver_control_checksum, cs, max_current_checksum )->by_default((int)max_current)->as_number(); // in mA
+    max_current= THEKERNEL->config->value(motor_driver_control_checksum, cs, max_current_checksum )->by_default((int)DRV->max_current)->as_number(); // in mA
     //current_factor= THEKERNEL->config->value(motor_driver_control_checksum, cs, current_factor_checksum )->by_default(1.0F)->as_number();
 
     current= THEKERNEL->config->value(motor_driver_control_checksum, cs, current_checksum )->by_default(1000)->as_number(); // in mA
@@ -228,19 +231,11 @@ bool MotorDriverControl::config_module(uint16_t cs)
             uint32_t reg= 0;
             for(auto i : regs) {
                 // this just sets the local storage, it does not write to the chip
-                switch(chip) {
-                    case DRV8711: drv8711->set_raw_register(&StreamOutput::NullStream, ++reg, i); break;
-                    case TMC2660: tmc26x->setRawRegister(&StreamOutput::NullStream, ++reg, i); break;
-                    case TMC2208: tmc22x->setRawRegister(&StreamOutput::NullStream, ++reg, i); break;
-                }
+                DRV->set_raw_register(&StreamOutput::NullStream, ++reg, i);
             }
 
             // write the stored registers
-            switch(chip) {
-                case DRV8711: drv8711->set_raw_register(&StreamOutput::NullStream, 255, 0); break;
-                case TMC2660: tmc26x->setRawRegister(&StreamOutput::NullStream, 255, 0); break;
-                case TMC2208: tmc22x->setRawRegister(&StreamOutput::NullStream, 255, 0); break;
-            }
+            DRV->set_raw_register(&StreamOutput::NullStream, 255, 0);
         }
 
     }else{
@@ -259,10 +254,10 @@ bool MotorDriverControl::config_module(uint16_t cs)
     }
 
     //finish driver setup
-    if(chip == TMC2208) {
-        THEKERNEL->streams->printf("MotorDriverControl INFO: configured motor %c (%d): as %s, tx: %04X, rx: %04X\n", axis, id, "TMC2208", (sw_uart_tx_pin->port_number<<8)|sw_uart_tx_pin->pin, (sw_uart_rx_pin->port_number<<8)|sw_uart_rx_pin->pin);
+    if(DRV->connection_method== stepper_connection_methods::UART) {
+        THEKERNEL->streams->printf("MotorDriverControl INFO: configured motor %c (%d): as %s, tx: %04X, rx: %04X\n", axis, id, THEKERNEL->config->value( motor_driver_control_checksum, cs, chip_checksum)->by_default("")->as_string().c_str(), (sw_uart_tx_pin->port_number<<8)|sw_uart_tx_pin->pin, (sw_uart_rx_pin->port_number<<8)|sw_uart_rx_pin->pin);
     } else {
-        THEKERNEL->streams->printf("MotorDriverControl INFO: configured motor %c (%d): as %s, cs: %04X\n", axis, id, chip==TMC2660?"TMC2660":chip==DRV8711?"DRV8711":"UNKNOWN", (spi_cs_pin->port_number<<8)|spi_cs_pin->pin);
+        THEKERNEL->streams->printf("MotorDriverControl INFO: configured motor %c (%d): as %s, cs: %04X\n", axis, id, THEKERNEL->config->value( motor_driver_control_checksum, cs, chip_checksum)->by_default("")->as_string().c_str(), (spi_cs_pin->port_number<<8)|spi_cs_pin->pin);
     }
 
     return true;
@@ -308,20 +303,8 @@ void MotorDriverControl::on_second_tick(void *argument)
     // we don't want to keep checking once we have been halted by an error
     if(THEKERNEL->is_halted()) return;
 
-    bool alarm=false;;
-    switch(chip) {
-        case DRV8711:
-            alarm= drv8711->check_alarm();
-            break;
-
-        case TMC2660:
-            alarm= tmc26x->checkAlarm();
-            break;
-
-        case TMC2208:
-            alarm= tmc22x->checkAlarm();
-            break;
-    }
+    bool alarm=false;
+    alarm=DRV->check_alarm();
 
     if(halt_on_alarm && alarm) {
         THEKERNEL->call_event(ON_HALT, nullptr);
@@ -387,13 +370,14 @@ void MotorDriverControl::on_gcode_received(void *argument)
                 // M911 no args dump status for all drivers, M911.1 P0|A0 dump for specific driver
                 if (!write_only) {
                     gcode->stream->printf("Motor %d (%c)...\n", id, axis);
-                    dump_status(gcode->stream, true);
+                    dump_status(gcode->stream);
                 }
                 
             }else if( (gcode->has_letter('P') && gcode->get_value('P') == id) || gcode->has_letter(axis)) {
                 if(gcode->subcode == 1) {
                     if (!write_only) {
-                        dump_status(gcode->stream, !gcode->has_letter('R'));
+                        //dump_status(gcode->stream, !gcode->has_letter('R'));
+                        dump_status(gcode->stream);
                     }
 
                 }else if(gcode->subcode == 2 && gcode->has_letter('R') && gcode->has_letter('V')) {
@@ -420,118 +404,48 @@ void MotorDriverControl::on_gcode_received(void *argument)
 
 void MotorDriverControl::initialize_chip(uint16_t cs)
 {
-    // send initialization sequence to chips
-    if(chip == DRV8711) {
-        drv8711->init(cs);
-        set_current(current);
-        set_microstep(microsteps);
-
-    }else if(chip == TMC2660){
-        tmc26x->init(cs);
-        set_current(current);
-        set_microstep(microsteps);
-        //set_decay_mode(decay_mode);
-
-    }else if(chip == TMC2208){
-        tmc22x->init(cs);
-        set_current(current);
-        set_microstep(microsteps);
-        //set_decay_mode(decay_mode);
-    }
+    DRV->init(cs);
+    set_current(current);
+    set_microstep(microsteps);
+    // not yet implemented
+    //set_decay_mode(decay_mode);
 }
 
 // set current in milliamps
 void MotorDriverControl::set_current(uint32_t c)
 {
-    switch(chip) {
-        case DRV8711:
-            drv8711->set_current(c);
-            break;
-
-        case TMC2660:
-            tmc26x->setCurrent(c);
-            break;
-
-        case TMC2208:
-            tmc22x->setCurrent(c);
-            break;
-    }
+    DRV->set_current(c);
 }
 
 // set microsteps where n is the number of microsteps eg 64 for 1/64
 uint32_t MotorDriverControl::set_microstep( uint32_t n )
 {
     uint32_t m= n;
-    switch(chip) {
-        case DRV8711:
-            m= drv8711->set_microsteps(n);
-            break;
-
-        case TMC2660:
-            tmc26x->setMicrosteps(n);
-            m= tmc26x->getMicrosteps();
-            break;
-
-        case TMC2208:
-            tmc22x->setMicrosteps(n);
-            m= tmc22x->getMicrosteps();
-            break;
-    }
+    m= DRV->set_microsteps(n);
     return m;
 }
 
 // TODO how to handle this? SO many options
 void MotorDriverControl::set_decay_mode( uint8_t dm )
 {
-    switch(chip) {
-        case DRV8711: break;
-        case TMC2660: break;
-        case TMC2208: break;
-    }
+    // this should be handled within the driver
 }
 
 void MotorDriverControl::enable(bool on)
 {
-    switch(chip) {
-        case DRV8711:
-            drv8711->set_enable(on);
-            break;
-
-        case TMC2660:
-            tmc26x->setEnabled(on);
-            break;
-
-        case TMC2208:
-            tmc22x->setEnabled(on);
-            break;
-    }
+    DRV->set_enable(on);
 }
 
-void MotorDriverControl::dump_status(StreamOutput *stream, bool b)
+void MotorDriverControl::dump_status(StreamOutput *stream)
 {
-    switch(chip) {
-        case DRV8711:
-            drv8711->dump_status(stream);
-            break;
-
-        case TMC2660:
-            tmc26x->dumpStatus(stream, b);
-            break;
-
-        case TMC2208:
-            tmc22x->dumpStatus(stream, b);
-            break;
-    }
+    DRV->dump_status(stream);
 }
 
 void MotorDriverControl::set_raw_register(StreamOutput *stream, uint32_t reg, uint32_t val)
 {
     bool ok= false;
-    switch(chip) {
-        case DRV8711: ok= drv8711->set_raw_register(stream, reg, val); break;
-        case TMC2660: ok= tmc26x->setRawRegister(stream, reg, val); break;
-        case TMC2208: ok= tmc22x->setRawRegister(stream, reg, val); break;
-    }
+    ok= DRV->set_raw_register(stream, reg, val);
+
     if(ok) {
         stream->printf("register operation succeeded\n");
     }else{
@@ -541,40 +455,24 @@ void MotorDriverControl::set_raw_register(StreamOutput *stream, uint32_t reg, ui
 
 void MotorDriverControl::set_options(Gcode *gcode)
 {
-    switch(chip) {
-        case DRV8711: break;
-
-        case TMC2660: {
-            TMC26X::options_t options= gcode->get_args_int();
-            if(options.size() > 0) {
-                if(tmc26x->set_options(options)) {
-                    gcode->stream->printf("options set\n");
-                }else{
-                    gcode->stream->printf("failed to set any options\n");
-                }
-            }
-            // options.clear();
-            // if(tmc26x->get_optional(options)) {
-            //     // foreach optional value
-            //     for(auto &i : options) {
-            //         // print all current values of supported options
-            //         gcode->stream->printf("%c: %d ", i.first, i.second);
-            //         gcode->add_nl = true;
-            //     }
-            // }
+    StepperDrv::options_t options= gcode->get_args_int();
+    
+    if(options.size() > 0) {
+        if(DRV->set_options(options)) {
+            gcode->stream->printf("options set\n");
+        }else{
+            gcode->stream->printf("failed to set any options\n");
         }
-        case TMC2208: {
-            TMC22X::options_t options= gcode->get_args_int();
-            if(options.size() > 0) {
-                if(tmc22x->set_options(options)) {
-                    gcode->stream->printf("options set\n");
-                }else{
-                    gcode->stream->printf("failed to set any options\n");
-                }
-            }
-        }
-        break;
     }
+    // options.clear();
+    // if(DRV->get_optional(options)) {
+    //     // foreach optional value
+    //     for(auto &i : options) {
+    //         // print all current values of supported options
+    //         gcode->stream->printf("%c: %d ", i.first, i.second);
+    //         gcode->add_nl = true;
+    //     }
+    // }
 }
 
 // Called by the drivers codes to send and receive SPI data to/from the chip

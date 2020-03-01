@@ -73,33 +73,41 @@
  */
 #define TMC22X_OVERTEMPERATURE_SHUTDOWN 2
 
-//which values can be read out
+//which registers can be read out - this is dirty, but it works for now
 /*!
- * Selects to readout the microstep position from the motor.
+ * Selects to read out the GCONF reg (holding also the current setting from the motor).
  *\sa readStatus()
  */
-#define TMC22X_READOUT_MICROSTEP 0
+#define TMC22X_READ_GCONF 0
+
 /*!
- * Selects to read out the current setting from the motor.
+ * Selects to readout the MSCNT reg (holding the microstep position from the motor).
  *\sa readStatus()
  */
-#define TMC22X_READOUT_CURRENT 1
+#define TMC22X_READ_MSCNT 1
+
+/*!
+ * Selects to read out the DRV_STATUS reg (holding also the current setting from the motor).
+ *\sa readStatus()
+ */
+#define TMC22X_READ_DRV_STATUS 2
+
 
 //some default values used in initialization
-#define DEFAULT_MICROSTEPPING_VALUE    32
-#define ZEROS_DEFAULT_DATA             0x00000000
-#define GCONF_DEFAULT_DATA             0x00000101
-#define TPOWERDOWN_DEFAULT_DATA        0x00000014
-#define CHOPCONF_DEFAULT_DATA          0x10000053
-#define PWMCONF_DEFAULT_DATA           0xC10D0024
+#define TMC22X_DEFAULT_MICROSTEPPING_VALUE    32
+#define TMC22X_ZEROS_DEFAULT_DATA             0x00000000
+#define TMC22X_GCONF_DEFAULT_DATA             0x00000101
+#define TMC22X_TPOWERDOWN_DEFAULT_DATA        0x00000014
+#define TMC22X_CHOPCONF_DEFAULT_DATA          0x10000053
+#define TMC22X_PWMCONF_DEFAULT_DATA           0xC10D0024
 
 //driver access request (read MSB bit is 0 and write MSB bit is 1)
-#define READ  0x00
-#define WRITE 0x80
+#define TMC22X_READ  0x00
+#define TMC22X_WRITE 0x80
 
 //sync and address of the target driver
-#define SYNC        0x05
-#define SLAVEADDR   0x00
+#define TMC22X_SYNC        0x05
+#define TMC22X_SLAVEADDR   0x00
 
 //TMC22X register definitions
 
@@ -107,58 +115,58 @@
 
 //Register                             Address   Type      N Bits    Description
 /********************************************************************************/
-#define GCONF_REGISTER                 0x00      //RW      10        //Global configuration flags
+#define TMC22X_GCONF_REGISTER                 0x00      //RW      10        //Global configuration flags
 /********************************************************************************/
 //Function                             Bit                 Description
-#define GCONF_I_SCALE_ANALOG           (1 << 0)            //0: Use internal reference derived from 5VOUT
+#define TMC22X_GCONF_I_SCALE_ANALOG           (1 << 0)            //0: Use internal reference derived from 5VOUT
                                                            //1: Use voltage supplied to VREF as current reference
                                                            //Reset default=1
-#define GCONF_INTERNAL_RSENSE          (1 << 1)            //0: Operation with external sense resistors
+#define TMC22X_GCONF_INTERNAL_RSENSE          (1 << 1)            //0: Operation with external sense resistors
                                                            //1: Internal sense resistors. Use current supplied into VREF as reference for internal sense resistor. VREF pin internally is driven to GND in this mode.
                                                            //Reset default: OTP
-#define GCONF_EN_SPREADCYCLE           (1 << 2)            //0: stealthChop PWM mode enabled (depending on velocity thresholds). Initially switch from off to on state while in stand still, only.
+#define TMC22X_GCONF_EN_SPREADCYCLE           (1 << 2)            //0: stealthChop PWM mode enabled (depending on velocity thresholds). Initially switch from off to on state while in stand still, only.
                                                            //1: spreadCycle mode enabled
                                                            //A high level on the pin SPREAD (TMC222x, only) inverts this flag to switch between both chopper modes.
                                                            //Reset default: OTP
-#define GCONF_SHAFT                    (1 << 3)            //1: Inverse motor direction
-#define GCONF_INDEX_OTPW               (1 << 4)            //0: INDEX shows the first microstep position of sequencer.
+#define TMC22X_GCONF_SHAFT                    (1 << 3)            //1: Inverse motor direction
+#define TMC22X_GCONF_INDEX_OTPW               (1 << 4)            //0: INDEX shows the first microstep position of sequencer.
                                                            //1: INDEX pin outputs overtemperature prewarning flag (otpw) instead
-#define GCONF_INDEX_STEP               (1 << 5)            //0: INDEX output as selected by index_otpw
+#define TMC22X_GCONF_INDEX_STEP               (1 << 5)            //0: INDEX output as selected by index_otpw
                                                            //1: INDEX output shows step pulses from internal pulse generator (toggle upon each step)
-#define GCONF_PDN_DISABLE              (1 << 6)            //0: PDN_UART controls standstill current reduction
+#define TMC22X_GCONF_PDN_DISABLE              (1 << 6)            //0: PDN_UART controls standstill current reduction
                                                            //1: PDN_UART input function disabled. Set this bit, when using the UART interface!
-#define GCONF_MSTEP_REG_SELECT         (1 << 7)            //0: Microstep resolution selected by pins MS1, MS2
+#define TMC22X_GCONF_MSTEP_REG_SELECT         (1 << 7)            //0: Microstep resolution selected by pins MS1, MS2
                                                            //1: Microstep resolution selected by MSTEP register
-#define GCONF_MULTISTEP_FILT           (1 << 8)            //0: No filtering of STEP pulses
+#define TMC22X_GCONF_MULTISTEP_FILT           (1 << 8)            //0: No filtering of STEP pulses
                                                            //1: Software pulse generator optimization enabled when fullstep frequency > 750Hz (roughly). TSTEP shows filtered step time values when active.
                                                            //Reset default=1
-#define GCONF_TEST_MODE                (1 << 9)            //0: Normal operation
+#define TMC22X_GCONF_TEST_MODE                (1 << 9)            //0: Normal operation
                                                            //1: Enable analog test output on pin ENN (pull down resistor off), ENN treated as enabled. IHOLD[1..0] selects the function of DCO: 0…2: T120, DAC, VDDH
                                                            //Attention: Not for user, set to 0 for normal operation!
 
 //Register                             Address   Type      N Bits    Description
 /********************************************************************************/
-#define GSTAT_REGISTER                 0x01      //R+WC    3         //Global status flags (Re-Write with ‘1’ bit to clear respective flags)
+#define TMC22X_GSTAT_REGISTER                 0x01      //R+WC    3         //Global status flags (Re-Write with ‘1’ bit to clear respective flags)
 /********************************************************************************/
 //Function                             Bit                 Description
-#define GSTAT_RESET                    (1 << 0)            //1: Indicates that the IC has been reset since the last read access to GSTAT.
-#define GSTAT_DRV_ERR                  (1 << 1)            //1: Indicates, that the driver has been shut down due to over temperature or short circuit detection since the last read access.
+#define TMC22X_GSTAT_RESET                    (1 << 0)            //1: Indicates that the IC has been reset since the last read access to GSTAT.
+#define TMC22X_GSTAT_DRV_ERR                  (1 << 1)            //1: Indicates, that the driver has been shut down due to over temperature or short circuit detection since the last read access.
                                                            //Read DRV_STATUS for details. The flag can only be reset when all error conditions are cleared.
-#define GSTAT_UV_CP                    (1 << 2)            //1: Indicates an under voltage on the charge pump. The driver is disabled in this case. This flag is not latched and thus does not need to be cleared.
+#define TMC22X_GSTAT_UV_CP                    (1 << 2)            //1: Indicates an under voltage on the charge pump. The driver is disabled in this case. This flag is not latched and thus does not need to be cleared.
 
 //Register                             Address   Type      N Bits    Description
 /********************************************************************************/
-#define IFCNT_REGISTER                 0x02      //R       8         //Interface transmission counter. This register becomes incremented with each successful UART interface write access.
+#define TMC22X_IFCNT_REGISTER                 0x02      //R       8         //Interface transmission counter. This register becomes incremented with each successful UART interface write access.
                                                                      //Read out to check the serial transmission for lost data. Read accesses do not change the content. The counter wraps around from 255 to 0.
 /********************************************************************************/
 
 //Register                             Address   Type      N Bits    Description
 /********************************************************************************/
-#define SLAVECONF_REGISTER             0x03      //W       4         //SENDDELAY for read access (time until reply is sent):
+#define TMC22X_SLAVECONF_REGISTER             0x03      //W       4         //SENDDELAY for read access (time until reply is sent):
 /********************************************************************************/
 //Function                             Bit                 Description
-#define SLAVECONF_SENDDELAY            (15 << 8)           //0, 1: 8 bit times
-#define SLAVECONF_SENDDELAY_SHIFT      8                   //2, 3: 3*8 bit times
+#define TMC22X_SLAVECONF_SENDDELAY            (15 << 8)           //0, 1: 8 bit times
+#define TMC22X_SLAVECONF_SENDDELAY_SHIFT      8                   //2, 3: 3*8 bit times
                                                            //4, 5: 5*8 bit times
                                                            //6, 7: 7*8 bit times
                                                            //8, 9: 9*8 bit times
@@ -168,56 +176,56 @@
 
 //Register                             Address   Type      N Bits    Description
 /********************************************************************************/
-#define OTP_PROG_REGISTER              0x04      //W       16       //OTP programming
+#define TMC22X_OTP_PROG_REGISTER              0x04      //W       16       //OTP programming
                                                                     //Write access programs OTP memory (one bit at a time),
                                                                     //Read access refreshes read data from OTP after a write
 /********************************************************************************/
 //Function                             Bit                 Description
-#define OTP_PROG_OTPBIT                (7 << 0)            //Selection of OTP bit to be programmed to the selected byte location (n=0..7: programs bit n to a logic 1)
-#define OTP_PROG_OTPBIT_SHIFT          0                   //
-#define OTP_PROG_OTPBYTE               (3 << 4)            //Selection of OTP programming location (0, 1 or 2)
-#define OTP_PROG_OTPBYTE_SHIFT         4                   //
-#define OTP_PROG_OTPMAGIC              (255 << 8)          //Set to 0xbd to enable programming. A programming time of minimum 10ms per bit is recommended (check by reading OTP_READ).
-#define OTP_PROG_OTPMAGIC_SHIFT        8                   //
+#define TMC22X_OTP_PROG_OTPBIT                (7 << 0)            //Selection of OTP bit to be programmed to the selected byte location (n=0..7: programs bit n to a logic 1)
+#define TMC22X_OTP_PROG_OTPBIT_SHIFT          0                   //
+#define TMC22X_OTP_PROG_OTPBYTE               (3 << 4)            //Selection of OTP programming location (0, 1 or 2)
+#define TMC22X_OTP_PROG_OTPBYTE_SHIFT         4                   //
+#define TMC22X_OTP_PROG_OTPMAGIC              (255 << 8)          //Set to 0xbd to enable programming. A programming time of minimum 10ms per bit is recommended (check by reading OTP_READ).
+#define TMC22X_OTP_PROG_OTPMAGIC_SHIFT        8                   //
 
 //Register                             Address   Type      N Bits    Description
 /********************************************************************************/
-#define OTP_READ_REGISTER              0x05      //R       24        //Access to OTP memory result and update
+#define TMC22X_OTP_READ_REGISTER              0x05      //R       24        //Access to OTP memory result and update
                                                                      //7..0: OTP0 byte 0 read data
                                                                      //15..8: OTP1 byte 1 read data
                                                                      //23..16: OTP2 byte 2 read data
 /********************************************************************************/
 //Function                             Bit                 Description
-#define OTP_READ_EN_SPREADCYCLE        (1 << 23)           //otp2.7: This flag determines if the driver defaults to spreadCycle or to stealthChop.
+#define TMC22X_OTP_READ_EN_SPREADCYCLE        (1 << 23)           //otp2.7: This flag determines if the driver defaults to spreadCycle or to stealthChop.
                                                            //0: Default: stealthChop (GCONF.en_spreadCycle=0)
                                                            //   OTP 1.0 to 1.7 and 2.0 used for stealthChop.
                                                            //   spreadCycle settings: HEND=0; HSTART=5; TOFF=3
                                                            //1: Default: spreadCycle (GCONF.en_spreadCycle=1)
                                                            //   OTP 1.0 to 1.7 and 2.0 used for spreadCycle
                                                            //   stealthChop settings: PWM_GRAD=0; TPWM_THRS=0; PWM_OFS=36; pwm_autograd=1
-#define OTP_READ_IHOLD                 (3 << 21)           //otp2.6, otp2.5: Reset default for standstill current IHOLD (used only if current reduction enabled, e.g. pin PDN_UART low).
-#define OTP_READ_IHOLD_SHIFT           21                  //%00: IHOLD= 16 (53% of IRUN)
+#define TMC22X_OTP_READ_IHOLD                 (3 << 21)           //otp2.6, otp2.5: Reset default for standstill current IHOLD (used only if current reduction enabled, e.g. pin PDN_UART low).
+#define TMC22X_OTP_READ_IHOLD_SHIFT           21                  //%00: IHOLD= 16 (53% of IRUN)
                                                            //%01: IHOLD= 2  ( 9% of IRUN)
                                                            //%10: IHOLD= 8  (28% of IRUN)
                                                            //%11: IHOLD= 24 (78% of IRUN)
                                                            //Reset default for run current IRUN=31
-#define OTP_READ_IHOLDDELAY            (3 << 19)           //otp2.4, otp2.3: Reset default for IHOLDDELAY
-#define OTP_READ_IHOLDDELAY_SHIFT      19                  //%00: IHOLDDELAY= 1
+#define TMC22X_OTP_READ_IHOLDDELAY            (3 << 19)           //otp2.4, otp2.3: Reset default for IHOLDDELAY
+#define TMC22X_OTP_READ_IHOLDDELAY_SHIFT      19                  //%00: IHOLDDELAY= 1
                                                            //%01: IHOLDDELAY= 2
                                                            //%10: IHOLDDELAY= 4
                                                            //%11: IHOLDDELAY= 8
-#define OTP_READ_PWM_FREQ              (1 << 18)           //otp2.2: Reset default for PWM_FREQ:
+#define TMC22X_OTP_READ_PWM_FREQ              (1 << 18)           //otp2.2: Reset default for PWM_FREQ:
                                                            //0: PWM_FREQ=%01=2/683
                                                            //1: PWM_FREQ=%10=2/512
-#define OTP_READ_PWM_REG               (1 << 17)           //otp2.1: Reset default for PWM_REG:
+#define TMC22X_OTP_READ_PWM_REG               (1 << 17)           //otp2.1: Reset default for PWM_REG:
                                                            //0: PWM_REG=%1000: max. 4 increments / cycle
                                                            //1: PWM_REG=%0010: max. 1 increment / cycle
-#define OTP_READ_PWM_OFS               (1 << 16)           //otp2.0: Depending on otp_en_spreadCycle:
+#define TMC22X_OTP_READ_PWM_OFS               (1 << 16)           //otp2.0: Depending on otp_en_spreadCycle:
                                                            //0: otp_en_spreadCycle = 0: PWM_OFS=36
                                                            //   otp_en_spreadCycle = 1: PWM_OFS=00 (no feed forward scaling); pwm_autograd=0
                                                            //1: Reset default for CHOPCONF.8 (hend1)
-#define OTP_READ_TPWMTHRS              (7 << 13)           //otp1.7, otp1.6, otp1.5: Depending on otp_en_spreadCycle:
-#define OTP_READ_TPWMTHRS_SHIFT        13                  //0: Reset default for TPWM_THRS as defined by (0..7):
+#define TMC22X_OTP_READ_TPWMTHRS              (7 << 13)           //otp1.7, otp1.6, otp1.5: Depending on otp_en_spreadCycle:
+#define TMC22X_OTP_READ_TPWMTHRS_SHIFT        13                  //0: Reset default for TPWM_THRS as defined by (0..7):
                                                            //   otp_en_spreadCycle = 0: TPWM_THRS = 0
                                                            //   otp_en_spreadCycle = 1: TPWM_THRS = 200
                                                            //   otp_en_spreadCycle = 2: TPWM_THRS = 300
@@ -227,12 +235,12 @@
                                                            //   otp_en_spreadCycle = 6: TPWM_THRS = 1200
                                                            //   otp_en_spreadCycle = 7: TPWM_THRS = 4000
                                                            //1: Reset default for CHOPCONF.5 to CHOPCONF.7 (hstrt1, hstrt2 and hend0)
-#define OTP_READ_PWM_AUTOGRAD          (1 << 12)           //otp1.4: Depending on otp_en_spreadCycle;
+#define TMC22X_OTP_READ_PWM_AUTOGRAD          (1 << 12)           //otp1.4: Depending on otp_en_spreadCycle;
                                                            //0: otp_en_spreadCycle = 0: pwm_autograd=1
                                                            //   otp_en_spreadCycle = 1: pwm_autograd=0
                                                            //1: Reset default for CHOPCONF.4 (hstrt0); (pwm_autograd=1)
-#define OTP_READ_PWM_GRAD              (15 << 8)           //otp1.3, otp1.2, otp1.1, otp1.0: Depending on otp_en_spreadCycle:
-#define OTP_READ_PWM_GRAD_SHIFT        8                   //0: Reset default for PWM_GRAD as defined by (0..15):
+#define TMC22X_OTP_READ_PWM_GRAD              (15 << 8)           //otp1.3, otp1.2, otp1.1, otp1.0: Depending on otp_en_spreadCycle:
+#define TMC22X_OTP_READ_PWM_GRAD_SHIFT        8                   //0: Reset default for PWM_GRAD as defined by (0..15):
                                                            //   otp_en_spreadCycle = 0: PWM_GRAD= 14
                                                            //   otp_en_spreadCycle = 1: PWM_GRAD= 16
                                                            //   otp_en_spreadCycle = 2: PWM_GRAD= 18
@@ -250,58 +258,58 @@
                                                            //   otp_en_spreadCycle = 14: PWM_GRAD= 88
                                                            //   otp_en_spreadCycle = 15: PWM_GRAD= 100
                                                            //1: Reset default for CHOPCONF.0 to CHOPCONF.3 (TOFF)
-#define OTP_READ_TBL                   (1 << 7)            //otp0.7: Reset default for TBL:
+#define TMC22X_OTP_READ_TBL                   (1 << 7)            //otp0.7: Reset default for TBL:
                                                            //0: TBL=%10
                                                            //1: TBL=%01
-#define OTP_READ_INTERNALRSENSE        (1 << 6)            //otp0.6: Reset default for GCONF.internal_Rsense
+#define TMC22X_OTP_READ_INTERNALRSENSE        (1 << 6)            //otp0.6: Reset default for GCONF.internal_Rsense
                                                            //0: External sense resistors
                                                            //1: Internal sense resistors
-#define OTP_READ_OTTRIM                (1 << 5)            //otp0.5: Reset default for OTTRIM:
+#define TMC22X_OTP_READ_OTTRIM                (1 << 5)            //otp0.5: Reset default for OTTRIM:
                                                            //0: OTTRIM= %00 (143°C)
                                                            //1: OTTRIM= %01 (150°C)
                                                            //internal power stage temperature about 10°C above the sensor temperature limit
-#define OTP_READ_FCLKTRIM              (31 << 0)           //otp0.4, otp0.3, otp0.2, otp0.1, otp0.0: Reset default for FCLKTRIM
-#define OTP_READ_FCLKTRIM_SHIFT        0                   //0: lowest frequency setting
+#define TMC22X_OTP_READ_FCLKTRIM              (31 << 0)           //otp0.4, otp0.3, otp0.2, otp0.1, otp0.0: Reset default for FCLKTRIM
+#define TMC22X_OTP_READ_FCLKTRIM_SHIFT        0                   //0: lowest frequency setting
                                                            //31: highest frequency setting
                                                            //Attention: This value is pre-programmed by factory clock trimming to the default clock frequency of 12MHz and differs between individual ICs! It should not be altered.
 
 //Register                             Address   Type      N Bits    Description
 /********************************************************************************/
-#define IOIN_REGISTER                  0x06      //R       10+8      //Reads the state of all input pins available
+#define TMC22X_IOIN_REGISTER                  0x06      //R       10+8      //Reads the state of all input pins available
 /********************************************************************************/
 //Function                             Bit                 Description
-#define IOIN_ENN_TMC220X               (1 << 0)            //1: ENN pin high state for TMC220X driver
-#define IOIN_MS1_TMC220X               (1 << 2)            //1: MS1 pin high state for TMC220X driver
-#define IOIN_MS2_TMC220X               (1 << 3)            //1: MS2 pin high state for TMC220X driver
-#define IOIN_DIAG_TMC220X              (1 << 4)            //1: DIAG pin high state for TMC220X driver
-#define IOIN_PDN_UART_TMC220X          (1 << 6)            //1: PDN_UART pin high state for TMC220X driver
-#define IOIN_STEP_TMC220X              (1 << 7)            //1: STEP pin high state for TMC220X driver
-#define IOIN_DIR_TMC220X               (1 << 9)            //1: DIR pin high state for TMC220X driver
+#define TMC22X_IOIN_ENN_TMC220X               (1 << 0)            //1: ENN pin high state for TMC220X driver
+#define TMC22X_IOIN_MS1_TMC220X               (1 << 2)            //1: MS1 pin high state for TMC220X driver
+#define TMC22X_IOIN_MS2_TMC220X               (1 << 3)            //1: MS2 pin high state for TMC220X driver
+#define TMC22X_IOIN_DIAG_TMC220X              (1 << 4)            //1: DIAG pin high state for TMC220X driver
+#define TMC22X_IOIN_PDN_UART_TMC220X          (1 << 6)            //1: PDN_UART pin high state for TMC220X driver
+#define TMC22X_IOIN_STEP_TMC220X              (1 << 7)            //1: STEP pin high state for TMC220X driver
+#define TMC22X_IOIN_DIR_TMC220X               (1 << 9)            //1: DIR pin high state for TMC220X driver
                                                            //
-#define IOIN_PDN_UART_TMC222X          (1 << 1)            //1: PDN_UART pin high state for TMC222X driver
-#define IOIN_SPREAD_TMC222X            (1 << 2)            //1: SPREAD pin high state for TMC222X driver
-#define IOIN_DIR_TMC222X               (1 << 3)            //1: DIR pin high state for TMC222X driver
-#define IOIN_ENN_TMC222X               (1 << 4)            //1: ENN pin high state for TMC222X driver
-#define IOIN_STEP_TMC222X              (1 << 5)            //1: STEP pin high state for TMC222X driver
-#define IOIN_MS1_TMC222X               (1 << 6)            //1: MS1 pin high state for TMC222X driver
-#define IOIN_MS2_TMC222X               (1 << 7)            //1: MS2 pin high state for TMC222X driver
+#define TMC22X_IOIN_PDN_UART_TMC222X          (1 << 1)            //1: PDN_UART pin high state for TMC222X driver
+#define TMC22X_IOIN_SPREAD_TMC222X            (1 << 2)            //1: SPREAD pin high state for TMC222X driver
+#define TMC22X_IOIN_DIR_TMC222X               (1 << 3)            //1: DIR pin high state for TMC222X driver
+#define TMC22X_IOIN_ENN_TMC222X               (1 << 4)            //1: ENN pin high state for TMC222X driver
+#define TMC22X_IOIN_STEP_TMC222X              (1 << 5)            //1: STEP pin high state for TMC222X driver
+#define TMC22X_IOIN_MS1_TMC222X               (1 << 6)            //1: MS1 pin high state for TMC222X driver
+#define TMC22X_IOIN_MS2_TMC222X               (1 << 7)            //1: MS2 pin high state for TMC222X driver
                                                            //
-#define IOIN_SEL_A                     (1 << 8)            //SEL_A: Driver type
+#define TMC22X_IOIN_SEL_A                     (1 << 8)            //SEL_A: Driver type
                                                            //1: TMC220x
                                                            //0: TMC222x
-#define IOIN_VERSION                   (255 << 24)         //0x20=first version of the IC
-#define IOIN_VERSION_SHIFT             24                  //24 Identical numbers mean full digital compatibility. Bits 31..24 are the version of the IC
+#define TMC22X_IOIN_VERSION                   (255 << 24)         //0x20=first version of the IC
+#define TMC22X_IOIN_VERSION_SHIFT             24                  //24 Identical numbers mean full digital compatibility. Bits 31..24 are the version of the IC
 
 //Register                             Address   Type      N Bits    Description
 /********************************************************************************/
-#define FACTORY_CONF_REGISTER          0x07      //RW      5+2       //Factory configuration
+#define TMC22X_FACTORY_CONF_REGISTER          0x07      //RW      5+2       //Factory configuration
 /********************************************************************************/
 //Function                             Bit                 Description
-#define FACTORY_CONF_FCLKTRIM          (31 << 0)           //0...31: Lowest to highest clock frequency. Check at charge pump output. The frequency span is not guaranteed, but it is tested, that tuning to 12MHz internal clock is possible.
-#define FACTORY_CONF_FCLKTRIM_SHIFT    0                   //The devices come preset to 12MHz clock frequency by OTP programming.
+#define TMC22X_FACTORY_CONF_FCLKTRIM          (31 << 0)           //0...31: Lowest to highest clock frequency. Check at charge pump output. The frequency span is not guaranteed, but it is tested, that tuning to 12MHz internal clock is possible.
+#define TMC22X_FACTORY_CONF_FCLKTRIM_SHIFT    0                   //The devices come preset to 12MHz clock frequency by OTP programming.
                                                            //Reset default: OTP
-#define FACTORY_CONF_OTTRIM            (3 << 8)            //%00: OT=143°C, OTPW=120°C
-#define FACTORY_CONF_OTTRIM_SHIFT      8                   //%01: OT=150°C, OTPW=120°C
+#define TMC22X_FACTORY_CONF_OTTRIM            (3 << 8)            //%00: OT=143°C, OTPW=120°C
+#define TMC22X_FACTORY_CONF_OTTRIM_SHIFT      8                   //%01: OT=150°C, OTPW=120°C
                                                            //%10: OT=150°C, OTPW=143°C
                                                            //%11: OT=157°C, OTPW=143°C
                                                            //Default: OTP
@@ -310,24 +318,24 @@
 
 //Register                             Address   Type      N Bits    Description
 /********************************************************************************/
-#define IHOLD_IRUN_REGISTER            0x10      //W       5+5+4     //Driver current control
+#define TMC22X_IHOLD_IRUN_REGISTER            0x10      //W       5+5+4     //Driver current control
 /********************************************************************************/
 //Function                             Bit                 Description
-#define IHOLD_IRUN_IHOLD               (31 << 0)           //Standstill current (0=1/32…31=32/32)
-#define IHOLD_IRUN_IHOLD_SHIFT         0                   //In combination with stealthChop mode, setting IHOLD=0 allows to choose freewheeling or coil short circuit for motor stand still.
+#define TMC22X_IHOLD_IRUN_IHOLD               (31 << 0)           //Standstill current (0=1/32…31=32/32)
+#define TMC22X_IHOLD_IRUN_IHOLD_SHIFT         0                   //In combination with stealthChop mode, setting IHOLD=0 allows to choose freewheeling or coil short circuit for motor stand still.
                                                            //Reset default: OTP
-#define IHOLD_IRUN_IRUN                (31 << 8)           //Motor run current (0=1/32…31=32/32)
-#define IHOLD_IRUN_IRUN_SHIFT          8                   //Hint: Choose sense resistors in a way, that normal IRUN is 16 to 31 for best microstep performance.
+#define TMC22X_IHOLD_IRUN_IRUN                (31 << 8)           //Motor run current (0=1/32…31=32/32)
+#define TMC22X_IHOLD_IRUN_IRUN_SHIFT          8                   //Hint: Choose sense resistors in a way, that normal IRUN is 16 to 31 for best microstep performance.
                                                            //Reset default=31
-#define IHOLD_IRUN_IHOLDDELAY          (15 << 16)          //Controls the number of clock cycles for motor power down after standstill is detected (stst=1) and TPOWERDOWN has expired.
-#define IHOLD_IRUN_IHOLDDELAY_SHIFT    16                  //The smooth transition avoids a motor jerk upon power down.
+#define TMC22X_IHOLD_IRUN_IHOLDDELAY          (15 << 16)          //Controls the number of clock cycles for motor power down after standstill is detected (stst=1) and TPOWERDOWN has expired.
+#define TMC22X_IHOLD_IRUN_IHOLDDELAY_SHIFT    16                  //The smooth transition avoids a motor jerk upon power down.
                                                            //0: instant power down
                                                            //1..15: Delay per current reduction step in multiple of 2^18 clocks
                                                            //Reset default: OTP
 
 //Register                             Address   Type      N Bits    Description
 /********************************************************************************/
-#define TPOWERDOWN_REGISTER            0x11      //W       8         //Sets the delay time from stand still (stst) detection to motor current power down.
+#define TMC22X_TPOWERDOWN_REGISTER            0x11      //W       8         //Sets the delay time from stand still (stst) detection to motor current power down.
                                                                      //Time range is about 0 to 5.6 seconds. 0…((2^8)-1) * 2^18 tCLK
                                                                      //Attention: A minimum setting of 2 is required to allow automatic tuning of stealthChop PWM_OFFS_AUTO.
                                                                      //Reset default=20
@@ -335,7 +343,7 @@
 
 //Register                             Address   Type      N Bits    Description
 /********************************************************************************/
-#define TSTEP_REGISTER                 0x12      //R       20        //Actual measured time between two 1/256 microsteps derived from the step input frequency in units of 1/fCLK.
+#define TMC22X_TSTEP_REGISTER                 0x12      //R       20        //Actual measured time between two 1/256 microsteps derived from the step input frequency in units of 1/fCLK.
                                                                      //Measured value is (2^20)-1 in case of overflow or stand still.
                                                                      //
                                                                      //The TSTEP related threshold use a hysteresis of 1/16 of the compare value to compensate for jitter in the clock or the step frequency:
@@ -346,7 +354,7 @@
 
 //Register                             Address   Type      N Bits    Description
 /********************************************************************************/
-#define TPWMTHRS_REGISTER              0x13      //W       20        //Sets the upper velocity for stealthChop voltage PWM mode.
+#define TMC22X_TPWMTHRS_REGISTER              0x13      //W       20        //Sets the upper velocity for stealthChop voltage PWM mode.
                                                                      //TSTEP ≥ TPWMTHRS
                                                                      //  - stealthChop PWM mode is enabled, if configured
                                                                      //When the velocity exceeds the limit set by TPWMTHRS, the driver switches to spreadCycle.
@@ -355,7 +363,7 @@
 
 //Register                             Address   Type      N Bits    Description
 /********************************************************************************/
-#define VACTUAL_REGISTER               0x22      //W       24        //VACTUAL allows moving the motor by UART control. It gives the motor velocity in +-(2^23)-1 [μsteps / t]
+#define TMC22X_VACTUAL_REGISTER               0x22      //W       24        //VACTUAL allows moving the motor by UART control. It gives the motor velocity in +-(2^23)-1 [μsteps / t]
                                                                      //0: Normal operation. Driver reacts to STEP input.
                                                                      ///=0: Motor moves with the velocity given by VACTUAL. Step pulses can be monitored via INDEX output. The motor direction is controlled by the sign of VACTUAL.
 /********************************************************************************/
@@ -364,7 +372,7 @@
 
 //Register                             Address   Type      N Bits    Description
 /********************************************************************************/
-#define MSCNT_REGISTER                 0x6A      //R       10        //Microstep counter.
+#define TMC22X_MSCNT_REGISTER                 0x6A      //R       10        //Microstep counter.
                                                                      //Indicates actual position in the microstep table for CUR_A. CUR_B uses an offset of 256 into the table.
                                                                      //Reading out MSCNT allows determination of the motor position within the electrical wave.
                                                                      //Range: 0..123
@@ -372,35 +380,35 @@
 
 //Register                             Address   Type      N Bits    Description
 /********************************************************************************/
-#define MSCURACT_REGISTER              0x6B      //R       9+9       //bit 8… 0: CUR_A (signed):
+#define TMC22X_MSCURACT_REGISTER              0x6B      //R       9+9       //bit 8… 0: CUR_A (signed):
                                                                      //bit 24… 16: CUR_B (signed):
 /********************************************************************************/
 //Function                             Bit                 Description
-#define MSCURACT_CUR_A                 (511 << 0)          //Actual microstep current for motor phase A as read from the internal sine wave table (not scaled by current)
-#define MSCURACT_CUR_A_SHIFT           0                   //Range +/-0...255
-#define MSCURACT_CUR_B                 (511 << 16)         //Actual microstep current for motor phase B as read from the internal sine wave table (not scaled by current)
-#define MSCURACT_CUR_B_SHIFT           16                  //Range +/-0...255
+#define TMC22X_MSCURACT_CUR_A                 (511 << 0)          //Actual microstep current for motor phase A as read from the internal sine wave table (not scaled by current)
+#define TMC22X_MSCURACT_CUR_A_SHIFT           0                   //Range +/-0...255
+#define TMC22X_MSCURACT_CUR_B                 (511 << 16)         //Actual microstep current for motor phase B as read from the internal sine wave table (not scaled by current)
+#define TMC22X_MSCURACT_CUR_B_SHIFT           16                  //Range +/-0...255
 
 //DRIVER REGISTER SET (0X6C...0X7F)
 
 //Register                             Address   Type      N Bits    Description
 /********************************************************************************/
-#define CHOPCONF_REGISTER              0x6C      //RW      32        //chopper and driver configuration
+#define TMC22X_CHOPCONF_REGISTER              0x6C      //RW      32        //chopper and driver configuration
                                                                      //Reset default = 0x10000053
 /********************************************************************************/
 //Function                             Bit                 Description
-#define CHOPCONF_DISS2VS               (1 << 31)           //Low side short protection disable
+#define TMC22X_CHOPCONF_DISS2VS               (1 << 31)           //Low side short protection disable
                                                            //0: Short protection low side is on
                                                            //1: Short protection low side is disabled
-#define CHOPCONF_DISS2G                (1 << 30)           //short to GND protection disable
+#define TMC22X_CHOPCONF_DISS2G                (1 << 30)           //short to GND protection disable
                                                            //0: Short to GND protection is on
                                                            //1: Short to GND protection is disabled
-#define CHOPCONF_DEDGE                 (1 << 29)           //Enable step impulse at each step edge to reduce step frequency requirement. This mode is not compatible with the step filtering function (multistep_filt)
-#define CHOPCONF_INTPOL                (1 << 28)           //interpolation to 256 microsteps
+#define TMC22X_CHOPCONF_DEDGE                 (1 << 29)           //Enable step impulse at each step edge to reduce step frequency requirement. This mode is not compatible with the step filtering function (multistep_filt)
+#define TMC22X_CHOPCONF_INTPOL                (1 << 28)           //interpolation to 256 microsteps
                                                            //1: The actual microstep resolution (MRES) becomes extrapolated to 256 microsteps for smoothest motor operation.
                                                            //Default: 1
-#define CHOPCONF_MRES                  (15 << 24)          //micro step resolution
-#define CHOPCONF_MRES_SHIFT            24                  //
+#define TMC22X_CHOPCONF_MRES                  (15 << 24)          //micro step resolution
+#define TMC22X_CHOPCONF_MRES_SHIFT            24                  //
                                                            //%0000: Native 256 microstep setting
                                                            //%0001 ... %1000: 128, 64, 32, 16, 8, 4, 2, FULLSTEP
                                                            //Reduced microstep resolution.
@@ -408,25 +416,25 @@
                                                            //When choosing a lower microstep resolution, the driver automatically uses microstep positions which result in a symmetrical wave.
                                                            //Number of microsteps per step pulse = 2^MRES
                                                            //Selection by pins unless disabled by GCONF. mstep_reg_select
-#define CHOPCONF_VSENSE                (1 << 17)           //sense resistor voltage based current scaling
+#define TMC22X_CHOPCONF_VSENSE                (1 << 17)           //sense resistor voltage based current scaling
                                                            //0: Low sensitivity, high sense resistor voltage
                                                            //1: High sensitivity, low sense resistor voltage
-#define CHOPCONF_TBL                   (3 << 15)           //blank time select
-#define CHOPCONF_TBL_SHIFT             15                  //%00 ... %11:
+#define TMC22X_CHOPCONF_TBL                   (3 << 15)           //blank time select
+#define TMC22X_CHOPCONF_TBL_SHIFT             15                  //%00 ... %11:
                                                            //Set comparator blank time to 16, 24, 32 or 40 clocks
                                                            //Hint: %00 or %01 is recommended for most applications
                                                            //Default: OTP
-#define CHOPCONF_HEND                  (15 << 7)           //HEND hysteresis low value, OFFSET sine wave offset
-#define CHOPCONF_HEND_SHIFT            7                   //
+#define TMC22X_CHOPCONF_HEND                  (15 << 7)           //HEND hysteresis low value, OFFSET sine wave offset
+#define TMC22X_CHOPCONF_HEND_SHIFT            7                   //
                                                            //%0000 ... %1111: Hysteresis is -3, -2, -1, 0, 1, ..., 12 (1/512 of this setting adds to current setting)
                                                            //This is the hysteresis value which becomes used for the hysteresis chopper.
                                                            //Default: OTP, resp. 5 in stealthChop mode
-#define CHOPCONF_HSTRT                 (7 << 4)            //HSTRT hysteresis start value added to HEND
-#define CHOPCONF_HSTRT_SHIFT           4                   //%0000 ... %1111: Add 1, 2, ..., 8 to hysteresis low value HEND (1/512 of this setting adds to current setting)
+#define TMC22X_CHOPCONF_HSTRT                 (7 << 4)            //HSTRT hysteresis start value added to HEND
+#define TMC22X_CHOPCONF_HSTRT_SHIFT           4                   //%0000 ... %1111: Add 1, 2, ..., 8 to hysteresis low value HEND (1/512 of this setting adds to current setting)
                                                            //Attention: Effective HEND+HSTRT ≤ 16.
                                                            //Hint: Hysteresis decrement is done each 16 clocks
-#define CHOPCONF_TOFF                  (15 << 0)           //off time and driver enable
-#define CHOPCONF_TOFF_SHIFT            0                   //Off time setting controls duration of slow decay phase
+#define TMC22X_CHOPCONF_TOFF                  (15 << 0)           //off time and driver enable
+#define TMC22X_CHOPCONF_TOFF_SHIFT            0                   //Off time setting controls duration of slow decay phase
                                                            //NCLK = 12 + 32*TOFF
                                                            //%0000: Driver disable, all bridges off
                                                            //%0001: 1 – use only with TBL ≥ 2
@@ -435,56 +443,56 @@
 
 //Register                             Address   Type      N Bits    Description
 /********************************************************************************/
-#define DRV_STATUS_REGISTER            0x6F      //R       32        //Driver status flags and current level read back
+#define TMC22X_DRV_STATUS_REGISTER            0x6F      //R       32        //Driver status flags and current level read back
 /********************************************************************************/
 //Function                             Bit                 Description
-#define DRV_STATUS_STST                (1 << 31)           //standstill indicator
+#define TMC22X_DRV_STATUS_STST                (1 << 31)           //standstill indicator
                                                            //This flag indicates motor stand still in each operation mode. This occurs 2^20 clocks after the last step pulse.
-#define DRV_STATUS_STEALTH             (1 << 30)           //stealthChop indicator
+#define TMC22X_DRV_STATUS_STEALTH             (1 << 30)           //stealthChop indicator
                                                            //1: Driver operates in stealthChop mode
                                                            //0: Driver operates in spreadCycle mode
-#define DRV_STATUS_CS_ACTUAL           (31 << 16)          //actual motor current / smart energy current
-#define DRV_STATUS_CS_ACTUAL_SHIFT     16                  //Actual current control scaling, for monitoring the function of the automatic current scaling.
-#define DRV_STATUS_T157                (1 << 11)           //157°C comparator
+#define TMC22X_DRV_STATUS_CS_ACTUAL           (31 << 16)          //actual motor current / smart energy current
+#define TMC22X_DRV_STATUS_CS_ACTUAL_SHIFT     16                  //Actual current control scaling, for monitoring the function of the automatic current scaling.
+#define TMC22X_DRV_STATUS_T157                (1 << 11)           //157°C comparator
                                                            //1: Temperature threshold is exceeded
-#define DRV_STATUS_T150                (1 << 10)           //150°C comparator
+#define TMC22X_DRV_STATUS_T150                (1 << 10)           //150°C comparator
                                                            //1: Temperature threshold is exceeded
-#define DRV_STATUS_T143                (1 << 9)            //143°C comparator
+#define TMC22X_DRV_STATUS_T143                (1 << 9)            //143°C comparator
                                                            //1: Temperature threshold is exceeded
-#define DRV_STATUS_T120                (1 << 8)            //120°C comparator
+#define TMC22X_DRV_STATUS_T120                (1 << 8)            //120°C comparator
                                                            //1: Temperature threshold is exceeded
-#define DRV_STATUS_OLB                 (1 << 7)            //open load indicator phase B
-#define DRV_STATUS_OLA                 (1 << 6)            //open load indicator phase A
+#define TMC22X_DRV_STATUS_OLB                 (1 << 7)            //open load indicator phase B
+#define TMC22X_DRV_STATUS_OLA                 (1 << 6)            //open load indicator phase A
                                                            //1: Open load detected on phase A or B.
                                                            //Hint: This is just an informative flag. The driver takes no action upon it.
                                                            //False detection may occur in fast motion and standstill. Check during slow motion, only.
-#define DRV_STATUS_S2VSB               (1 << 5)            //short to ground indicator phase B
-#define DRV_STATUS_S2VSA               (1 << 4)            //short to ground indicator phase A
+#define TMC22X_DRV_STATUS_S2VSB               (1 << 5)            //short to ground indicator phase B
+#define TMC22X_DRV_STATUS_S2VSA               (1 << 4)            //short to ground indicator phase A
                                                            //1: The driver becomes disabled. The flags stay active, until the driver is disabled by software (TOFF=0) or by the ENN input.
                                                            //Flags are separate for both chopper modes.
-#define DRV_STATUS_S2GB                (1 << 3)            //short to ground indicator phase B
-#define DRV_STATUS_S2GA                (1 << 2)            //short to ground indicator phase A
+#define TMC22X_DRV_STATUS_S2GB                (1 << 3)            //short to ground indicator phase B
+#define TMC22X_DRV_STATUS_S2GA                (1 << 2)            //short to ground indicator phase A
                                                            //1: The driver becomes disabled. The flags stay active, until the driver is disabled by software (TOFF=0) or by the ENN input.
                                                            //Flags are separate for both chopper modes.
-#define DRV_STATUS_OT                  (1 << 1)            //overtemperature flag
+#define TMC22X_DRV_STATUS_OT                  (1 << 1)            //overtemperature flag
                                                            //1: The selected overtemperature limit has been reached. Drivers become disabled until otpw is also cleared due to cooling down of the IC.
                                                            //The overtemperature flag is common for both bridges.
-#define DRV_STATUS_OTPW                (1 << 0)            //overtemperature pre-warning flag
+#define TMC22X_DRV_STATUS_OTPW                (1 << 0)            //overtemperature pre-warning flag
                                                            //1: 1: The selected overtemperature pre-warning threshold is exceeded.
                                                            //The overtemperature pre-warning flag is common for both bridges.
 
 //Register                             Address   Type      N Bits    Description
 /********************************************************************************/
-#define PWMCONF_REGISTER               0x70      //RW      22        //stealthChop PWM chopper configuration
+#define TMC22X_PWMCONF_REGISTER               0x70      //RW      22        //stealthChop PWM chopper configuration
                                                                      //Reset default= 0xC10D0024
 /********************************************************************************/
 //Function                             Bit                 Description
-#define PWMCONF_PWM_LIM                (15 << 28)          //PWM automatic scale amplitude limit when switching on
-#define PWMCONF_PWM_LIM_SHIFT          28                  //Limit for PWM_SCALE_AUTO when switching back from spreadCycle to stealthChop. This value defines the upper limit for bits 7 to 4 of the automatic current control when switching back.
+#define TMC22X_PWMCONF_PWM_LIM                (15 << 28)          //PWM automatic scale amplitude limit when switching on
+#define TMC22X_PWMCONF_PWM_LIM_SHIFT          28                  //Limit for PWM_SCALE_AUTO when switching back from spreadCycle to stealthChop. This value defines the upper limit for bits 7 to 4 of the automatic current control when switching back.
                                                            //It can be set to reduce the current jerk during mode change back to stealthChop. It does not limit PWM_GRAD or PWM_GRAD_AUTO offset.
                                                            //Default = 12
-#define PWMCONF_PWM_REG                (15 << 24)          //Regulation loop gradient
-#define PWMCONF_PWM_REG_SHIFT          24                  //User defined maximum PWM amplitude change per half wave when using pwm_autoscale=1. (1...15):
+#define TMC22X_PWMCONF_PWM_REG                (15 << 24)          //Regulation loop gradient
+#define TMC22X_PWMCONF_PWM_REG_SHIFT          24                  //User defined maximum PWM amplitude change per half wave when using pwm_autoscale=1. (1...15):
                                                            //1: 0.5 increments (slowest regulation)
                                                            //2: 1 increment (default with OTP2.1=1)
                                                            //3: 1.5 increments
@@ -493,14 +501,14 @@
                                                            //8: 4 increments (default with OTP2.1=0)
                                                            //...
                                                            //15: 7.5 increments (fastest regulation)
-#define PWMCONF_FREEWHEEL              (3 << 20)           //Allows different standstill modes
-#define PWMCONF_FREEWHEEL_SHIFT        20                  //
+#define TMC22X_PWMCONF_FREEWHEEL              (3 << 20)           //Allows different standstill modes
+#define TMC22X_PWMCONF_FREEWHEEL_SHIFT        20                  //
                                                            //Stand still option when motor current setting is zero (I_HOLD=0).
                                                            //%00: Normal operation
                                                            //%01: Freewheeling
                                                            //%10: Coil shorted using LS drivers
                                                            //%11: Coil shorted using HS drivers
-#define PWMCONF_PWM_AUTOGRAD           (1 << 19)           //PWM automatic gradient adaptation
+#define TMC22X_PWMCONF_PWM_AUTOGRAD           (1 << 19)           //PWM automatic gradient adaptation
                                                            //0: Fixed value for PWM_GRAD (PWM_GRAD_AUTO = PWM_GRAD)
                                                            //1: A symmetric PWM cycle is enforced
                                                            //Automatic tuning (only with pwm_autoscale=1)
@@ -513,26 +521,26 @@
                                                            //  2. Motor running and 1.5 * PWM_OFS_AUTO < PWM_SCALE_SUM < 4* PWM_OFS_AUTO and PWM_SCALE_SUM < 255.
                                                            //Time required for tuning PWM_GRAD_AUTO
                                                            //About 8 fullsteps per change of +/-1.
-#define PWMCONF_PWM_AUTOSCALE          (1 << 18)           //PWM automatic amplitude scaling
+#define TMC22X_PWMCONF_PWM_AUTOSCALE          (1 << 18)           //PWM automatic amplitude scaling
                                                            //0: User defined feed forward PWM amplitude. The current settings IRUN and IHOLD have no influence!
                                                            //The resulting PWM amplitude (limited to 0...255) is:
                                                            //PWM_OFS * ((CS_ACTUAL+1) / 32) + PWM_GRAD * 256 / TSTEP
                                                            //1: Enable automatic current control (Reset default)
-#define PWMCONF_PWM_FREQ               (3 << 16)           //PWM frequency selection
-#define PWMCONF_PWM_FREQ_SHIFT         16                  //%00: fPWM =2/1024 fCLK
+#define TMC22X_PWMCONF_PWM_FREQ               (3 << 16)           //PWM frequency selection
+#define TMC22X_PWMCONF_PWM_FREQ_SHIFT         16                  //%00: fPWM =2/1024 fCLK
                                                            //%01: fPWM =2/683 fCLK
                                                            //%10: fPWM =2/512 fCLK
                                                            //%11: fPWM =2/410 fCLK
-#define PWMCONF_PWM_GRAD               (255 << 8)          //User defined amplitude gradient
-#define PWMCONF_PWM_GRAD_SHIFT         8                   //Velocity dependent gradient for PWM amplitude:
+#define TMC22X_PWMCONF_PWM_GRAD               (255 << 8)          //User defined amplitude gradient
+#define TMC22X_PWMCONF_PWM_GRAD_SHIFT         8                   //Velocity dependent gradient for PWM amplitude:
                                                            //PWM_GRAD * 256 / TSTEP
                                                            //This value is added to PWM_AMPL to compensate for the velocity-dependent motor back-EMF.
                                                            //
                                                            //With automatic scaling (pwm_autoscale=1) the value is used for first initialization, only.
                                                            //Set PWM_GRAD to the application specific value (it can be read out from PWM_GRAD_AUTO) to speed up the automatic tuning process.
                                                            //An approximate value can be stored to OTP by programming OTP_PWM_GRAD.
-#define PWMCONF_PWM_OFS                (255 << 0)          //User defined amplitude (offset)
-#define PWMCONF_PWM_OFS_SHIFT          0                   //User defined PWM amplitude offset (0-255) related to full motor current (CS_ACTUAL=31) in stand still.
+#define TMC22X_PWMCONF_PWM_OFS                (255 << 0)          //User defined amplitude (offset)
+#define TMC22X_PWMCONF_PWM_OFS_SHIFT          0                   //User defined PWM amplitude offset (0-255) related to full motor current (CS_ACTUAL=31) in stand still.
                                                            //Reset default=36
                                                            //
                                                            //When using automatic scaling (pwm_autoscale=1) the value is used for initialization, only.
@@ -547,31 +555,36 @@
 
 //Register                             Address   Type      N Bits    Description
 /********************************************************************************/
-#define PWM_SCALE_REGISTER             0x71      //R       9+8       //Results of stealthChop amplitude regulator. These values can be used to monitor automatic PWM amplitude scaling (255=max. voltage).
+#define TMC22X_PWM_SCALE_REGISTER             0x71      //R       9+8       //Results of stealthChop amplitude regulator. These values can be used to monitor automatic PWM amplitude scaling (255=max. voltage).
 /********************************************************************************/
 //Function                             Bit                 Description
-#define PWM_SCALE_SUM                  (255 << 0)          //Actual PWM duty cycle. This value is used for scaling the values CUR_A and CUR_B read from the sine wave table.
-#define PWM_SCALE_SUM_SHIFT            0                   //Range: 0...255
-#define PWM_SCALE_AUTO                 (511 << 16)         //9 Bit signed offset added to the calculated PWM duty cycle. This is the result of the automatic amplitude regulation based on current measurement.
-#define PWM_SCALE_AUTO_SHIFT           16                  //Range: -255...+255
+#define TMC22X_PWM_SCALE_SUM                  (255 << 0)          //Actual PWM duty cycle. This value is used for scaling the values CUR_A and CUR_B read from the sine wave table.
+#define TMC22X_PWM_SCALE_SUM_SHIFT            0                   //Range: 0...255
+#define TMC22X_PWM_SCALE_AUTO                 (511 << 16)         //9 Bit signed offset added to the calculated PWM duty cycle. This is the result of the automatic amplitude regulation based on current measurement.
+#define TMC22X_PWM_SCALE_AUTO_SHIFT           16                  //Range: -255...+255
 
 //Register                             Address   Type      N Bits    Description
 /********************************************************************************/
-#define PWM_AUTO_REGISTER              0x72      //R       8+8       //These automatically generated values can be read out in order to determine a default / power up setting for PWM_GRAD and PWM_OFS.
+#define TMC22X_PWM_AUTO_REGISTER              0x72      //R       8+8       //These automatically generated values can be read out in order to determine a default / power up setting for PWM_GRAD and PWM_OFS.
 /********************************************************************************/
 //Function                             Bit                 Description
-#define PWM_AUTO_OFS                   (255 << 0)          //Automatically determined offset value
-#define PWM_AUTO_OFS_SHIFT             0                   //Range: 0...255
-#define PWM_AUTO_GRAD                  (255 << 16)         //Automatically determined gradient value
-#define PWM_AUTO_GRAD_SHIFT            16                  //Range: 0...255
+#define TMC22X_PWM_AUTO_OFS                   (255 << 0)          //Automatically determined offset value
+#define TMC22X_PWM_AUTO_OFS_SHIFT             0                   //Range: 0...255
+#define TMC22X_PWM_AUTO_GRAD                  (255 << 16)         //Automatically determined gradient value
+#define TMC22X_PWM_AUTO_GRAD_SHIFT            16                  //Range: 0...255
 
 /*
  * Constructor
  */
 TMC22X::TMC22X(std::function<int(uint8_t *b, int cnt, uint8_t *r)> serial, char d) : serial(serial), designator(d)
 {
+    connection_method = stepper_connection_methods::UART;
+    max_current= 3000;
+    
     //we are not started yet
     started = false;
+    write_only = false;
+    
     error_reported.reset();
 }
 
@@ -581,18 +594,19 @@ TMC22X::TMC22X(std::function<int(uint8_t *b, int cnt, uint8_t *r)> serial, char 
  */
 void TMC22X::init(uint16_t cs)
 {
+    
     // Read chip specific config entries
     this->resistor= THEKERNEL->config->value(motor_driver_control_checksum, cs, sense_resistor_checksum)->by_default(50)->as_number(); // in milliohms
     this->chopper_mode= THEKERNEL->config->value(motor_driver_control_checksum, cs, chopper_mode_checksum)->by_default(0)->as_number();
 
     // Setting the default register values
-    this->gconf_register_value = GCONF_DEFAULT_DATA;
-    this->slaveconf_register_value = ZEROS_DEFAULT_DATA;
-    this->ihold_irun_register_value = ZEROS_DEFAULT_DATA;
-    this->tpowerdown_register_value = TPOWERDOWN_DEFAULT_DATA;
-    this->tpwmthrs_register_value = ZEROS_DEFAULT_DATA;
-    this->chopconf_register_value = CHOPCONF_DEFAULT_DATA;
-    this->pwmconf_register_value = PWMCONF_DEFAULT_DATA;
+    this->gconf_register_value = TMC22X_GCONF_DEFAULT_DATA;
+    this->slaveconf_register_value = TMC22X_ZEROS_DEFAULT_DATA;
+    this->ihold_irun_register_value = TMC22X_ZEROS_DEFAULT_DATA;
+    this->tpowerdown_register_value = TMC22X_TPOWERDOWN_DEFAULT_DATA;
+    this->tpwmthrs_register_value = TMC22X_ZEROS_DEFAULT_DATA;
+    this->chopconf_register_value = TMC22X_CHOPCONF_DEFAULT_DATA;
+    this->pwmconf_register_value = TMC22X_PWMCONF_DEFAULT_DATA;
 
     // Configure SpreadCycle (also uses in StealthChop when TPWMTHRS is set)
     // (default values come from the Quick Configuration Guide chapter in TMC2208 datasheet)
@@ -627,21 +641,25 @@ void TMC22X::init(uint16_t cs)
         setSpreadCycleEnabled(true);
     }
 
-    // Set microstepping via software and set external sense resistors using internal reference voltage
-    setGeneralConfiguration(0,0,0,0,1,1);
+    // Set microstepping via software and set external sense resistors using internal reference voltage, uart on, external VREF
+    setGeneralConfiguration(1,0,0,1,1,1);
+
+    // check for connectivity if not in read-only mode! Read the global register and check crc
+    unsigned long gconf_status = readStatus(TMC22X_READ_GCONF);
+    THEKERNEL->streams->printf("GCONF status: %lu \n", gconf_status );
 
     // Set a nice microstepping value
     setStepInterpolation(1);
-    setMicrosteps(DEFAULT_MICROSTEPPING_VALUE);
+    set_microsteps(TMC22X_DEFAULT_MICROSTEPPING_VALUE);
 
     // Set the initial values
-    send2208(WRITE|GCONF_REGISTER, this->gconf_register_value);
-    send2208(WRITE|SLAVECONF_REGISTER, this->slaveconf_register_value);
-    send2208(WRITE|IHOLD_IRUN_REGISTER, this->ihold_irun_register_value);
-    send2208(WRITE|TPOWERDOWN_REGISTER, this->tpowerdown_register_value);
-    send2208(WRITE|TPWMTHRS_REGISTER, this->tpwmthrs_register_value);
-    send2208(WRITE|CHOPCONF_REGISTER, this->chopconf_register_value);
-    send2208(WRITE|PWMCONF_REGISTER, this->pwmconf_register_value);
+    transceive2208(TMC22X_WRITE|TMC22X_GCONF_REGISTER, this->gconf_register_value);
+    transceive2208(TMC22X_WRITE|TMC22X_SLAVECONF_REGISTER, this->slaveconf_register_value);
+    transceive2208(TMC22X_WRITE|TMC22X_IHOLD_IRUN_REGISTER, this->ihold_irun_register_value);
+    transceive2208(TMC22X_WRITE|TMC22X_TPOWERDOWN_REGISTER, this->tpowerdown_register_value);
+    transceive2208(TMC22X_WRITE|TMC22X_TPWMTHRS_REGISTER, this->tpwmthrs_register_value);
+    transceive2208(TMC22X_WRITE|TMC22X_CHOPCONF_REGISTER, this->chopconf_register_value);
+    transceive2208(TMC22X_WRITE|TMC22X_PWMCONF_REGISTER, this->pwmconf_register_value);
 
     //started
     started = true;
@@ -651,55 +669,55 @@ void TMC22X::setGeneralConfiguration(bool i_scale_analog, bool internal_rsense, 
 {
     if (i_scale_analog) {
         //set voltage supplied to VREF as current reference
-        gconf_register_value |= GCONF_I_SCALE_ANALOG;
+        gconf_register_value |= TMC22X_GCONF_I_SCALE_ANALOG;
     } else {
         //use internal reference voltage
-        gconf_register_value &= ~(GCONF_I_SCALE_ANALOG);
+        gconf_register_value &= ~(TMC22X_GCONF_I_SCALE_ANALOG);
     }
 
     if (internal_rsense) {
         //use internal sense resistors
-        gconf_register_value |= GCONF_INTERNAL_RSENSE;
+        gconf_register_value |= TMC22X_GCONF_INTERNAL_RSENSE;
     } else {
         //use external sense resistors
-        gconf_register_value &= ~(GCONF_INTERNAL_RSENSE);
+        gconf_register_value &= ~(TMC22X_GCONF_INTERNAL_RSENSE);
     }
 
     if (shaft) {
         //invert motor direction
-        gconf_register_value |= GCONF_SHAFT;
+        gconf_register_value |= TMC22X_GCONF_SHAFT;
     } else {
         //normal operation
-        gconf_register_value &= ~(GCONF_SHAFT);
+        gconf_register_value &= ~(TMC22X_GCONF_SHAFT);
     }
 
     if (pdn_disable) {
         //disable standstill current reduction via PDN_UART pin
-        gconf_register_value |= GCONF_PDN_DISABLE;
+        gconf_register_value |= TMC22X_GCONF_PDN_DISABLE;
     } else {
         //enable standstill current reduction via PDN_UART pin
-        gconf_register_value &= ~(GCONF_PDN_DISABLE);
+        gconf_register_value &= ~(TMC22X_GCONF_PDN_DISABLE);
     }
 
     if (mstep_reg_select) {
         //select microstep resolution by MSTEP register
-        gconf_register_value |= GCONF_MSTEP_REG_SELECT;
+        gconf_register_value |= TMC22X_GCONF_MSTEP_REG_SELECT;
     } else {
         //select microstep resolution by pins MS1, MS2
-        gconf_register_value &= ~(GCONF_MSTEP_REG_SELECT);
+        gconf_register_value &= ~(TMC22X_GCONF_MSTEP_REG_SELECT);
     }
 
     if (multistep_filt) {
         //enable software pulse generator optimization when fullstep frequency > 750 Hz
-        gconf_register_value |= GCONF_MULTISTEP_FILT;
+        gconf_register_value |= TMC22X_GCONF_MULTISTEP_FILT;
     } else {
         //disable STEP pulses filtering
-        gconf_register_value &= ~(GCONF_MULTISTEP_FILT);
+        gconf_register_value &= ~(TMC22X_GCONF_MULTISTEP_FILT);
     }
 
     //if started we directly send it to the motor
     if (started) {
-        send2208(WRITE|GCONF_REGISTER, gconf_register_value);
+        transceive2208(TMC22X_WRITE|TMC22X_GCONF_REGISTER, gconf_register_value);
     }
 }
 
@@ -707,23 +725,23 @@ void TMC22X::setIndexoptions(bool otpw, bool step)
 {
     if (otpw) {
         //Index pin outputs overtemperature pre-warning flag
-        gconf_register_value |= GCONF_INDEX_OTPW;
+        gconf_register_value |= TMC22X_GCONF_INDEX_OTPW;
     } else {
         //Index pin outputs first microstep position of sequencer
-        gconf_register_value &= ~(GCONF_INDEX_OTPW);
+        gconf_register_value &= ~(TMC22X_GCONF_INDEX_OTPW);
     }
 
     if (step) {
         //Index pin outputs step pulses from internal pulse generator
-        gconf_register_value |= GCONF_MULTISTEP_FILT;
+        gconf_register_value |= TMC22X_GCONF_MULTISTEP_FILT;
     } else {
         //Index pin outputs the same as selected by index_otpw
-        gconf_register_value &= ~(GCONF_MULTISTEP_FILT);
+        gconf_register_value &= ~(TMC22X_GCONF_MULTISTEP_FILT);
     }
 
     //if started we directly send it to the motor
     if (started) {
-        send2208(WRITE|GCONF_REGISTER, gconf_register_value);
+        transceive2208(TMC22X_WRITE|TMC22X_GCONF_REGISTER, gconf_register_value);
     }
 }
 
@@ -735,14 +753,14 @@ void TMC22X::setSenddelay(uint8_t value)
     }
 
     //delete the old value
-    this->slaveconf_register_value &= ~(SLAVECONF_SENDDELAY);
+    this->slaveconf_register_value &= ~(TMC22X_SLAVECONF_SENDDELAY);
 
     //save the new value
-    this->slaveconf_register_value = value << SLAVECONF_SENDDELAY_SHIFT;
+    this->slaveconf_register_value = value << TMC22X_SLAVECONF_SENDDELAY_SHIFT;
 
     //if started we directly send it to the motor
     if (started) {
-        send2208(WRITE|SLAVECONF_REGISTER,slaveconf_register_value);
+        transceive2208(TMC22X_WRITE|TMC22X_SLAVECONF_REGISTER,slaveconf_register_value);
     }
 }
 
@@ -752,7 +770,7 @@ void TMC22X::setSenddelay(uint8_t value)
  * any value in between will be mapped to the next smaller value
  * 0 and 1 set the motor in full step mode
  */
-void TMC22X::setMicrosteps(int number_of_steps)
+int TMC22X::set_microsteps(int number_of_steps)
 {
     long setting_pattern;
     //poor mans log
@@ -787,20 +805,22 @@ void TMC22X::setMicrosteps(int number_of_steps)
     }
 
     //delete the old value
-    this->chopconf_register_value &= ~(CHOPCONF_MRES);
+    this->chopconf_register_value &= ~(TMC22X_CHOPCONF_MRES);
     //set the new value
-    this->chopconf_register_value |= (setting_pattern << CHOPCONF_MRES_SHIFT);
+    this->chopconf_register_value |= (setting_pattern << TMC22X_CHOPCONF_MRES_SHIFT);
 
     //if started we directly send it to the motor
     if (started) {
-        send2208(WRITE|CHOPCONF_REGISTER, chopconf_register_value);
+        transceive2208(TMC22X_WRITE|TMC22X_CHOPCONF_REGISTER, chopconf_register_value);
     }
+    
+    return microsteps;
 }
 
 /*
  * returns the effective number of microsteps at the moment
  */
-int TMC22X::getMicrosteps(void)
+int TMC22X::get_microsteps(void)
 {
     return microsteps;
 }
@@ -808,26 +828,26 @@ int TMC22X::getMicrosteps(void)
 void TMC22X::setStepInterpolation(int8_t value)
 {
     if (value) {
-        chopconf_register_value |= CHOPCONF_INTPOL;
+        chopconf_register_value |= TMC22X_CHOPCONF_INTPOL;
     } else {
-        chopconf_register_value &= ~(CHOPCONF_INTPOL);
+        chopconf_register_value &= ~(TMC22X_CHOPCONF_INTPOL);
     }
     //if started we directly send it to the motor
     if (started) {
-        send2208(WRITE|CHOPCONF_REGISTER, chopconf_register_value);
+        transceive2208(TMC22X_WRITE|TMC22X_CHOPCONF_REGISTER, chopconf_register_value);
     }
 }
 
 void TMC22X::setDoubleEdge(int8_t value)
 {
     if (value) {
-        chopconf_register_value |= CHOPCONF_DEDGE;
+        chopconf_register_value |= TMC22X_CHOPCONF_DEDGE;
     } else {
-        chopconf_register_value &= ~(CHOPCONF_DEDGE);
+        chopconf_register_value &= ~(TMC22X_CHOPCONF_DEDGE);
     }
     //if started we directly send it to the motor
     if (started) {
-        send2208(WRITE|CHOPCONF_REGISTER, chopconf_register_value);
+        transceive2208(TMC22X_WRITE|TMC22X_CHOPCONF_REGISTER, chopconf_register_value);
     }
 }
 
@@ -890,32 +910,32 @@ void TMC22X::setSpreadCycleChopper(int8_t constant_off_time, int8_t blank_time, 
     hysteresis_end += 3;
 
     //first of all delete all the values for this
-    chopconf_register_value &= ~(CHOPCONF_TBL | CHOPCONF_HEND | CHOPCONF_HSTRT | CHOPCONF_TOFF);
+    chopconf_register_value &= ~(TMC22X_CHOPCONF_TBL | TMC22X_CHOPCONF_HEND | TMC22X_CHOPCONF_HSTRT | TMC22X_CHOPCONF_TOFF);
     //set the blank timing value
-    chopconf_register_value |= ((unsigned long)blank_value) << CHOPCONF_TBL_SHIFT;
+    chopconf_register_value |= ((unsigned long)blank_value) << TMC22X_CHOPCONF_TBL_SHIFT;
     //setting the constant off time
-    chopconf_register_value |= ((unsigned long)constant_off_time) << CHOPCONF_TOFF_SHIFT;
+    chopconf_register_value |= ((unsigned long)constant_off_time) << TMC22X_CHOPCONF_TOFF_SHIFT;
     //set the hysteresis_start
-    chopconf_register_value |= ((unsigned long)hysteresis_start) << CHOPCONF_HSTRT_SHIFT;
+    chopconf_register_value |= ((unsigned long)hysteresis_start) << TMC22X_CHOPCONF_HSTRT_SHIFT;
     //set the hysteresis end
-    chopconf_register_value |= ((unsigned long)hysteresis_end) << CHOPCONF_HEND_SHIFT;
+    chopconf_register_value |= ((unsigned long)hysteresis_end) << TMC22X_CHOPCONF_HEND_SHIFT;
 
     //if started we directly send it to the motor
     if (started) {
-        send2208(WRITE|CHOPCONF_REGISTER,chopconf_register_value);
+        transceive2208(TMC22X_WRITE|TMC22X_CHOPCONF_REGISTER,chopconf_register_value);
     }
 }
 
 void TMC22X::setSpreadCycleEnabled(bool enable)
 {
     if (enable) {
-        gconf_register_value |= GCONF_EN_SPREADCYCLE;
+        gconf_register_value |= TMC22X_GCONF_EN_SPREADCYCLE;
     } else {
-        gconf_register_value &= ~(GCONF_EN_SPREADCYCLE);
+        gconf_register_value &= ~(TMC22X_GCONF_EN_SPREADCYCLE);
     }
     //if started we directly send it to the motor
     if (started) {
-        send2208(WRITE|GCONF_REGISTER, gconf_register_value);
+        transceive2208(TMC22X_WRITE|TMC22X_GCONF_REGISTER, gconf_register_value);
     }
 }
 
@@ -940,29 +960,29 @@ void TMC22X::setStealthChop(uint8_t lim, uint8_t reg, uint8_t freewheel, bool au
 
     if (autoscale) {
         //set PWM automatic amplitude scaling
-        pwmconf_register_value |= PWMCONF_PWM_AUTOSCALE;
+        pwmconf_register_value |= TMC22X_PWMCONF_PWM_AUTOSCALE;
         if(autograd) {
             //set PWM automatic gradient adaptation
-            pwmconf_register_value |= PWMCONF_PWM_AUTOGRAD;
+            pwmconf_register_value |= TMC22X_PWMCONF_PWM_AUTOGRAD;
         }
         //set regulation loop gradient
-        pwmconf_register_value |= (reg << PWMCONF_PWM_REG_SHIFT);
+        pwmconf_register_value |= (reg << TMC22X_PWMCONF_PWM_REG_SHIFT);
     }
 
     //limit for PWM_SCALE_AUTO when switching back from spreadCycle to stealthChop
-    pwmconf_register_value |= (lim << PWMCONF_PWM_LIM_SHIFT);
+    pwmconf_register_value |= (lim << TMC22X_PWMCONF_PWM_LIM_SHIFT);
     //set standstill mode
-    pwmconf_register_value |= (freewheel << PWMCONF_FREEWHEEL_SHIFT);
+    pwmconf_register_value |= (freewheel << TMC22X_PWMCONF_FREEWHEEL_SHIFT);
     //set PWM frequency
-    pwmconf_register_value |= (freq << PWMCONF_PWM_FREQ_SHIFT);
+    pwmconf_register_value |= (freq << TMC22X_PWMCONF_PWM_FREQ_SHIFT);
     //set user defined amplitude gradient
-    pwmconf_register_value |= (grad << PWMCONF_PWM_GRAD_SHIFT);
+    pwmconf_register_value |= (grad << TMC22X_PWMCONF_PWM_GRAD_SHIFT);
     //set user defined amplitude offset
-    pwmconf_register_value |= (ofs << PWMCONF_PWM_OFS_SHIFT);
+    pwmconf_register_value |= (ofs << TMC22X_PWMCONF_PWM_OFS_SHIFT);
 
     //if started we directly send it to the motor
     if (started) {
-        send2208(WRITE|PWMCONF_REGISTER,pwmconf_register_value);
+        transceive2208(TMC22X_WRITE|TMC22X_PWMCONF_REGISTER,pwmconf_register_value);
     }
 }
 
@@ -974,14 +994,14 @@ void TMC22X::setHolddelay(uint8_t value)
     }
 
     //delete the old value
-    this->ihold_irun_register_value &= ~(IHOLD_IRUN_IHOLDDELAY);
+    this->ihold_irun_register_value &= ~(TMC22X_IHOLD_IRUN_IHOLDDELAY);
 
     //save the new value
-    this->ihold_irun_register_value = value << IHOLD_IRUN_IHOLDDELAY_SHIFT;
+    this->ihold_irun_register_value = value << TMC22X_IHOLD_IRUN_IHOLDDELAY_SHIFT;
 
     //if started we directly send it to the motor
     if (started) {
-        send2208(WRITE|IHOLD_IRUN_REGISTER,ihold_irun_register_value);
+        transceive2208(TMC22X_WRITE|TMC22X_IHOLD_IRUN_REGISTER,ihold_irun_register_value);
     }
 }
 
@@ -992,7 +1012,7 @@ void TMC22X::setPowerDowndelay(uint8_t value)
 
     //if started we directly send it to the motor
     if (started) {
-        send2208(WRITE|TPOWERDOWN_REGISTER,tpowerdown_register_value);
+        transceive2208(TMC22X_WRITE|TMC22X_TPOWERDOWN_REGISTER,tpowerdown_register_value);
     }
 }
 
@@ -1008,18 +1028,18 @@ void TMC22X::setStealthChopthreshold(uint32_t threshold)
 
     //if started we directly send it to the motor
     if (started) {
-        send2208(WRITE|TPWMTHRS_REGISTER,tpwmthrs_register_value);
+        transceive2208(TMC22X_WRITE|TMC22X_TPWMTHRS_REGISTER,tpwmthrs_register_value);
     }
 }
 
-void TMC22X::setCurrent(unsigned int current)
+void TMC22X::set_current(unsigned int current)
 {
     uint8_t current_scaling = 0;
     //calculate the current scaling from the max current setting (in mA)
     double mASetting = (double)current;
     double resistor_value = (double) this->resistor;
     // remove vsense flag
-    this->chopconf_register_value &= ~(CHOPCONF_VSENSE);
+    this->chopconf_register_value &= ~(TMC22X_CHOPCONF_VSENSE);
     //this is derived from I=(CS+1)/32*(Vsense/Rsense)
     //leading to CS = 32*Rsense*I/Vsense
     //with I = 1000 mA (default)
@@ -1030,7 +1050,7 @@ void TMC22X::setCurrent(unsigned int current)
     //check if the current scaling is too low
     if (current_scaling < 16) {
         //set the Vsense bit to get a use half the sense voltage (to support lower motor currents)
-        this->chopconf_register_value |= CHOPCONF_VSENSE;
+        this->chopconf_register_value |= TMC22X_CHOPCONF_VSENSE;
         //and recalculate the current setting
         current_scaling = (uint8_t)(((resistor_value + 20) * mASetting * 32.0F / (0.18F * 1000.0F * 1000.0F)) - 0.5F); //theoretically - 1.0 for better rounding it is 0.5
     }
@@ -1041,25 +1061,25 @@ void TMC22X::setCurrent(unsigned int current)
     }
 
     //delete the old value
-    ihold_irun_register_value &= ~(IHOLD_IRUN_IRUN);
+    ihold_irun_register_value &= ~(TMC22X_IHOLD_IRUN_IRUN);
     //set the new current scaling
-    ihold_irun_register_value  |= current_scaling << IHOLD_IRUN_IRUN_SHIFT;
+    ihold_irun_register_value  |= current_scaling << TMC22X_IHOLD_IRUN_IRUN_SHIFT;
     //if started we directly send it to the motor
     if (started) {
-        send2208(WRITE|CHOPCONF_REGISTER,chopconf_register_value);
-        send2208(WRITE|IHOLD_IRUN_REGISTER,ihold_irun_register_value);
+        transceive2208(TMC22X_WRITE|TMC22X_CHOPCONF_REGISTER,chopconf_register_value);
+        transceive2208(TMC22X_WRITE|TMC22X_IHOLD_IRUN_REGISTER,ihold_irun_register_value);
     }
 }
 
 void TMC22X::setHoldCurrent(uint8_t hold)
 {
-    double current_scaling = (double)((ihold_irun_register_value & IHOLD_IRUN_IRUN) >> IHOLD_IRUN_IRUN_SHIFT);
+    double current_scaling = (double)((ihold_irun_register_value & TMC22X_IHOLD_IRUN_IRUN) >> TMC22X_IHOLD_IRUN_IRUN_SHIFT);
     //delete the old value
-    ihold_irun_register_value &= ~(IHOLD_IRUN_IHOLD);
+    ihold_irun_register_value &= ~(TMC22X_IHOLD_IRUN_IHOLD);
     //set the new current scaling
-    ihold_irun_register_value |= (uint8_t)(current_scaling * ((double) hold) / 100.0F) << IHOLD_IRUN_IHOLD_SHIFT;
+    ihold_irun_register_value |= (uint8_t)(current_scaling * ((double) hold) / 100.0F) << TMC22X_IHOLD_IRUN_IHOLD_SHIFT;
     if (started) {
-        send2208(WRITE|IHOLD_IRUN_REGISTER,ihold_irun_register_value);
+        transceive2208(TMC22X_WRITE|TMC22X_IHOLD_IRUN_REGISTER,ihold_irun_register_value);
     }
 }
 
@@ -1068,13 +1088,13 @@ void TMC22X::setResistor(unsigned int value)
     this->resistor = value;
 }
 
-unsigned int TMC22X::getCurrent(void)
+unsigned int TMC22X::get_current(void)
 {
     //we calculate the current according to the datasheet to be on the safe side
     //this is not the fastest but the most accurate and illustrative way
-    double result = (double)((ihold_irun_register_value & IHOLD_IRUN_IRUN) >> IHOLD_IRUN_IRUN_SHIFT);
+    double result = (double)((ihold_irun_register_value & TMC22X_IHOLD_IRUN_IRUN) >> TMC22X_IHOLD_IRUN_IRUN_SHIFT);
     double resistor_value = (double)this->resistor;
-    double voltage = (chopconf_register_value & CHOPCONF_VSENSE) ? 0.18F : 0.32F;
+    double voltage = (chopconf_register_value & TMC22X_CHOPCONF_VSENSE) ? 0.18F : 0.32F;
     result = (result + 1.0F) / 32.0F * voltage / (resistor_value + 20) * 1000.0F * 1000.0F;
     return (unsigned int)result;
 }
@@ -1085,16 +1105,16 @@ unsigned int TMC22X::getCurrentCSReading(void)
     if (!started) {
         return 0;
     }
-    float result = ((readStatus(TMC22X_READOUT_CURRENT) & DRV_STATUS_CS_ACTUAL) >> DRV_STATUS_CS_ACTUAL_SHIFT);
+    float result = ((readStatus(TMC22X_READ_DRV_STATUS) & TMC22X_DRV_STATUS_CS_ACTUAL) >> TMC22X_DRV_STATUS_CS_ACTUAL_SHIFT);
     float resistor_value = (float)this->resistor;
-    float voltage = (chopconf_register_value & CHOPCONF_VSENSE) ? 0.18F : 0.32F;
+    float voltage = (chopconf_register_value & TMC22X_CHOPCONF_VSENSE) ? 0.18F : 0.32F;
     result = (result + 1.0F) / 32.0F * voltage / (resistor_value + 20) * 1000.0F * 1000.0F;
     return (unsigned int)roundf(result);
 }
 
 bool TMC22X::isCurrentScalingHalfed()
 {
-    if (this->chopconf_register_value & CHOPCONF_VSENSE) {
+    if (this->chopconf_register_value & TMC22X_CHOPCONF_VSENSE) {
         return true;
     } else {
         return false;
@@ -1112,10 +1132,10 @@ int8_t TMC22X::getOverTemperature(void)
     if (!this->started) {
         return 0;
     }
-    if (readStatus(TMC22X_READOUT_CURRENT) & DRV_STATUS_OT) {
+    if (readStatus(TMC22X_READ_DRV_STATUS) & TMC22X_DRV_STATUS_OT) {
         return TMC22X_OVERTEMPERATURE_SHUTDOWN;
     }
-    if (readStatus(TMC22X_READOUT_CURRENT) & DRV_STATUS_OTPW) {
+    if (readStatus(TMC22X_READ_DRV_STATUS) & TMC22X_DRV_STATUS_OTPW) {
         return TMC22X_OVERTEMPERATURE_PREWARNING;
     }
     return 0;
@@ -1127,7 +1147,7 @@ bool TMC22X::isShortToGroundA(void)
     if (!this->started) {
         return false;
     }
-    return (readStatus(TMC22X_READOUT_CURRENT) & DRV_STATUS_S2GA);
+    return (readStatus(TMC22X_READ_DRV_STATUS) & TMC22X_DRV_STATUS_S2GA);
 }
 
 //is motor channel B shorted to ground
@@ -1136,7 +1156,7 @@ bool TMC22X::isShortToGroundB(void)
     if (!this->started) {
         return false;
     }
-    return (readStatus(TMC22X_READOUT_CURRENT) & DRV_STATUS_S2GB);
+    return (readStatus(TMC22X_READ_DRV_STATUS) & TMC22X_DRV_STATUS_S2GB);
 }
 
 //is motor channel A connected
@@ -1145,7 +1165,7 @@ bool TMC22X::isOpenLoadA(void)
     if (!this->started) {
         return false;
     }
-    return (readStatus(TMC22X_READOUT_CURRENT) & DRV_STATUS_OLA);
+    return (readStatus(TMC22X_READ_DRV_STATUS) & TMC22X_DRV_STATUS_OLA);
 }
 
 //is motor channel B connected
@@ -1154,7 +1174,7 @@ bool TMC22X::isOpenLoadB(void)
     if (!this->started) {
         return false;
     }
-    return (readStatus(TMC22X_READOUT_CURRENT) & DRV_STATUS_OLB);
+    return (readStatus(TMC22X_READ_DRV_STATUS) & TMC22X_DRV_STATUS_OLB);
 }
 
 //is chopper inactive since 2^20 clock cycles - defaults to ~0,08s
@@ -1163,10 +1183,10 @@ bool TMC22X::isStandStill(void)
     if (!this->started) {
         return false;
     }
-    return (readStatus(TMC22X_READOUT_CURRENT) & DRV_STATUS_STST);
+    return (readStatus(TMC22X_READ_DRV_STATUS) & TMC22X_DRV_STATUS_STST);
 }
 
-void TMC22X::setEnabled(bool enabled)
+void TMC22X::set_enable(bool enabled)
 {
     int8_t constant_off_time=this->constant_off_time;
     //perform some sanity checks
@@ -1180,20 +1200,20 @@ void TMC22X::setEnabled(bool enabled)
     this->constant_off_time = constant_off_time;
 
     //delete the t_off in the chopper config to get sure
-    chopconf_register_value &= ~(CHOPCONF_TOFF);
+    chopconf_register_value &= ~(TMC22X_CHOPCONF_TOFF);
     if (enabled) {
         //and set the t_off time
-        chopconf_register_value |= ((unsigned long)this->constant_off_time) << CHOPCONF_TOFF_SHIFT;
+        chopconf_register_value |= ((unsigned long)this->constant_off_time) << TMC22X_CHOPCONF_TOFF_SHIFT;
     }
     //if not enabled we don't have to do anything since we already delete t_off from the register
     if (started) {
-        send2208(WRITE|CHOPCONF_REGISTER, chopconf_register_value);
+        transceive2208(TMC22X_WRITE|TMC22X_CHOPCONF_REGISTER, chopconf_register_value);
     }
 }
 
 bool TMC22X::isEnabled()
 {
-    if (chopconf_register_value & CHOPCONF_TOFF) {
+    if (chopconf_register_value & TMC22X_CHOPCONF_TOFF) {
         return true;
     } else {
         return false;
@@ -1204,17 +1224,19 @@ bool TMC22X::isEnabled()
 unsigned long TMC22X::readStatus(int8_t read_value)
 {
     uint32_t data;
-    if(read_value == TMC22X_READOUT_MICROSTEP) {
-        data = send2208(READ|MSCNT_REGISTER,ZEROS_DEFAULT_DATA);
+    if (read_value == TMC22X_READ_GCONF) {
+        data = transceive2208(TMC22X_READ|TMC22X_GCONF_REGISTER,TMC22X_ZEROS_DEFAULT_DATA);
+    } else if (read_value == TMC22X_READ_MSCNT) {
+        data = transceive2208(TMC22X_READ|TMC22X_MSCNT_REGISTER,TMC22X_ZEROS_DEFAULT_DATA);
     } else {
-        data = send2208(READ|DRV_STATUS_REGISTER,ZEROS_DEFAULT_DATA);
+        data = transceive2208(TMC22X_READ|TMC22X_DRV_STATUS_REGISTER,TMC22X_ZEROS_DEFAULT_DATA);
     }
     return data;
 }
 
-void TMC22X::dumpStatus(StreamOutput *stream, bool readable)
+void TMC22X::dump_status(StreamOutput *stream)
 {
-    if (readable) {
+    if (!this->write_only) {
         stream->printf("designator %c, Chip type TMC22X\n", designator);
 
         check_error_status_bits(stream);
@@ -1223,10 +1245,10 @@ void TMC22X::dumpStatus(StreamOutput *stream, bool readable)
             stream->printf("INFO: Motor is standing still.\n");
         }
 
-        int value = readStatus(TMC22X_READOUT_MICROSTEP);
+        int value = readStatus(TMC22X_READ_MSCNT);
         stream->printf("Microstep position phase A: %d\n", value);
 
-        stream->printf("Current setting: %dmA\n", getCurrent());
+        stream->printf("Current setting: %dmA\n", get_current());
 
         stream->printf("Microsteps: 1/%d\n", microsteps);
 
@@ -1248,11 +1270,11 @@ void TMC22X::dumpStatus(StreamOutput *stream, bool readable)
         if (moving) {
             stream->printf("#p%lu,k%u,r,", THEROBOT->actuators[0]->get_current_step(), getCurrentCSReading());
         } else {
-            readStatus(TMC22X_READOUT_MICROSTEP); // get the status bits
+            readStatus(TMC22X_READ_MSCNT); // get the status bits
             stream->printf("#s,");
         }
         stream->printf("d%d,", THEROBOT->actuators[0]->which_direction() ? -1 : 1);
-        stream->printf("c%u,m%d,", getCurrent(), getMicrosteps());
+        stream->printf("c%u,m%d,", get_current(), get_microsteps());
         // stream->printf('S');
         // stream->printf(tmc22XStepper.getSpeed(), DEC);
 
@@ -1298,7 +1320,7 @@ void TMC22X::dumpStatus(StreamOutput *stream, bool readable)
 bool TMC22X::check_error_status_bits(StreamOutput *stream)
 {
     bool error= false;
-    readStatus(TMC22X_READOUT_MICROSTEP); // get the status bits
+    readStatus(TMC22X_READ_MSCNT); // get the status bits
 
     if (this->getOverTemperature()&TMC22X_OVERTEMPERATURE_PREWARNING) {
         if(!error_reported.test(0)) stream->printf("%c - WARNING: Overtemperature Prewarning!\n", designator);
@@ -1351,24 +1373,24 @@ bool TMC22X::check_error_status_bits(StreamOutput *stream)
     return error;
 }
 
-bool TMC22X::checkAlarm()
+bool TMC22X::check_alarm()
 {
     return check_error_status_bits(THEKERNEL->streams);
 }
 
 // sets a raw register to the value specified, for advanced settings
 // register 255 writes them, 0 displays what registers are mapped to what
-bool TMC22X::setRawRegister(StreamOutput *stream, uint32_t reg, uint32_t val)
+bool TMC22X::set_raw_register(StreamOutput *stream, uint32_t reg, uint32_t val)
 {
     switch(reg) {
         case 255:
-            send2208(WRITE|GCONF_REGISTER, this->gconf_register_value);
-            send2208(WRITE|SLAVECONF_REGISTER, this->slaveconf_register_value);
-            send2208(WRITE|IHOLD_IRUN_REGISTER, this->ihold_irun_register_value);
-            send2208(WRITE|TPOWERDOWN_REGISTER, this->tpowerdown_register_value);
-            send2208(WRITE|TPWMTHRS_REGISTER, this->tpwmthrs_register_value);
-            send2208(WRITE|CHOPCONF_REGISTER, this->chopconf_register_value);
-            send2208(WRITE|PWMCONF_REGISTER, this->pwmconf_register_value);
+            transceive2208(TMC22X_WRITE|TMC22X_GCONF_REGISTER, this->gconf_register_value);
+            transceive2208(TMC22X_WRITE|TMC22X_SLAVECONF_REGISTER, this->slaveconf_register_value);
+            transceive2208(TMC22X_WRITE|TMC22X_IHOLD_IRUN_REGISTER, this->ihold_irun_register_value);
+            transceive2208(TMC22X_WRITE|TMC22X_TPOWERDOWN_REGISTER, this->tpowerdown_register_value);
+            transceive2208(TMC22X_WRITE|TMC22X_TPWMTHRS_REGISTER, this->tpwmthrs_register_value);
+            transceive2208(TMC22X_WRITE|TMC22X_CHOPCONF_REGISTER, this->chopconf_register_value);
+            transceive2208(TMC22X_WRITE|TMC22X_PWMCONF_REGISTER, this->pwmconf_register_value);
             stream->printf("Registers written\n");
             break;
 
@@ -1395,26 +1417,24 @@ bool TMC22X::setRawRegister(StreamOutput *stream, uint32_t reg, uint32_t val)
     return true;
 }
 
-//calculates CRC checksum and stores in last byte of message
-void calc_crc(uint8_t *buf, int cnt)
-{
-    uint8_t *crc = buf + cnt -1; // CRC located in last byte of message
-    uint8_t currentByte;
-
-    *crc = 0;
-    for (int i = 0; i < cnt-1; i++) {  // Execute for all bytes of a message
-        currentByte = buf[i];          // Retrieve a byte to be sent from Array
-        for (int j = 0; j < 8; j++) {
-            if ((*crc >> 7) ^ (currentByte & 0x01)) {   // update CRC based result of XOR operation
-                *crc = (*crc << 1) ^ 0x07;
-            } else {
-                *crc = (*crc << 1);
-            }
-            //crc &= 0xff;
-            currentByte = currentByte >> 1;
-        }   // for CRC bit
-    }       // for message byte
+/*
+uint8_t TMC22X::calcCRC(uint8_t *buf, uint8_t len) {
+    uint8_t crc = 0;
+	for (uint8_t i = 0; i < len; i++) {
+		uint8_t currentByte = buf[i];
+		for (uint8_t j = 0; j < 8; j++) {
+			if ((crc >> 7) ^ (currentByte & 0x01)) {
+				crc = (crc << 1) ^ 0x07;
+			} else {
+				crc = (crc << 1);
+			}
+			crc &= 0xff;
+			currentByte = currentByte >> 1;
+		}
+	}
+	return crc;
 }
+*/
 
 /*
  * send register settings to the stepper driver via UART
@@ -1422,12 +1442,12 @@ void calc_crc(uint8_t *buf, int cnt)
  * receive 64 bits only for read request
  * returns received data content
  */
-uint32_t TMC22X::send2208(uint8_t reg, uint32_t datagram)
+uint32_t TMC22X::transceive2208(uint8_t reg, uint32_t datagram)
 {
-    uint8_t rbuf[8];
+    uint8_t rbuf[9]; // 8 + 1 crc
     uint32_t i_datagram = 0;
-    if(reg & WRITE) {
-        uint8_t buf[] {(uint8_t)(SYNC), (uint8_t)(SLAVEADDR), (uint8_t)(reg), (uint8_t)(datagram >> 24), (uint8_t)(datagram >> 16), (uint8_t)(datagram >> 8), (uint8_t)(datagram >> 0), (uint8_t)(0x00)};
+    if(reg & TMC22X_WRITE) {
+        uint8_t buf[] {(uint8_t)(TMC22X_SYNC), (uint8_t)(TMC22X_SLAVEADDR), (uint8_t)(reg), (uint8_t)(datagram >> 24), (uint8_t)(datagram >> 16), (uint8_t)(datagram >> 8), (uint8_t)(datagram >> 0), (uint8_t)(0x00)};
 
         //calculate checksum
         calc_crc(buf, 8);
@@ -1435,20 +1455,27 @@ uint32_t TMC22X::send2208(uint8_t reg, uint32_t datagram)
         //write/read the values
         serial(buf, 8, rbuf);
 
-        //THEKERNEL->streams->printf("sent: %02X, %02X, %02X, %02X, %02X, %02X, %02X, %02X \n", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7]);
+        THEKERNEL->streams->printf("sent: %02X, %02X, %02X, %02X, %02X, %02X, %02X, %02X \n", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7]);
     } else {
-        uint8_t buf[] {(uint8_t)(SYNC), (uint8_t)(SLAVEADDR), (uint8_t)(reg), (uint8_t)(0x00)};
+        // reading from UART
+        uint8_t buf[] {(uint8_t)(TMC22X_SYNC), (uint8_t)(TMC22X_SLAVEADDR), (uint8_t)(reg), (uint8_t)(0x00)};
 
         //calculate checksum
         calc_crc(buf, 4);
 
         //write/read the values
         serial(buf, 4, rbuf);
-
+        
+        uint8_t crc;
+        // save response CRC
+        crc = rbuf[5];
+        calc_crc(rbuf,4);
+        
         //construct reply
         i_datagram = ((rbuf[3] << 24) | (rbuf[4] << 16) | (rbuf[5] << 8) | (rbuf[6] << 0));
 
-        //THEKERNEL->streams->printf("sent: %02X, %02X, %02X, %02X received: %02X, %02X, %02X, %02X, %02X, %02X, %02X, %02X \n", buf[0], buf[1], buf[2], buf[3], rbuf[0], rbuf[1], rbuf[2], rbuf[3], rbuf[4], rbuf[5], rbuf[6], rbuf[7]);
+        THEKERNEL->streams->printf("got CRC: %02X calc CRC: %02X \n", crc, rbuf[5]);
+        THEKERNEL->streams->printf("sent: %02X, %02X, %02X, %02X received: %02X, %02X, %02X, %02X, %02X, %02X, %02X, %02X, %02X \n", buf[0], buf[1], buf[2], buf[3], rbuf[0], rbuf[1], rbuf[2], rbuf[3], rbuf[4], rbuf[5], rbuf[6], rbuf[7], rbuf[8]);
     }
     return i_datagram;
 }
@@ -1518,7 +1545,7 @@ bool TMC22X::set_options(const options_t& options)
             set = true;
 
         } else if(s == 13 && HAS('Z')) {
-            setEnabled(GET('Z'));
+            set_enable(GET('Z'));
             set = true;
             
         }
@@ -1528,3 +1555,35 @@ bool TMC22X::set_options(const options_t& options)
     return set;
 }
 
+/*
+*
+* sets the write_only flag for this driver instance
+*
+*/
+
+void TMC22X::set_write_only(bool wo) {
+    this->write_only = wo;
+}
+
+//calculates CRC checksum and stores in last byte of message
+uint8_t TMC22X::calc_crc(uint8_t *buf, uint8_t cnt)
+{
+    // pointer address of last byte
+    uint8_t *crc = buf + cnt -1; // CRC located in last byte of message
+    uint8_t currentByte;
+
+    *crc = 0;
+    for (int i = 0; i < cnt-1; i++) {  // Execute for all bytes of a message
+        currentByte = buf[i];          // Retrieve a byte to be sent from Array
+        for (int j = 0; j < 8; j++) {
+            if ((*crc >> 7) ^ (currentByte & 0x01)) {   // update CRC based result of XOR operation
+                *crc = (*crc << 1) ^ 0x07;
+            } else {
+                *crc = (*crc << 1);
+            }
+            //crc &= 0xff;
+            currentByte = currentByte >> 1;
+        }   // for CRC bit
+    }       // for message byte
+    return *crc & 0xff;
+}

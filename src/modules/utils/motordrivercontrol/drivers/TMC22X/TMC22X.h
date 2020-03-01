@@ -34,13 +34,15 @@
 #include <map>
 #include <bitset>
 
+#include "../StepperDrv.h"
+
 class StreamOutput;
 
 /*!
  * \class TMC22X
  * \brief Class representing a TMC22X stepper driver
  */
-class TMC22X
+class TMC22X : public StepperDrv 
 {
 public:
     /*!
@@ -113,7 +115,7 @@ public:
      * If you give any other value it will be rounded to the next smaller number (3 would give a microstepping of 2).
      * You can always check the current microstepping with getMicrosteps().
      */
-    void setMicrosteps(int number_of_steps);
+    int set_microsteps(int number_of_steps);
 
     /*!
      * \brief returns the effective current number of microsteps selected.
@@ -121,9 +123,9 @@ public:
      * This function always returns the effective number of microsteps.
      * This can be a bit different than the micro steps set in setMicrosteps() since it is rounded to 2^i.
      *
-     * \sa setMicrosteps()
+     * \sa set_microsteps()
      */
-    int getMicrosteps(void);
+    int get_microsteps(void);
 
     /*!
      * \brief Enable actual microstep resolution (MRES) to 256 microsteps for smoothest motor operation.
@@ -209,7 +211,7 @@ public:
      * \param current the maximum motor current in mA
      * \sa getCurrent(), getCurrentCurrent()
      */
-    void setCurrent(unsigned int current);
+    void set_current(unsigned int current);
 
     /*!
      * \brief set standstill motor current
@@ -231,7 +233,7 @@ public:
      *\return the maximum motor current in milli amps
      * \sa getCurrentCurrent()
      */
-    unsigned int getCurrent(void);
+    unsigned int get_current(void);
 
     /*!
      *\brief a convenience method to determine if the current scaling uses 0.31V or 0.165V as reference.
@@ -301,7 +303,7 @@ public:
      *\brief enables or disables the motor driver bridges. If disabled the motor can run freely. If enabled not.
      *\param enabled a bool value true if the motor should be enabled, false otherwise.
      */
-    void setEnabled(bool enabled);
+    void set_enable(bool enabled);
 
     /*!
      *\brief checks if the output bridges are enabled. If the bridges are not enabled the motor can run freely
@@ -325,18 +327,22 @@ public:
      * \brief Prints out all the information that can be found in the last status read out - it does not force a status readout.
      * The result is printed via Serial
      */
-    void dumpStatus(StreamOutput *stream, bool readable= true);
-    bool setRawRegister(StreamOutput *stream, uint32_t reg, uint32_t val);
-    bool checkAlarm();
+    void dump_status(StreamOutput *stream);
+    bool set_raw_register(StreamOutput *stream, uint32_t reg, uint32_t val);
+    bool check_alarm();
 
     using options_t= std::map<char,int>;
 
     bool set_options(const options_t& options);
+    
+    void set_write_only(bool wo);
+    //uint8_t calcCRC(uint8_t *buf, uint8_t len);
+    uint8_t calc_crc(uint8_t *buf, uint8_t len);
 private:
     bool check_error_status_bits(StreamOutput *stream);
 
     // UART sender
-    inline uint32_t send2208(uint8_t reg, uint32_t datagram);
+    inline uint32_t transceive2208(uint8_t reg, uint32_t datagram);
     std::function<int(uint8_t *b, int cnt, uint8_t *r)> serial;
 
     unsigned int resistor{50}; // current sense resistor value in milliohm
@@ -367,5 +373,6 @@ private:
 
     char designator;
 
+    bool write_only = false;
 };
 

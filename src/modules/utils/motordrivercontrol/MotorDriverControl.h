@@ -4,15 +4,22 @@
 #include "Pin.h"
 
 #include <stdint.h>
+#include <memory>
 
 namespace mbed {
     class SPI;
 }
 
+class StreamOutput;
+
+class StepperDrv;
+
 class DRV8711DRV;
 class TMC26X;
 class TMC22X;
+
 class StreamOutput;
+
 class Gcode;
 class BufferedSoftSerial;
 
@@ -34,7 +41,7 @@ class MotorDriverControl : public Module {
         void set_current( uint32_t current );
         uint32_t set_microstep( uint32_t ms );
         void set_decay_mode( uint8_t dm );
-        void dump_status(StreamOutput*, bool);
+        void dump_status(StreamOutput*);
         void set_raw_register(StreamOutput *stream, uint32_t reg, uint32_t val);
         void set_options(Gcode *gcode);
 
@@ -59,16 +66,16 @@ class MotorDriverControl : public Module {
         enum CHIP_TYPE {
             DRV8711,
             TMC2660,
-            TMC2208
+            TMC2208,
+            TMC2209
         };
         CHIP_TYPE chip;
-
+        
         // one of these drivers
-        union {
-            DRV8711DRV *drv8711;
-            TMC26X *tmc26x;
-            TMC22X *tmc22x;
-        };
+        //DRV8711DRV *drv8711;
+        //TMC26X *tmc26x;
+        //TMC22X *tmc22x;
+        StepperDrv *DRV;
 
         //float current_factor;
         uint32_t max_current; // in milliamps

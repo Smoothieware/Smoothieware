@@ -3,9 +3,11 @@
 #include <functional>
 #include <bitset>
 
+#include "../StepperDrv.h"
+
 class StreamOutput;
 
-class DRV8711DRV
+class DRV8711DRV: public StepperDrv 
 {
 public:
   DRV8711DRV(std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi, char designator);

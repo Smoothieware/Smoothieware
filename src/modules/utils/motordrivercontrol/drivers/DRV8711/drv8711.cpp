@@ -18,6 +18,8 @@
 DRV8711DRV::DRV8711DRV(std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi, char d) : spi(spi), designator(d)
 {
     error_reported.reset();
+    max_current= 4000;
+    connection_method= stepper_connection_methods::SPI;
 }
 
 void DRV8711DRV::init (uint16_t cs)
