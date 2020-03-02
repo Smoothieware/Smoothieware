@@ -1161,7 +1161,7 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
         char ax= toupper(axis[0]);
         uint8_t a= ax >= 'X' ? ax - 'X' : ax - 'A' + 3;
         int steps= strtol(stepstr.c_str(), NULL, 10);
-        bool dir= steps >= 0;
+        bool dir= steps <= 0;
         steps= std::abs(steps);
 
         if(a > C_AXIS) {
