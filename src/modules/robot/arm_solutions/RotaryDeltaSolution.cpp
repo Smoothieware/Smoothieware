@@ -54,7 +54,7 @@ RotaryDeltaSolution::RotaryDeltaSolution(Config *config)
     tool_offset = config->value(tool_offset_checksum)->by_default(30.500F)->as_number();
 
     // mirror the XY axis
-    mirror_xy= config->value(delta_mirror_xy_checksum)->by_default(true)->as_bool();
+    mirror_xy= config->value(delta_mirror_xy_checksum)->by_default(false)->as_bool();
 
     debug_flag= false;
     init();
