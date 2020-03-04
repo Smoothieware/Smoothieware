@@ -6,7 +6,7 @@
 
 #include <map>
 
-void StepperDrv::set_current(uint32_t currentma){};
+void StepperDrv::set_current(uint16_t currentma){};
 
 void StepperDrv::set_enable(bool enable){};
 

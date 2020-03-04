@@ -217,7 +217,7 @@ void TMC26X::init(uint16_t cs)
     setStallGuardThreshold(10, 1);
 }
 
-void TMC26X::set_current(unsigned int current)
+void TMC26X::set_current(uint16_t current)
 {
     uint8_t current_scaling = 0;
     //calculate the current scaling from the max current setting (in mA)

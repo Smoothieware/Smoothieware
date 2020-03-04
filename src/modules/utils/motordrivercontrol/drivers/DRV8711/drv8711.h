@@ -16,7 +16,7 @@ public:
 
   void set_enable(bool enable) ;
   int set_microsteps(int number_of_steps);
-  void set_current(uint32_t currentma);
+  void set_current(uint16_t currentma);
 
   void dump_status(StreamOutput *stream) ;
   bool set_raw_register(StreamOutput *stream, uint32_t reg, uint32_t val);

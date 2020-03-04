@@ -322,6 +322,7 @@ void MotorDriverControl::on_gcode_received(void *argument)
                 // set motor currents in mA (Note not using M907 as digipots use that)
                 current= gcode->get_value(axis);
                 current= std::min(current, max_current);
+                gcode->stream->printf("Setting current for axis %c to %d mA", axis, current);
                 set_current(current);
                 current_override= true;
             } else {

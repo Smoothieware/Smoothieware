@@ -23,12 +23,12 @@ class StepperDrv{
         // no destructors
         //virtual ~StepperDrv(){};
         
-        uint32_t max_current= 3000;
+        uint16_t max_current= 3000;
         using options_t= std::map<char,int>;
         
         virtual void init(uint16_t cs) ;
 
-        virtual void set_current(uint32_t currentma);
+        virtual void set_current(uint16_t currentma);
         virtual void set_enable(bool enable) ;
         virtual int set_microsteps(int number_of_steps);
         virtual int get_microsteps();
