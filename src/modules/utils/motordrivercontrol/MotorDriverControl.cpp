@@ -394,7 +394,7 @@ void MotorDriverControl::on_gcode_received(void *argument)
         } else if(gcode->m == 500 || gcode->m == 503) {
             if(current_override) {
                 gcode->stream->printf(";Motor %c id %d  current mA:\n", axis, id);
-                gcode->stream->printf("M906 %c%lu\n", axis, current);
+                gcode->stream->printf("M906 %c%d\n", axis, current);
             }
             if(microstep_override) {
                 gcode->stream->printf(";Motor %c id %d  microsteps:\n", axis, id);
@@ -415,7 +415,7 @@ void MotorDriverControl::initialize_chip(uint16_t cs)
 }
 
 // set current in milliamps
-void MotorDriverControl::set_current(uint32_t c)
+void MotorDriverControl::set_current(uint16_t c)
 {
     DRV->set_current(c);
 }

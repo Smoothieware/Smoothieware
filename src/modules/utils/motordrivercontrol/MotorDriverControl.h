@@ -78,8 +78,8 @@ class MotorDriverControl : public Module {
         StepperDrv *DRV;
 
         //float current_factor;
-        uint32_t max_current; // in milliamps
-        uint32_t current; // in milliamps
+        uint16_t max_current; // in milliamps
+        uint16_t current; // in milliamps
         uint32_t microsteps;
 
         char axis;
