@@ -324,6 +324,8 @@ void MotorDriverControl::on_gcode_received(void *argument)
                 current= std::min(current, max_current);
                 set_current(current);
                 current_override= true;
+            } else {
+                gcode->stream->printf("Axis needed for setting current!\n");
             }
 
         } else if(gcode->m == 909) { // M909 Xnnn set microstepping, M909.1 also change steps/mm

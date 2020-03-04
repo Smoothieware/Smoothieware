@@ -822,6 +822,7 @@ int TMC22X::set_microsteps(int number_of_steps)
  */
 int TMC22X::get_microsteps(void)
 {
+    // TODO: read value from register if !write_only
     return microsteps;
 }
 
@@ -1068,6 +1069,8 @@ void TMC22X::set_current(unsigned int current)
     if (started) {
         transceive2208(TMC22X_WRITE|TMC22X_CHOPCONF_REGISTER,chopconf_register_value);
         transceive2208(TMC22X_WRITE|TMC22X_IHOLD_IRUN_REGISTER,ihold_irun_register_value);
+    } else {
+        THEKERNEL->streams->printf("TMC22X not started on %c, cannot set current.\n", designator);
     }
 }
 
@@ -1236,8 +1239,11 @@ unsigned long TMC22X::readStatus(int8_t read_value)
 
 void TMC22X::dump_status(StreamOutput *stream)
 {
+    uint8_t actu= (designator >= 'X' && designator <= 'Z') ? designator-'X' : designator-'A'+3;
+
+    // TODO: read data from the chip, rather than using the local stuff
     if (!this->write_only) {
-        stream->printf("designator %c, Chip type TMC22X\n", designator);
+        stream->printf("designator %c [%d], Chip type TMC22X\n", designator, actu);
 
         check_error_status_bits(stream);
 
@@ -1262,18 +1268,16 @@ void TMC22X::dump_status(StreamOutput *stream)
         stream->printf(" pwmconf register: %08lX(%ld)\n", pwmconf_register_value, pwmconf_register_value);
         stream->printf(" motor_driver_control.xxx.reg %05lX,%05lX,%05lX,%05lX,%05lX,%05lX,%05lX\n", gconf_register_value, slaveconf_register_value, ihold_irun_register_value,
                                                                                               tpowerdown_register_value, tpwmthrs_register_value, chopconf_register_value, pwmconf_register_value);
-
-    } else {
-        // TODO hardcoded for X need to select ABC as needed
-        bool moving = THEROBOT->actuators[0]->is_moving();
+        
+        bool moving = THEROBOT->actuators[actu]->is_moving();
         // dump out in the format that the processing script needs
         if (moving) {
-            stream->printf("#p%lu,k%u,r,", THEROBOT->actuators[0]->get_current_step(), getCurrentCSReading());
+            stream->printf("#p%lu,k%u,r,", THEROBOT->actuators[actu]->get_current_step(), getCurrentCSReading());
         } else {
             readStatus(TMC22X_READ_MSCNT); // get the status bits
             stream->printf("#s,");
         }
-        stream->printf("d%d,", THEROBOT->actuators[0]->which_direction() ? -1 : 1);
+        stream->printf("d%d,", THEROBOT->actuators[actu]->which_direction() ? -1 : 1);
         stream->printf("c%u,m%d,", get_current(), get_microsteps());
         // stream->printf('S');
         // stream->printf(tmc22XStepper.getSpeed(), DEC);
@@ -1313,6 +1317,8 @@ void TMC22X::dump_status(StreamOutput *stream)
         //write out the current chopper config
         stream->printf("Co%d,Cb%d,", constant_off_time, blank_time);
         stream->printf("\n");
+    } else {
+        stream->printf("TMC22x is running in READ ONLY mode on %c [%d], output status: %d\n", designator, actu,isEnabled());
     }
 }
 
@@ -1455,7 +1461,7 @@ uint32_t TMC22X::transceive2208(uint8_t reg, uint32_t datagram)
         //write/read the values
         serial(buf, 8, rbuf);
 
-        THEKERNEL->streams->printf("sent: %02X, %02X, %02X, %02X, %02X, %02X, %02X, %02X \n", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7]);
+        // THEKERNEL->streams->printf("sent: %02X, %02X, %02X, %02X, %02X, %02X, %02X, %02X \n", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7]);
     } else {
         // reading from UART
         uint8_t buf[] {(uint8_t)(TMC22X_SYNC), (uint8_t)(TMC22X_SLAVEADDR), (uint8_t)(reg), (uint8_t)(0x00)};
@@ -1466,16 +1472,21 @@ uint32_t TMC22X::transceive2208(uint8_t reg, uint32_t datagram)
         //write/read the values
         serial(buf, 4, rbuf);
         
-        uint8_t crc;
+        uint8_t response_crc;
         // save response CRC
-        crc = rbuf[5];
+        response_crc = rbuf[5];
+        
         calc_crc(rbuf,4);
         
         //construct reply
         i_datagram = ((rbuf[3] << 24) | (rbuf[4] << 16) | (rbuf[5] << 8) | (rbuf[6] << 0));
 
-        THEKERNEL->streams->printf("got CRC: %02X calc CRC: %02X \n", crc, rbuf[5]);
-        THEKERNEL->streams->printf("sent: %02X, %02X, %02X, %02X received: %02X, %02X, %02X, %02X, %02X, %02X, %02X, %02X, %02X \n", buf[0], buf[1], buf[2], buf[3], rbuf[0], rbuf[1], rbuf[2], rbuf[3], rbuf[4], rbuf[5], rbuf[6], rbuf[7], rbuf[8]);
+        if ( response_crc != rbuf[5] ) {
+            THEKERNEL->streams->printf("CRC does not match, check RX line! got CRC: %02X calc CRC: %02X \n", response_crc, rbuf[5]);
+        }
+
+        // THEKERNEL->streams->printf("got CRC: %02X calc CRC: %02X \n", crc, rbuf[5]);
+        // THEKERNEL->streams->printf("sent: %02X, %02X, %02X, %02X received: %02X, %02X, %02X, %02X, %02X, %02X, %02X, %02X, %02X \n", buf[0], buf[1], buf[2], buf[3], rbuf[0], rbuf[1], rbuf[2], rbuf[3], rbuf[4], rbuf[5], rbuf[6], rbuf[7], rbuf[8]);
     }
     return i_datagram;
 }
