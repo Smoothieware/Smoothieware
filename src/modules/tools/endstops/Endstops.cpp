@@ -1139,18 +1139,16 @@ void Endstops::on_gcode_received(void *argument)
 
             case 500: // save settings
             case 503: // print settings
-                if(!is_rdelta) {
-                    gcode->stream->printf(";Home offset (mm):\nM206 ");
-                    for (auto &p : homing_axis) {
-                        if(p.pin_info == nullptr) continue; // ignore if not a homing endstop
-                        gcode->stream->printf("%c%1.2f ", p.axis, p.home_offset);
-                    }
-                    gcode->stream->printf("\n");
-
+                if(is_rdelta) {
+                    gcode->stream->printf(";Theta offset (degrees):\nM206 ");
                 }else{
-                    gcode->stream->printf(";Theta offset (degrees):\nM206 A%1.5f B%1.5f C%1.5f\n",
-                        homing_axis[X_AXIS].home_offset, homing_axis[Y_AXIS].home_offset, homing_axis[Z_AXIS].home_offset);
+                    gcode->stream->printf(";Home offset (mm):\nM206 ");
                 }
+                for (auto &p : homing_axis) {
+                    if(p.pin_info == nullptr) continue; // ignore if not a homing endstop
+                    gcode->stream->printf("%c%1.5f ", p.axis, p.home_offset);
+                }
+                gcode->stream->printf("\n");
 
                 if (this->is_delta || this->is_scara) {
                     gcode->stream->printf(";Trim (mm):\nM666 X%1.3f Y%1.3f Z%1.3f\n", trim_mm[0], trim_mm[1], trim_mm[2]);
