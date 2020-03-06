@@ -64,22 +64,28 @@ void RotaryDeltaCalibration::on_gcode_received(void *argument)
                 // between what it thinks is the current angle and what the current angle actually is specified by X (ditto for Y and Z)
 
                 ActuatorCoordinates current_angle;
-                // get the current angle for each actuator, NOTE we only deal with XYZ so if there are more than 3 actuators this will probably go wonky
+                // get the current angle for each actuator
+                // NOTE we only deal with XYZ so if there are more than 3 actuators this will probably go wonky
                 for (size_t i = 0; i < 3; i++) {
                     current_angle[i]= THEROBOT->actuators[i]->get_current_position();
                 }
 
                 if (gcode->has_letter('L') && gcode->get_value('L') != 0) {
-                    // specifying L1 it will take the last probe position (set by G30) and set the home offset based on that
-                    // this allows the use of G30 to find the angle tool and M306 X0 to set X
+                    // specifying L1 it will take the last probe position (set by G30) which is degrees moved
+                    // we convert that to actual postion of the actuator when it triggered.
+                    // this allows the use of G30 to find the angle tool and M306 L1 X-37.1234 to set X
                     uint8_t ok;
-                    std::tie(current_angle[0], current_angle[1], current_angle[2], ok) = THEROBOT->get_last_probe_position();
+                    float d;
+                    // only Z is set by G30, but all will be the same amount moved
+                    std::tie(std::ignore, std::ignore, d, ok) = THEROBOT->get_last_probe_position();
                     if(ok == 0) {
                         gcode->stream->printf("error:Nothing set as probe failed or not run\n");
                         return;
                     }
-                    // only Z is set by G30, but all will be the same amount moved
-                    current_angle[0]= current_angle[1]= current_angle[2];
+                    // presuming we returned to original position we need to change current angle by the amount moved
+                    current_angle[0] += d;
+                    current_angle[1] += d;
+                    current_angle[2] += d;
                 }
 
                 float theta_offset[3];
@@ -90,7 +96,7 @@ void RotaryDeltaCalibration::on_gcode_received(void *argument)
 
                 int cnt= 0;
 
-                //figure out what home_offset needs to be to correct the homing_position
+                // figure out what home_offset needs to be to correct the homing_position
                 if (gcode->has_letter('X')) {
                     float a = gcode->get_value('X'); // what actual angle is
                     theta_offset[0] += (a - current_angle[0]);
