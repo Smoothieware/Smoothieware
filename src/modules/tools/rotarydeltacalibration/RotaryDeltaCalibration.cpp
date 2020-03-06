@@ -93,19 +93,19 @@ void RotaryDeltaCalibration::on_gcode_received(void *argument)
                 //figure out what home_offset needs to be to correct the homing_position
                 if (gcode->has_letter('X')) {
                     float a = gcode->get_value('X'); // what actual angle is
-                    theta_offset[0] -= (current_angle[0] - a);
+                    theta_offset[0] += (a - current_angle[0]);
                     current_angle[0]= a;
                     cnt++;
                 }
                 if (gcode->has_letter('Y')) {
                     float b = gcode->get_value('Y');
-                    theta_offset[1] -= (current_angle[1] - b);
+                    theta_offset[1] += (b - current_angle[1]);
                     current_angle[1]= b;
                     cnt++;
                 }
                 if (gcode->has_letter('Z')) {
                     float c = gcode->get_value('Z');
-                    theta_offset[2] -= (current_angle[2] - c);
+                    theta_offset[2] += (c - current_angle[2]);
                     current_angle[2]= c;
                     cnt++;
                 }
