@@ -281,8 +281,8 @@ void ZProbe::on_gcode_received(void *argument)
             float rate= gcode->has_letter('F') ? gcode->get_value('F') / 60 : this->slow_feedrate;
             float mm;
 
-            // if not setting Z then return probe to where it started, otherwise leave it where it is
-            probe_result = (set_z ? run_probe(mm, rate, -1, reverse) : run_probe_return(mm, rate, -1, reverse));
+            // if not setting Z ( and not subcode 1) then return probe to where it started, otherwise leave it where it is
+            probe_result = ((set_z || gcode->subcode == 1) ? run_probe(mm, rate, -1, reverse) : run_probe_return(mm, rate, -1, reverse));
 
             if(probe_result) {
                 // the result is in actuator coordinates moved

@@ -64,7 +64,7 @@ void RotaryDeltaCalibration::on_gcode_received(void *argument)
                 // between what it thinks is the current angle and what the current angle actually is specified by X (ditto for Y and Z)
 
                 ActuatorCoordinates current_angle;
-                // get the current angle for each actuator
+                // get the current angle for each actuator, relies on being left where probe triggered (G30.1)
                 // NOTE we only deal with XYZ so if there are more than 3 actuators this will probably go wonky
                 for (size_t i = 0; i < 3; i++) {
                     current_angle[i]= THEROBOT->actuators[i]->get_current_position();
