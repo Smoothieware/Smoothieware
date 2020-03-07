@@ -33,5 +33,6 @@ class RotaryDeltaSolution : public BaseSolution {
         struct {
             bool debug_flag:1;
             bool mirror_xy:1;
+            bool halt_on_error:1;
         };
 };
