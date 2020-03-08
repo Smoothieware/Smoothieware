@@ -56,6 +56,8 @@
 #define stealthchop_pwm_ofs_checksum        CHECKSUM("stealthchop_pwm_ofs")
 #define stealthchop_tpwmthrs_checksum       CHECKSUM("stealthchop_tpwmthrs")
 
+#define slave_addr_checksum       CHECKSUM("slave_addr")
+
 
 //! return value for TMC22X.getOverTemperature() if there is a overtemperature situation in the TMC chip
 /*!
@@ -578,7 +580,7 @@
  */
 TMC22X::TMC22X(std::function<int(uint8_t *b, int cnt, uint8_t *r)> serial, char d) : serial(serial), designator(d)
 {
-    connection_method = stepper_connection_methods::UART;
+    connection_method = StepstickParameters::UART;
     max_current= 3000;
     
     //we are not started yet
@@ -598,6 +600,11 @@ void TMC22X::init(uint16_t cs)
     // Read chip specific config entries
     this->resistor= THEKERNEL->config->value(motor_driver_control_checksum, cs, sense_resistor_checksum)->by_default(50)->as_number(); // in milliohms
     this->chopper_mode= THEKERNEL->config->value(motor_driver_control_checksum, cs, chopper_mode_checksum)->by_default(0)->as_number();
+    
+    if (chip_type == StepstickParameters::CHIP_TYPE::TMC2209) {        
+        this->slave_addr= THEKERNEL->config->value(motor_driver_control_checksum, cs, slave_addr_checksum)->by_default(0)->as_int();
+        THEKERNEL->streams->printf("Using slave address %d for axis %c\n", this->slave_addr, designator);
+    } // slave_addr defaults to 0, which is OK for TMC2208
 
     // Setting the default register values
     this->gconf_register_value = TMC22X_GCONF_DEFAULT_DATA;
@@ -1471,7 +1478,7 @@ uint32_t TMC22X::transceive2208(uint8_t reg, uint32_t datagram)
     uint8_t rbuf[9]; // 8 + 1 crc
     uint32_t i_datagram = 0;
     if(reg & TMC22X_WRITE) {
-        uint8_t buf[] {(uint8_t)(TMC22X_SYNC), (uint8_t)(TMC22X_SLAVEADDR), (uint8_t)(reg), (uint8_t)(datagram >> 24), (uint8_t)(datagram >> 16), (uint8_t)(datagram >> 8), (uint8_t)(datagram >> 0), (uint8_t)(0x00)};
+        uint8_t buf[] {(uint8_t)(TMC22X_SYNC), slave_addr, (uint8_t)(reg), (uint8_t)(datagram >> 24), (uint8_t)(datagram >> 16), (uint8_t)(datagram >> 8), (uint8_t)(datagram >> 0), (uint8_t)(0x00)};
 
         //calculate checksum
         calc_crc(buf, 8);

@@ -121,24 +121,29 @@ bool MotorDriverControl::config_module(uint16_t cs)
     using std::placeholders::_3;
 
     if(str == "DRV8711") {
-        chip= DRV8711;
+        chip= StepstickParameters::CHIP_TYPE::DRV8711;
         DRV= new DRV8711DRV(std::bind( &MotorDriverControl::sendSPI, this, _1, _2, _3), axis);
 
     }else if(str == "TMC2660") {
-        chip= TMC2660;
+        chip= StepstickParameters::CHIP_TYPE::TMC2660;
         DRV= new TMC26X(std::bind( &MotorDriverControl::sendSPI, this, _1, _2, _3), axis);
 
     }else if(str == "TMC2208") {
-        chip= TMC2208;
+        chip= StepstickParameters::CHIP_TYPE::TMC2208;
         DRV= new TMC22X(std::bind( &MotorDriverControl::sendUART, this, _1, _2, _3), axis);
-
+    }else if(str == "TMC2209") {
+        chip= StepstickParameters::CHIP_TYPE::TMC2209;
+        DRV= new TMC22X(std::bind( &MotorDriverControl::sendUART, this, _1, _2, _3), axis);
     }else{
         THEKERNEL->streams->printf("MotorDriverControl %c ERROR: Unknown chip type: %s\n", axis, str.c_str());
         return false;
     }
 
+    // only needed for TMC 2208/2209 now
+    DRV->set_chip_type(chip);
+    
     //Configure soft UART
-    if(DRV->connection_method == stepper_connection_methods::UART) {
+    if(DRV->connection_method == StepstickParameters::UART) {
     		
         //select TX and RX pins
         sw_uart_tx_pin = new Pin();
@@ -177,7 +182,7 @@ bool MotorDriverControl::config_module(uint16_t cs)
         }
 
         this->serial->baud(sw_uart_baudrate);
-    } else if(DRV->connection_method == stepper_connection_methods::SPI ) {
+    } else if(DRV->connection_method == StepstickParameters::SPI ) {
         //Configure SPI
     		
         //select chip select pin
@@ -254,7 +259,7 @@ bool MotorDriverControl::config_module(uint16_t cs)
     }
 
     //finish driver setup
-    if(DRV->connection_method== stepper_connection_methods::UART) {
+    if(DRV->connection_method== StepstickParameters::UART) {
         THEKERNEL->streams->printf("MotorDriverControl INFO: configured motor %c (%d): as %s, tx: %04X, rx: %04X\n", axis, id, THEKERNEL->config->value( motor_driver_control_checksum, cs, chip_checksum)->by_default("")->as_string().c_str(), (sw_uart_tx_pin->port_number<<8)|sw_uart_tx_pin->pin, (sw_uart_rx_pin->port_number<<8)|sw_uart_rx_pin->pin);
     } else {
         THEKERNEL->streams->printf("MotorDriverControl INFO: configured motor %c (%d): as %s, cs: %04X\n", axis, id, THEKERNEL->config->value( motor_driver_control_checksum, cs, chip_checksum)->by_default("")->as_string().c_str(), (spi_cs_pin->port_number<<8)|spi_cs_pin->pin);

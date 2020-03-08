@@ -385,5 +385,8 @@ private:
     bool crc_valid = false;
     
     bool write_only = false;
+    
+    // slave address for TMC2209
+    uint8_t slave_addr = 0;
 };
 

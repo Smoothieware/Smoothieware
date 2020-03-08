@@ -6,6 +6,8 @@
 #include <stdint.h>
 #include <memory>
 
+#include "drivers/StepperDrv.h"
+
 namespace mbed {
     class SPI;
 }
@@ -63,13 +65,7 @@ class MotorDriverControl : public Module {
             };
         };
 
-        enum CHIP_TYPE {
-            DRV8711,
-            TMC2660,
-            TMC2208,
-            TMC2209
-        };
-        CHIP_TYPE chip;
+        StepstickParameters::CHIP_TYPE chip;
         
         // one of these drivers
         //DRV8711DRV *drv8711;

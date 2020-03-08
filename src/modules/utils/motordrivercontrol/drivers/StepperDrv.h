@@ -5,11 +5,18 @@
 
 #include <map>
 
-namespace stepper_connection_methods {
-        enum Connection_Methods {
-                UART,
-                SPI
-        };
+namespace StepstickParameters {
+    enum Connection_Methods {
+            UART,
+            SPI
+    };
+    
+    enum CHIP_TYPE {
+        DRV8711,
+        TMC2660,
+        TMC2208,
+        TMC2209
+    };
 }
 
 class DRV8711DRV;
@@ -41,7 +48,10 @@ class StepperDrv{
         
         virtual void get_debug_info(StreamOutput *stream);
         
-        stepper_connection_methods::Connection_Methods connection_method;
+        virtual void set_chip_type(StepstickParameters::CHIP_TYPE);
+        
+        StepstickParameters::Connection_Methods connection_method;
+        StepstickParameters::CHIP_TYPE chip_type;
         
     protected:
         bool write_only = false;

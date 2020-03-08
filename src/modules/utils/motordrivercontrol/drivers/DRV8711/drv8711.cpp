@@ -19,7 +19,7 @@ DRV8711DRV::DRV8711DRV(std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi, 
 {
     error_reported.reset();
     max_current= 4000;
-    connection_method= stepper_connection_methods::SPI;
+    connection_method= StepstickParameters::SPI;
 }
 
 void DRV8711DRV::init (uint16_t cs)

@@ -159,7 +159,7 @@
  */
 TMC26X::TMC26X(std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi, char d) : spi(spi), designator(d)
 {
-    connection_method = stepper_connection_methods::SPI;
+    connection_method = StepstickParameters::SPI;
     max_current= 3000;
     
     //we are not started yet
