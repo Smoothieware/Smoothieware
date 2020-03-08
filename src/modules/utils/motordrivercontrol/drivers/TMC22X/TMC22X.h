@@ -380,6 +380,10 @@ private:
 
     char designator;
 
+    // to store response CRC before validating
+    uint8_t response_crc;
+    bool crc_valid = false;
+    
     bool write_only = false;
 };
 

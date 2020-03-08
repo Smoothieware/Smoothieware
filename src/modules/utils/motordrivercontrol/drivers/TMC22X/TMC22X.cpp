@@ -643,16 +643,18 @@ void TMC22X::init(uint16_t cs)
 
     // Set microstepping via software and set external sense resistors using internal reference voltage, uart on, external VREF
     setGeneralConfiguration(1,0,0,1,1,1);
-    THEKERNEL->streams->printf("Setting GCONF to 100111 for axis %x\n", designator);
+    THEKERNEL->streams->printf("Setting GCONF to %08lX for axis %x\n", gconf_register_value, designator);
     
     // from teemuatlut's TMC driver library
+    // TODO: read back the value, if it differs then echo error and/or switch to read-only!
     //constexpr static uint8_t TMC2208_n::DRV_STATUS_t::address = 0x6F
     // check for connectivity if not in read-only mode! Read the global register and check crc
     unsigned long gconf_status = readStatus(TMC22X_READ_GCONF);
-    THEKERNEL->streams->printf("GCONF status: %lu \n", gconf_status );
+    THEKERNEL->streams->printf("GCONF status: %08lX (%lu) [CRC: %d]\n", gconf_status, gconf_status, crc_valid );
     
     gconf_status = readStatus(TMC22X_DRV_STATUS_REGISTER);
-    THEKERNEL->streams->printf("DRV status: %lu \n", gconf_status );
+    THEKERNEL->streams->printf("DRV status: %08lX (%lu) [CRC: %d]\n", gconf_status, gconf_status, crc_valid );
+
 
     // Set a nice microstepping value
     setStepInterpolation(1);
@@ -1247,7 +1249,6 @@ void TMC22X::dump_status(StreamOutput *stream)
 {
     uint8_t actu= (designator >= 'X' && designator <= 'Z') ? designator-'X' : designator-'A'+3;
 
-    // TODO: read data from the chip, rather than using the local stuff
     if (!this->write_only) {
         stream->printf("designator %c [%d], Chip type TMC22X\n", designator, actu);
 
@@ -1264,6 +1265,7 @@ void TMC22X::dump_status(StreamOutput *stream)
 
         stream->printf("Microsteps: 1/%d\n", microsteps);
 
+    // TODO: read data from the chip, rather than using the local stuff
         stream->printf("Register dump:\n");
         stream->printf(" gconf register: %08lX(%ld)\n", gconf_register_value, gconf_register_value);
         stream->printf(" slaveconf register: %08lX(%ld)\n", slaveconf_register_value, slaveconf_register_value);
@@ -1331,10 +1333,10 @@ void TMC22X::dump_status(StreamOutput *stream)
 void TMC22X::get_debug_info(StreamOutput *stream)
 {
     unsigned long gconf_status = readStatus(TMC22X_READ_GCONF);
-    THEKERNEL->streams->printf("GCONF status for %c: %lu \n", designator, gconf_status );
+    THEKERNEL->streams->printf("GCONF status for %c: %08lX (%lu) \n", designator, gconf_status, gconf_status );
     
     unsigned long drv_status = readStatus(TMC22X_DRV_STATUS_REGISTER);
-    THEKERNEL->streams->printf("DRV status for %c: %lu \n", designator, drv_status );
+    THEKERNEL->streams->printf("DRV status for %c: %08lX (%lu) \n", designator, drv_status, drv_status );
     
 }
 
@@ -1488,7 +1490,6 @@ uint32_t TMC22X::transceive2208(uint8_t reg, uint32_t datagram)
         //write/read the values
         serial(buf, 4, rbuf);
         
-        uint8_t response_crc;
         // save response CRC
         response_crc = rbuf[5];
         
@@ -1498,7 +1499,10 @@ uint32_t TMC22X::transceive2208(uint8_t reg, uint32_t datagram)
         i_datagram = ((rbuf[3] << 24) | (rbuf[4] << 16) | (rbuf[5] << 8) | (rbuf[6] << 0));
 
         if ( response_crc != rbuf[5] ) {
+            crc_valid = false;
             THEKERNEL->streams->printf("CRC does not match, check RX line! got CRC: %02X calc CRC: %02X \n", response_crc, rbuf[5]);
+        } else {
+            crc_valid = true;
         }
 
         // THEKERNEL->streams->printf("got CRC: %02X calc CRC: %02X \n", crc, rbuf[5]);
