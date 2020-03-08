@@ -317,7 +317,7 @@ void MotorDriverControl::on_gcode_received(void *argument)
     Gcode *gcode = static_cast<Gcode*>(argument);
 
     if (gcode->has_m) {
-        if(gcode->m == 906) {
+        if(gcode->m == 906) { // motor current setting M906 Xnnn
             if (gcode->has_letter(axis)) {
                 // set motor currents in mA (Note not using M907 as digipots use that)
                 current= gcode->get_value(axis);
@@ -371,11 +371,9 @@ void MotorDriverControl::on_gcode_received(void *argument)
 
             if(gcode->subcode == 0 && gcode->get_num_args() == 0) {
                 // M911 no args dump status for all drivers, M911.1 P0|A0 dump for specific driver
-                if (!write_only) {
-                    gcode->stream->printf("Motor %d (%c)...\n", id, axis);
-                    dump_status(gcode->stream);
-                }
-                
+                gcode->stream->printf("Motor %d (%c)...\n", id, axis);
+                dump_status(gcode->stream);
+               
             }else if( (gcode->has_letter('P') && gcode->get_value('P') == id) || gcode->has_letter(axis)) {
                 if(gcode->subcode == 1) {
                     if (!write_only) {
@@ -401,6 +399,12 @@ void MotorDriverControl::on_gcode_received(void *argument)
                 gcode->stream->printf("M909 %c%lu\n", axis, microsteps);
             }
             //gcode->stream->printf("M910 %c%d\n", axis, decay_mode);
+        } else if(gcode->m == 122) {
+            if (gcode->has_letter(axis)) {
+                DRV->get_debug_info(gcode->stream);
+            } else {
+                gcode->stream->printf("Please specify axis! Generic query not yet supported.\n");
+            }
         }
     }
 }

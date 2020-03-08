@@ -643,10 +643,16 @@ void TMC22X::init(uint16_t cs)
 
     // Set microstepping via software and set external sense resistors using internal reference voltage, uart on, external VREF
     setGeneralConfiguration(1,0,0,1,1,1);
-
+    THEKERNEL->streams->printf("Setting GCONF to 100111 for axis %x\n", designator);
+    
+    // from teemuatlut's TMC driver library
+    //constexpr static uint8_t TMC2208_n::DRV_STATUS_t::address = 0x6F
     // check for connectivity if not in read-only mode! Read the global register and check crc
     unsigned long gconf_status = readStatus(TMC22X_READ_GCONF);
     THEKERNEL->streams->printf("GCONF status: %lu \n", gconf_status );
+    
+    gconf_status = readStatus(TMC22X_DRV_STATUS_REGISTER);
+    THEKERNEL->streams->printf("DRV status: %lu \n", gconf_status );
 
     // Set a nice microstepping value
     setStepInterpolation(1);
@@ -1320,6 +1326,16 @@ void TMC22X::dump_status(StreamOutput *stream)
     } else {
         stream->printf("TMC22x is running in READ ONLY mode on %c [%d], output status: %d\n", designator, actu,isEnabled());
     }
+}
+
+void TMC22X::get_debug_info(StreamOutput *stream)
+{
+    unsigned long gconf_status = readStatus(TMC22X_READ_GCONF);
+    THEKERNEL->streams->printf("GCONF status for %c: %lu \n", designator, gconf_status );
+    
+    unsigned long drv_status = readStatus(TMC22X_DRV_STATUS_REGISTER);
+    THEKERNEL->streams->printf("DRV status for %c: %lu \n", designator, drv_status );
+    
 }
 
 // check error bits and report, only report once

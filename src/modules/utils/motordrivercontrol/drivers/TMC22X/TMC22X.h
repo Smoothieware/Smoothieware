@@ -328,6 +328,13 @@ public:
      * The result is printed via Serial
      */
     void dump_status(StreamOutput *stream);
+    
+    /*!
+     * \brief Returns GCONF and DRV register status. Can be used to validate serial connection.
+     * The result is printed via Serial
+     */
+    void get_debug_info(StreamOutput *stream);
+    
     bool set_raw_register(StreamOutput *stream, uint32_t reg, uint32_t val);
     bool check_alarm();
 

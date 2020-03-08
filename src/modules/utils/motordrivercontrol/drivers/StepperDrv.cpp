@@ -1,3 +1,5 @@
+#include "StreamOutput.h"
+
 #include "StepperDrv.h"
 
 #include "TMC26X/TMC26X.h"
@@ -19,7 +21,11 @@ bool StepperDrv::set_options(const StepperDrv::options_t& options){ return false
 
 void StepperDrv::set_write_only(bool wo){ this->write_only = wo; };
 
-void StepperDrv::dump_status(StreamOutput *stream){};
+void StepperDrv::dump_status(StreamOutput *stream){ stream->printf("Not configured.\n"); };
+
+void StepperDrv::get_debug_info(StreamOutput *stream){
+	stream->printf("Not supported.\n");
+};
 
 bool StepperDrv::set_raw_register(StreamOutput *stream, uint32_t reg, uint32_t val){ return false; };
 bool StepperDrv::check_alarm(){ return false; };

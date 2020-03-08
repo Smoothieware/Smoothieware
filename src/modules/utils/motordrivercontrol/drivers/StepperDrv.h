@@ -35,9 +35,11 @@ class StepperDrv{
         virtual bool set_options(const options_t& options);
         virtual void set_write_only(bool wo);
 
-        virtual void dump_status(StreamOutput *stream) ;
+        virtual void dump_status(StreamOutput *stream);
         virtual bool set_raw_register(StreamOutput *stream, uint32_t reg, uint32_t val);
         virtual bool check_alarm();
+        
+        virtual void get_debug_info(StreamOutput *stream);
         
         stepper_connection_methods::Connection_Methods connection_method;
         
