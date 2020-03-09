@@ -18,7 +18,7 @@
 
 #include "drivers/StepperDrv.h"
 #include "drivers/TMC26X/TMC26X.h"
-#include "drivers/TMC22X/TMC22X.h"
+#include "drivers/TMC220X/TMC220X.h"
 #include "drivers/DRV8711/drv8711.h"
 
 #include <string>
@@ -130,10 +130,10 @@ bool MotorDriverControl::config_module(uint16_t cs)
 
     }else if(str == "TMC2208") {
         chip= StepstickParameters::CHIP_TYPE::TMC2208;
-        DRV= new TMC22X(std::bind( &MotorDriverControl::sendUART, this, _1, _2, _3), axis);
+        DRV= new TMC220X(std::bind( &MotorDriverControl::sendUART, this, _1, _2, _3), axis);
     }else if(str == "TMC2209") {
         chip= StepstickParameters::CHIP_TYPE::TMC2209;
-        DRV= new TMC22X(std::bind( &MotorDriverControl::sendUART, this, _1, _2, _3), axis);
+        DRV= new TMC220X(std::bind( &MotorDriverControl::sendUART, this, _1, _2, _3), axis);
     }else{
         THEKERNEL->streams->printf("MotorDriverControl %c ERROR: Unknown chip type: %s\n", axis, str.c_str());
         return false;

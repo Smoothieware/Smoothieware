@@ -21,7 +21,7 @@ namespace StepstickParameters {
 
 class DRV8711DRV;
 class TMC26X;
-class TMC22X;
+class TMC220X;
 
 class StreamOutput;
 

@@ -3,7 +3,7 @@
 #include "StepperDrv.h"
 
 #include "TMC26X/TMC26X.h"
-#include "TMC22X/TMC22X.h"
+#include "TMC220X/TMC220X.h"
 #include "DRV8711/drv8711.h"
 
 #include <map>
