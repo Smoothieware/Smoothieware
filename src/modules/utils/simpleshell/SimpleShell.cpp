@@ -1148,8 +1148,8 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
          }
         stream->printf("done\n");
 
-    }else if (what == "raw") {
-        // issues raw steps to the specified axis usage: axis steps steps/sec
+    }else if (what == "raw" || what == "acc") {
+        // issues raw steps (or actuator units) to the specified axis usage: axis steps steps/sec
         string axis = shift_parameter( parameters );
         string stepstr = shift_parameter( parameters );
         string stepspersec = shift_parameter( parameters );
@@ -1161,7 +1161,7 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
         char ax= toupper(axis[0]);
         uint8_t a= ax >= 'X' ? ax - 'X' : ax - 'A' + 3;
         int steps= strtol(stepstr.c_str(), NULL, 10);
-        bool dir= steps >= 0;
+        bool dir= steps <= 0;
         steps= std::abs(steps);
 
         if(a > C_AXIS) {
@@ -1175,6 +1175,13 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
         }
 
         uint32_t sps= strtol(stepspersec.c_str(), NULL, 10);
+
+        if(what == "acc") {
+            // convert actuator units to steps
+            steps= lroundf(THEROBOT->actuators[a]->get_steps_per_mm() * steps);
+            // convert steps per unit to steps/sec
+            sps= lroundf(THEROBOT->actuators[a]->get_steps_per_mm() * sps);
+        }
         sps= std::max(sps, 1UL);
 
         uint32_t delayus= 1000000.0F / sps;
@@ -1191,7 +1198,7 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
         //stream->printf("done\n");
 
     }else if (what == "pulse") {
-        // issues a step pulse then wqiats then unsteps, for testing when stepper moves
+        // issues a step pulse then waits then unsteps, for testing when stepper moves
         string axis = shift_parameter( parameters );
         string reps = shift_parameter( parameters );
         if(axis.empty()) {
@@ -1239,6 +1246,7 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
         stream->printf(" test square size iterations [feedrate]\n");
         stream->printf(" test circle radius iterations [feedrate]\n");
         stream->printf(" test raw axis steps steps/sec\n");
+        stream->printf(" test acc axis units units/sec\n");
         stream->printf(" test pulse axis iterations\n");
     }
 }

@@ -210,6 +210,7 @@ bool ZProbe::run_probe(float& mm, float feedrate, float max_dist, bool reverse)
     mm= z_start_pos - THEROBOT->actuators[2]->get_current_position();
 
     // set the last probe position to the actuator units moved during this home
+    // TODO maybe we should store current actuator position rather than the delta?
     THEROBOT->set_last_probe_position(std::make_tuple(0, 0, mm, probe_detected?1:0));
 
     probing= false;
@@ -280,8 +281,8 @@ void ZProbe::on_gcode_received(void *argument)
             float rate= gcode->has_letter('F') ? gcode->get_value('F') / 60 : this->slow_feedrate;
             float mm;
 
-            // if not setting Z then return probe to where it started, otherwise leave it where it is
-            probe_result = (set_z ? run_probe(mm, rate, -1, reverse) : run_probe_return(mm, rate, -1, reverse));
+            // if not setting Z ( and not subcode 1) then return probe to where it started, otherwise leave it where it is
+            probe_result = ((set_z || gcode->subcode == 1) ? run_probe(mm, rate, -1, reverse) : run_probe_return(mm, rate, -1, reverse));
 
             if(probe_result) {
                 // the result is in actuator coordinates moved
