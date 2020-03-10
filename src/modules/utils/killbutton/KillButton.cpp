@@ -23,6 +23,7 @@ using namespace std;
 KillButton::KillButton()
 {
     this->state= IDLE;
+    this->estop_still_pressed= false;
 }
 
 void KillButton::on_module_loaded()
@@ -61,7 +62,12 @@ void KillButton::on_idle(void *argument)
     if(state == KILL_BUTTON_DOWN) {
         if(!THEKERNEL->is_halted()) {
             THEKERNEL->call_event(ON_HALT, nullptr);
-            THEKERNEL->streams->printf("ALARM: Kill button pressed - reset or M999 to continue\r\n");
+            if(estop_still_pressed) {
+                THEKERNEL->streams->printf("WARNING: ESTOP is still latched, unlatch ESTOP to clear HALT\n");
+                estop_still_pressed= false;
+            }else{
+                THEKERNEL->streams->printf("ALARM: Kill button pressed - reset, $X or M999 to clear HALT\n");
+            }
         }
 
     }else if(state == UNKILL_FIRE) {
@@ -89,7 +95,14 @@ uint32_t KillButton::button_tick(uint32_t dummy)
                 if(killed) state= KILLED_BUTTON_DOWN;
                 break;
             case KILLED_BUTTON_DOWN:
-                if(this->kill_button.get()) state= KILLED_BUTTON_UP;
+                if (this->kill_button.get()) {
+                    state= KILLED_BUTTON_UP;
+                } else if ((toggle_enable) && (!killed)) {
+                    // button is still pressed but the halted state was left
+                    // re-trigger the halted state
+                    state= KILL_BUTTON_DOWN;
+                    estop_still_pressed= true;
+                }
                 break;
             case KILLED_BUTTON_UP:
                 if(!killed) state= IDLE;
