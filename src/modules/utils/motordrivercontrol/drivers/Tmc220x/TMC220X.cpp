@@ -63,7 +63,7 @@ TODO: add Coolstep and stallguard support
 #define stallguard_sgthrs_checksum          CHECKSUM("sg_thrs")
 // coolconf - TMC2209
 #define coolconf_seimin_checksum            CHECKSUM("coolconf_seimin")
-#define coolconf_sedn_checksum              CHECKSUM("coolconf_sedb")
+#define coolconf_sedn_checksum              CHECKSUM("coolconf_sedn")
 #define coolconf_semax_checksum             CHECKSUM("coolconf_semax")
 #define coolconf_seup_checksum              CHECKSUM("coolconf_seup")
 #define coolconf_semin_checksum             CHECKSUM("coolconf_semin")
@@ -84,24 +84,25 @@ TODO: add Coolstep and stallguard support
  */
 #define TMC220X_OVERTEMPERATURE_SHUTDOWN 2
 
+
 //which registers can be read out - this is dirty, but it works for now
 /*!
  * Selects to read out the GCONF reg (holding also the current setting from the motor).
  *\sa readStatus()
  */
-#define TMC220X_READ_GCONF 0
+// #define TMC220X_READ_GCONF 0
 
 /*!
  * Selects to readout the MSCNT reg (holding the microstep position from the motor).
  *\sa readStatus()
  */
-#define TMC220X_READ_MSCNT 1
+// #define TMC220X_READ_MSCNT 1
 
 /*!
  * Selects to read out the DRV_STATUS reg (holding also the current setting from the motor).
  *\sa readStatus()
  */
-#define TMC220X_READ_DRV_STATUS 2
+// #define TMC220X_DRV_STATUS_REGISTER 2
 
 
 //some default values used in initialization
@@ -403,7 +404,7 @@ TODO: add Coolstep and stallguard support
 
 //Register                             Address   Type      N Bits    Description
 /********************************************************************************/
-#define TMC220X_SG_RESULT_REGISTER      0x42      //W       16        //CoolStep configuration.
+#define TMC220X_COOLCONF_REGISTER      0x42      //W       16        //CoolStep configuration.
 /********************************************************************************/
 //Function                                       Bit                 Description
 #define TMC220X_COOLCONF_SEIMIN                   16                  //minimum current for smart current control
@@ -662,7 +663,7 @@ void TMC220X::init(uint16_t cs)
     this->resistor= THEKERNEL->config->value(motor_driver_control_checksum, cs, sense_resistor_checksum)->by_default(50)->as_number(); // in milliohms
     this->chopper_mode= THEKERNEL->config->value(motor_driver_control_checksum, cs, chopper_mode_checksum)->by_default(0)->as_number();
     
-    if (chip_type == StepstickParameters::CHIP_TYPE::TMC2209) {        
+    if (chip_type == StepstickParameters::CHIP_TYPE::TMC2209) {
         this->slave_addr= THEKERNEL->config->value(motor_driver_control_checksum, cs, slave_addr_checksum)->by_default(0)->as_int();
         THEKERNEL->streams->printf("TMC2209 using slave address %d for axis %c\n", this->slave_addr, designator);
     } // slave_addr defaults to 0, which is OK for TMC2208
@@ -673,8 +674,12 @@ void TMC220X::init(uint16_t cs)
     this->ihold_irun_register_value = TMC220X_ZEROS_DEFAULT_DATA;
     this->tpowerdown_register_value = TMC220X_TPOWERDOWN_DEFAULT_DATA;
     this->tpwmthrs_register_value = TMC220X_ZEROS_DEFAULT_DATA;
+    this->tcoolthrs_register_value = TMC220X_ZEROS_DEFAULT_DATA;
+    this->sgthrs_register_value = 0;
+    this->coolconf_register_value = TMC220X_ZEROS_DEFAULT_DATA;
     this->chopconf_register_value = TMC220X_CHOPCONF_DEFAULT_DATA;
     this->pwmconf_register_value = TMC220X_PWMCONF_DEFAULT_DATA;
+    
 
     // Configure SpreadCycle (also uses in StealthChop when TPWMTHRS is set)
     // (default values come from the Quick Configuration Guide chapter in TMC2208 datasheet)
@@ -708,6 +713,23 @@ void TMC220X::init(uint16_t cs)
     } else {
         setSpreadCycleEnabled(true);
     }
+    
+    // TMC2209 specific config
+    if (chip_type == StepstickParameters::CHIP_TYPE::TMC2209) {
+        
+        uint8_t tcoolthrs   = THEKERNEL->config->value(motor_driver_control_checksum, cs, stallguard_tcoolthrs_checksum)->by_default(0)->as_int();
+        setCoolThreshold(tcoolthrs);
+        
+        uint8_t sgthrs      = THEKERNEL->config->value(motor_driver_control_checksum, cs, stallguard_sgthrs_checksum)->by_default(0)->as_int();
+        setStallguardThreshold(sgthrs);
+        
+        bool seimin         = THEKERNEL->config->value(motor_driver_control_checksum, cs, coolconf_seimin_checksum)->by_default(false)->as_bool();
+        uint8_t sedn        = THEKERNEL->config->value(motor_driver_control_checksum, cs, coolconf_sedn_checksum)->by_default(0)->as_int();
+        uint8_t semax       = THEKERNEL->config->value(motor_driver_control_checksum, cs, coolconf_semax_checksum)->by_default(0)->as_int();
+        uint8_t seup        = THEKERNEL->config->value(motor_driver_control_checksum, cs, coolconf_seup_checksum)->by_default(0)->as_int();
+        uint8_t semin       = THEKERNEL->config->value(motor_driver_control_checksum, cs, coolconf_semin_checksum)->by_default(0)->as_int();
+        setCoolConf(seimin, sedn, semax, seup, semin);
+    }
 
     // Set microstepping via software and set external sense resistors using internal reference voltage, uart on, external VREF
     setGeneralConfiguration(1,0,0,1,1,1);
@@ -717,25 +739,25 @@ void TMC220X::init(uint16_t cs)
     // TODO: read back the value, if it differs then echo error and/or switch to read-only!
     //constexpr static uint8_t TMC2208_n::DRV_STATUS_t::address = 0x6F
     // check for connectivity if not in read-only mode! Read the global register and check crc
-    unsigned long gconf_status = readStatus(TMC220X_READ_GCONF);
+    unsigned long gconf_status = readRegister(TMC220X_GCONF_REGISTER);
     THEKERNEL->streams->printf("GCONF status: %08lX (%lu) [CRC: %d]\n", gconf_status, gconf_status, crc_valid );
     
-    gconf_status = readStatus(TMC220X_DRV_STATUS_REGISTER);
+    gconf_status = readRegister(TMC220X_DRV_STATUS_REGISTER);
     THEKERNEL->streams->printf("DRV status: %08lX (%lu) [CRC: %d]\n", gconf_status, gconf_status, crc_valid );
-
 
     // Set a nice microstepping value
     setStepInterpolation(1);
     set_microsteps(TMC220X_DEFAULT_MICROSTEPPING_VALUE);
 
     // Set the initial values
-    transceive2208(TMC220X_WRITE|TMC220X_GCONF_REGISTER, this->gconf_register_value);
-    transceive2208(TMC220X_WRITE|TMC220X_SLAVECONF_REGISTER, this->slaveconf_register_value);
-    transceive2208(TMC220X_WRITE|TMC220X_IHOLD_IRUN_REGISTER, this->ihold_irun_register_value);
-    transceive2208(TMC220X_WRITE|TMC220X_TPOWERDOWN_REGISTER, this->tpowerdown_register_value);
-    transceive2208(TMC220X_WRITE|TMC220X_TPWMTHRS_REGISTER, this->tpwmthrs_register_value);
-    transceive2208(TMC220X_WRITE|TMC220X_CHOPCONF_REGISTER, this->chopconf_register_value);
-    transceive2208(TMC220X_WRITE|TMC220X_PWMCONF_REGISTER, this->pwmconf_register_value);
+    transceive220X(TMC220X_WRITE|TMC220X_GCONF_REGISTER, this->gconf_register_value);
+    transceive220X(TMC220X_WRITE|TMC220X_SLAVECONF_REGISTER, this->slaveconf_register_value);
+    transceive220X(TMC220X_WRITE|TMC220X_IHOLD_IRUN_REGISTER, this->ihold_irun_register_value);
+    transceive220X(TMC220X_WRITE|TMC220X_TPOWERDOWN_REGISTER, this->tpowerdown_register_value);
+    transceive220X(TMC220X_WRITE|TMC220X_TPWMTHRS_REGISTER, this->tpwmthrs_register_value);
+    transceive220X(TMC220X_WRITE|TMC220X_TCOOLTHRS_REGISTER, this->tcoolthrs_register_value);
+    transceive220X(TMC220X_WRITE|TMC220X_CHOPCONF_REGISTER, this->chopconf_register_value);
+    transceive220X(TMC220X_WRITE|TMC220X_PWMCONF_REGISTER, this->pwmconf_register_value);
 
     //started
     started = true;
@@ -793,7 +815,7 @@ void TMC220X::setGeneralConfiguration(bool i_scale_analog, bool internal_rsense,
 
     //if started we directly send it to the motor
     if (started) {
-        transceive2208(TMC220X_WRITE|TMC220X_GCONF_REGISTER, gconf_register_value);
+        transceive220X(TMC220X_WRITE|TMC220X_GCONF_REGISTER, gconf_register_value);
     }
 }
 
@@ -817,7 +839,7 @@ void TMC220X::setIndexoptions(bool otpw, bool step)
 
     //if started we directly send it to the motor
     if (started) {
-        transceive2208(TMC220X_WRITE|TMC220X_GCONF_REGISTER, gconf_register_value);
+        transceive220X(TMC220X_WRITE|TMC220X_GCONF_REGISTER, gconf_register_value);
     }
 }
 
@@ -836,7 +858,7 @@ void TMC220X::setSenddelay(uint8_t value)
 
     //if started we directly send it to the motor
     if (started) {
-        transceive2208(TMC220X_WRITE|TMC220X_SLAVECONF_REGISTER,slaveconf_register_value);
+        transceive220X(TMC220X_WRITE|TMC220X_SLAVECONF_REGISTER,slaveconf_register_value);
     }
 }
 
@@ -887,7 +909,7 @@ int TMC220X::set_microsteps(int number_of_steps)
 
     //if started we directly send it to the motor
     if (started) {
-        transceive2208(TMC220X_WRITE|TMC220X_CHOPCONF_REGISTER, chopconf_register_value);
+        transceive220X(TMC220X_WRITE|TMC220X_CHOPCONF_REGISTER, chopconf_register_value);
     }
     
     return microsteps;
@@ -898,7 +920,32 @@ int TMC220X::set_microsteps(int number_of_steps)
  */
 int TMC220X::get_microsteps(void)
 {
-    // TODO: read value from register if !write_only
+    if (!this->write_only) {
+        // read CHOPCONF / MRES for actual setting
+        uint16_t result = ((readRegister(TMC220X_CHOPCONF_REGISTER) & TMC220X_CHOPCONF_MRES) >> TMC220X_CHOPCONF_MRES_SHIFT);
+        if (result == 8) {
+            microsteps = 1;
+        } else if (result == 7) {
+            microsteps = 2;
+        } else if (result == 6) {
+            microsteps = 4;
+        } else if (result == 5) {
+            microsteps = 8;
+        } else if (result == 4) {
+            microsteps = 16;
+        } else if (result == 3) {
+            microsteps = 32;
+        } else if (result == 2) {
+            microsteps = 64;
+        } else if (result == 1) {
+            microsteps = 128;
+        } else if (result == 0) {
+            microsteps = 256;
+        } else {
+            microsteps = -1; // indicate readout faliure
+        }
+    }
+    
     return microsteps;
 }
 
@@ -911,7 +958,7 @@ void TMC220X::setStepInterpolation(int8_t value)
     }
     //if started we directly send it to the motor
     if (started) {
-        transceive2208(TMC220X_WRITE|TMC220X_CHOPCONF_REGISTER, chopconf_register_value);
+        transceive220X(TMC220X_WRITE|TMC220X_CHOPCONF_REGISTER, chopconf_register_value);
     }
 }
 
@@ -924,7 +971,7 @@ void TMC220X::setDoubleEdge(int8_t value)
     }
     //if started we directly send it to the motor
     if (started) {
-        transceive2208(TMC220X_WRITE|TMC220X_CHOPCONF_REGISTER, chopconf_register_value);
+        transceive220X(TMC220X_WRITE|TMC220X_CHOPCONF_REGISTER, chopconf_register_value);
     }
 }
 
@@ -999,7 +1046,7 @@ void TMC220X::setSpreadCycleChopper(int8_t constant_off_time, int8_t blank_time,
 
     //if started we directly send it to the motor
     if (started) {
-        transceive2208(TMC220X_WRITE|TMC220X_CHOPCONF_REGISTER,chopconf_register_value);
+        transceive220X(TMC220X_WRITE|TMC220X_CHOPCONF_REGISTER,chopconf_register_value);
     }
 }
 
@@ -1012,7 +1059,7 @@ void TMC220X::setSpreadCycleEnabled(bool enable)
     }
     //if started we directly send it to the motor
     if (started) {
-        transceive2208(TMC220X_WRITE|TMC220X_GCONF_REGISTER, gconf_register_value);
+        transceive220X(TMC220X_WRITE|TMC220X_GCONF_REGISTER, gconf_register_value);
     }
 }
 
@@ -1059,7 +1106,7 @@ void TMC220X::setStealthChop(uint8_t lim, uint8_t reg, uint8_t freewheel, bool a
 
     //if started we directly send it to the motor
     if (started) {
-        transceive2208(TMC220X_WRITE|TMC220X_PWMCONF_REGISTER,pwmconf_register_value);
+        transceive220X(TMC220X_WRITE|TMC220X_PWMCONF_REGISTER,pwmconf_register_value);
     }
 }
 
@@ -1078,7 +1125,7 @@ void TMC220X::setHolddelay(uint8_t value)
 
     //if started we directly send it to the motor
     if (started) {
-        transceive2208(TMC220X_WRITE|TMC220X_IHOLD_IRUN_REGISTER,ihold_irun_register_value);
+        transceive220X(TMC220X_WRITE|TMC220X_IHOLD_IRUN_REGISTER,ihold_irun_register_value);
     }
 }
 
@@ -1089,7 +1136,7 @@ void TMC220X::setPowerDowndelay(uint8_t value)
 
     //if started we directly send it to the motor
     if (started) {
-        transceive2208(TMC220X_WRITE|TMC220X_TPOWERDOWN_REGISTER,tpowerdown_register_value);
+        transceive220X(TMC220X_WRITE|TMC220X_TPOWERDOWN_REGISTER,tpowerdown_register_value);
     }
 }
 
@@ -1105,9 +1152,113 @@ void TMC220X::setStealthChopthreshold(uint32_t threshold)
 
     //if started we directly send it to the motor
     if (started) {
-        transceive2208(TMC220X_WRITE|TMC220X_TPWMTHRS_REGISTER,tpwmthrs_register_value);
+        transceive220X(TMC220X_WRITE|TMC220X_TPWMTHRS_REGISTER,tpwmthrs_register_value);
     }
 }
+
+void TMC220X::setCoolThreshold(uint32_t threshold)
+{
+    //perform some sanity checks
+    if (threshold >= (1 << 20)) {
+        threshold = (1 << 20) - 1;
+    }
+
+    //save the threshold value
+    this->tcoolthrs_register_value = threshold;
+
+    //if started we directly send it to the motor
+    if (started && chip_type == StepstickParameters::CHIP_TYPE::TMC2209) {
+        transceive220X(TMC220X_WRITE|TMC220X_TCOOLTHRS_REGISTER,tcoolthrs_register_value);
+    }
+}
+
+void TMC220X::setStallguardThreshold(uint32_t threshold)
+{
+    //perform some sanity checks
+    if (threshold >= (1 << 8)) {
+        threshold = (1 << 8) - 1;
+    }
+
+    //save the threshold value
+    this->sgthrs_register_value = threshold;
+
+    //if started we directly send it to the motor
+    if (started && chip_type == StepstickParameters::CHIP_TYPE::TMC2209) {
+        transceive220X(TMC220X_WRITE|TMC220X_TCOOLTHRS_REGISTER,tcoolthrs_register_value);
+    }
+}
+
+uint8_t TMC220X::getStallguardResult(void)
+{
+    //if we don't yet started there cannot be a current value
+    if (!started || chip_type != StepstickParameters::CHIP_TYPE::TMC2209) {
+        return 0;
+    }
+    // Bits 9 and 0 will always show 0. 
+    // Scaling to 10 bit is for compatibility to StallGuard2.
+    unsigned long result = readRegister(TMC220X_SG_RESULT_REGISTER);
+
+    return (uint8_t)result;
+}
+
+void TMC220X::setCoolConf(bool seimin, uint8_t sedn, uint16_t semax, uint8_t seup, uint16_t semin)
+{
+       // we should honor the docs a bit more -> use decimal values instead of bits
+    //perform some sanity checks
+    if (sedn>32) {
+        sedn= 0;
+    } else if (sedn >= 8) {
+        sedn= 1;
+    } else if (sedn > 3) {
+        sedn= 3;
+    }
+    
+    if (semax > 480 ) {
+        semax= 480;
+    }
+    if (semax > 15) {
+        // divide by 32 - 5 bitswap
+        semax >>= 5;
+    }
+    
+    if (seup>8) {
+        seup= 3;
+    } else if (seup > 4) {
+        seup= 2;
+    } else if (seup > 2) {
+        seup= 1;
+    }
+    
+    if (semin > 480 ) {
+        semin= 480;
+    }
+    if (semin > 15) {
+        // divide by 32 - 5 bitswap
+        semin >>= 5;
+    }
+
+    //first of all delete all the values for this register
+    coolconf_register_value = 0;
+
+    if (seimin) {
+        coolconf_register_value |= TMC220X_COOLCONF_SEIMIN;
+    }
+    
+    // current down step speed
+    coolconf_register_value |= (sedn << TMC220X_COOLCONF_SEDN_SHIFT);
+    // SG hysteresis
+    coolconf_register_value |= (semax << TMC220X_COOLCONF_SEMAX_SHIFT);
+    // current up step width
+    coolconf_register_value |= (seup << TMC220X_COOLCONF_SEUP_SHIFT);
+    // minimum SG value for smart current control
+    coolconf_register_value |= (semin << TMC220X_COOLCONF_SEMIN_SHIFT);
+
+    //if started we directly send it to the motor
+    if (started && chip_type == StepstickParameters::CHIP_TYPE::TMC2209) {
+        transceive220X(TMC220X_WRITE|TMC220X_COOLCONF_REGISTER,coolconf_register_value);
+    }
+}
+
 
 void TMC220X::set_current(uint16_t current)
 {
@@ -1143,8 +1294,8 @@ void TMC220X::set_current(uint16_t current)
     ihold_irun_register_value  |= current_scaling << TMC220X_IHOLD_IRUN_IRUN_SHIFT;
     //if started we directly send it to the motor
     if (started) {
-        transceive2208(TMC220X_WRITE|TMC220X_CHOPCONF_REGISTER,chopconf_register_value);
-        transceive2208(TMC220X_WRITE|TMC220X_IHOLD_IRUN_REGISTER,ihold_irun_register_value);
+        transceive220X(TMC220X_WRITE|TMC220X_CHOPCONF_REGISTER,chopconf_register_value);
+        transceive220X(TMC220X_WRITE|TMC220X_IHOLD_IRUN_REGISTER,ihold_irun_register_value);
     } else {
         THEKERNEL->streams->printf("TMC220X not started on %c, cannot set current.\n", designator);
     }
@@ -1158,7 +1309,7 @@ void TMC220X::setHoldCurrent(uint8_t hold)
     //set the new current scaling
     ihold_irun_register_value |= (uint8_t)(current_scaling * ((double) hold) / 100.0F) << TMC220X_IHOLD_IRUN_IHOLD_SHIFT;
     if (started) {
-        transceive2208(TMC220X_WRITE|TMC220X_IHOLD_IRUN_REGISTER,ihold_irun_register_value);
+        transceive220X(TMC220X_WRITE|TMC220X_IHOLD_IRUN_REGISTER,ihold_irun_register_value);
     }
 }
 
@@ -1184,7 +1335,7 @@ unsigned int TMC220X::getCurrentCSReading(void)
     if (!started) {
         return 0;
     }
-    float result = ((readStatus(TMC220X_READ_DRV_STATUS) & TMC220X_DRV_STATUS_CS_ACTUAL) >> TMC220X_DRV_STATUS_CS_ACTUAL_SHIFT);
+    float result = ((readRegister(TMC220X_DRV_STATUS_REGISTER) & TMC220X_DRV_STATUS_CS_ACTUAL) >> TMC220X_DRV_STATUS_CS_ACTUAL_SHIFT);
     float resistor_value = (float)this->resistor;
     float voltage = (chopconf_register_value & TMC220X_CHOPCONF_VSENSE) ? 0.18F : 0.32F;
     result = (result + 1.0F) / 32.0F * voltage / (resistor_value + 20) * 1000.0F * 1000.0F;
@@ -1211,10 +1362,10 @@ int8_t TMC220X::getOverTemperature(void)
     if (!this->started) {
         return 0;
     }
-    if (readStatus(TMC220X_READ_DRV_STATUS) & TMC220X_DRV_STATUS_OT) {
+    if (readRegister(TMC220X_DRV_STATUS_REGISTER) & TMC220X_DRV_STATUS_OT) {
         return TMC220X_OVERTEMPERATURE_SHUTDOWN;
     }
-    if (readStatus(TMC220X_READ_DRV_STATUS) & TMC220X_DRV_STATUS_OTPW) {
+    if (readRegister(TMC220X_DRV_STATUS_REGISTER) & TMC220X_DRV_STATUS_OTPW) {
         return TMC220X_OVERTEMPERATURE_PREWARNING;
     }
     return 0;
@@ -1226,7 +1377,7 @@ bool TMC220X::isShortToGroundA(void)
     if (!this->started) {
         return false;
     }
-    return (readStatus(TMC220X_READ_DRV_STATUS) & TMC220X_DRV_STATUS_S2GA);
+    return (readRegister(TMC220X_DRV_STATUS_REGISTER) & TMC220X_DRV_STATUS_S2GA);
 }
 
 //is motor channel B shorted to ground
@@ -1235,7 +1386,7 @@ bool TMC220X::isShortToGroundB(void)
     if (!this->started) {
         return false;
     }
-    return (readStatus(TMC220X_READ_DRV_STATUS) & TMC220X_DRV_STATUS_S2GB);
+    return (readRegister(TMC220X_DRV_STATUS_REGISTER) & TMC220X_DRV_STATUS_S2GB);
 }
 
 //is motor channel A connected
@@ -1244,7 +1395,7 @@ bool TMC220X::isOpenLoadA(void)
     if (!this->started) {
         return false;
     }
-    return (readStatus(TMC220X_READ_DRV_STATUS) & TMC220X_DRV_STATUS_OLA);
+    return (readRegister(TMC220X_DRV_STATUS_REGISTER) & TMC220X_DRV_STATUS_OLA);
 }
 
 //is motor channel B connected
@@ -1253,7 +1404,7 @@ bool TMC220X::isOpenLoadB(void)
     if (!this->started) {
         return false;
     }
-    return (readStatus(TMC220X_READ_DRV_STATUS) & TMC220X_DRV_STATUS_OLB);
+    return (readRegister(TMC220X_DRV_STATUS_REGISTER) & TMC220X_DRV_STATUS_OLB);
 }
 
 //is chopper inactive since 2^20 clock cycles - defaults to ~0,08s
@@ -1262,7 +1413,7 @@ bool TMC220X::isStandStill(void)
     if (!this->started) {
         return false;
     }
-    return (readStatus(TMC220X_READ_DRV_STATUS) & TMC220X_DRV_STATUS_STST);
+    return (readRegister(TMC220X_DRV_STATUS_REGISTER) & TMC220X_DRV_STATUS_STST);
 }
 
 void TMC220X::set_enable(bool enabled)
@@ -1286,7 +1437,7 @@ void TMC220X::set_enable(bool enabled)
     }
     //if not enabled we don't have to do anything since we already delete t_off from the register
     if (started) {
-        transceive2208(TMC220X_WRITE|TMC220X_CHOPCONF_REGISTER, chopconf_register_value);
+        transceive220X(TMC220X_WRITE|TMC220X_CHOPCONF_REGISTER, chopconf_register_value);
     }
 }
 
@@ -1300,110 +1451,136 @@ bool TMC220X::isEnabled()
 }
 
 //reads a value from the TMC220X status register.
+unsigned long TMC220X::readRegister(int8_t reg_addr)
+{
+    uint32_t data;
+    uint8_t reg;
+    
+    reg = TMC220X_READ|reg_addr;
+    
+    data = transceive220X(reg);
+
+    return data;
+}
+
+/*
+
+DEPRECATED - Should be removed after testing
+
+//reads a value from the TMC220X status register.
 unsigned long TMC220X::readStatus(int8_t read_value)
 {
     uint32_t data;
     if (read_value == TMC220X_READ_GCONF) {
-        data = transceive2208(TMC220X_READ|TMC220X_GCONF_REGISTER,TMC220X_ZEROS_DEFAULT_DATA);
+        data = transceive220X(TMC220X_READ|TMC220X_GCONF_REGISTER,TMC220X_ZEROS_DEFAULT_DATA);
     } else if (read_value == TMC220X_READ_MSCNT) {
-        data = transceive2208(TMC220X_READ|TMC220X_MSCNT_REGISTER,TMC220X_ZEROS_DEFAULT_DATA);
+        data = transceive220X(TMC220X_READ|TMC220X_MSCNT_REGISTER,TMC220X_ZEROS_DEFAULT_DATA);
     } else {
-        data = transceive2208(TMC220X_READ|TMC220X_DRV_STATUS_REGISTER,TMC220X_ZEROS_DEFAULT_DATA);
+        data = transceive220X(TMC220X_READ|TMC220X_DRV_STATUS_REGISTER,TMC220X_ZEROS_DEFAULT_DATA);
     }
     return data;
 }
+*/
 
 void TMC220X::dump_status(StreamOutput *stream)
 {
     uint8_t actu= (designator >= 'X' && designator <= 'Z') ? designator-'X' : designator-'A'+3;
 
     if (!this->write_only) {
-        stream->printf("designator %c [%d], Chip type TMC220X\n", designator, actu);
-
-        check_error_status_bits(stream);
-
+        stream->printf("designator %c [%d], Chip type TMC220%c\n", designator, actu, (chip_type == StepstickParameters::CHIP_TYPE::TMC2209) ? '9' : '8' );
+        
         if (this->isStandStill()) {
             stream->printf("INFO: Motor is standing still.\n");
         }
 
-        int value = readStatus(TMC220X_READ_MSCNT);
+        int value = readRegister(TMC220X_MSCNT_REGISTER);
         stream->printf("Microstep position phase A: %d\n", value);
 
         stream->printf("Current setting: %dmA\n", get_current());
 
-        stream->printf("Microsteps: 1/%d\n", microsteps);
+        stream->printf("Microsteps: 1/%d\n", get_microsteps());
 
-    // TODO: read data from the chip, rather than using the local stuff
-        stream->printf("Register dump:\n");
-        stream->printf(" gconf register: %08lX(%ld)\n", gconf_register_value, gconf_register_value);
-        stream->printf(" slaveconf register: %08lX(%ld)\n", slaveconf_register_value, slaveconf_register_value);
-        stream->printf(" ihold_irun register: %08lX(%ld)\n", ihold_irun_register_value, ihold_irun_register_value);
-        stream->printf(" tpowerdown register: %08lX(%ld)\n", tpowerdown_register_value, tpowerdown_register_value);
-        stream->printf(" tpwmthrs register: %08lX(%ld)\n", tpwmthrs_register_value, tpwmthrs_register_value);
-        stream->printf(" chopconf register: %08lX(%ld)\n", chopconf_register_value, chopconf_register_value);
-        stream->printf(" pwmconf register: %08lX(%ld)\n", pwmconf_register_value, pwmconf_register_value);
-        stream->printf(" motor_driver_control.xxx.reg %05lX,%05lX,%05lX,%05lX,%05lX,%05lX,%05lX\n", gconf_register_value, slaveconf_register_value, ihold_irun_register_value,
-                                                                                              tpowerdown_register_value, tpwmthrs_register_value, chopconf_register_value, pwmconf_register_value);
+        check_error_status_bits(stream);
+
+        // TODO: read data from the chip, rather than using the local stuff
+        stream->printf("Register dump [L=from uC memory]:\n");
+        stream->printf(" gconf register: %08lX (%ld) %08lX\n", gconf_register_value, gconf_register_value, readRegister(TMC220X_GCONF_REGISTER));
+        stream->printf(" slaveconf register: %08lX (%ld)\n", slaveconf_register_value, slaveconf_register_value);
+        stream->printf(" ihold_irun register: %08lX (%ld)\n", ihold_irun_register_value, ihold_irun_register_value);
+        stream->printf(" tpowerdown register: %08lX (%ld)\n", tpowerdown_register_value, tpowerdown_register_value);
+        stream->printf(" tpwmthrs register: %08lX (%ld)\n", tpwmthrs_register_value, tpwmthrs_register_value);
+        stream->printf(" chopconf register: %08lX (%ld)\n", chopconf_register_value, chopconf_register_value);
+        stream->printf(" pwmconf register: %08lX (%ld)\n", pwmconf_register_value, pwmconf_register_value);
+        if (chip_type == StepstickParameters::CHIP_TYPE::TMC2209) {
+            unsigned long result= getStallguardResult();
+            stream->printf(" stallguard result: %10lX (%ld)\n", result, result);
+            stream->printf(" tcoolthrs register [L]: %08lX (%ld)\n", tcoolthrs_register_value, tcoolthrs_register_value);
+            stream->printf(" sgthrs register [L]: %08X (%d)\n", sgthrs_register_value, sgthrs_register_value);
+            stream->printf(" coolconf register: %08lX (%ld)\n", coolconf_register_value, coolconf_register_value);
+        }
+        // I really don't see any point having this
+        // stream->printf(" motor_driver_control.xxx.reg %05lX,%05lX,%05lX,%05lX,%05lX,%05lX,%05lX\n", gconf_register_value, slaveconf_register_value, ihold_irun_register_value,
+                                                                                              // tpowerdown_register_value, tpwmthrs_register_value, chopconf_register_value, pwmconf_register_value);
         
         bool moving = THEROBOT->actuators[actu]->is_moving();
         // dump out in the format that the processing script needs
         if (moving) {
-            stream->printf("#p%lu,k%u,r,", THEROBOT->actuators[actu]->get_current_step(), getCurrentCSReading());
+            stream->printf("P#%lu,k%u,", THEROBOT->actuators[actu]->get_current_step(), getCurrentCSReading());
         } else {
-            readStatus(TMC220X_READ_MSCNT); // get the status bits
-            stream->printf("#s,");
+            unsigned long result= readRegister(TMC220X_MSCNT_REGISTER); // get the status bits
+            stream->printf("S#%ld,",result);
         }
-        stream->printf("d%d,", THEROBOT->actuators[actu]->which_direction() ? -1 : 1);
-        stream->printf("c%u,m%d,", get_current(), get_microsteps());
+        stream->printf("D%d,", THEROBOT->actuators[actu]->which_direction() ? -1 : 1);
+        stream->printf("C%u,M%d,", get_current(), get_microsteps());
         // stream->printf('S');
         // stream->printf(tmc22XStepper.getSpeed(), DEC);
 
         //detect the winding status
         if (isOpenLoadA()) {
-            stream->printf("ao,");
+            stream->printf("Ao,");
         } else if(isShortToGroundA()) {
-            stream->printf("ag,");
+            stream->printf("Ag,");
         } else {
-            stream->printf("a-,");
+            stream->printf("A-,");
         }
         //detect the winding status
         if (isOpenLoadB()) {
-            stream->printf("bo,");
+            stream->printf("Bo,");
         } else if(isShortToGroundB()) {
-            stream->printf("bg,");
+            stream->printf("Bg,");
         } else {
-            stream->printf("b-,");
+            stream->printf("B-,");
         }
 
         char temperature = getOverTemperature();
         if (temperature == 0) {
-            stream->printf("x-,");
+            stream->printf("T-,");
         } else if (temperature == TMC220X_OVERTEMPERATURE_PREWARNING) {
-            stream->printf("xw,");
+            stream->printf("Tw,");
         } else {
-            stream->printf("xe,");
+            stream->printf("Te,");
         }
 
         if (isEnabled()) {
-            stream->printf("e1,");
+            stream->printf("EN1,");
         } else {
-            stream->printf("e0,");
+            stream->printf("EN0,");
         }
 
         //write out the current chopper config
         stream->printf("Co%d,Cb%d,", constant_off_time, blank_time);
         stream->printf("\n");
     } else {
-        stream->printf("TMC22x is running in READ ONLY mode on %c [%d], output status: %d\n", designator, actu,isEnabled());
+        stream->printf("TMC22x is running in READ ONLY mode on %c [%d], output status: %d\n", designator, actu, isEnabled());
     }
 }
 
 void TMC220X::get_debug_info(StreamOutput *stream)
 {
-    unsigned long gconf_status = readStatus(TMC220X_READ_GCONF);
+    unsigned long gconf_status = readRegister(TMC220X_GCONF_REGISTER);
     THEKERNEL->streams->printf("GCONF status for %c: %08lX (%lu) \n", designator, gconf_status, gconf_status );
     
-    unsigned long drv_status = readStatus(TMC220X_DRV_STATUS_REGISTER);
+    unsigned long drv_status = readRegister(TMC220X_DRV_STATUS_REGISTER);
     THEKERNEL->streams->printf("DRV status for %c: %08lX (%lu) \n", designator, drv_status, drv_status );
     
 }
@@ -1412,7 +1589,8 @@ void TMC220X::get_debug_info(StreamOutput *stream)
 bool TMC220X::check_error_status_bits(StreamOutput *stream)
 {
     bool error= false;
-    readStatus(TMC220X_READ_MSCNT); // get the status bits
+    // why is this here? I don't see any point in it, since it's not processed
+    // readRegister(TMC220X_MSCNT_REGISTER); // get the status bits
 
     if (this->getOverTemperature()&TMC220X_OVERTEMPERATURE_PREWARNING) {
         if(!error_reported.test(0)) stream->printf("%c - WARNING: Overtemperature Prewarning!\n", designator);
@@ -1476,13 +1654,13 @@ bool TMC220X::set_raw_register(StreamOutput *stream, uint32_t reg, uint32_t val)
 {
     switch(reg) {
         case 255:
-            transceive2208(TMC220X_WRITE|TMC220X_GCONF_REGISTER, this->gconf_register_value);
-            transceive2208(TMC220X_WRITE|TMC220X_SLAVECONF_REGISTER, this->slaveconf_register_value);
-            transceive2208(TMC220X_WRITE|TMC220X_IHOLD_IRUN_REGISTER, this->ihold_irun_register_value);
-            transceive2208(TMC220X_WRITE|TMC220X_TPOWERDOWN_REGISTER, this->tpowerdown_register_value);
-            transceive2208(TMC220X_WRITE|TMC220X_TPWMTHRS_REGISTER, this->tpwmthrs_register_value);
-            transceive2208(TMC220X_WRITE|TMC220X_CHOPCONF_REGISTER, this->chopconf_register_value);
-            transceive2208(TMC220X_WRITE|TMC220X_PWMCONF_REGISTER, this->pwmconf_register_value);
+            transceive220X(TMC220X_WRITE|TMC220X_GCONF_REGISTER, this->gconf_register_value);
+            transceive220X(TMC220X_WRITE|TMC220X_SLAVECONF_REGISTER, this->slaveconf_register_value);
+            transceive220X(TMC220X_WRITE|TMC220X_IHOLD_IRUN_REGISTER, this->ihold_irun_register_value);
+            transceive220X(TMC220X_WRITE|TMC220X_TPOWERDOWN_REGISTER, this->tpowerdown_register_value);
+            transceive220X(TMC220X_WRITE|TMC220X_TPWMTHRS_REGISTER, this->tpwmthrs_register_value);
+            transceive220X(TMC220X_WRITE|TMC220X_CHOPCONF_REGISTER, this->chopconf_register_value);
+            transceive220X(TMC220X_WRITE|TMC220X_PWMCONF_REGISTER, this->pwmconf_register_value);
             stream->printf("Registers written\n");
             break;
 
@@ -1534,7 +1712,7 @@ uint8_t TMC220X::calcCRC(uint8_t *buf, uint8_t len) {
  * receive 64 bits only for read request
  * returns received data content
  */
-uint32_t TMC220X::transceive2208(uint8_t reg, uint32_t datagram)
+uint32_t TMC220X::transceive220X(uint8_t reg, uint32_t datagram)
 {
     uint8_t rbuf[9]; // 8 + 1 crc
     uint32_t i_datagram = 0;
@@ -1649,8 +1827,10 @@ bool TMC220X::set_options(const options_t& options)
             
         }
 
+    } else if(HAS('H') && HAS('I') && HAS('J') && HAS('K') && HAS('L')) {
+        setCoolConf((bool)GET('L'), GET('J'), GET('I'), GET('K'), GET('H'));
+        set = true;
     }
-
     return set;
 }
 

@@ -364,7 +364,7 @@ void MotorDriverControl::on_gcode_received(void *argument)
             // M911.1 Pn (or X0) will dump the registers and status of the selected motor. R0 will request format in processing machine readable format
             // M911.2 Pn (or Y0) Rxxx Vyyy sets Register xxx to value yyy for motor nnn, xxx == 255 writes the registers, xxx == 0 shows what registers are mapped to what
             // M911.3 Pn (or Z0) will set the options based on the parameters passed as below...
-            // TMC2660:-
+            // TMC2660/TMC220X:-
             // M911.3 Onnn Qnnn setStallGuardThreshold O=stall_guard_threshold, Q=stall_guard_filter_enabled
             // M911.3 Hnnn Innn Jnnn Knnn Lnnn setCoolStepConfiguration H=lower_SG_threshold, I=SG_hysteresis, J=current_decrement_step_size, K=current_increment_step_size, L=lower_current_limit
             // M911.3 S0 Unnn Vnnn Wnnn Xnnn Ynnn setConstantOffTimeChopper  U=constant_off_time, V=blank_time, W=fast_decay_time_setting, X=sine_wave_offset, Y=use_current_comparator

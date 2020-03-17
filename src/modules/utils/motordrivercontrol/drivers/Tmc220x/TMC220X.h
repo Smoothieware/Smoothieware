@@ -216,6 +216,33 @@ public:
     void setCoolThreshold(uint32_t threshold);
 
     /*!
+     * \brief Stall detection threshold
+     * \param threshold velocity threshold.
+     *
+     * A stall is signaled with SG_RESULT ≤ SGTHRS*2
+     */
+    void setStallguardThreshold(uint32_t threshold);
+    
+    /*!
+     * \brief reads out the current Stallguard threashold.
+     *
+     */
+    uint8_t getStallguardResult(void);
+
+    /*!
+     * \brief Stall detection threshold
+     * \param seimin minimum current for smart control
+     * \param sedn current down step speed
+     * \param semax StallGuard hysteresis value. If SG_RESULT is >= (SEMIN+SEMAX+1)*32, then the motor current becomes decreased.
+     * \param seup Current increment steps per measured StallGuard value
+     * \param semin minimum StallGuard value for smart current control
+     *
+     * A stall is signaled with SG_RESULT ≤ SGTHRS*2
+     */
+    void setCoolConf(bool seimin, uint8_t sedn, uint16_t semax, uint8_t seup, uint16_t semin);
+
+
+    /*!
      * \brief set the maximum motor current in mA (1000 is 1 Amp)
      * Keep in mind this is the maximum peak Current. The RMS current will be 1/sqrt(2) smaller. The actual current can also be smaller
      * by employing CoolStep.
@@ -319,9 +346,16 @@ public:
     /*!
      *\brief checks if the output bridges are enabled. If the bridges are not enabled the motor can run freely
      *\return true if the bridges and by that the motor driver are enabled, false if not.
-     *\sa setEnabled()
+     *\sa set_enable()
      */
     bool isEnabled();
+    
+    /*!
+     * \brief Reads a given register
+     * \param reg_addr any valid register address
+     * \sa TMC220X_[GCONF|GSTAT|IOIN|TSTEP|SG_RESULT|MSCNT|CHOPCONF|DRV_STATUS]_REGISTER
+     */
+    unsigned long readRegister(int8_t reg_addr);
 
     /*!
      * \brief Manually read out the status register
@@ -332,7 +366,7 @@ public:
      * \param read_value selects which value to read out (0..3). You can use the defines TMC21X_READOUT_POSITION, TMC21X_READOUT_STALLGUARD_CURRENT
      * \sa TMC21X_READOUT_POSITION, TMC21X_READOUT_STALLGUARD_CURRENT
      */
-    unsigned long readStatus(int8_t read_value);
+    // unsigned long readStatus(int8_t read_value);
 
     /*!
      * \brief Prints out all the information that can be found in the last status read out - it does not force a status readout.
@@ -360,7 +394,7 @@ private:
     bool check_error_status_bits(StreamOutput *stream);
 
     // UART sender
-    inline uint32_t transceive2208(uint8_t reg, uint32_t datagram);
+    inline uint32_t transceive220X(uint8_t reg, uint32_t datagram = 0x00000000);
     std::function<int(uint8_t *b, int cnt, uint8_t *r)> serial;
 
     unsigned int resistor{50}; // current sense resistor value in milliohm
@@ -373,6 +407,8 @@ private:
     uint32_t tpowerdown_register_value;
     uint32_t tpwmthrs_register_value;
     uint32_t tcoolthrs_register_value;
+    uint8_t sgthrs_register_value;
+    uint32_t coolconf_register_value;
     uint32_t chopconf_register_value;
     uint32_t pwmconf_register_value;
 
