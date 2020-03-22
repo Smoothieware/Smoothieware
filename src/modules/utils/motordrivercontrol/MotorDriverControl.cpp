@@ -24,7 +24,6 @@
 #include <string>
 
 #define motor_driver_control_checksum  CHECKSUM("motor_driver_control")
-#define timeout_checksum               CHECKSUM("timeout")
 #define enable_checksum                CHECKSUM("enable")
 #define chip_checksum                  CHECKSUM("chip")
 #define designator_checksum            CHECKSUM("designator")
@@ -67,14 +66,6 @@ void MotorDriverControl::on_module_loaded()
     if (!THEKERNEL->config->value(motor_driver_control_checksum, enable_checksum )->by_default(1)->as_bool()) {
         delete this;
         return;
-    }
-
-    // Wait for drivers
-    int timeout = THEKERNEL->config->value(motor_driver_control_checksum, timeout_checksum)->by_default(0)->as_number();
-
-    if (timeout > 0)
-    {
-        wait(timeout);
     }
 
     // Load modules
