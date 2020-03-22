@@ -1,9 +1,13 @@
 /*
- Highly modifed from....
-
+ 
  TMC26X.cpp - - TMC26X Stepper library for Wiring/Arduino
-
- based on the stepper library by Tom Igoe, et. al.
+ 
+ Credits:
+ 
+ - Based on the TMC26X Stepper library for Wiring/Arduino by Tom Igoe, et. al. (highly modified)
+ - First adaption by tiagojbalmeida 
+ - Added support for write_only mode and stealthchop by LastDragon-ru
+ - TMC2209 support with coolconf and stallguard, rework by Tamas Dajka (V1pr - viper@AT@vipernet.DOT.hu)
 
  Copyright (c) 2011, Interactive Matter, Marcus Nowotny
 
@@ -24,8 +28,6 @@
  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  THE SOFTWARE.
-
-TODO: add Coolstep and stallguard support
 
  */
 
@@ -59,8 +61,8 @@ TODO: add Coolstep and stallguard support
 #define stealthchop_tpwmthrs_checksum       CHECKSUM("stealthchop_tpwmthrs")
 #define slave_addr_checksum                 CHECKSUM("slave_addr")
 //stallguard - TMC2209
-#define stallguard_tcoolthrs_checksum       CHECKSUM("sg_tcoolthrs")
-#define stallguard_sgthrs_checksum          CHECKSUM("sg_thrs")
+#define stallguard_tcoolthrs_checksum       CHECKSUM("stallguard_tcoolthrs")
+#define stallguard_sgthrs_checksum          CHECKSUM("stallguard_thrs")
 // coolconf - TMC2209
 #define coolconf_seimin_checksum            CHECKSUM("coolconf_seimin")
 #define coolconf_sedn_checksum              CHECKSUM("coolconf_sedn")
@@ -733,7 +735,7 @@ void TMC220X::init(uint16_t cs)
 
     // Set microstepping via software and set external sense resistors using internal reference voltage, uart on, external VREF
     setGeneralConfiguration(1,0,0,1,1,1);
-    THEKERNEL->streams->printf("Setting GCONF to %08lX for axis %x\n", gconf_register_value, designator);
+    THEKERNEL->streams->printf("Setting GCONF to %08lX for axis %c\n", gconf_register_value, designator);
     
     // from teemuatlut's TMC driver library
     // TODO: read back the value, if it differs then echo error and/or switch to read-only!
