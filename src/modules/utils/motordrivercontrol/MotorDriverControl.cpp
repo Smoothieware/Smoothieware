@@ -63,7 +63,7 @@ MotorDriverControl::~MotorDriverControl()
 void MotorDriverControl::on_module_loaded()
 {
     // Enabled?
-    if (!THEKERNEL->config->value(motor_driver_control_checksum, enable_checksum )->by_default(1)->as_bool()) {
+    if (!THEKERNEL->config->value(motor_driver_control_checksum, enable_checksum )->by_default(0)->as_bool()) {
         delete this;
         return;
     }
