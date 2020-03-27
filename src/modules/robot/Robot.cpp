@@ -551,6 +551,21 @@ void Robot::on_gcode_received(void *argument)
             case 20: this->inch_mode = true;   break;
             case 21: this->inch_mode = false;   break;
 
+            case 43:
+                if(gcode->subcode == 1) {
+                    float x, y, z;
+                    std::tie(x, y, z) = tool_offset;
+                    if(gcode->has_letter('X')) x += to_millimeters(gcode->get_value('X'));
+                    if(gcode->has_letter('Y')) y += to_millimeters(gcode->get_value('Y'));
+                    if(gcode->has_letter('Z')) z += to_millimeters(gcode->get_value('Z'));
+                    tool_offset = wcs_t(x, y, z);
+                }
+                break;
+
+            case 49:
+                tool_offset = wcs_t(0, 0, 0);
+                break;
+
             case 54: case 55: case 56: case 57: case 58: case 59:
                 // select WCS 0-8: G54..G59, G59.1, G59.2, G59.3
                 current_wcs = gcode->g - 54;
