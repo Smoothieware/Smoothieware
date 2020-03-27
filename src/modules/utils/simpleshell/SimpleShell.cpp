@@ -761,12 +761,12 @@ void SimpleShell::grblDP_command( string parameters, StreamOutput *stream)
         THEROBOT->from_millimeters(std::get<2>(v[n+1])));
 
     if(verbose) {
-        stream->printf("[Tool Offset:%1.4f,%1.4f,%1.4f]\n",
+        stream->printf("[TLO:%1.4f,%1.4f,%1.4f]\n",
             THEROBOT->from_millimeters(std::get<0>(v[n+2])),
             THEROBOT->from_millimeters(std::get<1>(v[n+2])),
             THEROBOT->from_millimeters(std::get<2>(v[n+2])));
     }else{
-        stream->printf("[TL0:%1.4f]\n", THEROBOT->from_millimeters(std::get<2>(v[n+2])));
+        stream->printf("[TLO:%1.4f]\n", THEROBOT->from_millimeters(std::get<2>(v[n+2])));
     }
 
     // this is the last probe position, updated when a probe completes, also stores the number of steps moved after a homing cycle
@@ -869,8 +869,8 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
 
     } else if (what == "state") {
         // also $G and $I
-        // [G0 G54 G17 G21 G90 G94 M0 M5 M9 T0 F0.]
-        stream->printf("[G%d %s G%d G%d G%d G94 M0 M%c M%c T%d F%1.4f S%1.4f]\n",
+        // [GC:G0 G54 G17 G21 G90 G94 M0 M5 M9 T0 F0.]
+        stream->printf("[GC:G%d %s G%d G%d G%d G94 M0 M%c M%c T%d F%1.4f S%1.4f]\n",
             THEKERNEL->gcode_dispatch->get_modal_command(),
             wcs2gcode(THEROBOT->get_current_wcs()).c_str(),
             THEROBOT->plane_axis_0 == X_AXIS && THEROBOT->plane_axis_1 == Y_AXIS && THEROBOT->plane_axis_2 == Z_AXIS ? 17 :
