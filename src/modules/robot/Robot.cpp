@@ -552,13 +552,23 @@ void Robot::on_gcode_received(void *argument)
             case 21: this->inch_mode = false;   break;
 
             case 43:
-                if(gcode->subcode == 1) {
+                if(gcode->subcode == 1 || gcode->subcode == 2) {
+                    float deltas[3]= {0, 0, 0};
+                    if(gcode->has_letter('X')) deltas[X_AXIS]= to_millimeters(gcode->get_value('X'));
+                    if(gcode->has_letter('Y')) deltas[Y_AXIS]= to_millimeters(gcode->get_value('Y'));
+                    if(gcode->has_letter('Z')) deltas[Z_AXIS]= to_millimeters(gcode->get_value('Z'));
+
                     float x, y, z;
                     std::tie(x, y, z) = tool_offset;
-                    if(gcode->has_letter('X')) x += to_millimeters(gcode->get_value('X'));
-                    if(gcode->has_letter('Y')) y += to_millimeters(gcode->get_value('Y'));
-                    if(gcode->has_letter('Z')) z += to_millimeters(gcode->get_value('Z'));
+                    if(deltas[X_AXIS] != 0) x += deltas[X_AXIS];
+                    if(deltas[Y_AXIS] != 0) y += deltas[Y_AXIS];
+                    if(deltas[Z_AXIS] != 0) z += deltas[Z_AXIS];
                     tool_offset = wcs_t(x, y, z);
+
+                    if(gcode->subcode == 2) {
+                        // we also move
+                        delta_move(deltas, this->seek_rate / seconds_per_minute, 3);
+                    }
                 }
                 break;
 
