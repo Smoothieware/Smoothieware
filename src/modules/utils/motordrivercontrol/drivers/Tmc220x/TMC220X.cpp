@@ -409,7 +409,7 @@
 #define TMC220X_COOLCONF_REGISTER      0x42      //W       16        //CoolStep configuration.
 /********************************************************************************/
 //Function                                       Bit                 Description
-#define TMC220X_COOLCONF_SEIMIN                   16                  //minimum current for smart current control
+#define TMC220X_COOLCONF_SEIMIN                   15                  //minimum current for smart current control
                                                             //0: 1/2 of current setting (IRUN) - Att.: use with IRUN >= 10
                                                             //1: 1/4 of current setting (IRUN) - Att.: use with IRUN >= 10
 #define TMC220X_COOLCONF_SEDN                (3 << 13)           //current down step speed
