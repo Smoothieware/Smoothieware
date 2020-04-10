@@ -65,10 +65,10 @@ void Switch::on_halt(void *arg)
 
         // set pin to failsafe value
         switch(this->output_type) {
-            case DIGITAL: this->digital_pin->set(this->failsafe); break;
+            case DIGITAL: if (this->digital_pin) this->digital_pin->set(this->failsafe); break;
             case SIGMADELTA: this->sigmadelta_pin->set(this->failsafe); break;
-            case HWPWM: this->pwm_pin->write(switch_value/100.0F); break;
-            case SWPWM: this->swpwm_pin->write(switch_value/100.0F); break;
+            case HWPWM: this->pwm_pin->write(this->switch_value/100.0F); break;
+            case SWPWM: this->swpwm_pin->write(this->switch_value/100.0F); break;
             case NONE: return;
         }
         this->switch_state= this->failsafe;
@@ -149,7 +149,7 @@ void Switch::on_config_reload(void *argument)
                     set_low_on_debug(digital_pin->port_number, digital_pin->pin);
                 }
             }else{
-                this->output_type= NONE;
+                if (this->output_on_command.empty() && this->output_off_command.empty()) this->output_type = NONE;
                 delete this->digital_pin;
                 this->digital_pin= nullptr;
             }
@@ -240,7 +240,7 @@ void Switch::on_config_reload(void *argument)
             }
 
         } else if(this->output_type == DIGITAL){
-            this->digital_pin->set(this->switch_state);
+            if (this->digital_pin) this->digital_pin->set(this->switch_state);
         }
     }
 
@@ -358,14 +358,19 @@ void Switch::on_gcode_received(void *argument)
             // drain queue
             THEKERNEL->conveyor->wait_for_idle();
             // logic pin turn on
-            this->digital_pin->set(true);
+            // if output_on_command not defined, handle here, otherwise setup to be handled in on_main_loop
+            if (this->output_on_command.empty()) {
+                if (this->digital_pin) this->digital_pin->set(true);
+            }
+            else {
+                if ((this->output_on_command[0]!='~') || !this->switch_state) this->switch_changed = true;
+            }
             this->switch_state = true;
         }
 
     } else if(match_input_off_gcode(gcode)) {
         // drain queue
         THEKERNEL->conveyor->wait_for_idle();
-        this->switch_state = false;
         if (this->output_type == SIGMADELTA) {
             // SIGMADELTA output pin
             this->sigmadelta_pin->set(false);
@@ -378,8 +383,15 @@ void Switch::on_gcode_received(void *argument)
 
         } else if (this->output_type == DIGITAL) {
             // logic pin turn off
-            this->digital_pin->set(false);
+            // if output_off_command not defined, handle here, otherwise setup to be handled in on_main_loop
+            if (this->output_off_command.empty()) {
+                if (this->digital_pin) this->digital_pin->set(false);
+            }
+            else {
+                if ((this->output_off_command[0]!='~') || this->switch_state) this->switch_changed = true;
+            }
         }
+        this->switch_state = false;
     }
 }
 
@@ -437,7 +449,7 @@ void Switch::on_main_loop(void *argument)
                 this->swpwm_pin->write(this->default_on_value/100.0F);
 
             } else if (this->output_type == DIGITAL) {
-                this->digital_pin->set(true);
+                if (this->digital_pin) this->digital_pin->set(true);
             }
 
         } else {
@@ -454,7 +466,7 @@ void Switch::on_main_loop(void *argument)
                 this->swpwm_pin->write(this->switch_value/100.0F);
 
             } else if (this->output_type == DIGITAL) {
-                this->digital_pin->set(false);
+                if (this->digital_pin) this->digital_pin->set(false);
             }
         }
         this->switch_changed = false;
@@ -501,7 +513,7 @@ void Switch::flip()
 void Switch::send_gcode(std::string msg, StreamOutput *stream)
 {
     struct SerialMessage message;
-    message.message = msg;
+    message.message = (msg[0]!='~') ? msg : &msg[1];
     message.stream = stream;
     THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
 }
