@@ -13,15 +13,17 @@ namespace StepstickParameters {
     
     enum CHIP_TYPE {
         DRV8711,
-        TMC2660,
+        TMC2130,
         TMC2208,
-        TMC2209
+        TMC2209,
+        TMC2660
     };
 }
 
 class DRV8711DRV;
-class TMC26X;
+class TMC21X;
 class TMC220X;
+class TMC26X;
 
 class StreamOutput;
 

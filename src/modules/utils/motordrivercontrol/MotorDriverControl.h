@@ -17,8 +17,9 @@ class StreamOutput;
 class StepperDrv;
 
 class DRV8711DRV;
+class TMC21X;
+class TMC220X;
 class TMC26X;
-class TMC22X;
 
 class StreamOutput;
 
