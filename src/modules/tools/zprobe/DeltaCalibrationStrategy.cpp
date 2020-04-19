@@ -154,11 +154,11 @@ float DeltaCalibrationStrategy::findBed()
 
     // find bed, run at slow rate so as to not hit bed hard
     float mm;
-    if(!zprobe->run_probe_return(mm, zprobe->getSlowFeedrate())) return NAN;
+    if(!zprobe->run_probe(mm, zprobe->getSlowFeedrate())) return NAN;
 
     // leave the probe zprobe->getProbeHeight() above bed
-    float dz= zprobe->getProbeHeight() - mm;
-    zprobe->coordinated_move(NAN, NAN, dz, zprobe->getFastFeedrate(), true); // relative move
+    float dz= zprobe->getProbeHeight();
+    zprobe->coordinated_move(NAN, NAN, dz, zprobe->getSlowFeedrate(), true); // relative move
 
     return mm + deltaz - zprobe->getProbeHeight(); // distance to move from home to 5mm above bed
 }
