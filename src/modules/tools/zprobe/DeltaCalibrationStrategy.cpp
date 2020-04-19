@@ -35,7 +35,7 @@ bool DeltaCalibrationStrategy::handleConfig()
     this->probe_radius= r;
 
     // the initial height above the bed we stop the intial move down after home to find the bed
-    // this should be a height that is enough that the probe will not hit the bed and is an offset from max_z (can be set to 0 if max_z takes into account the probe offset)
+    // this should be a height that is enough that the probe will not hit the bed and is the actual absolute z to move to before probing for the bed
     this->initial_height= THEKERNEL->config->value(leveling_strategy_checksum, delta_calibration_strategy_checksum, initial_height_checksum)->by_default(10)->as_number();
     return true;
 }
@@ -148,19 +148,20 @@ float DeltaCalibrationStrategy::findBed()
     // home
     zprobe->home();
 
-    // move to an initial position fast so as to not take all day, we move down max_z - initial_height, which is set in config, default 10mm
-    float deltaz= zprobe->getMaxZ() - initial_height;
-    zprobe->coordinated_move(NAN, NAN, -deltaz, zprobe->getFastFeedrate(), true);
+    // move to an initial position fast so as to not take all day, we move down to initial_height, which is set in config, default 10mm
+    float deltaz = initial_height;
+    zprobe->coordinated_move(NAN, NAN, deltaz, zprobe->getFastFeedrate());
+    zprobe->coordinated_move(0, 0, NAN, zprobe->getFastFeedrate()); // move to 0,0
 
     // find bed, run at slow rate so as to not hit bed hard
     float mm;
-    if(!zprobe->run_probe_return(mm, zprobe->getSlowFeedrate())) return NAN;
+    if(!zprobe->run_probe(mm, zprobe->getSlowFeedrate())) return NAN;
 
     // leave the probe zprobe->getProbeHeight() above bed
-    float dz= zprobe->getProbeHeight() - mm;
-    zprobe->coordinated_move(NAN, NAN, dz, zprobe->getFastFeedrate(), true); // relative move
+    float dz= zprobe->getProbeHeight();
+    zprobe->coordinated_move(NAN, NAN, dz, zprobe->getSlowFeedrate(), true); // relative move
 
-    return mm + deltaz - zprobe->getProbeHeight(); // distance to move from home to 5mm above bed
+    return THEROBOT->get_axis_position(Z_AXIS); // Z position to move to from home to probe height above bed
 }
 
 /* Run a calibration routine for a delta
@@ -255,7 +256,7 @@ bool DeltaCalibrationStrategy::calibrate_delta_endstops(Gcode *gcode)
 
         // home and move probe to start position just above the bed
         zprobe->home();
-        zprobe->coordinated_move(NAN, NAN, -bedht, zprobe->getFastFeedrate(), true); // do a relative move from home to the point above the bed
+        zprobe->coordinated_move(NAN, NAN, bedht, zprobe->getFastFeedrate()); // do a move from home to the point above the bed
 
         // probe the base of the X tower
         if(!zprobe->doProbeAt(mm, t1x, t1y)) return false;
@@ -377,7 +378,7 @@ bool DeltaCalibrationStrategy::calibrate_delta_radius(Gcode *gcode)
         gcode->stream->printf("Setting delta radius to: %1.4f\n", delta_radius);
 
         zprobe->home();
-        zprobe->coordinated_move(NAN, NAN, -bedht, zprobe->getFastFeedrate(), true); // needs to be a relative coordinated move
+        zprobe->coordinated_move(NAN, NAN, bedht, zprobe->getFastFeedrate()); // move to absolute Z that is just above bed
 
         // flush the output
         THEKERNEL->call_event(ON_IDLE);

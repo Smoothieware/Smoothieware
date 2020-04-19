@@ -16,7 +16,6 @@ using namespace std;
 #define kill_button_enable_checksum  CHECKSUM("kill_button_enable")
 #define toggle_checksum              CHECKSUM("kill_button_toggle_enable")
 #define unkill_checksum              CHECKSUM("unkill_enable")
-#define pause_button_pin_checksum    CHECKSUM("pause_button_pin")
 #define kill_button_pin_checksum     CHECKSUM("kill_button_pin")
 #define poll_frequency_checksum      CHECKSUM("kill_button_poll_frequency")
 
@@ -28,28 +27,22 @@ KillButton::KillButton()
 
 void KillButton::on_module_loaded()
 {
-    bool pause_enable = THEKERNEL->config->value( pause_button_enable_checksum )->by_default(false)->as_bool(); // @deprecated
+    // @DEPRECATED
+    bool pause_enable = THEKERNEL->config->value( pause_button_enable_checksum )->by_default(false)->as_bool();
     bool kill_enable = pause_enable || THEKERNEL->config->value( kill_button_enable_checksum )->by_default(false)->as_bool();
     if(!kill_enable) {
         delete this;
         return;
     }
-    this->unkill_enable = THEKERNEL->config->value( unkill_checksum )->by_default(true)->as_bool();
-    this->toggle_enable = THEKERNEL->config->value( toggle_checksum )->by_default(false)->as_bool();
-
-    Pin pause_button;
-    pause_button.from_string( THEKERNEL->config->value( pause_button_pin_checksum )->by_default("2.12")->as_string())->as_input(); // @DEPRECATED
-    this->kill_button.from_string( THEKERNEL->config->value( kill_button_pin_checksum )->by_default("nc")->as_string())->as_input();
-
-    if(!this->kill_button.connected() && pause_button.connected()) {
-        // use pause button for kill button if kill button not specifically defined
-        this->kill_button = pause_button;
-    }
+    this->kill_button.from_string( THEKERNEL->config->value( kill_button_pin_checksum )->by_default("2.12")->as_string())->as_input();
 
     if(!this->kill_button.connected()) {
         delete this;
         return;
     }
+
+    this->unkill_enable = THEKERNEL->config->value( unkill_checksum )->by_default(true)->as_bool();
+    this->toggle_enable = THEKERNEL->config->value( toggle_checksum )->by_default(false)->as_bool();
 
     this->register_for_event(ON_IDLE);
 

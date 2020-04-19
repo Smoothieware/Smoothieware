@@ -175,7 +175,7 @@ bool CartGridStrategy::handleConfig()
     }
 
     // the initial height above the bed we stop the intial move down after home to find the bed
-    // this should be a height that is enough that the probe will not hit the bed and is an offset from max_z (can be set to 0 if max_z takes into account the probe offset)
+    // this should be a height that is enough that the probe will not hit the bed and is the actual z machine  position to move to
     this->initial_height = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, initial_height_checksum)->by_default(NAN)->as_number();
     if(initial_height <= 0) initial_height= NAN;
 
