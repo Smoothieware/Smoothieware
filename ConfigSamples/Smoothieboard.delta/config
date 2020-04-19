@@ -37,7 +37,7 @@ x_axis_max_speed                             30000            # Maximum speed in
 y_axis_max_speed                             30000            # Maximum speed in mm/min
 z_axis_max_speed                             30000            # Maximum speed in mm/min
 
-# Stepper module configuration 
+# Stepper module configuration
 # Pins are defined as  ports, and pin numbers, appending "!" to the number will invert a pin
 # See http://smoothieware.org/pin-configuration and http://smoothieware.org/pinout
 alpha_step_pin                               2.0              # Pin for alpha stepper step signal
@@ -105,7 +105,7 @@ delta_current                                    1.5          # M4 driver - typi
 ## Laser module configuration
 # See http://smoothieware.org/laser
 laser_module_enable                           false           # Whether to activate the laser module at all
-laser_module_pwm_pin                          2.5             # This pin will be PWMed to control the laser. 
+laser_module_pwm_pin                          2.5             # This pin will be PWMed to control the laser.
                                                               # Only pins 2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 1.18, 1.20, 1.21, 1.23, 1.24, 1.26, 3.25 and 3.26
                                                               # can be used since laser requires hardware PWM, see http://smoothieware.org/pinout
 #laser_module_ttl_pin 	                      1.30            # This pin turns on when the laser turns on, and off when the laser turns off.
@@ -137,7 +137,7 @@ temperature_control.hotend.designator        T                # Designator lette
 #temperature_control.hotend.runaway_cooling_timeout        0  # How long it can take to cool down if temp is set lower, max is 2040 seconds
 #temperature_control.hotend.runaway_range                20   # How far from the set temperature it can wander, max setting is 63°C
 
-# PID configuration 
+# PID configuration
 # See http://smoothieware.org/temperaturecontrol#pid
 #temperature_control.hotend.p_factor         13.7             # P ( proportional ) factor
 #temperature_control.hotend.i_factor         0.097            # I ( integral ) factor
@@ -265,6 +265,7 @@ zprobe.probe_height                          5               # How much above be
 # Example for the delta calibration strategy
 #leveling-strategy.delta-calibration.enable   true            # Enable basic delta calibration
 #leveling-strategy.delta-calibration.radius   100             # the probe radius
+#leveling-strategy.delta-calibration.initial_height   10      # initial probe height
 
 # Example for the delta grid leveling strategy
 #leveling-strategy.delta-grid.enable          true            # Enable grid leveling
