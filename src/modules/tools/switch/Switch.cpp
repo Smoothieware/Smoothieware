@@ -45,6 +45,7 @@
 #define    output_off_command_checksum  CHECKSUM("output_off_command")
 #define    pwm_period_ms_checksum       CHECKSUM("pwm_period_ms")
 #define    failsafe_checksum            CHECKSUM("failsafe_set_to")
+#define    halt_setting_checksum        CHECKSUM("halt_set_to")
 #define    ignore_onhalt_checksum       CHECKSUM("ignore_on_halt")
 
 #define ROUND2DP(x) (roundf(x * 1e2F) / 1e2F)
@@ -65,8 +66,8 @@ void Switch::on_halt(void *arg)
 
         // set pin to failsafe value
         switch(this->output_type) {
-            case DIGITAL: this->digital_pin->set(this->failsafe); break;
-            case SIGMADELTA: this->sigmadelta_pin->set(this->failsafe); break;
+            case DIGITAL: this->digital_pin->set(this->haltsetting); break;
+            case SIGMADELTA: this->sigmadelta_pin->set(this->haltsetting); break;
             case HWPWM: this->pwm_pin->write(switch_value/100.0F); break;
             case SWPWM: this->swpwm_pin->write(switch_value/100.0F); break;
             case NONE: return;
@@ -121,6 +122,7 @@ void Switch::on_config_reload(void *argument)
         string type = THEKERNEL->config->value(switch_checksum, this->name_checksum, output_type_checksum )->by_default("pwm")->as_string();
         this->failsafe= THEKERNEL->config->value(switch_checksum, this->name_checksum, failsafe_checksum )->by_default(0)->as_number();
         this->ignore_on_halt= THEKERNEL->config->value(switch_checksum, this->name_checksum, ignore_onhalt_checksum )->by_default(false)->as_bool();
+        this->haltsetting= THEKERNEL->config->value(switch_checksum, this->name_checksum, halt_setting_checksum )->by_default(false)->as_bool();
 
         if(type == "pwm"){
             this->output_type= SIGMADELTA;
