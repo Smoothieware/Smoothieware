@@ -356,6 +356,30 @@ void ZProbe::on_gcode_received(void *argument)
         // M code processing here
         int c;
         switch (gcode->m) {
+           case 48: { // Measure Z-Probe repeatability Pnnn is number of iterations, 10 is the default
+                int n = gcode->has_letter('P') ? gcode->get_value('P') : 10;
+                float maxz = -1e6F, minz = 1e6F;
+                float rate = gcode->has_letter('F') ? gcode->get_value('F') / 60 : this->slow_feedrate;
+                for (int i = 0; i < n; ++i) {
+                    float mm;
+                    bool probe_result = run_probe_return(mm, rate);
+
+                    if(THEKERNEL->is_halted()) break;
+
+                    if(probe_result) {
+                        // the result is in actuator coordinates moved
+                        gcode->stream->printf("Z:%1.4f\n", mm);
+                        if(mm < minz) minz= mm;
+                        if(mm > maxz) maxz= mm;
+
+                    } else {
+                        gcode->stream->printf("ZProbe not triggered\n");
+                        break;
+                    }
+                }
+                gcode->stream->printf("Delta: %1.4f\n", fabs(maxz-minz));
+            } break;
+
             case 119:
                 c = this->pin.get();
                 gcode->stream->printf(" Probe: %d", c);
