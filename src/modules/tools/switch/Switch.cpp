@@ -66,10 +66,10 @@ void Switch::on_halt(void *arg)
 
         // set pin to failsafe value
         switch(this->output_type) {
-            case DIGITAL: this->digital_pin->set(this->haltsetting); break;
+            case DIGITAL: if (this->digital_pin) this->digital_pin->set(this->haltsetting); break;
             case SIGMADELTA: this->sigmadelta_pin->set(this->haltsetting); break;
-            case HWPWM: this->pwm_pin->write(switch_value/100.0F); break;
-            case SWPWM: this->swpwm_pin->write(switch_value/100.0F); break;
+            case HWPWM: this->pwm_pin->write(this->switch_value/100.0F); break;
+            case SWPWM: this->swpwm_pin->write(this->switch_value/100.0F); break;
             case NONE: return;
         }
         this->switch_state= this->failsafe;
