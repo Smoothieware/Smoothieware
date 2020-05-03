@@ -248,12 +248,6 @@ alpha_homing_retract_mm                      5                # Distance to retr
 beta_homing_retract_mm                       5                # Distance to retract from the endstop after it is hit for beta/Y
 gamma_homing_retract_mm                      1                # Distance to retract from the endstop after it is hit for gamma/Z
 
-
-# Optional enable limit switches, actions will stop if any enabled limit switch is triggered (all are set for delta)
-#alpha_limit_enable                          false            # Set to true to enable X min and max limit switches
-#beta_limit_enable                           false            # Set to true to enable Y min and max limit switches
-#gamma_limit_enable                          false            # Set to true to enable Z min and max limit switches
-
 # Optional order in which axis will home, default is they all home at the same time,
 # If this is set it will force each axis to home one at a time in the specified order
 #homing_order                                 XYZ              # X axis followed by Y then Z last
