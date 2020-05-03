@@ -119,7 +119,7 @@ class Robot : public Module {
         int get_active_extruder() const;
 
         std::array<wcs_t, MAX_WCS> wcs_offsets; // these are persistent once saved with M500
-        uint8_t current_wcs{0}; // 0 means G54 is enabled this is persistent once saved with M500
+        uint8_t current_wcs{0}; // 0 means G54 is enabled this is persistent once saved with M500
         wcs_t g92_offset;
         wcs_t tool_offset; // used for multiple extruders, sets the tool offset for the current extruder applied first
         std::tuple<float, float, float, uint8_t> last_probe_position{0,0,0,0};
@@ -139,7 +139,6 @@ class Robot : public Module {
         float seconds_per_minute;                            // for realtime speed change
         float default_acceleration;                          // the defualt accleration if not set for each axis
         float s_value;                                       // modal S value
-        float arc_milestone[3];                              // used as start of an arc command
 
         // Number of arc generation iterations by small angle approximation before exact arc trajectory
         // correction. This parameter may be decreased if there are issues with the accuracy of the arc

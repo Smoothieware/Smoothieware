@@ -1115,9 +1115,6 @@ void Robot::process_move(Gcode *gcode, enum MOTION_MODE_T motion_mode)
             break;
     }
 
-    // needed to act as start of next arc command
-    memcpy(arc_milestone, target, sizeof(arc_milestone));
-
     if(moved) {
         // set machine_position to the calculated target
         memcpy(machine_position, target, n_motors*sizeof(float));
@@ -1541,17 +1538,16 @@ bool Robot::append_arc(Gcode * gcode, const float target[], const float offset[]
     }
 
     // Scary math.
-    // We need to use arc_milestone here to get accurate arcs as previous machine_position may have been skipped due to small movements
-    float center_axis0 = this->arc_milestone[this->plane_axis_0] + offset[this->plane_axis_0];
-    float center_axis1 = this->arc_milestone[this->plane_axis_1] + offset[this->plane_axis_1];
-    float linear_travel = target[this->plane_axis_2] - this->arc_milestone[this->plane_axis_2];
+    float center_axis0 = this->machine_position[this->plane_axis_0] + offset[this->plane_axis_0];
+    float center_axis1 = this->machine_position[this->plane_axis_1] + offset[this->plane_axis_1];
+    float linear_travel = target[this->plane_axis_2] - this->machine_position[this->plane_axis_2];
     float r_axis0 = -offset[this->plane_axis_0]; // Radius vector from center to start position
     float r_axis1 = -offset[this->plane_axis_1];
-    float rt_axis0 = target[this->plane_axis_0] - this->arc_milestone[this->plane_axis_0] - offset[this->plane_axis_0]; // Radius vector from center to target position
-    float rt_axis1 = target[this->plane_axis_1] - this->arc_milestone[this->plane_axis_1] - offset[this->plane_axis_1];
+    float rt_axis0 = target[this->plane_axis_0] - this->machine_position[this->plane_axis_0] - offset[this->plane_axis_0]; // Radius vector from center to target position
+    float rt_axis1 = target[this->plane_axis_1] - this->machine_position[this->plane_axis_1] - offset[this->plane_axis_1];
     float angular_travel = 0;
     //check for condition where atan2 formula will fail due to everything canceling out exactly
-    if((this->arc_milestone[this->plane_axis_0]==target[this->plane_axis_0]) && (this->arc_milestone[this->plane_axis_1]==target[this->plane_axis_1])) {
+    if((this->machine_position[this->plane_axis_0]==target[this->plane_axis_0]) && (this->machine_position[this->plane_axis_1]==target[this->plane_axis_1])) {
         if (is_clockwise) { // set angular_travel to -2pi for a clockwise full circle
            angular_travel = (-2 * PI);
         } else { // set angular_travel to 2pi for a counterclockwise full circle
