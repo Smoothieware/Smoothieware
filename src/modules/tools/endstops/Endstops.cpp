@@ -569,8 +569,9 @@ void Endstops::check_limits()
                 this->status = LIMIT_TRIGGERED;
                 i->debounce= 0;
 
-                // we cannot call on_halt here but must defer it to on_idle, however we can stop all the motors here
-                for(auto &a : THEROBOT->actuators) a->stop_moving();
+                // we cannot call on_halt here but must defer it to on_idle,
+                // however we can stop incoming commands and stop all the motors here
+                THEKERNEL->immediate_halt();
                 trigger_halt= true;
                 // remember what axis triggered it (first one wins)
                 triggered_axis[0]= STEPPER[i->axis_index]->which_direction() ? '-' : '+';

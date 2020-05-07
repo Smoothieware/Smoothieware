@@ -56,6 +56,7 @@ class Kernel {
         bool is_feed_hold_enabled() const { return enable_feed_hold; }
         void set_bad_mcu(bool b) { bad_mcu= b; }
         bool is_bad_mcu() const { return bad_mcu; }
+        void immediate_halt();
 
         std::string get_query_string();
 
