@@ -41,6 +41,7 @@ class Endstops : public Module{
         void set_homing_offset(Gcode* gcode);
         uint32_t read_endstops(uint32_t dummy);
         void handle_park();
+        void on_idle(void*);
 
         // global settings
         float saved_position[3]{0}; // save G28 (in grbl mode)
@@ -49,6 +50,7 @@ class Endstops : public Module{
         axis_bitmap_t axis_to_home;
 
         float trim_mm[3];
+        char triggered_axis[3]{0};
 
         // per endstop settings
         using endstop_info_t = struct {
@@ -97,5 +99,6 @@ class Endstops : public Module{
             bool move_to_origin_after_home:1;
             bool park_after_home:1;
             bool limit_enabled:1;
+            volatile bool trigger_halt:1;
         };
 };

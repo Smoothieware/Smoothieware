@@ -107,6 +107,7 @@ enum STATES {
 Endstops::Endstops()
 {
     this->status = NOT_HOMING;
+    this->trigger_halt= false;
 }
 
 void Endstops::on_module_loaded()
@@ -129,7 +130,7 @@ void Endstops::on_module_loaded()
     register_for_event(ON_GCODE_RECEIVED);
     register_for_event(ON_GET_PUBLIC_DATA);
     register_for_event(ON_SET_PUBLIC_DATA);
-
+    register_for_event(ON_IDLE);
 
     THEKERNEL->slow_ticker->attach(1000, this, &Endstops::read_endstops);
 }
@@ -415,6 +416,20 @@ void Endstops::get_global_configs()
         this->park_after_home= false;
     }
 }
+void Endstops::on_idle(void*)
+{
+    if(trigger_halt) {
+        trigger_halt= false;
+        if(!THEKERNEL->is_grbl_mode()) {
+            THEKERNEL->streams->printf("Limit switch %s was hit - reset or M999 required\n", triggered_axis);
+        }else{
+            THEKERNEL->streams->printf("ALARM: Hard limit %s\n", triggered_axis);
+        }
+
+        // disables heaters and motors, ignores incoming GCode and flushes block queue
+        THEKERNEL->call_event(ON_HALT, nullptr);
+    }
+}
 
 bool Endstops::debounced_get(Pin *pin)
 {
@@ -514,10 +529,12 @@ void Endstops::move_to_origin(axis_bitmap_t axis)
     this->status = NOT_HOMING;
 }
 
+// called in ISR context
 void Endstops::check_limits()
 {
     if(this->status == LIMIT_TRIGGERED) {
-        // if we were in limit triggered see if it has been cleared
+        // if we were in limit triggered see if all have been cleared
+        bool all_clear= true;
         for(auto& i : endstops) {
             if(i->limit_enable) {
                 if(i->pin.get()) {
@@ -526,11 +543,15 @@ void Endstops::check_limits()
                     return;
                 }
 
-                if(i->debounce++ > debounce_count) { // can use less as it calls on_idle in between
-                    // clear the state
-                    this->status = NOT_HOMING;
+                if(i->debounce < debounce_ms) {
+                    ++i->debounce;
+                    all_clear= false;
                 }
             }
+        }
+        if(all_clear) {
+            // clear the state
+            this->status = NOT_HOMING;
         }
         return;
 
@@ -539,20 +560,22 @@ void Endstops::check_limits()
         return;
     }
 
+    // check if any limit switches were hit
     for(auto& i : endstops) {
         if(i->limit_enable && STEPPER[i->axis_index]->is_moving()) {
             // check min and max endstops
             if(debounced_get(&i->pin)) {
                 // endstop triggered
-                if(!THEKERNEL->is_grbl_mode()) {
-                    THEKERNEL->streams->printf("Limit switch %c%c was hit - reset or M999 required\n", STEPPER[i->axis_index]->which_direction() ? '-' : '+', i->axis);
-                }else{
-                    THEKERNEL->streams->printf("ALARM: Hard limit %c%c\n", STEPPER[i->axis_index]->which_direction() ? '-' : '+', i->axis);
-                }
                 this->status = LIMIT_TRIGGERED;
                 i->debounce= 0;
-                // disables heaters and motors, ignores incoming Gcode and flushes block queue
-                THEKERNEL->call_event(ON_HALT, nullptr);
+
+                // we cannot call on_halt here but must defer it to on_idle, however we can stop all the motors here
+                for(auto &a : THEROBOT->actuators) a->stop_moving();
+                trigger_halt= true;
+                // remember what axis triggered it (first one wins)
+                triggered_axis[0]= STEPPER[i->axis_index]->which_direction() ? '-' : '+';
+                triggered_axis[1]= i->axis;
+                triggered_axis[2]= '\0';
                 return;
             }
         }
