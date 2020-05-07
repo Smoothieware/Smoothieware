@@ -402,6 +402,7 @@ void Player::on_main_loop(void *argument)
     if(abort_flag) {
         abort_flag= false;
         abort_command("1", &(StreamOutput::NullStream));
+        return;
     }
 
     if(suspended && suspend_loops > 0) {

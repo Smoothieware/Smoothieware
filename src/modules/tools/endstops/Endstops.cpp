@@ -108,6 +108,7 @@ Endstops::Endstops()
 {
     this->status = NOT_HOMING;
     this->trigger_halt= false;
+    this->limits_activated= false;
 }
 
 void Endstops::on_module_loaded()
@@ -429,6 +430,10 @@ void Endstops::on_idle(void*)
 
         // disables heaters and motors
         THEKERNEL->call_event(ON_HALT, nullptr);
+
+    } else if(this->limits_activated) {
+        this->limits_activated= false;
+        THEKERNEL->streams->printf("// NOTICE hard limits are now active\n");
     }
 }
 
@@ -553,6 +558,7 @@ void Endstops::check_limits()
         if(all_clear) {
             // clear the state
             this->status = NOT_HOMING;
+            this->limits_activated= true;
         }
         return;
 

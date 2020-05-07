@@ -100,5 +100,6 @@ class Endstops : public Module{
             bool park_after_home:1;
             bool limit_enabled:1;
             volatile bool trigger_halt:1;
+            volatile bool limits_activated:1;
         };
 };
