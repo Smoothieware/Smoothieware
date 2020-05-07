@@ -11,11 +11,11 @@
 #include "Conveyor.h"
 #include "SpindleControl.h"
 
-void SpindleControl::on_gcode_received(void *argument) 
+void SpindleControl::on_gcode_received(void *argument)
 {
-    
+
     Gcode *gcode = static_cast<Gcode *>(argument);
-        
+
     if (gcode->has_m)
     {
         if (gcode->m == 957)
@@ -35,16 +35,16 @@ void SpindleControl::on_gcode_received(void *argument)
                 set_d_term( gcode->get_value('D') );
             // report PID settings
             report_settings();
-          
+
         }
-        else if (gcode->m == 3) 
+        else if (gcode->m == 3)
         {
             THECONVEYOR->wait_for_idle();
             // M3: Spindle on
             if(!spindle_on) {
                 turn_on();
             }
-            
+
             // M3 with S value provided: set speed
             if (gcode->has_letter('S'))
             {
@@ -67,6 +67,7 @@ void SpindleControl::on_halt(void *argument)
 {
     if (argument == nullptr) {
         if(spindle_on) {
+            // This is dangerous as turn_off calls on_delay in some instances
             turn_off();
         }
     }

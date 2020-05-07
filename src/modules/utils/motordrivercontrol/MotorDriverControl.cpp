@@ -223,7 +223,7 @@ void MotorDriverControl::on_idle(void *argument)
 void MotorDriverControl::on_halt(void *argument)
 {
     if(argument == nullptr) {
-        // we are being safe here and makign sure this gets called in on_idle not when on_halt is called
+        // we are being safe here and making sure this gets called in on_idle not when on_halt is called
         on_enable(nullptr);
     }
 }

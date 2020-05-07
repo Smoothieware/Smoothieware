@@ -53,6 +53,7 @@ Player::Player()
     this->reply_stream = nullptr;
     this->suspended= false;
     this->suspend_loops= 0;
+    this->abort_flag= false;
 }
 
 void Player::on_module_loaded()
@@ -75,10 +76,12 @@ void Player::on_module_loaded()
     this->leave_heaters_on = THEKERNEL->config->value(leave_heaters_on_suspend_checksum)->by_default(false)->as_bool();
 }
 
+// this can be called from on_idle so nothing downstream can call on_idle
 void Player::on_halt(void* argument)
 {
     if(argument == nullptr && this->playing_file ) {
-        abort_command("1", &(StreamOutput::NullStream));
+        // signal the on_main_loop() to abort next time it is called
+        abort_flag= true;
 	}
 
 	if(argument == nullptr && this->suspended) {
@@ -396,6 +399,11 @@ void Player::abort_command( string parameters, StreamOutput *stream )
 
 void Player::on_main_loop(void *argument)
 {
+    if(abort_flag) {
+        abort_flag= false;
+        abort_command("1", &(StreamOutput::NullStream));
+    }
+
     if(suspended && suspend_loops > 0) {
         // if we are suspended we need to allow main loop to cycle a few times then finish off the suspend processing
         if(--suspend_loops == 0) {
