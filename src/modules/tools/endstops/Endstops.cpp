@@ -421,12 +421,13 @@ void Endstops::on_idle(void*)
     if(trigger_halt) {
         trigger_halt= false;
         if(!THEKERNEL->is_grbl_mode()) {
-            THEKERNEL->streams->printf("Limit switch %s was hit - reset or M999 required\n", triggered_axis);
+            THEKERNEL->streams->printf("Limit switch %s was hit", triggered_axis);
         }else{
-            THEKERNEL->streams->printf("ALARM: Hard limit %s\n", triggered_axis);
+            THEKERNEL->streams->printf("ALARM: Hard limit %s", triggered_axis);
         }
+        THEKERNEL->streams->printf(". WARNING limits are disabled until all have been cleared\n");
 
-        // disables heaters and motors, ignores incoming GCode and flushes block queue
+        // disables heaters and motors
         THEKERNEL->call_event(ON_HALT, nullptr);
     }
 }

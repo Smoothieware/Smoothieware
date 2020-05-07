@@ -318,6 +318,7 @@ void Kernel::register_for_event(_EVENT_ENUM id_event, Module *mod)
 
 // This will stop the que and stop further commands, and stop motors
 // Optionally used before on_halt() is sent to do a quick stop
+// May be called from an ISR
 void Kernel::immediate_halt()
 {
     this->halted = true;
