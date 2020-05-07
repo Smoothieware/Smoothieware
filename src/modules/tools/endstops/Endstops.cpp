@@ -143,7 +143,7 @@ bool Endstops::load_old_config()
         ENDSTOP_CHECKSUMS("gamma")    // Z
     };
 
-    bool limit_enabled= false;
+    limit_enabled= false;
     for (int i = X_AXIS; i <= Z_AXIS; ++i) { // X_AXIS to Z_AXIS
         homing_info_t hinfo;
 
@@ -208,10 +208,6 @@ bool Endstops::load_old_config()
 
     get_global_configs();
 
-    if(limit_enabled) {
-        register_for_event(ON_IDLE);
-    }
-
     // sanity check for deltas
     /*
     if(this->is_delta || this->is_rdelta) {
@@ -231,7 +227,7 @@ bool Endstops::load_old_config()
 // Get config using new syntax supports ABC
 bool Endstops::load_config()
 {
-    bool limit_enabled= false;
+    limit_enabled= false;
     size_t max_index= 0;
 
     std::array<homing_info_t, k_max_actuators> temp_axis_array; // needs to be at least XYZ, but allow for ABC
@@ -373,10 +369,6 @@ bool Endstops::load_config()
     // sets some endstop global configs applicable to all endstops
     get_global_configs();
 
-    if(limit_enabled) {
-        register_for_event(ON_IDLE);
-    }
-
     return true;
 }
 
@@ -435,52 +427,6 @@ bool Endstops::debounced_get(Pin *pin)
         }
     }
     return false;
-}
-
-// only called if limits are enabled
-void Endstops::on_idle(void *argument)
-{
-    if(this->status == LIMIT_TRIGGERED) {
-        // if we were in limit triggered see if it has been cleared
-        for(auto& i : endstops) {
-            if(i->limit_enable) {
-                if(i->pin.get()) {
-                    // still triggered, so exit
-                    i->debounce = 0;
-                    return;
-                }
-
-                if(i->debounce++ > debounce_count) { // can use less as it calls on_idle in between
-                    // clear the state
-                    this->status = NOT_HOMING;
-                }
-            }
-        }
-        return;
-
-    } else if(this->status != NOT_HOMING) {
-        // don't check while homing
-        return;
-    }
-
-    for(auto& i : endstops) {
-        if(i->limit_enable && STEPPER[i->axis_index]->is_moving()) {
-            // check min and max endstops
-            if(debounced_get(&i->pin)) {
-                // endstop triggered
-                if(!THEKERNEL->is_grbl_mode()) {
-                    THEKERNEL->streams->printf("Limit switch %c%c was hit - reset or M999 required\n", STEPPER[i->axis_index]->which_direction() ? '-' : '+', i->axis);
-                }else{
-                    THEKERNEL->streams->printf("ALARM: Hard limit %c%c\n", STEPPER[i->axis_index]->which_direction() ? '-' : '+', i->axis);
-                }
-                this->status = LIMIT_TRIGGERED;
-                i->debounce= 0;
-                // disables heaters and motors, ignores incoming Gcode and flushes block queue
-                THEKERNEL->call_event(ON_HALT, nullptr);
-                return;
-            }
-        }
-    }
 }
 
 // if limit switches are enabled, then we must move off of the endstop otherwise we won't be able to move
@@ -568,9 +514,56 @@ void Endstops::move_to_origin(axis_bitmap_t axis)
     this->status = NOT_HOMING;
 }
 
+void Endstops::check_limits()
+{
+    if(this->status == LIMIT_TRIGGERED) {
+        // if we were in limit triggered see if it has been cleared
+        for(auto& i : endstops) {
+            if(i->limit_enable) {
+                if(i->pin.get()) {
+                    // still triggered, so exit
+                    i->debounce = 0;
+                    return;
+                }
+
+                if(i->debounce++ > debounce_count) { // can use less as it calls on_idle in between
+                    // clear the state
+                    this->status = NOT_HOMING;
+                }
+            }
+        }
+        return;
+
+    } else if(this->status != NOT_HOMING) {
+        // don't check while homing
+        return;
+    }
+
+    for(auto& i : endstops) {
+        if(i->limit_enable && STEPPER[i->axis_index]->is_moving()) {
+            // check min and max endstops
+            if(debounced_get(&i->pin)) {
+                // endstop triggered
+                if(!THEKERNEL->is_grbl_mode()) {
+                    THEKERNEL->streams->printf("Limit switch %c%c was hit - reset or M999 required\n", STEPPER[i->axis_index]->which_direction() ? '-' : '+', i->axis);
+                }else{
+                    THEKERNEL->streams->printf("ALARM: Hard limit %c%c\n", STEPPER[i->axis_index]->which_direction() ? '-' : '+', i->axis);
+                }
+                this->status = LIMIT_TRIGGERED;
+                i->debounce= 0;
+                // disables heaters and motors, ignores incoming Gcode and flushes block queue
+                THEKERNEL->call_event(ON_HALT, nullptr);
+                return;
+            }
+        }
+    }
+}
+
 // Called every millisecond in an ISR
 uint32_t Endstops::read_endstops(uint32_t dummy)
 {
+    if(limit_enabled) check_limits();
+
     if(this->status != MOVING_TO_ENDSTOP_SLOW && this->status != MOVING_TO_ENDSTOP_FAST) return 0; // not doing anything we need to monitor for
 
     // check each homing endstop

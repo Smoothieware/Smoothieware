@@ -383,7 +383,10 @@ void Player::abort_command( string parameters, StreamOutput *stream )
     if(parameters.empty()) {
         // clear out the block queue, will wait until queue is empty
         // MUST be called in on_main_loop to make sure there are no blocked main loops waiting to put something on the queue
-        THEKERNEL->conveyor->flush_queue();
+        THECONVEYOR->flush_queue();
+
+        // now wait until the block queue has been flushed and motors have stopped
+        THECONVEYOR->wait_for_idle(true);
 
         // now the position will think it is at the last received pos, so we need to do FK to get the actuator position and reset the current position
         THEROBOT->reset_position_from_current_actuator_position();

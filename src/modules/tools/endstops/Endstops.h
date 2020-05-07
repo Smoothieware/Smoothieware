@@ -35,7 +35,7 @@ class Endstops : public Module{
         void move_to_origin(axis_bitmap_t axis);
         void on_get_public_data(void* argument);
         void on_set_public_data(void* argument);
-        void on_idle(void *argument);
+        void check_limits();
         bool debounced_get(Pin *pin);
         void process_home_command(Gcode* gcode);
         void set_homing_offset(Gcode* gcode);
@@ -96,5 +96,6 @@ class Endstops : public Module{
             bool home_z_first:1;
             bool move_to_origin_after_home:1;
             bool park_after_home:1;
+            bool limit_enabled:1;
         };
 };
