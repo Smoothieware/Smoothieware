@@ -216,6 +216,7 @@ void Telnetd::get_char(u8_t c)
         } else {
             this->output("HALTED, M999 or $X to exit HALT state\r\n");
         }
+        return;
     }
 
     buf[(int)bufptr] = c;
