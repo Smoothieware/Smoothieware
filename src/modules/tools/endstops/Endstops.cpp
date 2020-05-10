@@ -433,7 +433,7 @@ void Endstops::on_idle(void*)
 
     } else if(this->limits_activated) {
         this->limits_activated= false;
-        THEKERNEL->streams->printf("// NOTICE hard limits are now active\n");
+        THEKERNEL->streams->printf("// NOTICE hard limits are now enabled\n");
     }
 }
 
