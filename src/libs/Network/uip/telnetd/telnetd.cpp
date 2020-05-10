@@ -209,6 +209,15 @@ void Telnetd::get_char(u8_t c)
         return;
     }
 
+    if(c == 'X'-'A'+1) { // CTRL-X
+        THEKERNEL->call_event(ON_HALT, nullptr);
+        if(THEKERNEL->is_grbl_mode()) {
+            this->output("ALARM: Abort during cycle\r\n");
+        } else {
+            this->output("HALTED, M999 or $X to exit HALT state\r\n");
+        }
+    }
+
     buf[(int)bufptr] = c;
     if (buf[(int)bufptr] == ISO_nl || bufptr == sizeof(buf) - 1) {
         if (bufptr > 0) {
