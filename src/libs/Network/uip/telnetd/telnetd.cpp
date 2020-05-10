@@ -35,6 +35,7 @@
 #include "uip.h"
 #include "telnetd.h"
 #include "shell.h"
+#include "Kernel.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -200,6 +201,11 @@ void Telnetd::senddata(void)
 void Telnetd::get_char(u8_t c)
 {
     if (c == ISO_cr) {
+        return;
+    }
+
+    if(c == '?') {
+        this->output(THEKERNEL->get_query_string().c_str());
         return;
     }
 
