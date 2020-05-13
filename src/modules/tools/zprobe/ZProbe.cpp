@@ -536,4 +536,5 @@ void ZProbe::home()
 {
     Gcode gc(THEKERNEL->is_grbl_mode() ? "G28.2" : "G28", &(StreamOutput::NullStream));
     THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
+    THEKERNEL->conveyor->wait_for_idle();
 }

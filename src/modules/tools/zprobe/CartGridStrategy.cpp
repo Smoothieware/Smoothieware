@@ -386,6 +386,7 @@ bool CartGridStrategy::handleGcode(Gcode *gcode)
             if(!before_probe.empty()) {
                 Gcode gc(before_probe, &(StreamOutput::NullStream));
                 THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
+                THEKERNEL->conveyor->wait_for_idle();
             }
 
             THEROBOT->disable_segmentation= true;
