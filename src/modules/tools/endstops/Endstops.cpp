@@ -569,8 +569,16 @@ void Endstops::check_limits()
 
     // check if any limit switches were hit
     for(auto& i : endstops) {
-        if(i->limit_enable && STEPPER[i->axis_index]->is_moving()) {
-            // check min and max endstops
+        if(!i->limit_enable) continue;
+        int m= i->axis_index;
+        bool moving= false;
+        if(is_corexy) {
+            // corexy either stepper moving can result in movement towards a limit
+            moving=  STEPPER[0]->is_moving() || STEPPER[1]->is_moving();
+        } else {
+            moving= STEPPER[m]->is_moving();
+        }
+        if(moving) {
             if(debounced_get(&i->pin)) {
                 // endstop triggered
                 this->status = LIMIT_TRIGGERED;
@@ -581,7 +589,8 @@ void Endstops::check_limits()
                 THEKERNEL->immediate_halt();
                 trigger_halt= true;
                 // remember what axis triggered it (first one wins)
-                triggered_axis[0]= STEPPER[i->axis_index]->which_direction() ? '-' : '+';
+                // NOTE gives incorrect result on corexy
+                triggered_axis[0]= is_corexy ? '?' : STEPPER[m]->which_direction() ? '-' : '+';
                 triggered_axis[1]= i->axis;
                 triggered_axis[2]= '\0';
                 return;
