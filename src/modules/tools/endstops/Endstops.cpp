@@ -535,7 +535,7 @@ void Endstops::move_to_origin(axis_bitmap_t axis)
     this->status = NOT_HOMING;
 }
 
-// called in ISR context
+// called in ISR contexte
 void Endstops::check_limits()
 {
     if(this->status == LIMIT_TRIGGERED) {
@@ -611,7 +611,9 @@ uint32_t Endstops::read_endstops(uint32_t dummy)
         if(e.pin_info == nullptr) continue; // ignore if not a homing endstop
         int m= e.axis_index;
 
-        // for corexy homing in X or Y we must only check the associated endstop, works as we only home one axis at a time for corexy
+        // for corexy homing in X or Y we must only check the associated endstop,
+        // this works as we only home one axis at a time for corexy
+        // and a straight move means both actuators move
         if(is_corexy && (m == X_AXIS || m == Y_AXIS) && !axis_to_home[m]) continue;
 
         if(STEPPER[m]->is_moving()) {
