@@ -593,7 +593,7 @@ void Endstops::check_limits()
                 // remember what axis triggered it (first one wins)
                 // TODO gives incorrect result on corexy need to use fk to figure it out
                 triggered_direction= STEPPER[m]->which_direction();
-                triggered_axis= i->axis>='X' ? i->axis-'X' : i->axis-'A' + 3;
+                triggered_axis= m;
                 return;
             }
         }
