@@ -421,10 +421,12 @@ void Endstops::on_idle(void*)
 {
     if(trigger_halt) {
         trigger_halt= false;
+        char d= triggered_direction ? '-' : '+';
+        char a= triggered_axis < 3 ? 'X' + triggered_axis : 'A' + triggered_axis-3;
         if(!THEKERNEL->is_grbl_mode()) {
-            THEKERNEL->streams->printf("Limit switch %s was hit\n", triggered_axis);
+            THEKERNEL->streams->printf("Limit switch %c%c was hit\n", d, a);
         }else{
-            THEKERNEL->streams->printf("ALARM: Hard limit %s\n", triggered_axis);
+            THEKERNEL->streams->printf("ALARM: Hard limit %c%c\n", d, a);
         }
         THEKERNEL->streams->printf("// NOTICE limits are disabled until all have been cleared\n");
 
@@ -590,9 +592,8 @@ void Endstops::check_limits()
                 trigger_halt= true;
                 // remember what axis triggered it (first one wins)
                 // NOTE gives incorrect result on corexy need to use fk to figure it out
-                triggered_axis[0]= (is_corexy && m < 2) ? '?' : STEPPER[m]->which_direction() ? '-' : '+';
-                triggered_axis[1]= i->axis;
-                triggered_axis[2]= '\0';
+                triggered_direction= STEPPER[m]->which_direction();
+                triggered_axis= i->axis>='X' ? i->axis-'X' : i->axis-'A' + 3;
                 return;
             }
         }
