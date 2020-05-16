@@ -100,7 +100,7 @@ class Endstops : public Module{
             bool limit_enabled:1;
             volatile bool trigger_halt:1;
             volatile bool limits_activated:1;
-            char triggered_axis:3;
-            char triggered_direction:1;
+            uint8_t triggered_axis:3;
+            bool triggered_direction:1;
         };
 };

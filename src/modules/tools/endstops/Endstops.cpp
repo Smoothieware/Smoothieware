@@ -591,7 +591,7 @@ void Endstops::check_limits()
                 THEKERNEL->immediate_halt();
                 trigger_halt= true;
                 // remember what axis triggered it (first one wins)
-                // NOTE gives incorrect result on corexy need to use fk to figure it out
+                // TODO gives incorrect result on corexy need to use fk to figure it out
                 triggered_direction= STEPPER[m]->which_direction();
                 triggered_axis= i->axis>='X' ? i->axis-'X' : i->axis-'A' + 3;
                 return;
