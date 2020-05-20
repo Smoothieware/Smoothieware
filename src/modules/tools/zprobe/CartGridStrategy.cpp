@@ -386,13 +386,19 @@ bool CartGridStrategy::handleGcode(Gcode *gcode)
             if(!before_probe.empty()) {
                 Gcode gc(before_probe, &(StreamOutput::NullStream));
                 THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
+                THEKERNEL->conveyor->wait_for_idle();
             }
 
             THEROBOT->disable_segmentation= true;
             if(!doProbe(gcode)) {
                 gcode->stream->printf("Probe failed to complete, check the initial probe height and/or initial_height settings\n");
             } else {
-                gcode->stream->printf("Probe completed. Enter M374 to save this grid\n");
+                gcode->stream->printf("Probe completed.");
+                if(!only_by_two_corners) {
+                    gcode->stream->printf(" Enter M374 to save this grid\n");
+                }else{
+                    gcode->stream->printf("\n");
+                }
             }
             THEROBOT->disable_segmentation= false;
 

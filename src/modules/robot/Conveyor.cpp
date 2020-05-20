@@ -87,6 +87,7 @@ void Conveyor::start(uint8_t n)
 void Conveyor::on_halt(void* argument)
 {
     if(argument == nullptr) {
+        // marks queue to be flushed next time get_next_block() is called
         flush_queue();
     }
 }
@@ -199,6 +200,7 @@ bool Conveyor::get_next_block(Block **block)
         while (queue.isr_tail_i != queue.head_i) {
             queue.isr_tail_i = queue.next(queue.isr_tail_i);
         }
+        flush = false;
     }
 
     // default the feerate to zero if there is no block available
@@ -244,11 +246,6 @@ void Conveyor::flush_queue()
     flush= true;
 
     // TODO force deceleration of last block
-
-    // now wait until the block queue has been flushed
-    wait_for_idle(false);
-
-    flush= false;
 }
 
 // Debug function

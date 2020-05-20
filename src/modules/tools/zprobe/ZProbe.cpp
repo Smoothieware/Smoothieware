@@ -528,7 +528,6 @@ void ZProbe::coordinated_move(float x, float y, float z, float feedrate, bool re
     THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
     THEKERNEL->conveyor->wait_for_idle();
     THEROBOT->pop_state();
-
 }
 
 // issue home command
