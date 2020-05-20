@@ -177,7 +177,7 @@ void Network::on_module_loaded()
             printf("Invalid IP Mask: %s\n", s.c_str());
             bad = true;
         }
-        s = THEKERNEL->config->value( network_checksum, network_ip_gateway_checksum )->by_default("192.168.3.1")->as_string();
+        s = THEKERNEL->config->value( network_checksum, network_ip_gateway_checksum )->by_default("192.168.1.254")->as_string();
         if (!parse_ip_str(s, ipgw, 4)) {
             printf("Invalid IP gateway: %s\n", s.c_str());
             bad = true;

@@ -76,7 +76,7 @@ static void help(char *str, Shell *sh)
     sh->output("Available telnet commands: All others are passed to the command handler\n");
     sh->output("netstat     - show network info\n");
     sh->output("h           - show network help\n");
-    sh->output("?           - show current query status\n");
+    sh->output("query       - show current query status\n");
     sh->output("help        - show command help\n");
     sh->output("exit, quit  - exit shell\n");
 }
@@ -197,7 +197,7 @@ static const struct ptentry parsetab[] = {
     {"exit", quit},
     {"quit", quit},
     {"ntest", ntest},
-    {"?", query},
+    {"query", query},
     {"h", help},
 
     /* Default action */
