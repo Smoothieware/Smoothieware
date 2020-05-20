@@ -40,7 +40,7 @@ USBSerial::USBSerial(USB *u): USBCDC(u), rxbuf(256 + 8), txbuf(128 + 8)
     flush_to_nl = false;
     halt_flag = false;
     query_flag = false;
-    last_char_was_dollar = false;
+    last_char_was_cr = false;
 }
 
 bool USBSerial::ensure_tx_space(int space)
@@ -190,51 +190,58 @@ bool USBSerial::USBEvent_EPOut(uint8_t bEP, uint8_t bEPStatus)
     readEP(c, &size);
     iprintf("Read %ld bytes:\n\t", size);
     for (uint8_t i = 0; i < size; i++) {
+        char b= c[i];
 
         // handle backspace and delete by deleting the last character in the buffer if there is one
-        if(c[i] == 0x08 || c[i] == 0x7F) {
+        if(b == 0x08 || b == 0x7F) {
             if(!rxbuf.isEmpty()) rxbuf.pop();
             continue;
         }
 
-        if(c[i] == 'X' - 'A' + 1) { // ^X
+        if(b == 'X' - 'A' + 1) { // ^X
             //THEKERNEL->set_feed_hold(false); // required to free stuff up
             halt_flag = true;
             continue;
         }
 
-        if(c[i] == '?') { // ?
+        if(b == '?') { // ?
             query_flag = true;
             continue;
         }
 
         if(THEKERNEL->is_feed_hold_enabled()) {
-            if(c[i] == '!') { // safe pause
+            if(b == '!') { // safe pause
                 THEKERNEL->set_feed_hold(true);
                 continue;
             }
 
-            if(c[i] == '~') { // safe resume
+            if(b == '~') { // safe resume
                 THEKERNEL->set_feed_hold(false);
                 continue;
             }
         }
 
-        last_char_was_dollar = (c[i] == '$');
+        if(b == '\n' && last_char_was_cr) {
+            // handle \r\n as single line terminator
+            last_char_was_cr= false;
+            continue;
+        }
+
+        last_char_was_cr = (b=='\r');
 
         if (flush_to_nl == false)
-            rxbuf.queue(c[i]);
+            rxbuf.queue(b);
 
-        // if (c[i] >= 32 && c[i] < 128)
+        // if (b >= 32 && b < 128)
         // {
-        //     iprintf("%c", c[i]);
+        //     iprintf("%c", b);
         // }
         // else
         // {
-        //     iprintf("\\x%02X", c[i]);
+        //     iprintf("\\x%02X", b);
         // }
 
-        if (c[i] == '\n' || c[i] == '\r') {
+        if (b == '\n' || b == '\r') {
             if (flush_to_nl)
                 flush_to_nl = false;
             else
