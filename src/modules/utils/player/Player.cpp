@@ -427,7 +427,11 @@ void Player::on_main_loop(void *argument)
                     continue;
                 }
                 if(len == 1) continue; // empty line
-
+                if(buf[len - 2] == '\r') {
+                    // \r\n terminated ignore \r
+                    len -=1;
+                    if(len == 1) continue; // empty line
+                }
                 if(this->current_stream != nullptr) {
                     this->current_stream->printf("%s", buf);
                 }
