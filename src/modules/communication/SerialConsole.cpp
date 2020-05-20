@@ -23,6 +23,7 @@ using std::string;
 SerialConsole::SerialConsole( PinName rx_pin, PinName tx_pin, int baud_rate ){
     this->serial = new mbed::Serial( rx_pin, tx_pin );
     this->serial->baud(baud_rate);
+    this->last_char_was_cr= false;
 }
 
 // Called when the module has just been loaded
@@ -52,6 +53,13 @@ void SerialConsole::on_serial_char_received(){
             halt_flag= true;
             continue;
         }
+        if(received == '\n' && last_char_was_cr) {
+            // ignore the \n of a \r\n pair
+            last_char_was_cr= false;
+            continue;
+        }
+        last_char_was_cr= (received=='\r');
+
         // convert CR to NL (for host OSs that don't send NL)
         if( received == '\r' ){ received = '\n'; }
         this->buffer.push_back(received);
