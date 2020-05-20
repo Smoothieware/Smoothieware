@@ -61,8 +61,8 @@
 #define TELNET_GA       0x03
 #define TELNET_X_PROMPT 0x55
 
-//#define DEBUG_PRINTF(...)
-#define DEBUG_PRINTF printf
+#define DEBUG_PRINTF(...)
+//#define DEBUG_PRINTF printf
 
 static char *alloc_line(int size)
 {
@@ -285,7 +285,6 @@ void Telnetd::newdata(void)
                 }else if (c == TELNET_GA) {
                     // enable prompt if telnet client running
                     prompt= true;
-                    shell->setConsole(); // tell shell we are a console, as this is sent be telnet clients
                 }else{
                      /* Reply with a WONT */
                     //sendopt(TELNET_WONT, c);

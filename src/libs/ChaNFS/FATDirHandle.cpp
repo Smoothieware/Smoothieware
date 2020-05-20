@@ -1,7 +1,7 @@
 /* mbed Microcontroller Library - FATDirHandle
  * Copyright (c) 2008, sford
  */
- 
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -35,12 +35,14 @@ struct dirent *FATDirHandle::readdir() {
         int stringSize = 0;
 #if _USE_LFN
         fn = *finfo.lfname ? finfo.lfname : finfo.fname;
-        stringSize = finfo.lfsize;
+        stringSize = *finfo.lfname ? finfo.lfsize : sizeof(finfo.fname);
 #else
         fn = fno.fname;
         stringSize =  sizeof(finfo.fname);
 #endif
         memcpy(cur_entry.d_name, fn, stringSize);
+        cur_entry.d_isdir= (finfo.fattrib & AM_DIR);
+        cur_entry.d_fsize= finfo.fsize;
         return &cur_entry;
     }
 }

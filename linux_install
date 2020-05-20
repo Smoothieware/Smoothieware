@@ -37,11 +37,11 @@ pushd $ROOTDIR
 ROOTDIR=$PWD
 LOGFILE=$ROOTDIR/linux_install.log
 ERRORFILE=$ROOTDIR/linux_install.err
-GCC4ARM_VERSION=gcc-arm-none-eabi-4_7-2012q4
-GCC4ARM_FILENAME=gcc-arm-none-eabi-4_7-2012q4-20121208-linux.tar.bz2
-GCC4ARM_URL=https://launchpad.net/gcc-arm-embedded/4.7/4.7-2012-q4-major/+download/$GCC4ARM_FILENAME
+GCC4ARM_VERSION=gcc-arm-none-eabi-4_8-2014q1
+GCC4ARM_FILENAME=gcc-arm-none-eabi-4_8-2014q1-20140314-linux.tar.bz2
+GCC4ARM_URL=https://launchpad.net/gcc-arm-embedded/4.8/4.8-2014-q1-update/+download/$GCC4ARM_FILENAME
 GCC4ARM_TAR=$ROOTDIR/$GCC4ARM_FILENAME
-GCC4ARM_MD5=475c3283253b872bb576020844046cf2
+GCC4ARM_MD5=72b0d06ae16b303c25fd70b2883d3950
 GCC4ARM_EXTRACT=$ROOTDIR/$GCC4ARM_VERSION
 GCC4ARM_DIR=$ROOTDIR/gcc-arm-none-eabi
 GCC4ARM_BINDIR=$GCC4ARM_DIR/bin

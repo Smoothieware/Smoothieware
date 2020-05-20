@@ -46,8 +46,8 @@
 #include "StreamOutputPool.h"
 #include "CommandQueue.h"
 
-//#define DEBUG_PRINTF(...)
-#define DEBUG_PRINTF printf
+#define DEBUG_PRINTF(...)
+//#define DEBUG_PRINTF printf
 
 struct ptentry {
     const char *command;
@@ -61,7 +61,7 @@ bool Shell::parse(register char *str, const struct ptentry *t)
 {
     const struct ptentry *p;
     for (p = t; p->command != 0; ++p) {
-        if (strncasecmp(str, p->command, strlen(p->command)) == 0) {
+        if (strcasecmp(str, p->command) == 0) {
             break;
         }
     }
@@ -73,11 +73,17 @@ bool Shell::parse(register char *str, const struct ptentry *t)
 /*---------------------------------------------------------------------------*/
 static void help(char *str, Shell *sh)
 {
-    sh->output("Available commands: All others are passed on\n");
+    sh->output("Available telnet commands: All others are passed to the command handler\n");
     sh->output("netstat     - show network info\n");
-    sh->output("?           - show network help\n");
+    sh->output("h           - show network help\n");
+    sh->output("?           - show current query status\n");
     sh->output("help        - show command help\n");
     sh->output("exit, quit  - exit shell\n");
+}
+
+static void query(char *str, Shell *sh)
+{
+    sh->output(THEKERNEL->get_query_string().c_str());
 }
 
 /*---------------------------------------------------------------------------*/
@@ -126,7 +132,7 @@ static void quit(char *str, Shell *sh)
 }
 
 //#include "clock.h"
-static void test(char *str, Shell *sh)
+static void ntest(char *str, Shell *sh)
 {
     printf("In Test\n");
 
@@ -190,8 +196,9 @@ static const struct ptentry parsetab[] = {
     {"netstat", connections},
     {"exit", quit},
     {"quit", quit},
-    {"test", test},
-    {"?", help},
+    {"ntest", ntest},
+    {"?", query},
+    {"h", help},
 
     /* Default action */
     {0, unknown}
@@ -223,8 +230,11 @@ int Shell::command_result(const char *str, void *p)
 
 /*---------------------------------------------------------------------------*/
 void Shell::start()
-{
-    telnet->output("Smoothie command shell\r\n> ");
+{   // add it to the kernels output stream
+    DEBUG_PRINTF("Shell: Adding stream to kernel streams\n");
+    THEKERNEL->streams->append_stream(pstream);
+    telnet->output("Smoothie command shell\r\n");
+    telnet->output_prompt(SHELL_PROMPT);
 }
 
 int Shell::queue_size()
@@ -252,11 +262,6 @@ void Shell::close()
 
 void Shell::setConsole()
 {
-    // add it to the kernels output stream if we are a console
-    // TODO do we do this for all connections? so pronterface will get file done when playing from M24?
-    // then we need to turn it off for the streaming app
-    DEBUG_PRINTF("Shell: Adding stream to kernel streams\n");
-    THEKERNEL->streams->append_stream(pstream);
     isConsole= true;
 }
 
@@ -271,10 +276,9 @@ Shell::Shell(Telnetd *telnet)
 
 Shell::~Shell()
 {
-    if(isConsole) {
-        DEBUG_PRINTF("Shell: Removing stream from kernel streams\n");
-        THEKERNEL->streams->remove_stream(pstream);
-    }
+    DEBUG_PRINTF("Shell: Removing stream from kernel streams\n");
+    THEKERNEL->streams->remove_stream(pstream);
+
     // we cannot delete this stream until it is no longer in any command queue entries
     // so mark it as closed, and allow it to delete itself when it is no longer being used
     static_cast<CallbackStream*>(pstream)->mark_closed(); // mark the stream as closed so we do not get any callbacks

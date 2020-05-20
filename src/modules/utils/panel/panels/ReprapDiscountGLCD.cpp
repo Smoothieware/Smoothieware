@@ -36,17 +36,7 @@ ReprapDiscountGLCD::ReprapDiscountGLCD() {
 
     // select which SPI channel to use
     int spi_channel = THEKERNEL->config->value(panel_checksum, spi_channel_checksum)->by_default(0)->as_number();
-    PinName mosi;
-    PinName sclk;
-    if(spi_channel == 0){
-        mosi= P0_18; sclk= P0_15;
-    }else if(spi_channel == 1){
-        mosi= P0_9; sclk= P0_7;
-    }else{
-        mosi= P0_18; sclk= P0_15;
-    }
-
-    this->glcd= new RrdGlcd(mosi, sclk, this->spi_cs_pin);
+    this->glcd= new RrdGlcd(spi_channel, this->spi_cs_pin);
 
     int spi_frequency = THEKERNEL->config->value(panel_checksum, spi_frequency_checksum)->by_default(1000000)->as_number();
     this->glcd->setFrequency(spi_frequency);
@@ -90,8 +80,8 @@ void ReprapDiscountGLCD::buzz(long duration, uint16_t freq) {
 }
 
 void ReprapDiscountGLCD::write(const char* line, int len) {
-    this->glcd->displayString(this->row, this->col, line, len);
-    this->col+=len;
+    this->glcd->displayString(line, len);   
+				   
 }
 
 void ReprapDiscountGLCD::home(){
@@ -109,9 +99,20 @@ void ReprapDiscountGLCD::display() {
     // it is always on
 }
 
+void ReprapDiscountGLCD::setColor(int c){
+    this->glcd->set_color(c);
+}
+
+void ReprapDiscountGLCD::setBackground(bool bg){
+    this->glcd->set_background(bg);
+}
+
+void ReprapDiscountGLCD::setCursorPX(int x, int y){ 
+    this->glcd->set_cursorPX(x, y);
+}
+
 void ReprapDiscountGLCD::setCursor(uint8_t col, uint8_t row){
-    this->col= col;
-    this->row= row;
+    this->glcd->set_cursor(col, row);				   
 }
 
 void ReprapDiscountGLCD::init(){
@@ -139,6 +140,22 @@ void ReprapDiscountGLCD::bltGlyph(int x, int y, int w, int h, const uint8_t *gly
         }
         this->glcd->renderGlyph(x, y, g, w, h);
     }
+}
+
+void ReprapDiscountGLCD::pixel(int x, int y, int color){
+    this->glcd->pixel( x,  y,  color);
+}
+
+void ReprapDiscountGLCD::drawHLine(int x, int y, int w, int color){
+    this->glcd->drawHLine( x,  y,  w,  color);
+}
+
+void ReprapDiscountGLCD::drawBox(int x, int y, int w, int h, int color){
+    this->glcd->drawBox( x,  y,  w,  h,  color);
+}
+
+void ReprapDiscountGLCD::drawVLine(int x, int y, int h, int color){
+    this->glcd->drawVLine( x,  y,  h,  color);
 }
 
 void ReprapDiscountGLCD::on_refresh(bool now){

@@ -27,12 +27,14 @@ class StreamOutput {
         virtual int _putc(int c) { return 1; }
         virtual int _getc(void) { return 0; }
         virtual int puts(const char* str) = 0;
+        virtual bool ready() { return true; };
 
         static NullStreamOutput NullStream;
 };
 
 class NullStreamOutput : public StreamOutput {
     public:
+        int printf(const char *format, ...) { return 0; }
         int puts(const char* str) { return strlen(str); }
 };
 

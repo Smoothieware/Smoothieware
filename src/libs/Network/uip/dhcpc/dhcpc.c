@@ -88,6 +88,7 @@ struct dhcp_msg {
 #define DHCP_OPTION_SUBNET_MASK   1
 #define DHCP_OPTION_ROUTER        3
 #define DHCP_OPTION_DNS_SERVER    6
+#define DHCP_OPTION_HOSTNAME     12
 #define DHCP_OPTION_REQ_IPADDR   50
 #define DHCP_OPTION_LEASE_TIME   51
 #define DHCP_OPTION_MSG_TYPE     53
@@ -127,13 +128,29 @@ add_req_ipaddr(u8_t *optptr)
 }
 /*---------------------------------------------------------------------------*/
 static u8_t *
+add_hostname(u8_t *optptr)
+{
+    if (s.hostname == NULL) {
+        return optptr;
+    }
+    const u8_t l = strlen(s.hostname);
+    *optptr++ = DHCP_OPTION_HOSTNAME;
+    *optptr++ = l;
+    memcpy(optptr, s.hostname, l);
+    return optptr + l;
+}
+/*---------------------------------------------------------------------------*/
+static u8_t *
 add_req_options(u8_t *optptr)
 {
     *optptr++ = DHCP_OPTION_REQ_LIST;
-    *optptr++ = 3;
+    *optptr++ = s.hostname == NULL ? 3 : 4;
     *optptr++ = DHCP_OPTION_SUBNET_MASK;
     *optptr++ = DHCP_OPTION_ROUTER;
     *optptr++ = DHCP_OPTION_DNS_SERVER;
+    if (s.hostname != NULL) {
+        *optptr++ = DHCP_OPTION_HOSTNAME;
+    }
     return optptr;
 }
 /*---------------------------------------------------------------------------*/
@@ -196,6 +213,7 @@ send_request(int rea)
     end = add_msg_type(&m->options[4], DHCPREQUEST);
     end = add_server_id(end);
     end = add_req_ipaddr(end);
+    end = add_hostname(end);
     end = add_end(end);
 
     uip_send(uip_appdata, end - (u8_t *)uip_appdata);
@@ -350,12 +368,13 @@ PT_THREAD(handle_dhcp(void))
 }
 /*---------------------------------------------------------------------------*/
 void
-dhcpc_init(const void *mac_addr, int mac_len)
+dhcpc_init(const void *mac_addr, int mac_len, char *hostname)
 {
     uip_ipaddr_t addr;
 
     s.mac_addr = mac_addr;
     s.mac_len  = mac_len;
+    s.hostname = hostname;
 
     s.state = STATE_INITIAL;
     uip_ipaddr(addr, 255, 255, 255, 255);

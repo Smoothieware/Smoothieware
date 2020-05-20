@@ -14,17 +14,18 @@
 #include "libs/nuts_bolts.h"
 #include "libs/utils.h"
 #include <string>
-#include "modules/robot/RobotPublicAccess.h"
+#include "Robot.h"
 #include "PublicData.h"
 #include "checksumm.h"
+#include "LcdBase.h"
 
 #include <math.h>
+#include <stdio.h>
 
 using namespace std;
 
 #define NULL_CONTROL_MODE        0
 #define AXIS_CONTROL_MODE        1
-#define INCREMENT_SELECTION_MODE 2
 
 ControlScreen::ControlScreen()
 {
@@ -35,7 +36,7 @@ void ControlScreen::on_enter()
 {
     THEPANEL->enter_menu_mode();
     THEPANEL->setup_menu(4);
-    get_current_pos(this->pos);
+    get_current_pos(this->pos); // gets current WCS
     this->refresh_menu();
     this->pos_changed = false;
 }
@@ -111,6 +112,9 @@ void ControlScreen::enter_axis_control(char axis)
     THEPANEL->enter_control_mode(this->jog_increment, this->jog_increment / 10);
     THEPANEL->set_control_value(this->pos[axis - 'X']);
     THEPANEL->lcd->clear();
+    THEPANEL->lcd->setCursor(0, 0);
+    THEPANEL->lcd->printf("Jog %6.3f", jog_increment);
+
     THEPANEL->lcd->setCursor(0, 2);
     this->display_axis_line(this->controlled_axis);
 }
@@ -121,24 +125,15 @@ void ControlScreen::enter_menu_control()
     THEPANEL->enter_menu_mode();
 }
 
-void ControlScreen::get_current_pos(float *cp)
-{
-    void *returned_data;
-
-    bool ok = PublicData::get_value( robot_checksum, current_position_checksum, &returned_data );
-    if (ok) {
-        float *p = static_cast<float *>(returned_data);
-        cp[0] = p[0];
-        cp[1] = p[1];
-        cp[2] = p[2];
-    }
-}
-
 void ControlScreen::set_current_pos(char axis, float p)
 {
-    // change pos by issuing a G0 Xnnn
+    // change pos by issuing a G0 Xnnn in absolute mode
     char buf[32];
-    int n = snprintf(buf, sizeof(buf), "G0 %c%f F%d", axis, p, (int)round(THEPANEL->get_jogging_speed(axis)));
+    // make sure we are in absolute mode
+    THEROBOT->push_state();
+    THEROBOT->absolute_mode= true;
+    int n = snprintf(buf, sizeof(buf), "G0 %c%f F%d", axis, p, (int)round(THEROBOT->from_millimeters(THEPANEL->get_jogging_speed(axis))));
     string g(buf, n);
     send_gcode(g);
+    THEROBOT->pop_state();
 }

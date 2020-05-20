@@ -9,6 +9,8 @@
 #ifndef GCODE_H
 #define GCODE_H
 #include <string>
+#include <map>
+
 using std::string;
 
 class StreamOutput;
@@ -25,20 +27,23 @@ class Gcode {
         bool has_letter ( char letter ) const;
         float get_value ( char letter, char **ptr= nullptr ) const;
         int get_int ( char letter, char **ptr= nullptr ) const;
+        uint32_t get_uint ( char letter, char **ptr= nullptr ) const;
         int get_num_args() const;
-        void mark_as_taken();
+        std::map<char,float> get_args() const;
+        std::map<char,int> get_args_int() const;
         void strip_parameters();
 
         // FIXME these should be private
         unsigned int m;
         unsigned int g;
-        float millimeters_of_travel;
 
         struct {
             bool add_nl:1;
             bool has_m:1;
             bool has_g:1;
-            bool accepted_by_module:1;
+            bool stripped:1;
+            bool is_error:1;
+            uint8_t subcode:3;
         };
 
         StreamOutput* stream;

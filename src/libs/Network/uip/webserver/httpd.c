@@ -83,8 +83,9 @@
 #define STATE_OUTPUT  3
 #define STATE_UPLOAD  4
 
-#define GET  1
-#define POST 2
+#define GET     1
+#define POST    2
+#define OPTIONS 3
 
 #define ISO_nl      0x0a
 #define ISO_space   0x20
@@ -94,9 +95,10 @@
 #define ISO_slash   0x2f
 #define ISO_colon   0x3a
 
-#define DEBUG_PRINTF printf
-//#define DEBUG_PRINTF(...)
+//#define DEBUG_PRINTF printf
+#define DEBUG_PRINTF(...)
 
+extern const char *get_query_string();
 
 // this callback gets the results of a command, line by line. need to check if
 // we need to stall the upstream sender return 0 if stalled 1 if ok to keep
@@ -170,12 +172,6 @@ static int save_file(uint8_t *buf, unsigned int len)
 {
     if (fwrite(buf, 1, len, fd) == len) {
         file_cnt += len;
-        // HACK alert work around bug causing file corruption when writing large amounts of data
-        if (file_cnt >= 400) {
-            file_cnt = 0;
-            fclose(fd);
-            fd = fopen(output_filename, "a");
-        }
         return 1;
 
     } else {
@@ -293,12 +289,13 @@ static PT_THREAD(send_headers_3(struct httpd_state *s, const char *statushdr, ch
     PSOCK_BEGIN(&s->sout);
 
     PSOCK_SEND_STR(&s->sout, statushdr);
+    PSOCK_SEND_STR(&s->sout, http_header_all);
 
     if (send_content_type) {
         ptr = strrchr(s->filename, ISO_period);
         if (ptr == NULL) {
             PSOCK_SEND_STR(&s->sout, http_content_type_plain); // http_content_type_binary);
-        } else if (strncmp(http_html, ptr, 5) == 0 || strncmp(http_shtml, ptr, 6) == 0) {
+        } else if (strncmp(http_html, ptr, 5) == 0) {
             PSOCK_SEND_STR(&s->sout, http_content_type_html);
         } else if (strncmp(http_css, ptr, 4) == 0) {
             PSOCK_SEND_STR(&s->sout, http_content_type_css);
@@ -322,9 +319,14 @@ static PT_THREAD(send_headers(struct httpd_state *s, const char *statushdr))
 static
 PT_THREAD(handle_output(struct httpd_state *s))
 {
+    char qstr[132];
     PT_BEGIN(&s->outputpt);
 
-    if (s->method == POST) {
+    if (s->method == OPTIONS) {
+        PT_WAIT_THREAD(&s->outputpt, send_headers(s, http_header_preflight));
+        PSOCK_SEND_STR(&s->sout, "OK\r\n");
+    }
+    else if (s->method == POST) {
         if (strcmp(s->filename, "/command") == 0) {
             DEBUG_PRINTF("Executed command post\n");
             PT_WAIT_THREAD(&s->outputpt, send_headers(s, http_header_200));
@@ -355,7 +357,13 @@ PT_THREAD(handle_output(struct httpd_state *s))
 
     } else {
         // Presume method GET
-        if (!fs_open(s)) { // Note this has the side effect of opening the file
+
+        if (strcmp(s->filename, "/query") == 0) { // query short cut
+            PT_WAIT_THREAD(&s->outputpt, send_headers(s, http_header_200));
+            strncpy(qstr, get_query_string(), sizeof(qstr) - 1);
+            PSOCK_SEND_STR(&s->sout, qstr);
+
+        } else if (!fs_open(s)) { // Note this has the side effect of opening the file
             DEBUG_PRINTF("404 file not found\n");
             httpd_fs_open(http_404_html, &s->file);
             strcpy(s->filename, http_404_html);
@@ -471,16 +479,18 @@ PT_THREAD(handle_input(struct httpd_state *s))
 
     PSOCK_READTO(&s->sin, ISO_space);
 
-    if (strncmp(s->inputbuf, http_get, 4) == 0) {
+    if (strncmp(s->inputbuf, http_get, 3) == 0) {
         s->method = GET;
     } else if (strncmp(s->inputbuf, http_post, 4) == 0) {
         s->method = POST;
+    } else if (strncmp(s->inputbuf, http_options, 7) == 0) {
+        s->method = OPTIONS;
     } else {
         DEBUG_PRINTF("Unexpected method: %s\n", s->inputbuf);
         PSOCK_CLOSE_EXIT(&s->sin);
     }
 
-    DEBUG_PRINTF("Method: %s\n", s->method == POST ? "POST" : "GET");
+    DEBUG_PRINTF("Method: %s\n", s->method == POST ? "POST" : (s->method == GET ? "GET" : "OPTIONS"));
 
     PSOCK_READTO(&s->sin, ISO_space);
 
@@ -509,7 +519,10 @@ PT_THREAD(handle_input(struct httpd_state *s))
             s->inputbuf[PSOCK_DATALEN(&s->sin) - 1] = 0;
             if (s->inputbuf[0] == '\r') {
                 DEBUG_PRINTF("end of headers\n");
-                if (s->method == GET) {
+                if (s->method == OPTIONS) {
+                   s->state = STATE_OUTPUT;
+                   break;
+                } else if (s->method == GET) {
                     s->state = STATE_OUTPUT;
                     break;
                 } else if (s->method == POST) {

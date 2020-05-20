@@ -9,6 +9,7 @@
 #define PANELSCREEN_H
 
 #include <string>
+#include <deque>
 
 class Panel;
 
@@ -16,10 +17,13 @@ class PanelScreen
 {
 public:
     PanelScreen();
+    virtual ~PanelScreen();
+
     virtual void on_refresh();
     virtual void on_main_loop();
     PanelScreen *set_parent(PanelScreen *passed_parent);
     virtual void on_enter();
+    virtual void on_exit(){};
     // if you completely rewrite the screen do not clear it, this avoids flicker
     void refresh_screen(bool clear);
     void refresh_menu(bool clear);
@@ -30,10 +34,11 @@ public:
 
     friend class Panel;
 protected:
+    void get_current_pos(float *p);
     void send_gcode(std::string g);
     void send_gcode(const char *gm_code, char parameter, float value);
     void send_command(const char *gcstr);
-
+    static std::deque<std::string> command_queue;
     PanelScreen *parent;
 };
 

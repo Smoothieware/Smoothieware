@@ -29,9 +29,12 @@ SerialConsole::SerialConsole( PinName rx_pin, PinName tx_pin, int baud_rate ){
 void SerialConsole::on_module_loaded() {
     // We want to be called every time a new char is received
     this->serial->attach(this, &SerialConsole::on_serial_char_received, mbed::Serial::RxIrq);
+    query_flag= false;
+    halt_flag= false;
 
     // We only call the command dispatcher in the main loop, nowhere else
     this->register_for_event(ON_MAIN_LOOP);
+    this->register_for_event(ON_IDLE);
 
     // Add to the pack of streams kernel can call to, for example for broadcasting
     THEKERNEL->streams->append_stream(this);
@@ -41,9 +44,34 @@ void SerialConsole::on_module_loaded() {
 void SerialConsole::on_serial_char_received(){
     while(this->serial->readable()){
         char received = this->serial->getc();
+        if(received == '?') {
+            query_flag= true;
+            continue;
+        }
+        if(received == 'X'-'A'+1) { // ^X
+            halt_flag= true;
+            continue;
+        }
         // convert CR to NL (for host OSs that don't send NL)
         if( received == '\r' ){ received = '\n'; }
         this->buffer.push_back(received);
+    }
+}
+
+void SerialConsole::on_idle(void * argument)
+{
+    if(query_flag) {
+        query_flag= false;
+        puts(THEKERNEL->get_query_string().c_str());
+    }
+    if(halt_flag) {
+        halt_flag= false;
+        THEKERNEL->call_event(ON_HALT, nullptr);
+        if(THEKERNEL->is_grbl_mode()) {
+            puts("ALARM: Abort during cycle\r\n");
+        } else {
+            puts("HALTED, M999 or $X to exit HALT state\r\n");
+        }
     }
 }
 
@@ -71,7 +99,12 @@ void SerialConsole::on_main_loop(void * argument){
 
 int SerialConsole::puts(const char* s)
 {
-    return fwrite(s, strlen(s), 1, (FILE*)(*this->serial));
+    //return fwrite(s, strlen(s), 1, (FILE*)(*this->serial));
+    size_t n= strlen(s);
+    for (size_t i = 0; i < n; ++i) {
+        _putc(s[i]);
+    }
+    return n;
 }
 
 int SerialConsole::_putc(int c)

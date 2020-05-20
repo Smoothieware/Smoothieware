@@ -10,10 +10,14 @@
 
 class PublicData {
     public:
-        static bool get_value(uint16_t csa, void **data) { return get_value(csa, 0, 0, data); }
-        static bool get_value(uint16_t csa, uint16_t csb, void **data) { return get_value(csa, csb, 0, data); }
-        static bool get_value(uint16_t cs[3], void **data) { return get_value(cs[0], cs[1], cs[2], data); };
-        static bool get_value(uint16_t csa, uint16_t csb, uint16_t csc, void **data);
+        // there are two ways to get data from a module
+        // 1. pass in a pointer to a data storage area that the caller creates, the callee module will put the returned data in that pointer
+        // 2. pass in a pointer to a pointer, the callee will set that pointer to some storage the callee has control over, with the requested data
+        // the version used is dependent on the target (callee) module
+        static bool get_value(uint16_t csa, void *data) { return get_value(csa, 0, 0, data); }
+        static bool get_value(uint16_t csa, uint16_t csb, void *data) { return get_value(csa, csb, 0, data); }
+        static bool get_value(uint16_t cs[3], void *data) { return get_value(cs[0], cs[1], cs[2], data); };
+        static bool get_value(uint16_t csa, uint16_t csb, uint16_t csc, void *data);
 
         static bool set_value(uint16_t csa, void *data) { return set_value(csa, 0, 0, data); }
         static bool set_value(uint16_t csa, uint16_t csb, void *data) { return set_value(csa, csb, 0, data); }

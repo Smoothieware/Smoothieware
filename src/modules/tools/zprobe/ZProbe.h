@@ -11,43 +11,64 @@
 #include "Module.h"
 #include "Pin.h"
 
+#include <vector>
+
+// defined here as they are used in multiple files
+#define zprobe_checksum            CHECKSUM("zprobe")
+#define leveling_strategy_checksum CHECKSUM("leveling-strategy")
+
 class StepperMotor;
 class Gcode;
 class StreamOutput;
+class LevelingStrategy;
 
 class ZProbe: public Module
 {
 
 public:
+    ZProbe() : invert_override(false),invert_probe(false) {};
+    virtual ~ZProbe() {};
+
     void on_module_loaded();
-    void on_config_reload(void *argument);
     void on_gcode_received(void *argument);
-    void on_idle(void *argument);
-    uint32_t acceleration_tick(uint32_t dummy);
 
+    bool run_probe(float& mm, float feedrate, float max_dist= -1, bool reverse= false);
+    bool run_probe_return(float& mm, float feedrate, float max_dist= -1, bool reverse= false);
+    bool doProbeAt(float &mm, float x, float y);
 
-private:
-    bool wait_for_probe(int steps[3]);
-    bool run_probe(int& steps, bool fast= false);
-    bool probe_delta_tower(int& steps, float x, float y);
-    bool return_probe(int steps);
-    bool calibrate_delta_endstops(Gcode *gcode);
-    bool calibrate_delta_radius(Gcode *gcode);
     void coordinated_move(float x, float y, float z, float feedrate, bool relative=false);
     void home();
-    bool set_trim(float x, float y, float z, StreamOutput *stream);
-    bool get_trim(float& x, float& y, float& z);
 
-    float          probe_radius;
-    float          probe_height;
-    float          current_feedrate;
-    float          slow_feedrate;
-    float          fast_feedrate;
-    Pin            pin;
-    uint8_t        debounce_count;
-    struct {
-        bool           running:1;
-        bool           is_delta:1;
+    bool getProbeStatus() { return this->pin.get(); }
+    float getSlowFeedrate() const { return slow_feedrate; }
+    float getFastFeedrate() const { return fast_feedrate; }
+    float getProbeHeight() const { return probe_height; }
+    float getMaxZ() const { return max_z; }
+
+private:
+    void config_load();
+    void probe_XYZ(Gcode *gc);
+    uint32_t read_probe(uint32_t dummy);
+
+    float slow_feedrate;
+    float fast_feedrate;
+    float return_feedrate;
+    float probe_height;
+    float max_z;
+    float dwell_before_probing;
+
+    Pin pin;
+    std::vector<LevelingStrategy*> strategies;
+    uint16_t debounce_ms, debounce;
+
+    volatile struct {
+        bool is_delta:1;
+        bool is_rdelta:1;
+        bool probing:1;
+        bool reverse_z:1;
+        bool invert_override:1;
+        bool invert_probe:1;
+        volatile bool probe_detected:1;
     };
 };
 

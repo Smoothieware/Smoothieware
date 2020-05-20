@@ -815,12 +815,15 @@ int USBDevice::findDescriptorIndex(uint8_t start, uint8_t descriptorType, uint8_
                 switch(descriptorType) {
                     case DT_CONFIGURATION: {
                         index = ((usbdesc_configuration *) descriptors[i])->bConfigurationValue;
+                        break;
                     };
                     case DT_INTERFACE: {
                         index = ((usbdesc_interface *) descriptors[i])->bInterfaceNumber;
+                        break;
                     };
                     case DT_ENDPOINT: {
                         index = ((usbdesc_endpoint *) descriptors[i])->bEndpointAddress;
+                        break;
                     };
                 }
                 iprintf("FOUND %d:%d at %d, looking for %d\n", descriptorType, index, i, descriptorIndex);

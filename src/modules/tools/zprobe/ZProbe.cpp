@@ -15,7 +15,6 @@
 #include "StreamOutputPool.h"
 #include "Gcode.h"
 #include "Conveyor.h"
-#include "Stepper.h"
 #include "checksumm.h"
 #include "ConfigValue.h"
 #include "SlowTicker.h"
@@ -24,31 +23,39 @@
 #include "PublicDataRequest.h"
 #include "EndstopsPublicAccess.h"
 #include "PublicData.h"
+#include "LevelingStrategy.h"
+#include "StepTicker.h"
+#include "utils.h"
 
-#include <tuple>
-#include <algorithm>
+// strategies we know about
+#include "DeltaCalibrationStrategy.h"
+#include "ThreePointStrategy.h"
+#include "DeltaGridStrategy.h"
+#include "CartGridStrategy.h"
 
-#define zprobe_checksum          CHECKSUM("zprobe")
 #define enable_checksum          CHECKSUM("enable")
 #define probe_pin_checksum       CHECKSUM("probe_pin")
-#define debounce_count_checksum  CHECKSUM("debounce_count")
+#define debounce_ms_checksum     CHECKSUM("debounce_ms")
 #define slow_feedrate_checksum   CHECKSUM("slow_feedrate")
 #define fast_feedrate_checksum   CHECKSUM("fast_feedrate")
-#define probe_radius_checksum    CHECKSUM("probe_radius")
+#define return_feedrate_checksum CHECKSUM("return_feedrate")
 #define probe_height_checksum    CHECKSUM("probe_height")
+#define gamma_max_checksum       CHECKSUM("gamma_max")
+#define max_z_checksum           CHECKSUM("max_z")
+#define reverse_z_direction_checksum CHECKSUM("reverse_z")
+#define dwell_before_probing_checksum CHECKSUM("dwell_before_probing")
 
 // from endstop section
 #define delta_homing_checksum    CHECKSUM("delta_homing")
+#define rdelta_homing_checksum    CHECKSUM("rdelta_homing")
 
 #define X_AXIS 0
 #define Y_AXIS 1
 #define Z_AXIS 2
 
-#define STEPPER THEKERNEL->robot->actuators
+#define STEPPER THEROBOT->actuators
 #define STEPS_PER_MM(a) (STEPPER[a]->get_steps_per_mm())
 #define Z_STEPS_PER_MM STEPS_PER_MM(Z_AXIS)
-
-#define abs(a) ((a<0) ? -a : a)
 
 void ZProbe::on_module_loaded()
 {
@@ -58,538 +65,475 @@ void ZProbe::on_module_loaded()
         delete this;
         return;
     }
-    this->running = false;
 
     // load settings
-    this->on_config_reload(this);
+    this->config_load();
     // register event-handlers
     register_for_event(ON_GCODE_RECEIVED);
-    register_for_event(ON_IDLE);
 
-    THEKERNEL->slow_ticker->attach( THEKERNEL->stepper->get_acceleration_ticks_per_second() , this, &ZProbe::acceleration_tick );
+    // we read the probe in this timer
+    probing= false;
+    THEKERNEL->slow_ticker->attach(1000, this, &ZProbe::read_probe);
 }
 
-void ZProbe::on_config_reload(void *argument)
+void ZProbe::config_load()
 {
     this->pin.from_string( THEKERNEL->config->value(zprobe_checksum, probe_pin_checksum)->by_default("nc" )->as_string())->as_input();
-    this->debounce_count = THEKERNEL->config->value(zprobe_checksum, debounce_count_checksum)->by_default(0  )->as_number();
+    this->debounce_ms    = THEKERNEL->config->value(zprobe_checksum, debounce_ms_checksum)->by_default(0  )->as_number();
 
-    // see what type of arm solution we need to use
-    this->is_delta =  THEKERNEL->config->value(delta_homing_checksum)->by_default(false)->as_bool();
-    if(this->is_delta) {
-        // default is probably wrong
-        this->probe_radius =  THEKERNEL->config->value(zprobe_checksum, probe_radius_checksum)->by_default(100.0F)->as_number();
+    // get strategies to load
+    vector<uint16_t> modules;
+    THEKERNEL->config->get_module_list( &modules, leveling_strategy_checksum);
+    for( auto cs : modules ){
+        if( THEKERNEL->config->value(leveling_strategy_checksum, cs, enable_checksum )->as_bool() ){
+            bool found= false;
+            LevelingStrategy *ls= nullptr;
+
+            // check with each known strategy and load it if it matches
+            switch(cs) {
+                case delta_calibration_strategy_checksum:
+                    ls= new DeltaCalibrationStrategy(this);
+                    found= true;
+                    break;
+
+                case three_point_leveling_strategy_checksum:
+                    // NOTE this strategy is mutually exclusive with the delta calibration strategy
+                    ls= new ThreePointStrategy(this);
+                    found= true;
+                    break;
+
+                case delta_grid_leveling_strategy_checksum:
+                    ls= new DeltaGridStrategy(this);
+                    found= true;
+                    break;
+
+                case cart_grid_leveling_strategy_checksum:
+                    ls= new CartGridStrategy(this);
+                    found= true;
+                    break;
+            }
+            if(found) {
+                if(ls->handleConfig()) {
+                    this->strategies.push_back(ls);
+                }else{
+                    delete ls;
+                }
+            }
+        }
     }
 
-    this->probe_height =  THEKERNEL->config->value(zprobe_checksum, probe_height_checksum)->by_default(5.0F)->as_number();
+    // need to know if we need to use delta kinematics for homing
+    this->is_delta = THEKERNEL->config->value(delta_homing_checksum)->by_default(false)->as_bool();
+    this->is_rdelta = THEKERNEL->config->value(rdelta_homing_checksum)->by_default(false)->as_bool();
+
+    // default for backwards compatibility add DeltaCalibrationStrategy if a delta
+    // may be deprecated
+    if(this->strategies.empty()) {
+        if(this->is_delta) {
+            this->strategies.push_back(new DeltaCalibrationStrategy(this));
+            this->strategies.back()->handleConfig();
+        }
+    }
+
+    this->probe_height  = THEKERNEL->config->value(zprobe_checksum, probe_height_checksum)->by_default(5.0F)->as_number();
     this->slow_feedrate = THEKERNEL->config->value(zprobe_checksum, slow_feedrate_checksum)->by_default(5)->as_number(); // feedrate in mm/sec
     this->fast_feedrate = THEKERNEL->config->value(zprobe_checksum, fast_feedrate_checksum)->by_default(100)->as_number(); // feedrate in mm/sec
+    this->return_feedrate = THEKERNEL->config->value(zprobe_checksum, return_feedrate_checksum)->by_default(0)->as_number(); // feedrate in mm/sec
+    this->reverse_z     = THEKERNEL->config->value(zprobe_checksum, reverse_z_direction_checksum)->by_default(false)->as_bool(); // Z probe moves in reverse direction
+    this->max_z         = THEKERNEL->config->value(zprobe_checksum, max_z_checksum)->by_default(NAN)->as_number(); // maximum zprobe distance
+    if(isnan(this->max_z)){
+        this->max_z = THEKERNEL->config->value(gamma_max_checksum)->by_default(200)->as_number(); // maximum zprobe distance
+    }
+    this->dwell_before_probing = THEKERNEL->config->value(zprobe_checksum, dwell_before_probing_checksum)->by_default(0)->as_number(); // dwell time in seconds before probing
+
 }
 
-bool ZProbe::wait_for_probe(int steps[3])
+uint32_t ZProbe::read_probe(uint32_t dummy)
 {
-    unsigned int debounce = 0;
-    while(true) {
-        THEKERNEL->call_event(ON_IDLE);
-        // if no stepper is moving, moves are finished and there was no touch
-        if( !STEPPER[X_AXIS]->is_moving() && !STEPPER[Y_AXIS]->is_moving() && !STEPPER[Z_AXIS]->is_moving() ) {
-            return false;
-        }
+    if(!probing || probe_detected) return 0;
 
-        // if the touchprobe is active...
-        if( this->pin.get() ) {
-            //...increase debounce counter...
-            if( debounce < debounce_count) {
-                // ...but only if the counter hasn't reached the max. value
+    // we check all axis as it maybe a G38.2 X10 for instance, not just a probe in Z
+    if(STEPPER[X_AXIS]->is_moving() || STEPPER[Y_AXIS]->is_moving() || STEPPER[Z_AXIS]->is_moving()) {
+        // if it is moving then we check the probe, and debounce it
+        if(this->pin.get() != invert_probe) {
+            if(debounce < debounce_ms) {
                 debounce++;
             } else {
-                // ...otherwise stop the steppers, return its remaining steps
-                for( int i = X_AXIS; i <= Z_AXIS; i++ ) {
-                    steps[i] = 0;
-                    if ( STEPPER[i]->is_moving() ) {
-                        steps[i] =  STEPPER[i]->get_stepped();
-                        STEPPER[i]->move(0, 0);
-                    }
-                }
-                return true;
+                // we signal the motors to stop, which will preempt any moves on that axis
+                // we do all motors as it may be a delta
+                for(auto &a : THEROBOT->actuators) a->stop_moving();
+                probe_detected= true;
+                debounce= 0;
             }
-        } else {
-            // The probe was not hit yet, reset debounce counter
-            debounce = 0;
-        }
-    }
-}
-
-void ZProbe::on_idle(void *argument)
-{
-}
-
-// single probe and report amount moved
-bool ZProbe::run_probe(int& steps, bool fast)
-{
-    // Enable the motors
-    THEKERNEL->stepper->turn_enable_pins_on();
-    this->current_feedrate = (fast ? this->fast_feedrate : this->slow_feedrate) * Z_STEPS_PER_MM; // steps/sec
-
-    // move Z down
-    STEPPER[Z_AXIS]->set_speed(0); // will be increased by acceleration tick
-    STEPPER[Z_AXIS]->move(true, 1000 * Z_STEPS_PER_MM); // always probes down, no more than 1000mm TODO should be 2*maxz
-    if(this->is_delta) {
-        // for delta need to move all three actuators
-        STEPPER[X_AXIS]->set_speed(0);
-        STEPPER[X_AXIS]->move(true, 1000 * STEPS_PER_MM(X_AXIS));
-        STEPPER[Y_AXIS]->set_speed(0);
-        STEPPER[Y_AXIS]->move(true, 1000 * STEPS_PER_MM(Y_AXIS));
-    }
-
-    this->running = true;
-
-    int s[3];
-    bool r = wait_for_probe(s);
-    steps= s[Z_AXIS]; // only need z
-    this->running = false;
-    return r;
-}
-
-bool ZProbe::return_probe(int steps)
-{
-    // move probe back to where it was
-    this->current_feedrate = this->fast_feedrate * Z_STEPS_PER_MM; // feedrate in steps/sec
-    bool dir= steps < 0;
-    steps= abs(steps);
-
-    STEPPER[Z_AXIS]->set_speed(0); // will be increased by acceleration tick
-    STEPPER[Z_AXIS]->move(dir, steps);
-    if(this->is_delta) {
-        STEPPER[X_AXIS]->set_speed(0);
-        STEPPER[X_AXIS]->move(dir, steps);
-        STEPPER[Y_AXIS]->set_speed(0);
-        STEPPER[Y_AXIS]->move(dir, steps);
-    }
-
-    this->running = true;
-    while(STEPPER[X_AXIS]->is_moving() || STEPPER[Y_AXIS]->is_moving() || STEPPER[Z_AXIS]->is_moving()) {
-        // wait for it to complete
-        THEKERNEL->call_event(ON_IDLE);
-    }
-
-    this->running = false;
-
-    return true;
-}
-
-// calculate the X and Y positions for the three towers given the radius from the center
-static std::tuple<float, float, float, float, float, float> getCoordinates(float radius)
-{
-    float px = 0.866F * radius; // ~sin(60)
-    float py = 0.5F * radius; // cos(60)
-    float t1x = -px, t1y = -py; // X Tower
-    float t2x = px, t2y = -py; // Y Tower
-    float t3x = 0.0F, t3y = radius; // Z Tower
-    return std::make_tuple(t1x, t1y, t2x, t2y, t3x, t3y);
-}
-
-bool ZProbe::probe_delta_tower(int& steps, float x, float y)
-{
-    int s;
-    // move to tower
-    coordinated_move(x, y, NAN, this->fast_feedrate);
-    if(!run_probe(s)) return false;
-
-    // return to original Z
-    return_probe(s);
-    steps= s;
-
-    return true;
-}
-
-/* Run a calibration routine for a delta
-    1. Home
-    2. probe for z bed
-    3. probe initial tower positions
-    4. set initial trims such that trims will be minimal negative values
-    5. home, probe three towers again
-    6. calculate trim offset and apply to all trims
-    7. repeat 5, 6 until it converges on a solution
-*/
-
-bool ZProbe::calibrate_delta_endstops(Gcode *gcode)
-{
-    float target= 0.03F;
-    if(gcode->has_letter('I')) target= gcode->get_value('I'); // override default target
-    if(gcode->has_letter('J')) this->probe_radius= gcode->get_value('J'); // override default probe radius
-
-    bool keep= false;
-    if(gcode->has_letter('K')) keep= true; // keep current settings
-
-    gcode->stream->printf("Calibrating Endstops: target %fmm, radius %fmm\n", target, this->probe_radius);
-
-    // get probe points
-    float t1x, t1y, t2x, t2y, t3x, t3y;
-    std::tie(t1x, t1y, t2x, t2y, t3x, t3y) = getCoordinates(this->probe_radius);
-
-    float trimx= 0.0F, trimy= 0.0F, trimz= 0.0F;
-    if(!keep) {
-        // zero trim values
-        if(!set_trim(0, 0, 0, gcode->stream)) return false;
-
-    }else{
-        // get current trim, and continue from that
-        if (get_trim(trimx, trimy, trimz)) {
-            gcode->stream->printf("Current Trim X: %f, Y: %f, Z: %f\r\n", trimx, trimy, trimz);
 
         } else {
-            gcode->stream->printf("Could not get current trim, are endstops enabled?\n");
-            return false;
+            // The endstop was not hit yet
+            debounce= 0;
         }
     }
 
-    // home
-    home();
-
-    // find bed, run at fast rate
-    int s;
-    if(!run_probe(s, true)) return false;
-
-    float bedht= s/Z_STEPS_PER_MM - this->probe_height; // distance to move from home to 5mm above bed
-    gcode->stream->printf("Bed ht is %f mm\n", bedht);
-
-    // move to start position
-    home();
-    coordinated_move(NAN, NAN, -bedht, this->fast_feedrate, true); // do a relative move from home to the point above the bed
-
-    // get initial probes
-    // probe the base of the X tower
-    if(!probe_delta_tower(s, t1x, t1y)) return false;
-    float t1z= s / Z_STEPS_PER_MM;
-    gcode->stream->printf("T1-0 Z:%1.4f C:%d\n", t1z, s);
-
-    // probe the base of the Y tower
-    if(!probe_delta_tower(s, t2x, t2y)) return false;
-    float t2z= s / Z_STEPS_PER_MM;
-    gcode->stream->printf("T2-0 Z:%1.4f C:%d\n", t2z, s);
-
-    // probe the base of the Z tower
-    if(!probe_delta_tower(s, t3x, t3y)) return false;
-    float t3z= s / Z_STEPS_PER_MM;
-    gcode->stream->printf("T3-0 Z:%1.4f C:%d\n", t3z, s);
-
-    float trimscale= 1.2522F; // empirically determined
-
-    auto mm= std::minmax({t1z, t2z, t3z});
-    if((mm.second-mm.first) <= target) {
-        gcode->stream->printf("trim already set within required parameters: delta %f\n", mm.second-mm.first);
-        return true;
-    }
-
-    // set trims to worst case so we always have a negative trim
-    trimx += (mm.first-t1z)*trimscale;
-    trimy += (mm.first-t2z)*trimscale;
-    trimz += (mm.first-t3z)*trimscale;
-
-    for (int i = 1; i <= 10; ++i) {
-        // set trim
-        if(!set_trim(trimx, trimy, trimz, gcode->stream)) return false;
-
-        // home and move probe to start position just above the bed
-        home();
-        coordinated_move(NAN, NAN, -bedht, this->fast_feedrate, true); // do a relative move from home to the point above the bed
-
-        // probe the base of the X tower
-        if(!probe_delta_tower(s, t1x, t1y)) return false;
-        t1z= s / Z_STEPS_PER_MM;
-        gcode->stream->printf("T1-%d Z:%1.4f C:%d\n", i, t1z, s);
-
-        // probe the base of the Y tower
-        if(!probe_delta_tower(s, t2x, t2y)) return false;
-        t2z= s / Z_STEPS_PER_MM;
-        gcode->stream->printf("T2-%d Z:%1.4f C:%d\n", i, t2z, s);
-
-        // probe the base of the Z tower
-        if(!probe_delta_tower(s, t3x, t3y)) return false;
-        t3z= s / Z_STEPS_PER_MM;
-        gcode->stream->printf("T3-%d Z:%1.4f C:%d\n", i, t3z, s);
-
-        mm= std::minmax({t1z, t2z, t3z});
-        if((mm.second-mm.first) <= target) {
-            gcode->stream->printf("trim set to within required parameters: delta %f\n", mm.second-mm.first);
-            break;
-        }
-
-        // set new trim values based on min difference
-        trimx += (mm.first-t1z)*trimscale;
-        trimy += (mm.first-t2z)*trimscale;
-        trimz += (mm.first-t3z)*trimscale;
-
-        // flush the output
-        THEKERNEL->call_event(ON_IDLE);
-    }
-
-    if((mm.second-mm.first) > target) {
-        gcode->stream->printf("WARNING: trim did not resolve to within required parameters: delta %f\n", mm.second-mm.first);
-    }
-
-    return true;
+    return 0;
 }
 
-/*
-    probe edges to get outer positions, then probe center
-    modify the delta radius until center and X converge
-*/
-
-bool ZProbe::calibrate_delta_radius(Gcode *gcode)
+// single probe in Z with custom feedrate
+// returns boolean value indicating if probe was triggered
+bool ZProbe::run_probe(float& mm, float feedrate, float max_dist, bool reverse)
 {
-    float target= 0.03F;
-    if(gcode->has_letter('I')) target= gcode->get_value('I'); // override default target
-    if(gcode->has_letter('J')) this->probe_radius= gcode->get_value('J'); // override default probe radius
+    if(dwell_before_probing > .0001F) safe_delay_ms(dwell_before_probing*1000);
 
-    gcode->stream->printf("Calibrating delta radius: target %f, radius %f\n", target, this->probe_radius);
-
-    // get probe points
-    float t1x, t1y, t2x, t2y, t3x, t3y;
-    std::tie(t1x, t1y, t2x, t2y, t3x, t3y) = getCoordinates(this->probe_radius);
-
-    home();
-    // find bed, then move to a point 5mm above it
-    int s;
-    if(!run_probe(s, true)) return false;
-    float bedht= s/Z_STEPS_PER_MM - this->probe_height; // distance to move from home to 5mm above bed
-    gcode->stream->printf("Bed ht is %f mm\n", bedht);
-
-    home();
-    coordinated_move(NAN, NAN, -bedht, this->fast_feedrate, true); // do a relative move from home to the point above the bed
-
-    // probe center to get reference point at this Z height
-    int dc;
-    if(!probe_delta_tower(dc, 0, 0)) return false;
-    gcode->stream->printf("CT Z:%1.3f C:%d\n", dc / Z_STEPS_PER_MM, dc);
-    float cmm= dc / Z_STEPS_PER_MM;
-
-    // get current delta radius
-    float delta_radius= 0.0F;
-    BaseSolution::arm_options_t options;
-    if(THEKERNEL->robot->arm_solution->get_optional(options)) {
-        delta_radius= options['R'];
-    }
-    if(delta_radius == 0.0F) {
-        gcode->stream->printf("This appears to not be a delta arm solution\n");
+    if(this->pin.get()) {
+        // probe already triggered so abort
         return false;
     }
-    options.clear();
 
-    float drinc= 2.5F; // approx
-    for (int i = 1; i <= 10; ++i) {
-        // probe t1, t2, t3 and get average, but use coordinated moves, probing center won't change
-        int dx, dy, dz;
-        if(!probe_delta_tower(dx, t1x, t1y)) return false;
-        gcode->stream->printf("T1-%d Z:%1.3f C:%d\n", i, dx / Z_STEPS_PER_MM, dx);
-        if(!probe_delta_tower(dy, t2x, t2y)) return false;
-        gcode->stream->printf("T2-%d Z:%1.3f C:%d\n", i, dy / Z_STEPS_PER_MM, dy);
-        if(!probe_delta_tower(dz, t3x, t3y)) return false;
-        gcode->stream->printf("T3-%d Z:%1.3f C:%d\n", i, dz / Z_STEPS_PER_MM, dz);
+    float maxz= max_dist < 0 ? this->max_z*2 : max_dist;
 
-        // now look at the difference and reduce it by adjusting delta radius
-        float m= ((dx+dy+dz)/3.0F) / Z_STEPS_PER_MM;
-        float d= cmm-m;
-        gcode->stream->printf("C-%d Z-ave:%1.4f delta: %1.3f\n", i, m, d);
+    probing= true;
+    probe_detected= false;
+    debounce= 0;
 
-        if(abs(d) <= target) break; // resolution of success
+    // save current actuator position so we can report how far we moved
+    float z_start_pos= THEROBOT->actuators[Z_AXIS]->get_current_position();
 
-        // increase delta radius to adjust for low center
-        // decrease delta radius to adjust for high center
-        delta_radius += (d*drinc);
+    // move Z down
+    bool dir= (!reverse_z != reverse); // xor
+    float delta[3]= {0,0,0};
+    delta[Z_AXIS]= dir ? -maxz : maxz;
+    THEROBOT->delta_move(delta, feedrate, 3);
 
-        // set the new delta radius
-        options['R']= delta_radius;
-        THEKERNEL->robot->arm_solution->set_optional(options);
-        gcode->stream->printf("Setting delta radius to: %1.4f\n", delta_radius);
+    // wait until finished
+    THECONVEYOR->wait_for_idle();
+    if(THEKERNEL->is_halted()) return false;
 
-        home();
-        coordinated_move(NAN, NAN, -bedht, this->fast_feedrate, true); // needs to be a relative coordinated move
+    // now see how far we moved, get delta in z we moved
+    // NOTE this works for deltas as well as all three actuators move the same amount in Z
+    mm= z_start_pos - THEROBOT->actuators[2]->get_current_position();
 
-        // flush the output
-        THEKERNEL->call_event(ON_IDLE);
+    // set the last probe position to the actuator units moved during this home
+    // TODO maybe we should store current actuator position rather than the delta?
+    THEROBOT->set_last_probe_position(std::make_tuple(0, 0, mm, probe_detected?1:0));
+
+    probing= false;
+
+    if(probe_detected) {
+        // if the probe stopped the move we need to correct the last_milestone as it did not reach where it thought
+        THEROBOT->reset_position_from_current_actuator_position();
     }
-    return true;
+
+    return probe_detected;
+}
+
+// do probe then return to start position
+bool ZProbe::run_probe_return(float& mm, float feedrate, float max_dist, bool reverse)
+{
+    float save_z_pos= THEROBOT->get_axis_position(Z_AXIS);
+
+    bool ok= run_probe(mm, feedrate, max_dist, reverse);
+
+    // move probe back to where it was
+    float fr;
+    if(this->return_feedrate != 0) { // use return_feedrate if set
+        fr = this->return_feedrate;
+    } else {
+        fr = this->slow_feedrate*2; // nominally twice slow feedrate
+        if(fr > this->fast_feedrate) fr = this->fast_feedrate; // unless that is greater than fast feedrate
+    }
+
+    // absolute move back to saved starting position
+    coordinated_move(NAN, NAN, save_z_pos, fr, false);
+
+    return ok;
+}
+
+bool ZProbe::doProbeAt(float &mm, float x, float y)
+{
+    // move to xy
+    coordinated_move(x, y, NAN, getFastFeedrate());
+    return run_probe_return(mm, slow_feedrate);
 }
 
 void ZProbe::on_gcode_received(void *argument)
 {
     Gcode *gcode = static_cast<Gcode *>(argument);
 
-    if( gcode->has_g) {
-        // G code processing
+    if( gcode->has_g && gcode->g >= 29 && gcode->g <= 32) {
+
+        invert_probe = false;
+        // make sure the probe is defined and not already triggered before moving motors
+        if(!this->pin.connected()) {
+            gcode->stream->printf("ZProbe pin not configured.\n");
+            return;
+        }
+
+        // first wait for all moves to finish
+        THEKERNEL->conveyor->wait_for_idle();
+
+        if(this->pin.get()) {
+            gcode->stream->printf("ZProbe triggered before move, aborting command.\n");
+            return;
+        }
+
         if( gcode->g == 30 ) { // simple Z probe
-            gcode->mark_as_taken();
-            // first wait for an empty queue i.e. no moves left
-            THEKERNEL->conveyor->wait_for_empty_queue();
 
-            // make sure the probe is not already triggered before moving motors
-            if(this->pin.get()) {
-                gcode->stream->printf("ZProbe triggered before move, aborting command.\n");
-                return;
-            }
+            bool set_z= (gcode->has_letter('Z') && !is_rdelta);
+            bool probe_result;
+            bool reverse= (gcode->has_letter('R') && gcode->get_value('R') != 0); // specify to probe in reverse direction
+            float rate= gcode->has_letter('F') ? gcode->get_value('F') / 60 : this->slow_feedrate;
+            float mm;
 
-            int steps;
-            if(run_probe(steps)) {
-                gcode->stream->printf("Z:%1.4f C:%d\n", steps / Z_STEPS_PER_MM, steps);
-                // move back to where it started, unless a Z is specified
-                if(gcode->has_letter('Z')) {
-                    // set Z to the specified value, and leave probe where it is
-                    THEKERNEL->robot->reset_axis_position(gcode->get_value('Z'), Z_AXIS);
-                } else {
-                    return_probe(steps);
+            // if not setting Z ( and not subcode 1) then return probe to where it started, otherwise leave it where it is
+            probe_result = ((set_z || gcode->subcode == 1) ? run_probe(mm, rate, -1, reverse) : run_probe_return(mm, rate, -1, reverse));
+
+            if(probe_result) {
+                // the result is in actuator coordinates moved
+                gcode->stream->printf("Z:%1.4f\n", THEKERNEL->robot->from_millimeters(mm));
+
+                if(set_z) {
+                    // set current Z to the specified value, shortcut for G92 Znnn
+                    char buf[32];
+                    int n = snprintf(buf, sizeof(buf), "G92 Z%f", gcode->get_value('Z'));
+                    string g(buf, n);
+                    Gcode gc(g, &(StreamOutput::NullStream));
+                    THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
                 }
+
             } else {
                 gcode->stream->printf("ZProbe not triggered\n");
             }
 
-        } else if( gcode->g == 32 ) { // auto calibration for delta, Z bed mapping for cartesian
-            // first wait for an empty queue i.e. no moves left
-            THEKERNEL->conveyor->wait_for_empty_queue();
-            gcode->mark_as_taken();
-
-            // make sure the probe is not already triggered before moving motors
-            if(this->pin.get()) {
-                gcode->stream->printf("ZProbe triggered before move, aborting command.\n");
-                return;
-            }
-
-            if(is_delta) {
-                if(!gcode->has_letter('R')){
-                    if(!calibrate_delta_endstops(gcode)) {
-                        gcode->stream->printf("Calibration failed to complete, probe not triggered\n");
+        } else {
+            if(!gcode->has_letter('P')) {
+                // find the first strategy to handle the gcode
+                for(auto s : strategies){
+                    if(s->handleGcode(gcode)) {
                         return;
                     }
                 }
-                if(!gcode->has_letter('E')){
-                    if(!calibrate_delta_radius(gcode)) {
-                        gcode->stream->printf("Calibration failed to complete, probe not triggered\n");
-                        return;
-                    }
-                }
-                gcode->stream->printf("Calibration complete, save settings with M500\n");
+                gcode->stream->printf("No strategy found to handle G%d\n", gcode->g);
 
-            } else {
-                // TODO create Z height map for bed
-                gcode->stream->printf("Not supported yet\n");
+            }else{
+                // P paramater selects which strategy to send the code to
+                // they are loaded in the order they are defined in config, 0 being the first, 1 being the second and so on.
+                uint16_t i= gcode->get_value('P');
+                if(i < strategies.size()) {
+                    if(!strategies[i]->handleGcode(gcode)){
+                        gcode->stream->printf("strategy #%d did not handle G%d\n", i, gcode->g);
+                    }
+                    return;
+
+                }else{
+                    gcode->stream->printf("strategy #%d is not loaded\n", i);
+                }
             }
         }
 
+    } else if(gcode->has_g && gcode->g == 38 ) { // G38.2 Straight Probe with error, G38.3 straight probe without error
+        // linuxcnc/grbl style probe http://www.linuxcnc.org/docs/2.5/html/gcode/gcode.html#sec:G38-probe
+        if(gcode->subcode < 2 || gcode->subcode > 5) {
+            gcode->stream->printf("error:Only G38.2 to G38.5 are supported\n");
+            return;
+        }
+
+        // make sure the probe is defined and not already triggered before moving motors
+        if(!this->pin.connected()) {
+            gcode->stream->printf("error:ZProbe not connected.\n");
+            return;
+        }
+
+        if(gcode->subcode == 4 || gcode->subcode == 5) {
+            invert_probe = true;
+        } else {
+            invert_probe = false;
+        }
+
+        probe_XYZ(gcode);
+
+        invert_probe = false;
+
+        return;
+
     } else if(gcode->has_m) {
         // M code processing here
-        if(gcode->m == 119) {
-            int c = this->pin.get();
-            gcode->stream->printf(" Probe: %d", c);
-            gcode->add_nl = true;
-            gcode->mark_as_taken();
+        int c;
+        switch (gcode->m) {
+           case 48: { // Measure Z-Probe repeatability Pnnn is number of iterations, 10 is the default
+                int n = gcode->has_letter('P') ? gcode->get_value('P') : 10;
+                float maxz = -1e6F, minz = 1e6F;
+                float rate = gcode->has_letter('F') ? gcode->get_value('F') / 60 : this->slow_feedrate;
+                for (int i = 0; i < n; ++i) {
+                    float mm;
+                    bool probe_result = run_probe_return(mm, rate);
 
-        } else if (gcode->m == 557) { // P0 Xxxx Yyyy sets probe points for G32
-            // TODO will override the automatically calculated probe points for a delta, required for a cartesian
+                    if(THEKERNEL->is_halted()) break;
 
-            gcode->mark_as_taken();
+                    if(probe_result) {
+                        // the result is in actuator coordinates moved
+                        gcode->stream->printf("Z:%1.4f\n", mm);
+                        if(mm < minz) minz= mm;
+                        if(mm > maxz) maxz= mm;
+
+                    } else {
+                        gcode->stream->printf("ZProbe not triggered\n");
+                        break;
+                    }
+                }
+                gcode->stream->printf("Delta: %1.4f\n", fabs(maxz-minz));
+            } break;
+
+            case 119:
+                c = this->pin.get();
+                gcode->stream->printf(" Probe: %d", c);
+                gcode->add_nl = true;
+                break;
+
+            case 670:
+                if (gcode->has_letter('S')) this->slow_feedrate = gcode->get_value('S');
+                if (gcode->has_letter('K')) this->fast_feedrate = gcode->get_value('K');
+                if (gcode->has_letter('R')) this->return_feedrate = gcode->get_value('R');
+                if (gcode->has_letter('Z')) this->max_z = gcode->get_value('Z');
+                if (gcode->has_letter('H')) this->probe_height = gcode->get_value('H');
+                if (gcode->has_letter('I')) { // NOTE this is temporary and toggles the invertion status of the pin
+                    invert_override= (gcode->get_value('I') != 0);
+                    pin.set_inverting(pin.is_inverting() != invert_override); // XOR so inverted pin is not inverted and vice versa
+                    gcode->stream->printf("// Invert override set: %d\n", pin.is_inverting());
+                }
+                if (gcode->has_letter('D')) this->dwell_before_probing = gcode->get_value('D');
+                break;
+
+            case 500: // save settings
+            case 503: // print settings
+                gcode->stream->printf(";Probe feedrates Slow/fast(K)/Return (mm/sec) max_z (mm) height (mm) dwell (s):\nM670 S%1.2f K%1.2f R%1.2f Z%1.2f H%1.2f D%1.2f\n",
+                    this->slow_feedrate, this->fast_feedrate, this->return_feedrate, this->max_z, this->probe_height, this->dwell_before_probing);
+
+                // fall through is intended so leveling strategies can handle m-codes too
+
+            default:
+                for(auto s : strategies){
+                    if(s->handleGcode(gcode)) {
+                        return;
+                    }
+                }
         }
     }
 }
 
-#define max(a,b) (((a) > (b)) ? (a) : (b))
-// Called periodically to change the speed to match acceleration
-uint32_t ZProbe::acceleration_tick(uint32_t dummy)
+// special way to probe in the X or Y or Z direction using planned moves, should work with any kinematics
+void ZProbe::probe_XYZ(Gcode *gcode)
 {
-    if(!this->running) return(0); // nothing to do
-
-    // foreach stepper that is moving
-    for ( int c = X_AXIS; c <= Z_AXIS; c++ ) {
-        if( !STEPPER[c]->is_moving() ) continue;
-
-        uint32_t current_rate = STEPPER[c]->get_steps_per_second();
-        uint32_t target_rate = int(floor(this->current_feedrate));
-
-        if( current_rate < target_rate ) {
-            uint32_t rate_increase = int(floor((THEKERNEL->planner->get_acceleration() / THEKERNEL->stepper->get_acceleration_ticks_per_second()) * STEPS_PER_MM(c)));
-            current_rate = min( target_rate, current_rate + rate_increase );
-        }
-        if( current_rate > target_rate ) {
-            current_rate = target_rate;
-        }
-
-        // steps per second
-        STEPPER[c]->set_speed(max(current_rate, THEKERNEL->stepper->get_minimum_steps_per_second()));
+    float x= 0, y= 0, z= 0;
+    if(gcode->has_letter('X')) {
+        x= gcode->get_value('X');
     }
 
-    return 0;
+    if(gcode->has_letter('Y')) {
+        y= gcode->get_value('Y');
+    }
+
+    if(gcode->has_letter('Z')) {
+        z= gcode->get_value('Z');
+    }
+
+    if(x == 0 && y == 0 && z == 0) {
+        gcode->stream->printf("error:at least one of X Y or Z must be specified, and be > or < 0\n");
+        return;
+    }
+
+    // get probe feedrate in mm/min and convert to mm/sec if specified
+    float rate = (gcode->has_letter('F')) ? gcode->get_value('F')/60 : this->slow_feedrate;
+
+    // first wait for all moves to finish
+    THEKERNEL->conveyor->wait_for_idle();
+
+    if(this->pin.get() != invert_probe) {
+        gcode->stream->printf("error:ZProbe triggered before move, aborting command.\n");
+        return;
+    }
+
+    // enable the probe checking in the timer
+    probing= true;
+    probe_detected= false;
+    debounce= 0;
+
+    // do a delta move which will stop as soon as the probe is triggered, or the distance is reached
+    float delta[3]= {x, y, z};
+    if(!THEROBOT->delta_move(delta, rate, 3)) {
+        gcode->stream->printf("error:No move detected or too small\n");
+        probing= false;
+        return;
+    }
+
+    THEKERNEL->conveyor->wait_for_idle();
+
+    // disable probe checking
+    probing= false;
+
+    // if the probe stopped the move we need to correct the last_milestone as it did not reach where it thought
+    // this also sets last_milestone to the machine coordinates it stopped at
+    THEROBOT->reset_position_from_current_actuator_position();
+    float pos[3];
+    THEROBOT->get_axis_position(pos, 3);
+
+    uint8_t probeok= this->probe_detected ? 1 : 0;
+
+    // print results using the GRBL format
+    gcode->stream->printf("[PRB:%1.3f,%1.3f,%1.3f:%d]\n", THEKERNEL->robot->from_millimeters(pos[X_AXIS]), THEKERNEL->robot->from_millimeters(pos[Y_AXIS]), THEKERNEL->robot->from_millimeters(pos[Z_AXIS]), probeok);
+    THEROBOT->set_last_probe_position(std::make_tuple(pos[X_AXIS], pos[Y_AXIS], pos[Z_AXIS], probeok));
+
+    if(probeok == 0 && (gcode->subcode == 2 || gcode->subcode == 4)) {
+        // issue error if probe was not triggered and subcode is 2 or 4
+        gcode->stream->printf("ALARM: Probe fail\n");
+        THEKERNEL->call_event(ON_HALT, nullptr);
+    }
 }
 
 // issue a coordinated move directly to robot, and return when done
 // Only move the coordinates that are passed in as not nan
+// NOTE must use G53 to force move in machine coordinates and ignore any WCS offsets
 void ZProbe::coordinated_move(float x, float y, float z, float feedrate, bool relative)
 {
-    char buf[32];
-    char cmd[64];
+    #define CMDLEN 128
+    char *cmd= new char[CMDLEN]; // use heap here to reduce stack usage
 
     if(relative) strcpy(cmd, "G91 G0 ");
-    else strcpy(cmd, "G0 ");
+    else strcpy(cmd, "G53 G0 "); // G53 forces movement in machine coordinate system
 
     if(!isnan(x)) {
-        int n = snprintf(buf, sizeof(buf), " X%1.3f", x);
-        strncat(cmd, buf, n);
+        size_t n= strlen(cmd);
+        snprintf(&cmd[n], CMDLEN-n, " X%1.3f", x);
     }
     if(!isnan(y)) {
-        int n = snprintf(buf, sizeof(buf), " Y%1.3f", y);
-        strncat(cmd, buf, n);
+        size_t n= strlen(cmd);
+        snprintf(&cmd[n], CMDLEN-n, " Y%1.3f", y);
     }
     if(!isnan(z)) {
-        int n = snprintf(buf, sizeof(buf), " Z%1.3f", z);
-        strncat(cmd, buf, n);
+        size_t n= strlen(cmd);
+        snprintf(&cmd[n], CMDLEN-n, " Z%1.3f", z);
     }
 
-    // use specified feedrate (mm/sec)
-    int n = snprintf(buf, sizeof(buf), " F%1.1f", feedrate * 60); // feed rate is converted to mm/min
-    strncat(cmd, buf, n);
-    if(relative) strcat(cmd, " G90");
+    {
+        size_t n= strlen(cmd);
+        // use specified feedrate (mm/sec)
+        snprintf(&cmd[n], CMDLEN-n, " F%1.1f", feedrate * 60); // feed rate is converted to mm/min
+    }
 
-    //THEKERNEL->streams->printf("DEBUG: move: %s\n", cmd);
+    //THEKERNEL->streams->printf("DEBUG: move: %s: %u\n", cmd, strlen(cmd));
 
     // send as a command line as may have multiple G codes in it
+    THEROBOT->push_state();
     struct SerialMessage message;
     message.message = cmd;
+    delete [] cmd;
+
     message.stream = &(StreamOutput::NullStream);
     THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
-    THEKERNEL->conveyor->wait_for_empty_queue();
+    THEKERNEL->conveyor->wait_for_idle();
+    THEROBOT->pop_state();
+
 }
 
 // issue home command
 void ZProbe::home()
 {
-    Gcode gc("G28", &(StreamOutput::NullStream));
+    Gcode gc(THEKERNEL->is_grbl_mode() ? "G28.2" : "G28", &(StreamOutput::NullStream));
     THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
-}
-
-bool ZProbe::set_trim(float x, float y, float z, StreamOutput *stream)
-{
-    float t[3]{x, y, z};
-    bool ok= PublicData::set_value( endstops_checksum, trim_checksum, t);
-
-    if (ok) {
-        stream->printf("set trim to X:%f Y:%f Z:%f\n", x, y, z);
-    } else {
-        stream->printf("unable to set trim, is endstops enabled?\n");
-    }
-
-    return ok;
-}
-
-bool ZProbe::get_trim(float& x, float& y, float& z)
-{
-    void *returned_data;
-    bool ok = PublicData::get_value( endstops_checksum, trim_checksum, &returned_data );
-
-    if (ok) {
-        float *trim = static_cast<float *>(returned_data);
-        x= trim[0];
-        y= trim[1];
-        z= trim[2];
-        return true;
-    }
-    return false;
 }

@@ -26,124 +26,216 @@ Author: Michael Hackney, mhackney@eclecticangler.com
 #include "checksumm.h"
 #include "PublicData.h"
 #include "StreamOutputPool.h"
+#include "TemperatureControlPool.h"
+#include "mri.h"
 
 #define temperatureswitch_checksum                    CHECKSUM("temperatureswitch")
-#define temperatureswitch_enable_checksum             CHECKSUM("enable")
+#define enable_checksum                               CHECKSUM("enable")
 #define temperatureswitch_hotend_checksum             CHECKSUM("hotend")
 #define temperatureswitch_threshold_temp_checksum     CHECKSUM("threshold_temp")
 #define temperatureswitch_type_checksum               CHECKSUM("type")
+#define temperatureswitch_switch_checksum             CHECKSUM("switch")
 #define temperatureswitch_heatup_poll_checksum        CHECKSUM("heatup_poll")
 #define temperatureswitch_cooldown_poll_checksum      CHECKSUM("cooldown_poll")
+#define temperatureswitch_trigger_checksum            CHECKSUM("trigger")
+#define temperatureswitch_inverted_checksum           CHECKSUM("inverted")
+#define temperatureswitch_arm_command_checksum        CHECKSUM("arm_mcode")
+#define designator_checksum                           CHECKSUM("designator")
 
 TemperatureSwitch::TemperatureSwitch()
 {
 }
 
+TemperatureSwitch::~TemperatureSwitch()
+{
+    THEKERNEL->unregister_for_event(ON_SECOND_TICK, this);
+    THEKERNEL->unregister_for_event(ON_GCODE_RECEIVED, this);
+}
+
 // Load module
 void TemperatureSwitch::on_module_loaded()
 {
-    // free up space if not loaded
-    if (!THEKERNEL->config->value(temperatureswitch_checksum, temperatureswitch_hotend_checksum, temperatureswitch_enable_checksum)->by_default(false)->as_bool()) {
-        delete this;
-        return;
+    vector<uint16_t> modulist;
+    // allow for multiple temperature switches
+    THEKERNEL->config->get_module_list(&modulist, temperatureswitch_checksum);
+    for (auto m : modulist) {
+        load_config(m);
     }
 
-    // settings
-    this->on_config_reload(this);
+    // no longer need this instance as it is just used to load the other instances
+    delete this;
 }
 
-// Get config
-void TemperatureSwitch::on_config_reload(void *argument)
+TemperatureSwitch* TemperatureSwitch::load_config(uint16_t modcs)
 {
-    // get the list of temperature controllers and remove any that fon't have designator == "T"
-    vector<uint16_t> controller_list;  
-    THEKERNEL->config->get_module_list(&controller_list, temperature_control_checksum);
-    
-    void *returned_temp;
-    for (auto controller : controller_list) {
-        bool temp_ok = PublicData::get_value(temperature_control_checksum, controller, current_temperature_checksum, &returned_temp);
-        if (temp_ok) {
-            struct pad_temperature temp =  *static_cast<struct pad_temperature *>(returned_temp);
-            // if the controller is a hotend (designator == "T") then keep it
-            if (temp.designator.substr(0, 1) == "T") {
-                temp_controllers.push_back(controller);
-            }
+    // see if enabled
+    if (!THEKERNEL->config->value(temperatureswitch_checksum, modcs, enable_checksum)->by_default(false)->as_bool()) {
+        return nullptr;
+    }
+
+    // create a temperature control and load settings
+    char designator= 0;
+    string s= THEKERNEL->config->value(temperatureswitch_checksum, modcs, designator_checksum)->by_default("")->as_string();
+    if(s.empty()){
+        // for backward compatibility temperatureswitch.hotend will need designator 'T' by default @DEPRECATED
+        if(modcs == temperatureswitch_hotend_checksum) designator= 'T';
+
+    }else{
+        designator= s[0];
+    }
+
+    if(designator == 0) return nullptr; // no designator then not valid
+
+    // load settings from config file
+    string switchname = THEKERNEL->config->value(temperatureswitch_checksum, modcs, temperatureswitch_switch_checksum)->by_default("")->as_string();
+    if(switchname.empty()) {
+        // handle old configs where this was called type @DEPRECATED
+        switchname = THEKERNEL->config->value(temperatureswitch_checksum, modcs, temperatureswitch_type_checksum)->by_default("")->as_string();
+        if(switchname.empty()) {
+            // no switch specified so invalid entry
+            THEKERNEL->streams->printf("WARNING TEMPERATURESWITCH: no switch specified\n");
+            return nullptr;
         }
     }
-    
-    // if we don't have any controllers, free up space
-    if (temp_controllers.empty()) {
-        delete this;
-        return;
-    }   
-    
-    // load settings from config file
-    this->temperatureswitch_state = false;
-    this->temperatureswitch_type = THEKERNEL->config->value(temperatureswitch_checksum, temperatureswitch_hotend_checksum, temperatureswitch_type_checksum)->by_default("")->as_string();
-    this->temperatureswitch_threshold_temp = THEKERNEL->config->value(temperatureswitch_checksum, temperatureswitch_hotend_checksum, temperatureswitch_threshold_temp_checksum)->by_default(50.0f)->as_number();    
+
+    // create a new temperature switch module
+    TemperatureSwitch *ts= new TemperatureSwitch();
+
+    // save designator
+    ts->designator= designator;
+
+    // if we should turn the switch on or off when trigger is hit
+    ts->inverted = THEKERNEL->config->value(temperatureswitch_checksum, modcs, temperatureswitch_inverted_checksum)->by_default(false)->as_bool();
+
+    // if we should trigger when above and below, or when rising through, or when falling through the specified temp
+    string trig = THEKERNEL->config->value(temperatureswitch_checksum, modcs, temperatureswitch_trigger_checksum)->by_default("level")->as_string();
+    if(trig == "level") ts->trigger= LEVEL;
+    else if(trig == "rising") ts->trigger= RISING;
+    else if(trig == "falling") ts->trigger= FALLING;
+    else ts->trigger= LEVEL;
+
+    // the mcode used to arm the switch
+    ts->arm_mcode = THEKERNEL->config->value(temperatureswitch_checksum, modcs, temperatureswitch_arm_command_checksum)->by_default(0)->as_number();
+
+    ts->temperatureswitch_switch_cs= get_checksum(switchname); // checksum of the switch to use
+
+    ts->temperatureswitch_threshold_temp = THEKERNEL->config->value(temperatureswitch_checksum, modcs, temperatureswitch_threshold_temp_checksum)->by_default(50.0f)->as_number();
 
     // these are to tune the heatup and cooldown polling frequencies
-    this->temperatureswitch_heatup_poll = THEKERNEL->config->value(temperatureswitch_checksum, temperatureswitch_hotend_checksum, temperatureswitch_heatup_poll_checksum)->by_default(15)->as_number();   
-    this->temperatureswitch_cooldown_poll = THEKERNEL->config->value(temperatureswitch_checksum, temperatureswitch_hotend_checksum, temperatureswitch_cooldown_poll_checksum)->by_default(60)->as_number();
+    ts->temperatureswitch_heatup_poll = THEKERNEL->config->value(temperatureswitch_checksum, modcs, temperatureswitch_heatup_poll_checksum)->by_default(15)->as_number();
+    ts->temperatureswitch_cooldown_poll = THEKERNEL->config->value(temperatureswitch_checksum, modcs, temperatureswitch_cooldown_poll_checksum)->by_default(60)->as_number();
+    ts->current_delay = ts->temperatureswitch_heatup_poll;
 
-    second_counter = 0;
-    current_delay = this->temperatureswitch_heatup_poll;
+    // set initial state
+    ts->current_state= NONE;
+    ts->second_counter = ts->current_delay; // do test immediately on first second_tick
+    // if not defined then always armed, otherwise start out disarmed
+    ts->armed= (ts->arm_mcode == 0);
 
     // Register for events
-    this->register_for_event(ON_SECOND_TICK);
+    ts->register_for_event(ON_SECOND_TICK);
+
+    if(ts->arm_mcode != 0) {
+        ts->register_for_event(ON_GCODE_RECEIVED);
+    }
+    return ts;
+}
+
+void TemperatureSwitch::on_gcode_received(void *argument)
+{
+    Gcode *gcode = static_cast<Gcode *>(argument);
+    if(gcode->has_m && gcode->m == this->arm_mcode) {
+        this->armed= (gcode->has_letter('S') && gcode->get_value('S') != 0);
+        gcode->stream->printf("temperature switch %s\n", this->armed ? "armed" : "disarmed");
+    }
 }
 
 // Called once a second but we only need to service on the cooldown and heatup poll intervals
 void TemperatureSwitch::on_second_tick(void *argument)
 {
     second_counter++;
-    if (second_counter < current_delay) {
-        return;
+    if (second_counter < current_delay) return;
+
+    second_counter = 0;
+    float current_temp = this->get_highest_temperature();
+
+    if (current_temp >= this->temperatureswitch_threshold_temp) {
+        set_state(HIGH_TEMP);
+
     } else {
-        second_counter = 0;
-        float current_temp = this->get_highest_temperature();
-    
-        if (current_temp >= this->temperatureswitch_threshold_temp) {
-            // temp >= threshold temp, turn the cooler switch on if it isn't already
-            if (!temperatureswitch_state) {
-                set_switch(true);
-                current_delay = temperatureswitch_cooldown_poll;               
-            }
-        } else {
-            // temp < threshold temp, turn the cooler switch off if it isn't already
-            if (temperatureswitch_state) {
-                set_switch(false);
-                current_delay = temperatureswitch_heatup_poll;
-            }
-        }   
+        set_state(LOW_TEMP);
+   }
+}
+
+void TemperatureSwitch::set_state(STATE state)
+{
+    if(state == this->current_state) return; // state did not change
+
+    // state has changed
+    switch(this->trigger) {
+        case LEVEL:
+            // switch on or off depending on HIGH or LOW
+            set_switch(state == HIGH_TEMP);
+            break;
+
+        case RISING:
+            // switch on if rising edge
+            if(this->current_state == LOW_TEMP && state == HIGH_TEMP) set_switch(true);
+            break;
+
+        case FALLING:
+            // switch off if falling edge
+            if(this->current_state == HIGH_TEMP && state == LOW_TEMP) set_switch(false);
+            break;
     }
+
+    this->current_delay = state == HIGH_TEMP ? this->temperatureswitch_cooldown_poll : this->temperatureswitch_heatup_poll;
+    this->current_state= state;
 }
 
 // Get the highest temperature from the set of temperature controllers
 float TemperatureSwitch::get_highest_temperature()
 {
-    void *returned_temp;
     float high_temp = 0.0;
 
-    for (auto controller : temp_controllers) {
-        bool temp_ok = PublicData::get_value(temperature_control_checksum, controller, current_temperature_checksum, &returned_temp);
-        if (temp_ok) {
-            struct pad_temperature temp =  *static_cast<struct pad_temperature *>(returned_temp);
+    std::vector<struct pad_temperature> controllers;
+    bool ok = PublicData::get_value(temperature_control_checksum, poll_controls_checksum, &controllers);
+    if (ok) {
+        for (auto &c : controllers) {
             // check if this controller's temp is the highest and save it if so
-            if (temp.current_temperature > high_temp && temp.designator.substr(0, 1) == "T") {
-                high_temp = temp.current_temperature;
+            if (c.designator[0] == this->designator && c.current_temperature > high_temp) {
+                high_temp = c.current_temperature;
             }
         }
     }
+
     return high_temp;
 }
 
 // Turn the switch on (true) or off (false)
 void TemperatureSwitch::set_switch(bool switch_state)
 {
-    this->temperatureswitch_state = switch_state;
-    bool ok = PublicData::set_value(switch_checksum, get_checksum(this->temperatureswitch_type), state_checksum, &this->temperatureswitch_state);
+    if(!this->armed) return; // do not actually switch anything if not armed
+
+    if(this->arm_mcode != 0 && this->trigger != LEVEL) {
+        // if edge triggered we only trigger once per arming, if level triggered we switch as long as we are armed
+        this->armed= false;
+    }
+
+    if(this->inverted) switch_state= !switch_state; // turn switch on or off inverted
+
+    // get current switch state
+    struct pad_switch pad;
+    bool ok = PublicData::get_value(switch_checksum, this->temperatureswitch_switch_cs, 0, &pad);
     if (!ok) {
-        THEKERNEL->streams->printf("Failed changing switch state.\r\n");
+        THEKERNEL->streams->printf("// Failed to get switch state.\r\n");
+        return;
+    }
+
+    if(pad.state == switch_state) return; // switch is already in the requested state
+
+    ok = PublicData::set_value(switch_checksum, this->temperatureswitch_switch_cs, state_checksum, &switch_state);
+    if (!ok) {
+        THEKERNEL->streams->printf("// Failed changing switch state.\r\n");
     }
 }

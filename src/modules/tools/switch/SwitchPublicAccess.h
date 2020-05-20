@@ -5,7 +5,6 @@
 #define switch_checksum              CHECKSUM("switch")
 #define fan_checksum                 CHECKSUM("fan")
 #define state_checksum               CHECKSUM("state")
-#define value_checksum               CHECKSUM("value")
 
 struct pad_switch {
     int name;

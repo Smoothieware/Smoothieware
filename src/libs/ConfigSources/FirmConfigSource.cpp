@@ -20,20 +20,27 @@ using namespace std;
 extern char _binary_config_default_start;
 extern char _binary_config_default_end;
 
-
 FirmConfigSource::FirmConfigSource(const char* name){
     this->name_checksum = get_checksum(name);
+    this->start= &_binary_config_default_start;
+    this->end= &_binary_config_default_end;
+}
+
+FirmConfigSource::FirmConfigSource(const char* name, const char *start, const char *end){
+    this->name_checksum = get_checksum(name);
+    this->start= start;
+    this->end= end;
 }
 
 // Transfer all values found in the file to the passed cache
 void FirmConfigSource::transfer_values_to_cache( ConfigCache* cache ){
 
-    char* p = &_binary_config_default_start;
+    const char* p = this->start;
     // For each line
-    while( p < &_binary_config_default_end ){
+    while( p < this->end ){
         // find eol
-        char *eol= p;
-        while(eol < &_binary_config_default_end) {
+        const char *eol= p;
+        while(eol < this->end) {
             if(*eol++ == '\n') break;
         }
         string line(p, eol-p);
@@ -59,12 +66,12 @@ string FirmConfigSource::read( uint16_t check_sums[3] ){
 
     string value = "";
 
-    char* p = &_binary_config_default_start;
+    const char* p = this->start;
     // For each line
-    while( p < &_binary_config_default_end ){
+    while( p < this->end ){
         // find eol
-        char *eol= p;
-        while(eol < &_binary_config_default_end) {
+        const char *eol= p;
+        while(eol < this->end) {
             if(*eol++ == '\n') break;
         }
         string line(p, eol-p);

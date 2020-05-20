@@ -34,10 +34,7 @@ public:
     };
 
 	bool isFull() {
-		__disable_irq();
-		bool b= ((write + 1) % size == read);
-		__enable_irq();
-		return b;
+		return ((write + 1) % size == read);
     };
 
     bool isEmpty() {
@@ -53,6 +50,14 @@ public:
         buf[write++] = k;
         write %= size;
 		__enable_irq();
+    }
+
+    // pop last entered character
+    void pop() {
+        if(!isEmpty()) {
+            write--;
+            write %= size;
+        }
     }
 
     uint16_t available() {

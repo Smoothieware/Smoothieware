@@ -16,14 +16,19 @@ class ConfigCache;
 using namespace std;
 #include <string>
 
-class FirmConfigSource : public ConfigSource {
-    public:
-        FirmConfigSource(const char* name);
-        void transfer_values_to_cache( ConfigCache* cache );
-        bool is_named( uint16_t check_sum );
-        bool write( string setting, string value );
-        string read( uint16_t check_sums[3] );
+class FirmConfigSource : public ConfigSource
+{
+public:
+    FirmConfigSource(const char *name);
+    FirmConfigSource(const char* name, const char *start, const char *end);
 
+    void transfer_values_to_cache( ConfigCache *cache );
+    bool is_named( uint16_t check_sum );
+    bool write( string setting, string value );
+    string read( uint16_t check_sums[3] );
+
+private:
+    const char *start, *end;
 };
 
 
