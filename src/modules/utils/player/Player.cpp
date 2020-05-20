@@ -433,7 +433,7 @@ void Player::on_main_loop(void *argument)
                 }
 
                 struct SerialMessage message;
-                message.message = buf;
+                message.message.assign(buf, len-1); // we do not want to include the \n
                 message.stream = this->current_stream == nullptr ? &(StreamOutput::NullStream) : this->current_stream;
 
                 // waits for the queue to have enough room
