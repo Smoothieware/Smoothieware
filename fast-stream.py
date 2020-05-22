@@ -13,7 +13,7 @@ import threading
 import time
 import signal
 import sys
- 
+
 errorflg= False
 intrflg= False
 
@@ -21,7 +21,7 @@ def signal_term_handler(signal, frame):
    global intrflg
    print('got SIGTERM...')
    intrflg= True
- 
+
 signal.signal(signal.SIGTERM, signal_term_handler)
 
 # Define command line argument interface
@@ -54,7 +54,7 @@ def read_thread():
     global okcnt, errorflg
     flag= 1
     while flag :
-        rep= s.readline()
+        rep= s.readline().decode('latin1')
         n= rep.count("ok")
         if n == 0 :
             print("Incoming: " + rep)
@@ -81,10 +81,10 @@ try:
         if line.startswith(';') :
             continue
         l= line.strip()
-        s.write(l + '\n')
+        s.write("{}\n".format(l).encode('latin1'))
         linecnt+=1
         if verbose: print("SND " + str(linecnt) + ": " + line.strip() + " - " + str(okcnt))
-        
+
 except KeyboardInterrupt:
     print("Interrupted...")
     intrflg= True
@@ -93,7 +93,7 @@ if intrflg :
     # We need to consume oks otherwise smoothie will deadlock on a full tx buffer
     print("Sending Abort - this may take a while...")
     s.write('\x18') # send halt
-    
+
 if errorflg :
     print("Target halted due to errors")
 
@@ -107,7 +107,8 @@ else :
         time.sleep(1)
 
     # Wait here until finished to close serial port and file.
-    raw_input("  Press <Enter> to exit")
+    print("  Press <Enter> to exit")
+    input();
 
 
 # Close file and serial port
