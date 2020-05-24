@@ -32,7 +32,7 @@
 
 #define iprintf(...) do { } while (0)
 
-USBSerial::USBSerial(USB *u): USBCDC(u), rxbuf(256 + 8), txbuf(128 + 8)
+USBSerial::USBSerial(USB *u): USBCDC(u), rxbuf(256), txbuf(128 + 8)
 {
     usb = u;
     nl_in_rx = 0;
