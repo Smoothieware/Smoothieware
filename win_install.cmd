@@ -32,6 +32,15 @@ set BUILDENV_CMD=%GCC4ARM_BINDIR%\buildenv.cmd
 set BUILDSHELL_CMD=%ROOTDIR%BuildShell.cmd
 set BUILDSHELL_DEBUG_CMD=%ROOTDIR%BuildShellDebug.cmd
 
+set MINIMAL_PATH=%SystemRoot%\system32;%SystemRoot%;%SystemRoot%\System32\Wbem;%SYSTEMROOT%\System32\WindowsPowerShell\v1.0\
+
+rem prune path to include required parts only
+where git | find "cmd">git_location.txt
+set /p GIT_LOCATION=<git_location.txt
+del git_location.txt
+set GIT_LOCATION=%GIT_LOCATION:\git.exe=%
+set PATH=%GIT_LOCATION%;%MINIMAL_PATH%
+
 
 rem Make sure that we are running with current directory set to where this
 rem batch file is located.
