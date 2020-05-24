@@ -912,6 +912,11 @@ void Robot::on_gcode_received(void *argument)
                     }
                     gcode->stream->printf("\n");
                 }
+                if(gcode->m == 503) {
+                    // show temporary settings
+                    gcode->stream->printf(";Temporary settings S - delta segs/sec, U - mm/line segment:\nM665 ");
+                    gcode->stream->printf("S%1.5f U%1.5f\n", this->delta_segments_per_second, this->mm_per_line_segment);
+                }
 
                 // save wcs_offsets and current_wcs
                 // TODO this may need to be done whenever they change to be compliant
