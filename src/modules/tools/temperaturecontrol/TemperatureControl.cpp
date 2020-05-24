@@ -101,7 +101,6 @@ void TemperatureControl::on_module_loaded()
 
     if(!this->readonly) {
         this->register_for_event(ON_SECOND_TICK);
-        this->register_for_event(ON_MAIN_LOOP);
         this->register_for_event(ON_SET_PUBLIC_DATA);
         this->register_for_event(ON_HALT);
     }
@@ -119,18 +118,13 @@ void TemperatureControl::on_halt(void *arg)
 
 void TemperatureControl::on_idle(void *arg)
 {
-    sensor->on_idle();
-}
-
-
-void TemperatureControl::on_main_loop(void *argument)
-{
     if (this->temp_violated) {
         this->temp_violated = false;
         THEKERNEL->streams->printf("ERROR: MINTEMP or MAXTEMP triggered on %s. Check your temperature sensors!\n", designator.c_str());
         THEKERNEL->streams->printf("HALT asserted - reset or M999 required\n");
         THEKERNEL->call_event(ON_HALT, nullptr);
     }
+    sensor->on_idle();
 }
 
 // Get configuration from the config file
