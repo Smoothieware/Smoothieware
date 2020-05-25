@@ -1253,7 +1253,7 @@ void SimpleShell::test_command( string parameters, StreamOutput *stream)
 
 void SimpleShell::jog(string parameters, StreamOutput *stream)
 {
-    // $J X0.1 [Y0.2] [F0.5]
+    // $J X0.1 [Y0.2] [S0.5]
     int n_motors= THEROBOT->get_number_registered_motors();
 
     // get axis to move and amount (X0.1)
@@ -1269,7 +1269,7 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
     // $J is first parameter
     shift_parameter(parameters);
     if(parameters.empty()) {
-        stream->printf("usage: $J X0.01 [F0.5] - axis can be XYZABC, optional speed is scale of max_rate\n");
+        stream->printf("usage: $J X0.01 [S0.5] - axis can be XYZABC, optional speed is scale of max_rate\n");
         return;
     }
 
@@ -1277,7 +1277,7 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
         string p= shift_parameter(parameters);
 
         char ax= toupper(p[0]);
-        if(ax == 'F') {
+        if(ax == 'S') {
             // get speed scale
             scale= strtof(p.substr(1).c_str(), NULL);
             continue;
@@ -1307,7 +1307,7 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
             }else{
                 rate_mm_s = std::min(rate_mm_s, THEROBOT->actuators[i]->get_max_rate());
             }
-            //hstream->printf("%d %f F%f\n", i, delta[i], rate_mm_s);
+            //stream->printf("%d %f S%f\n", i, delta[i], rate_mm_s);
         }
     }
     if(!ok) {
