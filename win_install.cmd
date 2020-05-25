@@ -75,7 +75,7 @@ echo @echo off>%BUILDENV_CMD%
 echo REM Uncomment next line and set destination drive to match mbed device>>%BUILDENV_CMD%
 echo REM SET LPC_DEPLOY=copy PROJECT.bin f:\>>%BUILDENV_CMD%
 echo.>>%BUILDENV_CMD%
-echo SET PATH=%%~dp0;%%~dp0..\..\build\win32;%%PATH%%>>%BUILDENV_CMD%
+echo SET PATH=%%~dp0;%%~dp0..\..\build\win32;%PATH%>>%BUILDENV_CMD%
 rem
 echo @cmd.exe /K %%~dp0\gcc-arm-none-eabi\bin\buildenv.cmd>%BUILDSHELL_CMD%
 
