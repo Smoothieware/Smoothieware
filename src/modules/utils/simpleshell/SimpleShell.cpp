@@ -869,7 +869,7 @@ void SimpleShell::get_command( string parameters, StreamOutput *stream)
 
     } else if (what == "state") {
         // also $G and $I
-        // [GC:G0 G54 G17 G21 G90 G94 M0 M5 M9 T0 F0.]
+        // [GC:G0 G55 G17 G21 G90 G94 M0 M5 M9 T1 F4000.0000 S0.8000]
         stream->printf("[GC:G%d %s G%d G%d G%d G94 M0 M%c M%c T%d F%1.1f S%1.4f]\n",
             THEKERNEL->gcode_dispatch->get_modal_command(),
             wcs2gcode(THEROBOT->get_current_wcs()).c_str(),
