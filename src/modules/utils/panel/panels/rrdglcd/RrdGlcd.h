@@ -36,13 +36,9 @@ public:
 
     void initDisplay(void);
     void clearScreen(void);
-    void displayString(const char *ptr, int length);
+    void displayString(int row, int column, const char *ptr, int length);
     void refresh();
-    void set_background(bool bg);
-    void set_color(int c);
-    void set_cursor(uint8_t col, uint8_t row);
-    void set_cursorPX(int x, int y);
-    void drawByte(int index, uint8_t mask, int color);   
+
      /**
     *@brief Fills the screen with the graphics described in a 1024-byte array
     *@
@@ -55,26 +51,17 @@ public:
     // copy the bits in g, of X line size pixels, to x, y in frame buffer
     void renderGlyph(int x, int y, const uint8_t *g, int pixelWidth, int pixelHeight);
     // TODO: Implement new graphics functions for RRDGLCD
-    void pixel(int x, int y, int color);
-    void drawLine(int x0, int y0, int x1, int y1,int color);
-    void drawHLine(int x, int y, int w, int color);
-    void drawVLine(int x, int y, int h, int color);
-    void drawBox(int x, int y, int w, int h, int color);
     // void setCursorPX(int x, int y);
 
 private:
     Pin cs;
     mbed::SPI* spi;
-    int drawChar(int x, int y, unsigned char c, int color, bool bg);
-    uint8_t tx, ty;
-    uint8_t text_color = 1;
+    void renderChar(uint8_t *fb, char c, int ox, int oy);
+    void displayChar(int row, int column,char inpChr);
 
     uint8_t *fb;
-    struct {
-        bool inited:1;
-        bool dirty:1;
-        bool text_background:1;
-    };
+    bool inited;
+    bool dirty;
 };
 #endif
 
