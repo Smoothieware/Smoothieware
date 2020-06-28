@@ -620,6 +620,8 @@
  */
 TMC21X::TMC21X(std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi, char d) : spi(spi), designator(d)
 {
+	connection_method = StepstickParameters::SPI;
+    max_current= 2000; //TMC2130 supports upto 2A.
     //we are not started yet
     started = false;
     //by default cool step is not enabled
