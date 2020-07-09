@@ -1268,19 +1268,16 @@ void TMC21X::set_current(uint16_t current)
     double resistor_value = (double) this->resistor;
     // remove vsense flag
     this->chopconf_register_value &= ~(CHOPCONF_VSENSE);
-    //this is derived from I=(CS+1)/32*(Vsense/Rsense)
-    //leading to CS = 32*Rsense*I/Vsense
-    //with I = 1000 mA (default)
-    //with Rsense = 50 milli Ohm (default)
+    //this is derived from 𝐼𝑅𝑀𝑆 = 𝐶𝑆 +1/32 ∗ 𝑉𝐹𝑆/ (𝑅𝑆𝐸𝑁𝑆𝐸 +20𝑚Ω) ∗1√2
     //for vsense = 0,32V (VSENSE not set)
     //or vsense = 0,18V (VSENSE set)
-    current_scaling = (uint8_t)(((resistor_value + 20) * mASetting * 32.0F / (0.32F * 1000.0F * 1000.0F)) - 0.5F); //theoretically - 1.0 for better rounding it is 0.5
+    current_scaling = (uint8_t)((5.65685F * (resistor_value + 20) * mASetting / 1000.0F) / (125 * 0.32F) - 1);
     //check if the current scaling is too low
     if (current_scaling < 16) {
         //set the Vsense bit to get a use half the sense voltage (to support lower motor currents)
         this->chopconf_register_value |= CHOPCONF_VSENSE;
         //and recalculate the current setting
-        current_scaling = (uint8_t)(((resistor_value + 20) * mASetting * 32.0F / (0.18F * 1000.0F * 1000.0F)) - 0.5F); //theoretically - 1.0 for better rounding it is 0.5
+        current_scaling = (uint8_t)((5.65685F * (resistor_value + 20) * mASetting / 1000.0F) / (125 * 0.18F) - 1);
     }
 
     //do some sanity checks
@@ -1301,6 +1298,7 @@ void TMC21X::set_current(uint16_t current)
 
 void TMC21X::setHoldCurrent(uint8_t hold)
 {
+    //hold current is passed as a percentage of run current. Use the existing current_scale to calcualte new IHOLD value.
     double current_scaling = (double)((ihold_irun_register_value & IHOLD_IRUN_IRUN) >> IHOLD_IRUN_IRUN_SHIFT);
     //delete the old value
     ihold_irun_register_value &= ~(IHOLD_IRUN_IHOLD);
@@ -1319,11 +1317,13 @@ void TMC21X::setResistor(unsigned int value)
 unsigned int TMC21X::get_current(void)
 {
     //we calculate the current according to the datasheet to be on the safe side
-    //this is not the fastest but the most accurate and illustrative way
+    //𝐼𝑅𝑀𝑆 = (𝐶𝑆 +1)/32 ∗ 𝑉𝐹𝑆/ (𝑅𝑆𝐸𝑁𝑆𝐸 +20𝑚Ω) ∗ 1/√2
+    //IRMS*1000 to get in milliAmps, similified I = (CS+1)/32 * VFS/ ((𝑅𝑆𝐸𝑁𝑆𝐸 +20) * 0.001) * 707.1067811865474
+
     double result = (double)((ihold_irun_register_value & IHOLD_IRUN_IRUN) >> IHOLD_IRUN_IRUN_SHIFT);
     double resistor_value = (double)this->resistor;
     double voltage = (chopconf_register_value & CHOPCONF_VSENSE) ? 0.18F : 0.32F;
-    result = (result + 1.0F) / 32.0F * voltage / (resistor_value + 20) * 1000.0F * 1000.0F;
+    result = (result + 1.0F) / 32.0F * voltage / ((resistor_value + 20)*0.001F) * 707.10678F;
     return (unsigned int)result;
 }
 
@@ -1494,7 +1494,7 @@ unsigned int TMC21X::getCoolstepCurrent(void)
     float result = (float)getCurrentCSReading();
     float resistor_value = (float)this->resistor;
     float voltage = (chopconf_register_value & CHOPCONF_VSENSE) ? 0.18F : 0.32F;
-    result = (result + 1.0F) / 32.0F * voltage / (resistor_value + 20) * 1000.0F * 1000.0F;
+    result = (result + 1.0F) / 32.0F * voltage / ((resistor_value + 20)*0.001F) * 707.10678F;git 
     return (unsigned int)roundf(result);
 }
 
