@@ -1260,7 +1260,7 @@ void TMC21X::setCoolStepthreshold (uint32_t threshold)
     }
 }
 
-void TMC21X::set_current(unsigned int current)
+void TMC21X::set_current(uint16_t current)
 {
     uint8_t current_scaling = 0;
     //calculate the current scaling from the max current setting (in mA)
