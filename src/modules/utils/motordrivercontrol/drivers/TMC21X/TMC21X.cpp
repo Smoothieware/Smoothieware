@@ -1272,6 +1272,8 @@ void TMC21X::set_current(uint16_t current)
     //for vsense = 0,32V (VSENSE not set)
     //or vsense = 0,18V (VSENSE set)
     current_scaling = (uint8_t)((5.65685F * (resistor_value + 20) * mASetting / 1000.0F) / (125 * 0.32F) - 1);
+    //THEKERNEL->streams->printf("Current - %d, Final CS - %d",current, (uint16_t) current_scaling);
+    
     //check if the current scaling is too low
     if (current_scaling < 16) {
         //set the Vsense bit to get a use half the sense voltage (to support lower motor currents)
@@ -1494,7 +1496,7 @@ unsigned int TMC21X::getCoolstepCurrent(void)
     float result = (float)getCurrentCSReading();
     float resistor_value = (float)this->resistor;
     float voltage = (chopconf_register_value & CHOPCONF_VSENSE) ? 0.18F : 0.32F;
-    result = (result + 1.0F) / 32.0F * voltage / ((resistor_value + 20)*0.001F) * 707.10678F;git 
+    result = (result + 1.0F) / 32.0F * voltage / ((resistor_value + 20)*0.001F) * 707.10678F;
     return (unsigned int)roundf(result);
 }
 
