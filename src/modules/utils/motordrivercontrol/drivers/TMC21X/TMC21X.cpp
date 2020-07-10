@@ -1268,18 +1268,21 @@ void TMC21X::set_current(uint16_t current)
     double resistor_value = (double) this->resistor;
     // remove vsense flag
     this->chopconf_register_value &= ~(CHOPCONF_VSENSE);
-    //this is derived from 𝐼𝑅𝑀𝑆 = 𝐶𝑆 +1/32 ∗ 𝑉𝐹𝑆/ (𝑅𝑆𝐸𝑁𝑆𝐸 +20𝑚Ω) ∗1√2
+    //this is derived from I(rms)=(CS+1)/32*(Vsense/Rsense)*1/sqrt(2)
     //for vsense = 0,32V (VSENSE not set)
     //or vsense = 0,18V (VSENSE set)
-    current_scaling = (uint8_t)((5.65685F * (resistor_value + 20) * mASetting / 1000.0F) / (125 * 0.32F) - 1);
+    // this is for I(rms) - but we use I(peak) everywhere
+    //current_scaling = (uint8_t)((5.65685F * (resistor_value + 20) * mASetting / 1000.0F) / (125 * 0.32F) - 1);
+    current_scaling = (uint8_t)(((resistor_value + 20) * mASetting * 32.0F / (0.32F * 1000.0F * 1000.0F)) - 0.5F); //theoretically - 1.0 for better rounding it is 0.5
     //THEKERNEL->streams->printf("Current - %d, Final CS - %d",current, (uint16_t) current_scaling);
-    
     //check if the current scaling is too low
     if (current_scaling < 16) {
         //set the Vsense bit to get a use half the sense voltage (to support lower motor currents)
         this->chopconf_register_value |= CHOPCONF_VSENSE;
         //and recalculate the current setting
-        current_scaling = (uint8_t)((5.65685F * (resistor_value + 20) * mASetting / 1000.0F) / (125 * 0.18F) - 1);
+	// I(rms) calculation
+        //current_scaling = (uint8_t)((5.65685F * (resistor_value + 20) * mASetting / 1000.0F) / (125 * 0.18F) - 1);
+        current_scaling = (uint8_t)(((resistor_value + 20) * mASetting * 32.0F / (0.18F * 1000.0F * 1000.0F)) - 0.5F); //theoretically - 1.0 for better rounding it is 0.5
     }
 
     //do some sanity checks
@@ -1319,13 +1322,13 @@ void TMC21X::setResistor(unsigned int value)
 unsigned int TMC21X::get_current(void)
 {
     //we calculate the current according to the datasheet to be on the safe side
-    //𝐼𝑅𝑀𝑆 = (𝐶𝑆 +1)/32 ∗ 𝑉𝐹𝑆/ (𝑅𝑆𝐸𝑁𝑆𝐸 +20𝑚Ω) ∗ 1/√2
-    //IRMS*1000 to get in milliAmps, similified I = (CS+1)/32 * VFS/ ((𝑅𝑆𝐸𝑁𝑆𝐸 +20) * 0.001) * 707.1067811865474
-
+    //this is not the fastest but the most accurate and illustrative way
     double result = (double)((ihold_irun_register_value & IHOLD_IRUN_IRUN) >> IHOLD_IRUN_IRUN_SHIFT);
     double resistor_value = (double)this->resistor;
     double voltage = (chopconf_register_value & CHOPCONF_VSENSE) ? 0.18F : 0.32F;
-    result = (result + 1.0F) / 32.0F * voltage / ((resistor_value + 20)*0.001F) * 707.10678F;
+    // this would return I(rms), but we're working with I(peak)
+    //result = (result + 1.0F) / 32.0F * voltage / ((resistor_value + 20)*0.001F) * 707.10678F;
+    result = (result + 1.0F) / 32.0F * voltage / (resistor_value + 20) * 1000.0F * 1000.0F;
     return (unsigned int)result;
 }
 
