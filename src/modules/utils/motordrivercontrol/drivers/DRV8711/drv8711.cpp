@@ -18,6 +18,8 @@
 DRV8711DRV::DRV8711DRV(std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi, char d) : spi(spi), designator(d)
 {
     error_reported.reset();
+    max_current= 4000;
+    connection_method= StepstickParameters::SPI;
 }
 
 void DRV8711DRV::init (uint16_t cs)
@@ -95,7 +97,7 @@ void DRV8711DRV::init (uint16_t cs)
     WriteAllRegisters();
 }
 
-void DRV8711DRV::set_current(uint32_t currentma)
+void DRV8711DRV::set_current(uint16_t currentma)
 {
     // derive torque and gain from current
     float c = currentma / 1000.0F; // current in amps

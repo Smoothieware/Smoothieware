@@ -3,9 +3,11 @@
 #include <functional>
 #include <bitset>
 
+#include "../StepperDrv.h"
+
 class StreamOutput;
 
-class DRV8711DRV
+class DRV8711DRV: public StepperDrv 
 {
 public:
   DRV8711DRV(std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi, char designator);
@@ -14,7 +16,7 @@ public:
 
   void set_enable(bool enable) ;
   int set_microsteps(int number_of_steps);
-  void set_current(uint32_t currentma);
+  void set_current(uint16_t currentma);
 
   void dump_status(StreamOutput *stream) ;
   bool set_raw_register(StreamOutput *stream, uint32_t reg, uint32_t val);

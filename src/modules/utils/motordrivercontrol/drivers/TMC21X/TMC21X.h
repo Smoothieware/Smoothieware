@@ -1,6 +1,5 @@
 /*
- modified from...
- TMC26X.cpp - - TMC26X Stepper library for Wiring/Arduino
+ Modified from TMC26X.h
 
  based on the stepper library by Tom Igoe, et. al.
 
@@ -39,14 +38,14 @@
 class StreamOutput;
 
 /*!
- * \class TMC26X
- * \brief Class representing a TMC26X stepper driver
+ * \class TMC21X
+ * \brief Class representing a TMC21X stepper driver
  */
-class TMC26X : public StepperDrv 
+class TMC21X : public StepperDrv
 {
 public:
     /*!
-     * \brief creates a new represenatation of a stepper motor connected to a TMC26X stepper driver
+     * \brief creates a new representation of a stepper motor connected to a TMC21X stepper driver
      *
      * This is the main constructor. If in doubt use this. You must provide all parameters as described below.
      *
@@ -56,22 +55,57 @@ public:
      * This should work on most motors (YMMV). You may want to configure and use the Spread Cycle Chopper, see  setSpreadCycleChopper().
      *
      * By default a microstepping of 1/32th is used to provide a smooth motor run, while still giving a good progression per step.
-     * You can select a different stepping with setMicrosteps() to aa different value.
+     * You can select a different stepping with setMicrosteps() to a different value.
      * \sa start(), setMicrosteps()
      */
-    TMC26X(std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi, char designator);
+    TMC21X(std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi, char designator);
 
     /*!
-     * \brief configures the TMC26X stepper driver. Before you called this function the stepper driver is in nonfunctional mode.
+     * \brief configures the TMC21X stepper driver. Before you called this function the stepper driver is in nonfunctional mode.
      *
-     * \param rms_current the maximum current to privide to the motor in mA (!). A value of 200 would send up to 200mA to the motor
-     * \param resistor the current sense resistor in milli Ohm, defaults to ,15 Ohm ( or 150 milli Ohm) as in the TMC260 Arduino Shield
+     * \param rms_current the maximum current to provide to the motor in mA, default to 1000 mA
+     * \param resistor the current sense resistor in milli Ohm, default to 50 milli Ohm
 
-     * This routine configures the TMC26X stepper driver for the given values via SPI.
+     * This routine configures the TMC21X stepper driver for the given values via SPI.
      * Most member functions are non functional if the driver has not been started.
      * Therefore it is best to call this in your Arduino setup() function.
      */
     void init(uint16_t cs);
+
+    /*!
+     * \brief Set general parameters
+     * \param i_scale_analog sets reference voltage
+     * \param internal_rsense sets sense resistors
+     * \param shaft inverse motor direction
+     * \param set hysteresis for step frequency comparison
+     *
+     * This method sets some general flags of global configuration (GCONF) register
+     */
+    void setGeneralConfiguration(bool i_scale_analog, bool internal_rsense, bool shaft, bool small_hysteresis);
+
+    /*!
+     * \brief Set diag0 pin options
+     * \param error enable DIAG0 active on driver errors: Over temperature (ot), short to GND (s2g), undervoltage chargepump (uv_cp)
+     * \param otpw enable DIAG0 active on driver over temperature
+     * \param stall enable DIAG0 active on motor stall
+     * \param pushpull enable DIAG1 push pull output (active high) or open collector output (active low)
+     *
+     *  The diagnostic pin 0 supplies a configurable set of different real time information such as driver over temperature, short to GND,
+     *  undervoltage chargepump and motor stall.
+     */
+    void setDiag0options(bool error, bool otpw, bool stall, bool pushpull);
+
+    /*!
+     * \brief Set diag1 pin options
+     * \param stall enable DIAG1 active on motor stall
+     * \param index enable DIAG1 active on index position (microstep look up table position 0)
+     * \param onstate enable DIAG1 active when chopper is on (for the coil which is in the second half of the fullstep)
+     * \param pushpull enable DIAG1 push pull output (active high) or open collector output (active low)
+     *
+     *  The diagnostic pin 1 supplies a configurable set of different real time information such as motor stall, index position
+     *  and chopper on-state.
+     */
+    void setDiag1options(bool stall, bool index, bool onstate, bool pushpull);
 
     /*!
      * \brief Set the number of microsteps in 2^i values (rounded) up to 256
@@ -149,7 +183,7 @@ public:
      * \param value 0 for off, -1 for on
      *
      * In a constant off time chopper scheme both coil choppers run freely, i.e. are not synchronized.
-     * The frequency of each chopper mainly depends on the coil current and the position dependant motor coil inductivity,
+     * The frequency of each chopper mainly depends on the coil current and the position dependent motor coil inductivity,
      * thus it depends on the microstep position. With some motors a slightly audible beat can occur between the chopper
      * frequencies, especially when they are near to each other. This typically occurs at a few microstep positions within
      * each quarter wave.
@@ -162,13 +196,90 @@ public:
     void setRandomOffTime(int8_t value);
 
     /*!
-     * \brief set the maximum motor current in mA (1000 is 1 Amp)
+     *\brief enables or disables StealthChop mode. If disabled, StealthChop is disabled, which means SpreadCycle is enabled. If enabled, StealthChop is enabled and SpreadCycle not.
+     *\param enabled a bool value true if StealthChop should be enabled, false otherwise.
+     */
+    void setStealthChopEnabled(bool enable);
+
+    /*!
+     * \brief Configures the driver with stealthChop.
+     * \param freewheel Stand still option when motor current setting is zero (I_HOLD=0). Only available with stealthChop enabled. The freewheeling option makes the motor easy movable, while both coil short options realize a passive brake. 0 - Normal operation, 1 - Freewheeling, 2 - Coil short via LS drivers, 3 - Coil short via HS drivers
+     * \param symmetric Force a symmetric PWM for each cycle. Reduces the number of updates to the PWM cycle. 0 - Normal Operation. 1 - A symmetric PWM cycle is enforced
+     * \param autoscale Enable automatic current scaling using current measurement or use forward controlled velocity based mode. 0 - Forward controlled mode, 1 - Automatic scaling with current regulator
+     * \param freq PWM frequency selection. Use the lowest setting giving good results. The frequency measured at each of the chopper outputs is half of the effective chopper frequency fPWM. 0 - fPWM = 2/1024 fCLK, 1 - fPWM=2/683 fCLK, 2 - fPWM=2/512 fCLK, 3 - fPWM=2/410 fCLK
+     * \param grad User defined PWM amplitude (gradient) for velocity based scaling or regulation loop gradient when pwm_autoscale=1.
+     * \param ampl User defined PWM amplitude (offset) for velocity based scaling or amplitude limit for re-entry into stealthChop mode when pwm_autoscale=1.
+     *
+     * Noiseless stealthChop operates absolutely free of vibration at low velocities. With stealthChop, the motor current is applied by driving a certain effective voltage into the coil, using a voltage mode PWM.
+     * There are no more configurations required except for the PWM voltage regulator response to a change of motor current. Two algorithms are provided, a manual and an automatic mode.
+     * Use automatic current control (pwm_autoscale = 1) if motor is not well-known as well as operating conditions.
+     */
+    void setStealthChop(uint8_t freewheel, bool symmetric, bool autoscale, uint8_t freq, uint8_t grad, uint8_t ampl);
+
+    /*!
+     * \brief Configures smooth current reduction time from run current to hold current.
+     * \param value Delay before power down in stand still 0=instant power down, 1..15: Current reduction delay per current step in multiple of 2^18 clocks
+     *
+     * IHOLDDELAY controls the number of clock cycles for motor power down after TPOWERDOWN in increments of 2^18 clocks
+     */
+    void setHolddelay(uint8_t value);
+
+    /*!
+     * \brief Configures delayed standstill current reduction
+     * \param value Delay before power down in stand still
+     *
+     * TPOWERDOWN sets the delay time after stand still (stst) of the motor to motor current power down. Time range is about 0 to 4 seconds (0...((2^8)-1) * 2^18 t CLK).
+     */
+    void setPowerDowndelay(uint8_t value);
+
+    /*!
+     * \brief Configures the stealthChop upper velocity threshold.
+     * \param threshold velocity threshold. For most applications an velocity threshold between 30 and 200 will fit. Setting this parameter to zero will not enable SpreadCycle.
+     *
+     * For applications requiring high velocity motion, spreadCycle may bring more stable operation in the
+     * upper velocity range. To combine no-noise operation with highest dynamic performance, the TMC22xx
+     * allows combining stealthChop and spreadCycle based on a velocity threshold
+     */
+    void setStealthChopthreshold(uint32_t threshold);
+
+    /*!
+     * \brief Configures the coolStep lower velocity threshold.
+     * \param threshold velocity threshold. For most applications an velocity threshold between 30 and 200 will fit. This setting is only used in SpreadCycle. 1... 2^20-1
+     *
+     * Lower velocity threshold for switching on coolStep and stop on stall. Below this velocity coolStep becomes disabled (not used in STEP/DIR mode).
+     * Adapt to the lower limit of the velocity range where stallGuard2 gives a stable result.
+     * Hint: May be adapted to disable coolStep during acceleration and deceleration phase by setting identical to maximum velocity value.
+     */
+    void setCoolStepthreshold(uint32_t threshold);
+
+    /*!
+     * \brief Configures the traditional constant off-time lower velocity threshold.
+     * \param threshold velocity threshold. For most applications an velocity threshold between 30 and 200 will fit. This setting disables StealthChop and SpreadCycle. 1... 2^20-1
+     * \param vhighchm high velocity chopper mode. Enables switching to chm=1 and fd=0 (constant off time with slow decay, only), when VHIGH is exceeded.
+     * \param vhighfs high velocity fullstep selection. Enables switching to fullstep, when VHIGH is exceeded. Switching takes place only at 45° position.
+     *
+     * This velocity setting allows velocity dependent switching into a different chopper mode and fullstepping to maximize torque. The stall detection feature becomes switched off for 2-3
+     * electrical periods whenever passing THIGH threshold to compensate for the effect of switching modes.
+     * Note that vhighchm and vhighfs can be combined. If set, the TOFF setting automatically becomes doubled during high velocity operation in order to avoid doubling of the chopper frequency.
+     */
+    void setConstantOffTimethreshold(uint32_t threshold, bool vhighchm, bool vhighfs);
+
+    /*!
+     * \brief set the maximum motor current and StandStill current in mA (1000 is 1 Amp)
      * Keep in mind this is the maximum peak Current. The RMS current will be 1/sqrt(2) smaller. The actual current can also be smaller
      * by employing CoolStep.
      * \param current the maximum motor current in mA
      * \sa getCurrent(), getCurrentCurrent()
      */
     void set_current(uint16_t current);
+
+    /*!
+     * \brief set standstill motor current
+     * Keep in mind this is the maximum peak Current. The RMS current will be 1/sqrt(2) smaller. The actual current can also be smaller
+     * by employing CoolStep.
+     * \param hold the standtill motor current relative to maximum motor current in percentage
+     */
+    void setHoldCurrent(uint8_t hold);
 
     /*!
      * \brief readout the motor maximum current in mA (1000 is an Amp)
@@ -179,13 +290,20 @@ public:
     unsigned int get_current(void);
 
     /*!
+     * \brief sets new resistor value
+     * This method registers the new resistor value included in current scaling calculations
+     *\rparam value sensing resistor value as a reference in milliohms
+     */
+    void setResistor(unsigned int value);
+
+    /*!
      * \brief set the StallGuard threshold in order to get sensible StallGuard readings.
      * \param stall_guard_threshold -64 … 63 the StallGuard threshold
      * \param stall_guard_filter_enabled 0 if the filter is disabled, -1 if it is enabled
      *
      * The StallGuard threshold is used to optimize the StallGuard reading to sensible values. It should be at 0 at
      * the maximum allowable load on the motor (but not before). = is a good starting point (and the default)
-     * If you get Stall Gaurd readings of 0 without any load or with too little load increase the value.
+     * If you get Stall Guard readings of 0 without any load or with too little load increase the value.
      * If you get readings of 1023 even with load decrease the setting.
      *
      * If you switch on the filter the StallGuard reading is only updated each 4th full step to reduce the noise in the
@@ -208,7 +326,7 @@ public:
     int8_t getStallGuardFilter(void);
 
     /*!
-     * \brief This method configures the CoolStep smart energy operation. You must have a proper StallGuard configuration for the motor situation (current, voltage, speed) in rder to use this feature.
+     * \brief This method configures the CoolStep smart energy operation. You must have a proper StallGuard configuration for the motor situation (current, voltage, speed) in order to use this feature.
      * \param lower_SG_threshold Sets the lower threshold for stallGuard2TM reading. Below this value, the motor current becomes increased. Allowed values are 0...480
      * \param SG_hysteresis Sets the distance between the lower and the upper threshold for stallGuard2TM reading. Above the upper threshold (which is lower_SG_threshold+SG_hysteresis+1) the motor current becomes decreased. Allowed values are 0...480
      * \param current_decrement_step_size Sets the current decrement steps. If the StallGuard value is above the threshold the current gets decremented by this step size. 0...32
@@ -219,9 +337,9 @@ public:
      * You configure the CoolStep current regulator by defining upper and lower bounds of StallGuard readouts. If the readout is above the
      * limit the current gets increased, below the limit the current gets decreased.
      * You can specify the upper an lower threshold of the StallGuard readout in order to adjust the current. You can also set the number of
-     * StallGuard readings neccessary above or below the limit to get a more stable current adjustement.
-     * The current adjustement itself is configured by the number of steps the current gests in- or decreased and the absolut minimum current
-     * (1/2 or 1/4th otf the configured current).
+     * StallGuard readings necessary above or below the limit to get a more stable current adjustment.
+     * The current adjustment itself is configured by the number of steps the current gets in- or decreased and the absolute minimum current
+     * (1/2 or 1/4th of the configured current).
      * \sa COOL_STEP_HALF_CS_LIMIT, COOL_STEP_QUARTER_CS_LIMIT
      */
     void setCoolStepConfiguration(unsigned int lower_SG_threshold, unsigned int SG_hysteresis, uint8_t current_decrement_step_size,
@@ -254,7 +372,7 @@ public:
     unsigned int getCoolStepUpperSgThreshold();
 
     /*!
-     * \brief returns the number of StallGuard readings befor CoolStep adjusts the motor current.
+     * \brief returns the number of StallGuard readings before CoolStep adjusts the motor current.
      * \sa setCoolStepConfiguration()
      */
     uint8_t getCoolStepNumberOfSGReadings();
@@ -297,7 +415,7 @@ public:
     /*!
      * \brief Reads the current current setting value and recalculates the absolute current in mA (1A would be 1000).
      * This method calculates the currently used current setting (either by setting or by CoolStep) and reconstructs
-     * the current in mA by usinge the VSENSE and resistor value. This method uses floating point math - so it
+     * the current in mA by using the VSENSE and resistor value. This method uses floating point math - so it
      * may not be the fastest.
      * \sa getCurrentCSReading(), getResistor(), isCurrentScalingHalfed(), getCurrent()
      */
@@ -315,7 +433,7 @@ public:
 
     /*!
      * \brief Return over temperature status of the last status readout
-     * return 0 is everything is OK, TMC26X_OVERTEMPERATURE_PREWARING if status is reached, TMC26X_OVERTEMPERATURE_SHUTDOWN is the chip is shutdown, -1 if the status is unknown.
+     * return 0 is everything is OK, TMC21X_OVERTEMPERATURE_PREWARNING if status is reached, TMC21X_OVERTEMPERATURE_SHUTDOWN is the chip is shutdown, -1 if the status is unknown.
      * Keep in mind that this method does not enforce a readout but uses the value of the last status readout.
      * You may want to use getMotorPosition() or getCurrentStallGuardReading() to enforce an updated status readout.
      */
@@ -338,7 +456,7 @@ public:
      */
     bool isShortToGroundB(void);
     /*!
-     * \brief iIs motor channel A connected according to the last statu readout.
+     * \brief iIs motor channel A connected according to the last status readout.
      * \return true is yes, false if not.
      * Keep in mind that this method does not enforce a readout but uses the value of the last status readout.
      * You may want to use getMotorPosition() or getCurrentStallGuardReading() to enforce an updated status readout.
@@ -346,7 +464,7 @@ public:
     bool isOpenLoadA(void);
 
     /*!
-     * \brief iIs motor channel A connected according to the last statu readout.
+     * \brief iIs motor channel A connected according to the last status readout.
      * \return true is yes, false if not.
      * Keep in mind that this method does not enforce a readout but uses the value of the last status readout.
      * You may want to use getMotorPosition() or getCurrentStallGuardReading() to enforce an updated status readout.
@@ -390,13 +508,13 @@ public:
     /*!
      * \brief Manually read out the status register
      * This function sends a byte to the motor driver in order to get the current readout. The parameter read_value
-     * seletcs which value will get returned. If the read_vlaue changes in respect to the previous readout this method
-     * automatically send two bytes to the motor: one to set the redout and one to get the actual readout. So this method
+     * selects which value will get returned. If the read_vlaue changes in respect to the previous readout this method
+     * automatically send two bytes to the motor: one to set the readout and one to get the actual readout. So this method
      * may take time to send and read one or two bits - depending on the previous readout.
-     * \param read_value selects which value to read out (0..3). You can use the defines TMC26X_READOUT_POSITION, TMC_262_READOUT_STALLGUARD, or TMC_262_READOUT_CURRENT
-     * \sa TMC26X_READOUT_POSITION, TMC_262_READOUT_STALLGUARD, TMC_262_READOUT_CURRENT
+     * \param read_value selects which value to read out (0..3). You can use the defines TMC21X_READOUT_POSITION, TMC21X_READOUT_STALLGUARD_CURRENT
+     * \sa TMC21X_READOUT_POSITION, TMC21X_READOUT_STALLGUARD_CURRENT
      */
-    void readStatus(int8_t read_value);
+    uint32_t readStatus(int8_t read_value);
 
     /*!
      * \brief Prints out all the information that can be found in the last status read out - it does not force a status readout.
@@ -411,44 +529,47 @@ public:
     bool set_options(const options_t& options);
 
 private:
-    //helper routione to get the top 10 bit of the readout
-    inline int getReadoutValue();
     bool check_error_status_bits(StreamOutput *stream);
 
     // SPI sender
-    inline void send262(unsigned long datagram);
+    inline uint32_t send2130(uint8_t reg, uint32_t datagram);
     std::function<int(uint8_t *b, int cnt, uint8_t *r)> spi;
 
-    unsigned int resistor{50}; // current sense resitor value in milliohm
+    unsigned int resistor{50}; // current sense resistor value in milliohm
+    uint8_t chopper_mode; //stealthChop or spreadCycle mode or traditional constant off-time
 
     //driver control register copies to easily set & modify the registers
-    unsigned long driver_control_register_value;
-    unsigned long chopper_config_register;
-    unsigned long cool_step_register_value;
-    unsigned long stall_guard2_current_register_value;
-    unsigned long driver_configuration_register_value;
-    //the driver status result
-    unsigned long driver_status_result;
+    uint32_t gconf_register_value;
+    uint32_t ihold_irun_register_value;
+    uint32_t tpowerdown_register_value;
+    uint32_t tpwmthrs_register_value;
+    uint32_t tcoolthrs_register_value;
+    uint32_t thigh_register_value;
+    uint32_t chopconf_register_value;
+    uint32_t coolconf_register_value;
+    uint32_t pwmconf_register_value;
+
+    //SPI status result transferred with each datagram read back
+    uint8_t spi_status_result;
 
     //status values
     int microsteps; //the current number of micro steps
 
     std::bitset<8> error_reported;
 
-    // only beeded for the tuning app report
+    // only needed for the tuning app report
     struct {
         int8_t blank_time:8;
         int8_t constant_off_time:5; //we need to remember this value in order to enable and disable the motor
         int8_t h_start:4;
         int8_t h_end:4;
         int8_t h_decrement:3;
-        bool cool_step_enabled:1; //we need to remember this to configure the coolstep if it si enabled
+        bool cool_step_enabled:1; //we need to remember this to configure the coolstep if it is enabled
         bool started:1; //if the stepper has been started yet
     };
 
     uint8_t cool_step_lower_threshold; // we need to remember the threshold to enable and disable the CoolStep feature
     char designator;
-    
-    bool write_only = false;
+
 };
 
