@@ -271,7 +271,7 @@ public:
      * \param current the maximum motor current in mA
      * \sa getCurrent(), getCurrentCurrent()
      */
-    void set_current(unsigned int current);
+    void set_current(uint16_t current);
 
     /*!
      * \brief set standstill motor current
