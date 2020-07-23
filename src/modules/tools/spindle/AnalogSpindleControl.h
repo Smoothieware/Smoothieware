@@ -26,15 +26,17 @@ class AnalogSpindleControl: public SpindleControl {
         
     private:
        
-        Pin *switch_on; // digital output for switching the VFD on 
+        Pin *switch_on; // digital output for switching the VFD on
+        Pin *reverse_dir; // digital output pin for reverse  
         mbed::PwmOut *pwm_pin; // PWM output for spindle speed control
         bool output_inverted;
-        
+                       
         int target_rpm;
         int min_rpm;
         int max_rpm;
 
         void turn_on(void);
+        void turn_on_rev(void);
         void turn_off(void);
         void set_speed(int);
         void report_speed(void);

@@ -51,6 +51,20 @@ void SpindleControl::on_gcode_received(void *argument)
                 set_speed(gcode->get_value('S'));
             }
         }
+        else if (gcode->m == 4)
+        {
+            THECONVEYOR->wait_for_idle();
+            // M4: Spindle on reverse
+            if(!spindle_on) {
+                turn_on_rev();
+            }
+
+            // M3 with S value provided: set speed
+            if (gcode->has_letter('S'))
+            {
+                set_speed(gcode->get_value('S'));
+            }
+        }
         else if (gcode->m == 5)
         {
             THECONVEYOR->wait_for_idle();

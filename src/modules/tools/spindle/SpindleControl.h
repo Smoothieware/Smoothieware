@@ -18,12 +18,13 @@ class SpindleControl: public Module {
 
     protected:
         bool spindle_on;
-
+        
     private:
         void on_gcode_received(void *argument);
         void on_halt(void *argument);
         
         virtual void turn_on(void) {};
+        virtual void turn_on_rev(void) {};
         virtual void turn_off(void) {};
         virtual void set_speed(int) {};
         virtual void report_speed(void) {};

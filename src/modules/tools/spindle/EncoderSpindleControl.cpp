@@ -7,7 +7,7 @@
 
 #include "libs/Module.h"
 #include "libs/Kernel.h"
-#include "PWMSpindleControl.h"
+#include "EncoderSpindleControl.h"
 #include "Config.h"
 #include "checksumm.h"
 #include "ConfigValue.h"
@@ -30,19 +30,21 @@
 #define spindle_feedback_pin_checksum       CHECKSUM("feedback_pin")
 #define spindle_pulses_per_rev_checksum     CHECKSUM("pulses_per_rev")
 #define spindle_default_rpm_checksum        CHECKSUM("default_rpm")
+#define spindle_max_rpm_checksum            CHECKSUM("max_rpm")
 #define spindle_control_P_checksum          CHECKSUM("control_P")
 #define spindle_control_I_checksum          CHECKSUM("control_I")
 #define spindle_control_D_checksum          CHECKSUM("control_D")
 #define spindle_control_smoothing_checksum  CHECKSUM("control_smoothing")
 #define spindle_reverse_dir_pin_checksum    CHECKSUM("reverse_dir_pin")
+#define spindle_switch_on_pin_checksum      CHECKSUM("switch_on_pin")
 
 #define UPDATE_FREQ 1000
 
-PWMSpindleControl::PWMSpindleControl()
+EncoderSpindleControl::EncoderSpindleControl()
 {
 }
 
-void PWMSpindleControl::on_module_loaded()
+void EncoderSpindleControl::on_module_loaded()
 {
     last_time = 0;
     last_edge = 0;
@@ -54,7 +56,8 @@ void PWMSpindleControl::on_module_loaded()
     spindle_on = false;
     
     pulses_per_rev = THEKERNEL->config->value(spindle_checksum, spindle_pulses_per_rev_checksum)->by_default(1.0f)->as_number();
-    target_rpm = THEKERNEL->config->value(spindle_checksum, spindle_default_rpm_checksum)->by_default(5000.0f)->as_number();    
+    max_rpm = THEKERNEL->config->value(spindle_checksum, spindle_max_rpm_checksum)->by_default(10000.0f)->as_number();
+    default_rpm = THEKERNEL->config->value(spindle_checksum, spindle_default_rpm_checksum)->by_default(max_rpm * .1f)->as_number();
     control_P_term = THEKERNEL->config->value(spindle_checksum, spindle_control_P_checksum)->by_default(0.0001f)->as_number();
     control_I_term = THEKERNEL->config->value(spindle_checksum, spindle_control_I_checksum)->by_default(0.0001f)->as_number();
     control_D_term = THEKERNEL->config->value(spindle_checksum, spindle_control_D_checksum)->by_default(0.0001f)->as_number();
@@ -97,7 +100,7 @@ void PWMSpindleControl::on_module_loaded()
         if (smoothie_pin->port_number == 0 || smoothie_pin->port_number == 2) {
             PinName pinname = port_pin((PortName)smoothie_pin->port_number, smoothie_pin->pin);
             feedback_pin = new mbed::InterruptIn(pinname);
-            feedback_pin->rise(this, &PWMSpindleControl::on_pin_rise);
+            feedback_pin->rise(this, &EncoderSpindleControl::on_pin_rise);
             NVIC_SetPriority(EINT3_IRQn, 16);
         } else {
             THEKERNEL->streams->printf("Error: Spindle feedback pin has to be on P0 or P2.\n");
@@ -114,11 +117,19 @@ void PWMSpindleControl::on_module_loaded()
         reverse_dir = new Pin();
         reverse_dir->from_string(reverse_dir_pin)->as_output()->set(false);
     }
+
+    // Get digital out pin for switch on
+    switch_on_pin = THEKERNEL->config->value(spindle_checksum, spindle_switch_on_pin_checksum)->by_default("nc")->as_string();
+    switch_on = NULL;
+    if(switch_on_pin.compare("nc") != 0) {
+        switch_on = new Pin();
+        switch_on->from_string(switch_on_pin)->as_output()->set(false);
+    }
     
-    THEKERNEL->slow_ticker->attach(UPDATE_FREQ, this, &PWMSpindleControl::on_update_speed);       
+    THEKERNEL->slow_ticker->attach(UPDATE_FREQ, this, &EncoderSpindleControl::on_update_speed);       
 }
 
-void PWMSpindleControl::on_pin_rise()
+void EncoderSpindleControl::on_pin_rise()
 {
     uint32_t timestamp = us_ticker_read();
     last_time = timestamp - last_edge;
@@ -126,7 +137,7 @@ void PWMSpindleControl::on_pin_rise()
     irq_count++;
 }
 
-uint32_t PWMSpindleControl::on_update_speed(uint32_t dummy)
+uint32_t EncoderSpindleControl::on_update_speed(uint32_t dummy)
 {
     // If we don't get any interrupts for 1 second, set current RPM to 0
     uint32_t new_irq = irq_count;
@@ -155,7 +166,7 @@ uint32_t PWMSpindleControl::on_update_speed(uint32_t dummy)
         current_I_value += control_I_term * error * 1.0f / UPDATE_FREQ;
         current_I_value = confine(current_I_value, -1.0f, 1.0f);
 
-        float new_pwm = .5f;
+        float new_pwm = default_rpm / max_rpm;
         new_pwm += control_P_term * error;
         new_pwm += current_I_value;
         new_pwm += control_D_term * UPDATE_FREQ * (error - prev_error);
@@ -180,56 +191,66 @@ uint32_t PWMSpindleControl::on_update_speed(uint32_t dummy)
     return 0;
 }
 
-void PWMSpindleControl::turn_on() {
+void EncoderSpindleControl::turn_on() {
     // clear output for reverse direction     
     if(reverse_dir != NULL)
         reverse_dir->set(false);
+    // set output for switch on    
+    if(switch_on != NULL)
+        switch_on->set(true);
     spindle_on = true;
 }
 
-void PWMSpindleControl::turn_on_rev() {
-    // set output for reverse direction     
-    if(reverse_dir != NULL){
+void EncoderSpindleControl::turn_on_rev() {
+    // check if reverse is being used     
+    if(reverse_dir != NULL) {
+        // set output for switch on
+        if(switch_on != NULL)
+            switch_on->set(true);
+        // set output for reverse direction    
         reverse_dir->set(true);
         spindle_on = true;
     }    
 }
 
-void PWMSpindleControl::turn_off() {
+void EncoderSpindleControl::turn_off() {
     // clear output for reverse direction     
     if(reverse_dir != NULL)
         reverse_dir->set(false);
+    // clear output for switch on    
+    if(switch_on != NULL)
+            switch_on->set(false);
     spindle_on = false;
 }
 
 
-void PWMSpindleControl::set_speed(int rpm) {
+void EncoderSpindleControl::set_speed(int rpm) {
     target_rpm = rpm;
 }
 
 
-void PWMSpindleControl::report_speed() {
+void EncoderSpindleControl::report_speed() {
     THEKERNEL->streams->printf("Current RPM: %5.0f  Target RPM: %5.0f  PWM value: %5.3f \n",
                                current_rpm, target_rpm, current_pwm_value);
 }
 
 
-void PWMSpindleControl::set_p_term(float p) {
+void EncoderSpindleControl::set_p_term(float p) {
     control_P_term = p;
 }
 
 
-void PWMSpindleControl::set_i_term(float i) {
+void EncoderSpindleControl::set_i_term(float i) {
     control_I_term = i;
 }
 
 
-void PWMSpindleControl::set_d_term(float d) {
+void EncoderSpindleControl::set_d_term(float d) {
     control_D_term = d;
 }
 
 
-void PWMSpindleControl::report_settings() {
+void EncoderSpindleControl::report_settings() {
     THEKERNEL->streams->printf("P: %0.6f I: %0.6f D: %0.6f\n",
                                control_P_term, control_I_term, control_D_term);
 }

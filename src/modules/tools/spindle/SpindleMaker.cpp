@@ -10,6 +10,7 @@
 #include "libs/Kernel.h"
 #include "SpindleControl.h"
 #include "PWMSpindleControl.h"
+#include "EncoderSpindleControl.h"
 #include "AnalogSpindleControl.h"
 #include "HuanyangSpindleControl.h"
 #include "Config.h"
@@ -42,6 +43,8 @@ void SpindleMaker::load_spindle(){
         spindle = new PWMSpindleControl();
     } else if ( spindle_type.compare("analog") == 0 ) {
         spindle = new AnalogSpindleControl();
+    } else if ( spindle_type.compare("encoder") == 0 ) {
+        spindle = new EncoderSpindleControl();    
     } else if ( spindle_type.compare("modbus") == 0 ) {
         if(vfd_type.compare("huanyang") == 0) { 
             spindle = new HuanyangSpindleControl();

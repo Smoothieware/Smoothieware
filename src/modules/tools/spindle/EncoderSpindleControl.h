@@ -5,8 +5,8 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef PWM_SPINDLE_MODULE_H
-#define PWM_SPINDLE_MODULE_H
+#ifndef ENCODER_SPINDLE_MODULE_H
+#define ENCODER_SPINDLE_MODULE_H
 
 #include "SpindleControl.h"
 #include <stdint.h>
@@ -18,11 +18,12 @@ namespace mbed {
 
 class Pin;
 
-// This module implements closed loop PID control for spindle RPM.
-class PWMSpindleControl: public SpindleControl {
+// This module implements closed loop PID control for spindle RPM. 
+// Currently a clone of PWM module. Will be modified for hardware encoder implementation. 
+class EncoderSpindleControl: public SpindleControl {
     public:
-        PWMSpindleControl();
-        virtual ~PWMSpindleControl() {};
+        EncoderSpindleControl();
+        virtual ~EncoderSpindleControl() {};
         void on_module_loaded();
     
     private:
@@ -30,12 +31,14 @@ class PWMSpindleControl: public SpindleControl {
         void on_pin_rise();
         uint32_t on_update_speed(uint32_t dummy);
         uint32_t tick_counter(uint32_t dummy);
-
-        std::string reverse_dir_pin; 
+        
         Pin *reverse_dir; // digital output pin for reverse
+        Pin *switch_on; // digital output pin to Enable spindle drive 
         mbed::PwmOut *pwm_pin; // PWM output for spindle speed control
         mbed::InterruptIn *feedback_pin; // Interrupt pin for measuring speed
-        bool output_inverted;               
+        bool output_inverted;
+        std::string reverse_dir_pin;
+        std::string switch_on_pin;        
                
         bool vfd_spindle; // true if we have a VFD driven spindle
 

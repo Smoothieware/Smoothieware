@@ -21,6 +21,7 @@
 #define spindle_pwm_pin_checksum            CHECKSUM("pwm_pin")
 #define spindle_pwm_period_checksum         CHECKSUM("pwm_period")
 #define spindle_switch_on_pin_checksum      CHECKSUM("switch_on_pin")
+#define spindle_reverse_dir_pin_checksum    CHECKSUM("reverse_dir_pin")
 
 void AnalogSpindleControl::on_module_loaded()
 {
@@ -59,29 +60,52 @@ void AnalogSpindleControl::on_module_loaded()
         switch_on = new Pin();
         switch_on->from_string(switch_on_pin)->as_output()->set(false);
     }
+
+    // Get digital out pin for reverse direction
+    std::string reverse_dir_pin = THEKERNEL->config->value(spindle_checksum, spindle_reverse_dir_pin_checksum)->by_default("nc")->as_string();
+    reverse_dir = NULL;
+    if(reverse_dir_pin.compare("nc") != 0) {
+        reverse_dir = new Pin();
+        reverse_dir->from_string(reverse_dir_pin)->as_output()->set(false);
+    }
 }
 
 void AnalogSpindleControl::turn_on() 
 {
     // set the output for switching the VFD on
     if(switch_on != NULL) 
-        switch_on->set(true); 
+        switch_on->set(true);
+    if(reverse_dir != NULL)
+        reverse_dir->set(false); 
     spindle_on = true;
 
 }
 
+void AnalogSpindleControl::turn_on_rev() 
+{
+    if(reverse_dir != NULL) {
+        // set the output for switching the VFD on
+        if(switch_on != NULL) 
+            switch_on->set(true);
+        // set output for reverse direction
+        reverse_dir->set(true);
+        spindle_on = true;
+    }    
+}
 
 void AnalogSpindleControl::turn_off() 
 {
     // clear the output for switching the VFD on 
     if(switch_on != NULL) 
         switch_on->set(false);
+    // clear the output for reverse direction
+    if(reverse_dir != NULL)
+        reverse_dir->set(false);    
     spindle_on = false;
     // set the PWM value to 0 to make sure it stops
     update_pwm(0);
 
 }
-
 
 void AnalogSpindleControl::set_speed(int rpm) 
 {
