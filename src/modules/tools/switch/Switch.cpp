@@ -14,6 +14,7 @@
 #include "modules/robot/Conveyor.h"
 #include "PublicDataRequest.h"
 #include "SwitchPublicAccess.h"
+#include "Robot.h"
 #include "SlowTicker.h"
 #include "Config.h"
 #include "Gcode.h"
@@ -47,6 +48,7 @@
 #define    failsafe_checksum            CHECKSUM("failsafe_set_to")
 #define    halt_setting_checksum        CHECKSUM("halt_set_to")
 #define    ignore_onhalt_checksum       CHECKSUM("ignore_on_halt")
+#define    slave_axis_letter_checksum   CHECKSUM("slave_axis_letter")
 
 #define ROUND2DP(x) (roundf(x * 1e2F) / 1e2F)
 
@@ -99,6 +101,7 @@ void Switch::on_config_reload(void *argument)
     this->output_on_command = THEKERNEL->config->value(switch_checksum, this->name_checksum, output_on_command_checksum )->by_default("")->as_string();
     this->output_off_command = THEKERNEL->config->value(switch_checksum, this->name_checksum, output_off_command_checksum )->by_default("")->as_string();
     this->switch_state = THEKERNEL->config->value(switch_checksum, this->name_checksum, startup_state_checksum )->by_default(false)->as_bool();
+    this->slave_axis_letter = THEKERNEL->config->value(switch_checksum, this->name_checksum, slave_axis_letter_checksum )->by_default("0")->as_string();
 
     this->input_pin= new Pin();
     this->input_pin->from_string( THEKERNEL->config->value(switch_checksum, this->name_checksum, input_pin_checksum )->by_default("nc")->as_string())->as_input();
@@ -467,6 +470,20 @@ void Switch::on_main_loop(void *argument)
 // Check the state of the button and act accordingly
 uint32_t Switch::pinpoll_tick(uint32_t dummy)
 {
+    // In this branch, here we also check for the position of an axis, and modify our PWM value to match it as needed
+    // This is the core of the "slave axis" feature
+
+    // Get axis positions
+    float mpos[3];
+    THEROBOT->get_current_machine_position(mpos);
+
+    // Depending on the axis, set the current switch value
+    switch(this->slave_axis_letter[0]){
+      case 'X': this->switch_value = mpos[0]; break;
+      case 'Y': this->switch_value = mpos[1]; break;
+      case 'Z': this->switch_value = mpos[2]; break;
+    }
+
     // If pin changed
     bool current_state = this->input_pin->get();
     if(this->input_pin_state != current_state) {
@@ -507,4 +524,3 @@ void Switch::send_gcode(std::string msg, StreamOutput *stream)
     message.stream = stream;
     THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
 }
-

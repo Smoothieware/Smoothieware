@@ -55,6 +55,7 @@ class Switch : public Module {
         };
         std::string    output_on_command;
         std::string    output_off_command;
+        std::string    slave_axis_letter;
         struct {
             uint16_t  name_checksum:16;
             uint16_t  input_pin_behavior:16;
