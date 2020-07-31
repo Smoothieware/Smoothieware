@@ -132,7 +132,7 @@ bool DeltaGridStrategy::handleConfig()
     grid = (float *)AHB0.alloc(grid_size * grid_size * sizeof(float));
 
     if(grid == nullptr) {
-        THEKERNEL->streams->printf("Error: Not enough memory\n");
+        printf("Error: Not enough memory\n");
         return false;
     }
 

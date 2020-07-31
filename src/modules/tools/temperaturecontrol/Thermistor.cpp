@@ -144,7 +144,7 @@ void Thermistor::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
         std::vector<float> trl= parse_number_list(rtc.c_str());
         if(trl.size() != 6) {
             // punt we need 6 numbers, three pairs
-            THEKERNEL->streams->printf("Error in config need 6 numbers for Steinhart-Hart\n");
+            printf("Error in config need 6 numbers for Steinhart-Hart\n");
             this->bad_config= true;
             return;
         }
@@ -160,7 +160,7 @@ void Thermistor::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
         std::vector<float> v= parse_number_list(coef.c_str());
         if(v.size() != 3) {
             // punt we need 6 numbers, three pairs
-            THEKERNEL->streams->printf("Error in config need 3 Steinhart-Hart coefficients\n");
+            printf("Error in config need 3 Steinhart-Hart coefficients\n");
             this->bad_config= true;
             return;
         }
@@ -175,7 +175,7 @@ void Thermistor::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
         calc_jk();
 
     }else if(!found) {
-        THEKERNEL->streams->printf("Error in config need rt_curve, coefficients, beta or a valid predefined thermistor defined\n");
+        printf("Error in config need rt_curve, coefficients, beta or a valid predefined thermistor defined\n");
         this->bad_config= true;
         return;
     }

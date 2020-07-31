@@ -76,19 +76,19 @@ bool MotorDriverControl::config_module(uint16_t cs)
         // NOTE Deprecated use of designator for backward compatibility
         str= THEKERNEL->config->value( motor_driver_control_checksum, cs, designator_checksum)->by_default("")->as_string();
         if(str.empty()) {
-            THEKERNEL->streams->printf("MotorDriverControl ERROR: axis not defined\n");
+            printf("MotorDriverControl ERROR: axis not defined\n");
             return false; // axis/axis required
         }
     }
     axis= str[0];
     if( !((axis >= 'X' && axis <= 'Z') || (axis >= 'A' && axis <= 'C')) ) {
-        THEKERNEL->streams->printf("MotorDriverControl ERROR: axis must be one of XYZABC\n");
+        printf("MotorDriverControl ERROR: axis must be one of XYZABC\n");
         return false; // axis is illegal
     }
 
     spi_cs_pin.from_string(THEKERNEL->config->value( motor_driver_control_checksum, cs, spi_cs_pin_checksum)->by_default("nc")->as_string())->as_output();
     if(!spi_cs_pin.connected()) {
-        THEKERNEL->streams->printf("MotorDriverControl %c ERROR: chip select not defined\n", axis);
+        printf("MotorDriverControl %c ERROR: chip select not defined\n", axis);
         return false; // if not defined then we can't use this instance
     }
     spi_cs_pin.set(1);
@@ -96,7 +96,7 @@ bool MotorDriverControl::config_module(uint16_t cs)
 
     str= THEKERNEL->config->value( motor_driver_control_checksum, cs, chip_checksum)->by_default("")->as_string();
     if(str.empty()) {
-        THEKERNEL->streams->printf("MotorDriverControl %c ERROR: chip type not defined\n", axis);
+        printf("MotorDriverControl %c ERROR: chip type not defined\n", axis);
         return false; // chip type required
     }
 
@@ -113,7 +113,7 @@ bool MotorDriverControl::config_module(uint16_t cs)
         tmc26x= new TMC26X(std::bind( &MotorDriverControl::sendSPI, this, _1, _2, _3), axis);
 
     }else{
-        THEKERNEL->streams->printf("MotorDriverControl %c ERROR: Unknown chip type: %s\n", axis, str.c_str());
+        printf("MotorDriverControl %c ERROR: Unknown chip type: %s\n", axis, str.c_str());
         return false;
     }
 
@@ -128,7 +128,7 @@ bool MotorDriverControl::config_module(uint16_t cs)
     } else if(spi_channel == 1) {
         mosi = P0_9; miso = P0_8; sclk = P0_7;
     } else {
-        THEKERNEL->streams->printf("MotorDriverControl %c ERROR: Unknown SPI Channel: %d\n", axis, spi_channel);
+        printf("MotorDriverControl %c ERROR: Unknown SPI Channel: %d\n", axis, spi_channel);
         return false;
     }
 
@@ -189,7 +189,7 @@ bool MotorDriverControl::config_module(uint16_t cs)
         this->register_for_event(ON_SECOND_TICK);
     }
 
-    THEKERNEL->streams->printf("MotorDriverControl INFO: configured motor %c (%d): as %s, cs: %04X\n", axis, id, chip==TMC2660?"TMC2660":chip==DRV8711?"DRV8711":"UNKNOWN", (spi_cs_pin.port_number<<8)|spi_cs_pin.pin);
+    printf("MotorDriverControl INFO: configured motor %c (%d): as %s, cs: %04X\n", axis, id, chip==TMC2660?"TMC2660":chip==DRV8711?"DRV8711":"UNKNOWN", (spi_cs_pin.port_number<<8)|spi_cs_pin.pin);
 
     return true;
 }
