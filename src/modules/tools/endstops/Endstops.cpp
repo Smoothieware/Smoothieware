@@ -279,7 +279,7 @@ bool Endstops::load_config()
         // check we are not going above the number of defined actuators/axis
         if(i >= THEROBOT->get_number_registered_motors()) {
             // too many axis we only have configured n_motors
-            THEKERNEL->streams->printf("ERROR: endstop %d is greater than number of defined motors. Endstops disabled\n", i);
+            printf("ERROR: endstop %d is greater than number of defined motors. Endstops disabled\n", i);
             delete pin_info;
             return false;
         }

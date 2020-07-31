@@ -170,7 +170,7 @@ bool CartGridStrategy::handleConfig()
     this->x_size = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, x_size_checksum)->by_default(0.0F)->as_number();
     this->y_size = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, y_size_checksum)->by_default(0.0F)->as_number();
     if (this->x_size == 0.0F || this->y_size == 0.0F) {
-        THEKERNEL->streams->printf("Error: Invalid config, x_size and y_size must be defined\n");
+        printf("Error: Invalid config, x_size and y_size must be defined\n");
         return false;
     }
 
@@ -218,7 +218,7 @@ bool CartGridStrategy::handleConfig()
     grid = (float *)AHB0.alloc(configured_grid_x_size * configured_grid_y_size * sizeof(float));
 
     if(grid == nullptr) {
-        THEKERNEL->streams->printf("Error: Not enough memory\n");
+        printf("Error: Not enough memory\n");
         return false;
     }
 
