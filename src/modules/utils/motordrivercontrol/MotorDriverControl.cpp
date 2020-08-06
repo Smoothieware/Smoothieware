@@ -148,7 +148,7 @@ bool MotorDriverControl::config_module(uint16_t cs)
         PinName rxd = NC;
         
         // Read/Write or Write-only mode?
-        if (THEKERNEL->config->value(motor_driver_control_checksum, cs, sw_uart_rx_pin_checksum)->by_default("nc")->as_string() != "NC" ) {            
+        if (THEKERNEL->config->value(motor_driver_control_checksum, cs, sw_uart_rx_pin_checksum)->by_default("nc")->as_string() != "nc" ) {            
             sw_uart_rx_pin->from_string(THEKERNEL->config->value(motor_driver_control_checksum, cs, sw_uart_rx_pin_checksum)->by_default("nc")->as_string())->as_input();
             if(!sw_uart_rx_pin->connected()) {
                 THEKERNEL->streams->printf("MotorDriverControl %c ERROR: cannot open RX PIN, falling back to writeonly!\n", axis);
