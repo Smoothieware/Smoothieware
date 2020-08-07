@@ -153,7 +153,11 @@ bool MotorDriverControl::config_module(uint16_t cs)
             if(!sw_uart_rx_pin->connected()) {
                 printf("MotorDriverControl %c ERROR: cannot open RX PIN, falling back to writeonly!\n", axis);
                 write_only = true;
-            } else {
+            }else if(!(sw_uart_rx_pin->port_number == 0 || sw_uart_rx_pin->port_number == 2)) {
+                printf("MotorDriverControl %c ERROR: RX PIN needs to be Interrupt enabled pin (Port 0 or 2), falling back to writeonly!\n", axis);
+                write_only = true;
+            } 
+            else {
                 rxd = port_pin((PortName)(sw_uart_rx_pin->port_number), sw_uart_rx_pin->pin);
                 write_only = false;
             }
