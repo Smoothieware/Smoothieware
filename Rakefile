@@ -11,8 +11,12 @@ def pop_path(path)
 end
 
 def obj2src(fn, e)
-  File.join('src', pop_path(File.dirname(fn)), File.basename(fn).ext(e))
+  File.absolute_path(File.join('src', pop_path(File.dirname(fn)), File.basename(fn).ext(e)))
 end
+
+#def obj2src(fn, e)
+#  File.join('src', pop_path(File.dirname(fn)), File.basename(fn).ext(e))
+#end
 
 def is_windows?
   (/cygwin|mswin|mingw|bccwin|wince|emx/ =~ RUBY_PLATFORM) != nil
