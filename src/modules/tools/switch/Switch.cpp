@@ -15,6 +15,7 @@
 #include "PublicDataRequest.h"
 #include "SwitchPublicAccess.h"
 #include "Robot.h"
+#include "StepperMotor.h"
 #include "SlowTicker.h"
 #include "Config.h"
 #include "Gcode.h"
@@ -49,6 +50,8 @@
 #define    halt_setting_checksum        CHECKSUM("halt_set_to")
 #define    ignore_onhalt_checksum       CHECKSUM("ignore_on_halt")
 #define    slave_axis_letter_checksum   CHECKSUM("slave_axis_letter")
+#define    slave_ratio_checksum         CHECKSUM("slave_ratio")
+#define    slave_offset_checksum        CHECKSUM("slave_offset")
 
 #define ROUND2DP(x) (roundf(x * 1e2F) / 1e2F)
 
@@ -57,7 +60,6 @@ Switch::Switch() {}
 Switch::Switch(uint16_t name)
 {
     this->name_checksum = name;
-    //this->dummy_stream = &(StreamOutput::NullStream);
 }
 
 // set the pin to the fail safe value on halt
@@ -101,7 +103,11 @@ void Switch::on_config_reload(void *argument)
     this->output_on_command = THEKERNEL->config->value(switch_checksum, this->name_checksum, output_on_command_checksum )->by_default("")->as_string();
     this->output_off_command = THEKERNEL->config->value(switch_checksum, this->name_checksum, output_off_command_checksum )->by_default("")->as_string();
     this->switch_state = THEKERNEL->config->value(switch_checksum, this->name_checksum, startup_state_checksum )->by_default(false)->as_bool();
+
+    // Slave feature
     this->slave_axis_letter = THEKERNEL->config->value(switch_checksum, this->name_checksum, slave_axis_letter_checksum )->by_default("0")->as_string();
+    this->slave_ratio = THEKERNEL->config->value(switch_checksum, this->name_checksum, slave_ratio_checksum )->by_default(1)->as_number();
+    this->slave_offset = THEKERNEL->config->value(switch_checksum, this->name_checksum, slave_offset_checksum )->by_default(0)->as_number();
 
     this->input_pin= new Pin();
     this->input_pin->from_string( THEKERNEL->config->value(switch_checksum, this->name_checksum, input_pin_checksum )->by_default("nc")->as_string())->as_input();
@@ -160,6 +166,10 @@ void Switch::on_config_reload(void *argument)
             }
 
         }else if(type == "hwpwm"){
+
+            // TODO: This must go into the others if we are going to use it like this
+            THEKERNEL->slow_ticker->attach( 100, this, &Switch::pinpoll_tick);
+
             this->output_type= HWPWM;
             Pin *pin= new Pin();
             pin->from_string(THEKERNEL->config->value(switch_checksum, this->name_checksum, output_pin_checksum )->by_default("nc")->as_string())->as_output();
@@ -302,7 +312,32 @@ bool Switch::match_input_off_gcode(const Gcode *gcode) const
 
 void Switch::on_gcode_received(void *argument)
 {
+    // For debug of axis slaving only, TODO: Remove
+    //THEKERNEL->streams->printf("value:[%f] letter:[%c]\r\n", this->switch_value, this->slave_axis_letter[0]);
+
     Gcode *gcode = static_cast<Gcode *>(argument);
+
+    float temp = -1;
+    if(gcode->has_m && gcode->m == 994 && (this->slave_axis_letter[0] == 'X' || this->slave_axis_letter[0] == 'Y' || this->slave_axis_letter[0] == 'Z' )){
+      switch(this->slave_axis_letter[0]){
+        case 'X': temp = (float)(THEROBOT->actuators[0]->get_current_step()); break;
+        case 'Y': temp = (float)(THEROBOT->actuators[1]->get_current_step()); break;
+        case 'Z': temp = (float)(THEROBOT->actuators[2]->get_current_step()); break;
+      }
+      THEKERNEL->streams->printf("[a] Axis %c: %f(steps) \r\n", this->slave_axis_letter[0], temp);
+      THEKERNEL->streams->printf("[b] %f(steps) * %f(slave_ratio) = %f \r\n", temp, this->slave_ratio, temp * this->slave_ratio);
+      temp = temp * this->slave_ratio;
+      THEKERNEL->streams->printf("[c] %f + %f(slave_offset) = %f \r\n", temp, this->slave_offset, temp + this->slave_offset);
+      temp = temp + this->slave_offset;
+      float previous = temp;
+      if(temp > 100){ temp = 100; }
+      THEKERNEL->streams->printf("[d] %f can't be more than 100: %f \r\n", previous, temp);
+      previous = temp;
+      if(temp < 0){ temp = 0; }
+      THEKERNEL->streams->printf("[e] %f can't be less than 0: %f \r\n", previous, temp);
+      THEKERNEL->streams->printf("[f] output as PWM value [0-1](%f) [0-100](%f) [0-255](%f) \r\n", temp/100, temp, temp * 2.55);
+    }
+
     // Add the gcode to the queue ourselves if we need it
     if (!(match_input_on_gcode(gcode) || match_input_off_gcode(gcode))) {
         return;
@@ -339,6 +374,8 @@ void Switch::on_gcode_received(void *argument)
                 else if(v < 0) v= 0;
                 this->pwm_pin->write(v/100.0F);
                 this->switch_state= (ROUND2DP(v) != ROUND2DP(this->switch_value));
+                this->switch_value = v;
+                // TODO: Remove THEKERNEL->streams->printf("value: v[%f] t->sv[%f]\r\n", v, this->switch_value);
             } else {
                 this->pwm_pin->write(this->default_on_value/100.0F);
                 this->switch_state= true;
@@ -473,15 +510,37 @@ uint32_t Switch::pinpoll_tick(uint32_t dummy)
     // In this branch, here we also check for the position of an axis, and modify our PWM value to match it as needed
     // This is the core of the "slave axis" feature
 
-    // Get axis positions
-    float mpos[3];
-    THEROBOT->get_current_machine_position(mpos);
-
-    // Depending on the axis, set the current switch value
     switch(this->slave_axis_letter[0]){
-      case 'X': this->switch_value = mpos[0]; break;
-      case 'Y': this->switch_value = mpos[1]; break;
-      case 'Z': this->switch_value = mpos[2]; break;
+      case 'X':
+        this->switch_value = (float)(THEROBOT->actuators[0]->get_current_step());
+        if (this->output_type == HWPWM) {
+          this->switch_value = this->switch_value * this->slave_ratio;
+          this->switch_value = this->switch_value + this->slave_offset;
+          if(this->switch_value > 100){ this->switch_value = 100; }
+          if(this->switch_value < 0){this->switch_value = 0; }
+          this->pwm_pin->write(this->switch_value/100.0F);
+        };
+        break;
+      case 'Y':
+        this->switch_value = (float)(THEROBOT->actuators[1]->get_current_step());
+        if (this->output_type == HWPWM) {
+          this->switch_value = this->switch_value * this->slave_ratio;
+          this->switch_value = this->switch_value + this->slave_offset;
+          if(this->switch_value > 100){ this->switch_value = 100; }
+          if(this->switch_value < 0){this->switch_value = 0; }
+          this->pwm_pin->write(this->switch_value/100.0F);
+        };
+        break;
+      case 'Z':
+        this->switch_value = (float)(THEROBOT->actuators[2]->get_current_step());
+        if (this->output_type == HWPWM) {
+          this->switch_value = this->switch_value * this->slave_ratio;
+          this->switch_value = this->switch_value + this->slave_offset;
+          if(this->switch_value > 100){ this->switch_value = 100; }
+          if(this->switch_value < 0){this->switch_value = 0; }
+          this->pwm_pin->write(this->switch_value/100.0F);
+        };
+        break;
     }
 
     // If pin changed

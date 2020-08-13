@@ -45,6 +45,9 @@ class Switch : public Module {
         float switch_value;
         float default_on_value;
 
+        float slave_ratio;
+        float slave_offset;
+
         OUTPUT_TYPE output_type;
         union {
             Pin          *input_pin;
