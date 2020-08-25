@@ -204,6 +204,11 @@ bool USBSerial::USBEvent_EPOut(uint8_t bEP, uint8_t bEPStatus)
             continue;
         }
 
+        if(b == 'Y' - 'A' + 1) { // ^Y
+            THEKERNEL->set_stop_request(true); // generic stop what you are doing request
+            continue;
+        }
+
         if(b == '?') { // ?
             query_flag = true;
             continue;

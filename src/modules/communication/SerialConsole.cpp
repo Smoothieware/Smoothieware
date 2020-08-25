@@ -53,6 +53,10 @@ void SerialConsole::on_serial_char_received(){
             halt_flag= true;
             continue;
         }
+        if(received == 'Y'-'A'+1) { // ^Y
+            THEKERNEL->set_stop_request(true); // generic stop what you are doing request
+            continue;
+        }
         if(received == '\n' && last_char_was_cr) {
             // ignore the \n of a \r\n pair
             last_char_was_cr= false;
