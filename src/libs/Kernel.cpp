@@ -60,6 +60,7 @@ Kernel::Kernel()
     feed_hold = false;
     enable_feed_hold = false;
     bad_mcu= true;
+    stop_request= false;
 
     instance = this; // setup the Singleton instance of the kernel
 
