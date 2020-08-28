@@ -1346,13 +1346,14 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
                 delta[i]= d * (delta[i]<0?-1:1);
             }
         }
+        THEROBOT->disable_segmentation= true;
         // feed moves into planner until full then keep it topped up
         while(!THEKERNEL->get_stop_request()) {
             while(!THECONVEYOR->is_queue_full()) {
                 if(THEKERNEL->get_stop_request() || THEKERNEL->is_halted()) break;
                 THEROBOT->delta_move(delta, fr, n_motors);
             }
-            if(THEKERNEL->is_halted()) return;
+            if(THEKERNEL->is_halted()) break;
             THEKERNEL->call_event(ON_IDLE);
         }
         // fast foward all blocks but the last which is a deceleration block
@@ -1360,6 +1361,7 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
         THECONVEYOR->wait_for_idle();
         THEKERNEL->set_stop_request(false);
         THECONVEYOR->set_controlled_stop(false);
+        THEROBOT->disable_segmentation= false;
 
     }else{
         THEROBOT->delta_move(delta, rate_mm_s*scale, n_motors);
