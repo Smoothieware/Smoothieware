@@ -84,18 +84,18 @@ Block& BlockQueue::item(unsigned int i)
     return ring[i];
 }
 
-void BlockQueue::push_front(Block& item)
-{
-    ring[head_i] = item;
-    head_i = next(head_i);
-}
+// void BlockQueue::push_front(Block& item)
+// {
+//     ring[head_i] = item;
+//     head_i = next(head_i);
+// }
 
-Block& BlockQueue::pop_back()
-{
-    Block& r = ring[tail_i];
-    tail_i = next(tail_i);
-    return r;
-}
+// Block& BlockQueue::pop_back()
+// {
+//     Block& r = ring[tail_i];
+//     tail_i = next(tail_i);
+//     return r;
+// }
 
 /*
  * pointer accessors

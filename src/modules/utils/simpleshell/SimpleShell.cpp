@@ -1338,11 +1338,9 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
         // calculate minimum distance to travel to accomodate acceleration and feedrate
         float acc= THEROBOT->get_default_acceleration();
         float t= fr/acc; // time to reach frame rate
-        float d= 0.5F * acc * powf(t, 2); // distance required to accelerate
-        d *= 2; // include distance to decelerate
-        d= roundf(d+0.5F); // round up to nearest mm
+        float d= 0.5F * acc * powf(t, 2); // distance required to accelerate (or decelerate)
+
         // we need to move at least this distance to reach full speed
-        d = d/32; // distance that will fill planner buffer
         for (int i = 0; i < n_motors; ++i) {
             if(delta[i] != 0) {
                 delta[i]= d * (delta[i]<0?-1:1);
@@ -1357,8 +1355,11 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
             if(THEKERNEL->is_halted()) return;
             THEKERNEL->call_event(ON_IDLE);
         }
+        // fast foward all blocks but the last which is a deceleration block
+        THECONVEYOR->set_controlled_stop(true);
         THECONVEYOR->wait_for_idle();
         THEKERNEL->set_stop_request(false);
+        THECONVEYOR->set_controlled_stop(false);
 
     }else{
         THEROBOT->delta_move(delta, rate_mm_s*scale, n_motors);

@@ -63,6 +63,7 @@ Conveyor::Conveyor()
     running = false;
     allow_fetch = false;
     flush= false;
+    controlled_stop = false;
 }
 
 void Conveyor::on_module_loaded()
@@ -197,12 +198,22 @@ void Conveyor::check_queue(bool force)
 // called from step ticker ISR
 bool Conveyor::get_next_block(Block **block)
 {
-    // mark entire queue for GC if flush flag is asserted
-    if (flush){
+    if(flush){
+        // mark entire queue for GC if flush flag is asserted
         while (queue.isr_tail_i != queue.head_i) {
             queue.isr_tail_i = queue.next(queue.isr_tail_i);
         }
         flush = false;
+    }
+
+    if(controlled_stop){
+        // fast forward to all but the last block (which should be a full deceleration block)
+        // can only be used if we know each block has full acceleration move
+        // We could also search for the first block which has zero exit speed
+        while (queue.isr_tail_i != queue.head_i && queue.next(queue.isr_tail_i) != queue.head_i) {
+            queue.isr_tail_i = queue.next(queue.isr_tail_i);
+        }
+        controlled_stop= false;
     }
 
     // default the feerate to zero if there is no block available
