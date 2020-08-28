@@ -20,8 +20,8 @@ public:
     Block& head();
     Block& tail();
 
-    void push_front(Block&) __attribute__ ((warning("Not thread-safe if pop_back() is used in ISR context!"))); // instead, prepare(head_ref()); produce_head();
-    Block& pop_back(void) __attribute__ ((warning("Not thread-safe if head_ref() is used to prepare new items, or push_front() is used in ISR context!"))); // instead, consume(tail_ref()); consume_tail();
+    // void push_front(Block&) __attribute__ ((warning("Not thread-safe if pop_back() is used in ISR context!"))); // instead, prepare(head_ref()); produce_head();
+    // Block& pop_back(void) __attribute__ ((warning("Not thread-safe if head_ref() is used to prepare new items, or push_front() is used in ISR context!"))); // instead, consume(tail_ref()); consume_tail();
 
     /*
      * pointer accessors
