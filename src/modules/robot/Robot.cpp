@@ -120,7 +120,7 @@ Robot::Robot()
     this->compensationTransform = nullptr;
     this->get_e_scale_fnc= nullptr;
     this->wcs_offsets.fill(wcs_t(0.0F, 0.0F, 0.0F));
-    this->g92_offset = wcs_t(0.0F, 0.0F, 0.0F);
+    memset(this->g92_offset, 0, sizeof g92_offset);
     this->next_command_is_MCS = false;
     this->disable_segmentation= false;
     this->disable_arm_solution= false;
@@ -201,7 +201,9 @@ void Robot::load_config()
         // optional setting for a fixed G92 offset
         std::vector<float> t= parse_number_list(g92.c_str());
         if(t.size() == 3) {
-            g92_offset = wcs_t(t[0], t[1], t[2]);
+            g92_offset[0] = t[0];
+            g92_offset[1] = t[1];
+            g92_offset[2] = t[2];
         }
     }
 
@@ -339,7 +341,7 @@ std::vector<Robot::wcs_t> Robot::get_wcs_state() const
     for(auto& i : wcs_offsets) {
         v.push_back(i);
     }
-    v.push_back(g92_offset);
+    v.push_back(wcs_t(g92_offset[X_AXIS], g92_offset[Y_AXIS], g92_offset[Z_AXIS]));
     v.push_back(tool_offset);
     return v;
 }
@@ -413,9 +415,13 @@ void Robot::print_position(uint8_t subcode, std::string& res, bool ignore_extrud
     for (int i = A_AXIS; i < n_motors; ++i) {
         n= 0;
         if(ignore_extruders && actuators[i]->is_extruder()) continue; // don't show an extruder as that will be E
-        if(subcode == 4) { // M114.4 print last milestone
+        if(subcode == 0) { // M114 print last milestone which is the machine position with g92 offset applied for ABC
+            n= snprintf(buf, sizeof(buf), " %c:%1.4f", 'A'+i-A_AXIS, machine_position[i] + g92_offset[i]);
+        }else if(subcode == 4) { // M114.4 print last milestone in machine coordinates
             n= snprintf(buf, sizeof(buf), " %c:%1.4f", 'A'+i-A_AXIS, machine_position[i]);
-
+        }else if(subcode == 1) { // M114.1 prints real time position which is the machine position with g92 offset applied for ABC
+            // current position 
+            n= snprintf(buf, sizeof(buf), " %c:%1.4f", 'A'+i-A_AXIS,  actuators[i]->get_current_position() + g92_offset[i]);
         }else if(subcode == 2 || subcode == 3) { // M114.2/M114.3 print actuator position which is the same as machine position for ABC
             // current actuator position
             n= snprintf(buf, sizeof(buf), " %c:%1.4f", 'A'+i-A_AXIS, actuators[i]->get_current_position());
@@ -430,9 +436,9 @@ void Robot::print_position(uint8_t subcode, std::string& res, bool ignore_extrud
 Robot::wcs_t Robot::mcs2wcs(const Robot::wcs_t& pos) const
 {
     return std::make_tuple(
-        std::get<X_AXIS>(pos) - std::get<X_AXIS>(wcs_offsets[current_wcs]) + std::get<X_AXIS>(g92_offset) - std::get<X_AXIS>(tool_offset),
-        std::get<Y_AXIS>(pos) - std::get<Y_AXIS>(wcs_offsets[current_wcs]) + std::get<Y_AXIS>(g92_offset) - std::get<Y_AXIS>(tool_offset),
-        std::get<Z_AXIS>(pos) - std::get<Z_AXIS>(wcs_offsets[current_wcs]) + std::get<Z_AXIS>(g92_offset) - std::get<Z_AXIS>(tool_offset)
+        std::get<X_AXIS>(pos) - std::get<X_AXIS>(wcs_offsets[current_wcs]) + g92_offset[X_AXIS] - std::get<X_AXIS>(tool_offset),
+        std::get<Y_AXIS>(pos) - std::get<Y_AXIS>(wcs_offsets[current_wcs]) + g92_offset[Y_AXIS] - std::get<Y_AXIS>(tool_offset),
+        std::get<Z_AXIS>(pos) - std::get<Z_AXIS>(wcs_offsets[current_wcs]) + g92_offset[Z_AXIS] - std::get<Z_AXIS>(tool_offset)
     );
 }
 
@@ -440,9 +446,9 @@ Robot::wcs_t Robot::mcs2wcs(const Robot::wcs_t& pos) const
 Robot::wcs_t Robot::wcs2mcs(const Robot::wcs_t& pos) const
 {
     return std::make_tuple(
-        std::get<X_AXIS>(pos) + std::get<X_AXIS>(wcs_offsets[current_wcs]) - std::get<X_AXIS>(g92_offset) + std::get<X_AXIS>(tool_offset),
-        std::get<Y_AXIS>(pos) + std::get<Y_AXIS>(wcs_offsets[current_wcs]) - std::get<Y_AXIS>(g92_offset) + std::get<Y_AXIS>(tool_offset),
-        std::get<Z_AXIS>(pos) + std::get<Z_AXIS>(wcs_offsets[current_wcs]) - std::get<Z_AXIS>(g92_offset) + std::get<Z_AXIS>(tool_offset)
+        std::get<X_AXIS>(pos) + std::get<X_AXIS>(wcs_offsets[current_wcs]) - g92_offset[X_AXIS] + std::get<X_AXIS>(tool_offset),
+        std::get<Y_AXIS>(pos) + std::get<Y_AXIS>(wcs_offsets[current_wcs]) - g92_offset[Y_AXIS] + std::get<Y_AXIS>(tool_offset),
+        std::get<Z_AXIS>(pos) + std::get<Z_AXIS>(wcs_offsets[current_wcs]) - g92_offset[Z_AXIS] + std::get<Z_AXIS>(tool_offset)
     );
 }
 
@@ -591,7 +597,7 @@ void Robot::on_gcode_received(void *argument)
             case 92: {
                 if(gcode->subcode == 1 || gcode->subcode == 2 || gcode->get_num_args() == 0) {
                     // reset G92 offsets to 0
-                    g92_offset = wcs_t(0, 0, 0);
+                    memset(g92_offset, 0, sizeof g92_offset);
 
                 } else if(gcode->subcode == 4) {
                     // G92.4 is a smoothie special it sets manual homing for X,Y,Z
@@ -606,12 +612,16 @@ void Robot::on_gcode_received(void *argument)
                     if(gcode->has_letter('X')) x= gcode->get_value('X');
                     if(gcode->has_letter('Y')) y= gcode->get_value('Y');
                     if(gcode->has_letter('Z')) z= gcode->get_value('Z');
-                    g92_offset = wcs_t(x, y, z);
+                    g92_offset[X_AXIS] = x;
+                    g92_offset[Y_AXIS] = y;
+                    g92_offset[Z_AXIS] = z;
 
                 } else {
                     // standard setting of the g92 offsets, making current WCS position whatever the coordinate arguments are
                     float x, y, z;
-                    std::tie(x, y, z) = g92_offset;
+                    x = g92_offset[X_AXIS];
+                    y = g92_offset[Y_AXIS];
+                    z = g92_offset[Z_AXIS];
                     // get current position in WCS
                     wcs_t pos= mcs2wcs(machine_position);
 
@@ -625,7 +635,9 @@ void Robot::on_gcode_received(void *argument)
                     if(gcode->has_letter('Z')) {
                         z += to_millimeters(gcode->get_value('Z')) - std::get<Z_AXIS>(pos);
                     }
-                    g92_offset = wcs_t(x, y, z);
+                    g92_offset[X_AXIS] = x;
+                    g92_offset[Y_AXIS] = y;
+                    g92_offset[Z_AXIS] = z;
                 }
 
                 #if MAX_ROBOT_ACTUATORS > 3
@@ -642,11 +654,10 @@ void Robot::on_gcode_received(void *argument)
                 if(gcode->subcode == 0 && gcode->get_num_args() > 0) {
                     for (int i = A_AXIS; i < n_motors; i++) {
                         // ABC just need to set machine_position and compensated_machine_position if specified
-                        char axis= 'A'+i-3;
+                        char axis= 'A'+i-A_AXIS;
                         float ap= gcode->get_value(axis);
                         if((!actuators[i]->is_extruder() || ap == 0) && gcode->has_letter(axis)) {
-                            machine_position[i]= compensated_machine_position[i]= ap;
-                            actuators[i]->change_last_milestone(ap); // this updates the last_milestone in the actuator
+                            g92_offset[i] = ap - machine_position[i];
                         }
                     }
                 }
@@ -936,9 +947,13 @@ void Robot::on_gcode_received(void *argument)
                 if(save_g92) {
                     // linuxcnc saves G92, so we do too if configured, default is to not save to maintain backward compatibility
                     // also it needs to be used to set Z0 on rotary deltas as M206/306 can't be used, so saving it is necessary in that case
-                    if(g92_offset != wcs_t(0, 0, 0)) {
+                    if(g92_offset[X_AXIS] != 0 
+                    || g92_offset[Y_AXIS] != 0 
+                    || g92_offset[Z_AXIS] != 0) {
                         float x, y, z;
-                        std::tie(x, y, z) = g92_offset;
+                        x = g92_offset[X_AXIS];
+                        y = g92_offset[Y_AXIS];
+                        z = g92_offset[Z_AXIS];
                         gcode->stream->printf("G92.3 X%f Y%f Z%f\n", x, y, z); // sets G92 to the specified values
                     }
                 }
@@ -1029,15 +1044,15 @@ void Robot::process_move(Gcode *gcode, enum MOTION_MODE_T motion_mode)
         if(this->absolute_mode) {
             // apply wcs offsets and g92 offset and tool offset
             if(!isnan(param[X_AXIS])) {
-                target[X_AXIS]= param[X_AXIS] + std::get<X_AXIS>(wcs_offsets[current_wcs]) - std::get<X_AXIS>(g92_offset) + std::get<X_AXIS>(tool_offset);
+                target[X_AXIS]= param[X_AXIS] + std::get<X_AXIS>(wcs_offsets[current_wcs]) - g92_offset[X_AXIS] + std::get<X_AXIS>(tool_offset);
             }
 
             if(!isnan(param[Y_AXIS])) {
-                target[Y_AXIS]= param[Y_AXIS] + std::get<Y_AXIS>(wcs_offsets[current_wcs]) - std::get<Y_AXIS>(g92_offset) + std::get<Y_AXIS>(tool_offset);
+                target[Y_AXIS]= param[Y_AXIS] + std::get<Y_AXIS>(wcs_offsets[current_wcs]) - g92_offset[Y_AXIS] + std::get<Y_AXIS>(tool_offset);
             }
 
             if(!isnan(param[Z_AXIS])) {
-                target[Z_AXIS]= param[Z_AXIS] + std::get<Z_AXIS>(wcs_offsets[current_wcs]) - std::get<Z_AXIS>(g92_offset) + std::get<Z_AXIS>(tool_offset);
+                target[Z_AXIS]= param[Z_AXIS] + std::get<Z_AXIS>(wcs_offsets[current_wcs]) - g92_offset[Z_AXIS] + std::get<Z_AXIS>(tool_offset);
             }
 
         }else{
@@ -1081,7 +1096,7 @@ void Robot::process_move(Gcode *gcode, enum MOTION_MODE_T motion_mode)
         if(gcode->has_letter(letter)) {
             float p= gcode->get_value(letter);
             if(this->absolute_mode) {
-                target[i]= p;
+                target[i]= p - g92_offset[i];
             }else{
                 target[i]= p + machine_position[i];
             }

@@ -120,7 +120,7 @@ class Robot : public Module {
 
         std::array<wcs_t, MAX_WCS> wcs_offsets; // these are persistent once saved with M500
         uint8_t current_wcs{0}; // 0 means G54 is enabled this is persistent once saved with M500
-        wcs_t g92_offset;
+        float g92_offset[k_max_actuators];
         wcs_t tool_offset; // used for multiple extruders, sets the tool offset for the current extruder applied first
         std::tuple<float, float, float, uint8_t> last_probe_position{0,0,0,0};
 
