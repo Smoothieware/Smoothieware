@@ -16,29 +16,27 @@
 #include "libs/TSRingBuffer.h"
 #include "libs/StreamOutput.h"
 
-#include "Serial.h" // mbed.h lib
-
-#define baud_rate_setting_checksum CHECKSUM("baud_rate")
-
 class SerialConsole : public Module, public StreamOutput {
     public:
-        SerialConsole( PinName rx_pin, PinName tx_pin, int baud_rate );
+        SerialConsole(int ch);
+        virtual ~SerialConsole();
 
         void on_module_loaded();
-        void on_serial_char_received();
+        void on_serial_char_received(char c);
         void on_main_loop(void * argument);
         void on_idle(void * argument);
-
+        void init_uart(int baud_rate);
         int _putc(int c);
         int _getc(void);
         int puts(const char*);
 
         TSRingBuffer<char, 256> buffer;   // Receive buffer
-        mbed::Serial* serial;
+
         struct {
           bool query_flag:1;
           bool halt_flag:1;
           bool last_char_was_cr:1;
+          uint8_t uartn:2;
           uint8_t lf_count:8;
         };
 };
