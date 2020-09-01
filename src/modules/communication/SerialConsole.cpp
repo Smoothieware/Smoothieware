@@ -32,6 +32,7 @@ void SerialConsole::on_module_loaded() {
     this->serial->attach(this, &SerialConsole::on_serial_char_received, mbed::Serial::RxIrq);
     query_flag= false;
     halt_flag= false;
+    lf_count= 0;
 
     // We only call the command dispatcher in the main loop, nowhere else
     this->register_for_event(ON_MAIN_LOOP);
@@ -66,7 +67,9 @@ void SerialConsole::on_serial_char_received(){
 
         // convert CR to NL (for host OSs that don't send NL)
         if( received == '\r' ){ received = '\n'; }
-        this->buffer.push_back(received);
+        if(this->buffer.put(received)) {
+            if(received == '\n') ++lf_count;
+        }
     }
 }
 
@@ -89,13 +92,14 @@ void SerialConsole::on_idle(void * argument)
 
 // Actual event calling must happen in the main loop because if it happens in the interrupt we will loose data
 void SerialConsole::on_main_loop(void * argument){
-    if( this->has_char('\n') ){
+    if(lf_count > 0){
         string received;
         received.reserve(20);
         while(1){
            char c;
-           this->buffer.pop_front(c);
+           this->buffer.get(c);
            if( c == '\n' ){
+                --lf_count;
                 struct SerialMessage message;
                 message.message = received;
                 message.stream = this;
@@ -127,16 +131,4 @@ int SerialConsole::_putc(int c)
 int SerialConsole::_getc()
 {
     return this->serial->getc();
-}
-
-// Does the queue have a given char ?
-bool SerialConsole::has_char(char letter){
-    int index = this->buffer.tail;
-    while( index != this->buffer.head ){
-        if( this->buffer.buffer[index] == letter ){
-            return true;
-        }
-        index = this->buffer.next_block_index(index);
-    }
-    return false;
 }

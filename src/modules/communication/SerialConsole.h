@@ -9,14 +9,14 @@
 #define SERIALCONSOLE_H
 
 #include "libs/Module.h"
-#include "Serial.h" // mbed.h lib
 #include "libs/Kernel.h"
 #include <vector>
 #include <string>
-using std::string;
-#include "libs/RingBuffer.h"
+
+#include "libs/TSRingBuffer.h"
 #include "libs/StreamOutput.h"
 
+#include "Serial.h" // mbed.h lib
 
 #define baud_rate_setting_checksum CHECKSUM("baud_rate")
 
@@ -28,20 +28,18 @@ class SerialConsole : public Module, public StreamOutput {
         void on_serial_char_received();
         void on_main_loop(void * argument);
         void on_idle(void * argument);
-        bool has_char(char letter);
 
         int _putc(int c);
         int _getc(void);
         int puts(const char*);
 
-        //string receive_buffer;                 // Received chars are stored here until a newline character is received
-        //vector<std::string> received_lines;    // Received lines are stored here until they are requested
-        RingBuffer<char,256> buffer;             // Receive buffer
+        TSRingBuffer<char, 256> buffer;   // Receive buffer
         mbed::Serial* serial;
         struct {
           bool query_flag:1;
           bool halt_flag:1;
           bool last_char_was_cr:1;
+          uint8_t lf_count:8;
         };
 };
 
