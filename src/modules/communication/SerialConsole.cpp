@@ -16,6 +16,7 @@
 #include "libs/Config.h"
 #include "checksumm.h"
 #include "ConfigValue.h"
+#include "utils.h"
 
 #include <string>
 #include <stdarg.h>
@@ -23,6 +24,7 @@
 #include "lpc17xx_uart.h"
 #include "lpc17xx_libcfg_default.h"
 #include "lpc17xx_pinsel.h"
+#include "cmsis_nvic.h"
 
 #define baud_rate_setting_checksum CHECKSUM("baud_rate")
 #define uart0_checksum             CHECKSUM("uart0")
@@ -56,6 +58,49 @@ SerialConsole::~SerialConsole()
     // DeInitialize UART0 peripheral
     UART_DeInit((LPC_UART_TypeDef *)LPC_UART);
     instance = nullptr;
+}
+
+/*----------------- INTERRUPT SERVICE ROUTINES --------------------------*/
+/*********************************************************************/
+static void UART_IRQHandler(void)
+{
+    uint32_t intsrc, tmp;
+
+    /* Determine the interrupt source */
+    intsrc = UART_GetIntId((LPC_UART_TypeDef *)LPC_UART);
+    tmp = intsrc & UART_IIR_INTID_MASK;
+
+    // Receive Line Status
+    if (tmp == UART_IIR_INTID_RLS) {
+        // Check line status
+        uint32_t tmp1 = UART_GetLineStatus((LPC_UART_TypeDef *)LPC_UART);
+        // Mask out the Receive Ready and Transmit Holding empty status
+        tmp1 &= (UART_LSR_OE | UART_LSR_PE | UART_LSR_FE | UART_LSR_BI | UART_LSR_RXFE);
+        // If any error exist
+        if (tmp1) {
+            // UART_IntErr(&uart0, tmp1);
+        }
+    }
+
+    // Receive Data Available or Character time-out
+    if ((tmp == UART_IIR_INTID_RDA) || (tmp == UART_IIR_INTID_CTI)) {
+        uint8_t tmpc;
+        uint32_t rLen;
+
+        while(1) {
+            // Call UART read function in UART driver
+            rLen = UART_Receive((LPC_UART_TypeDef *)LPC_UART, &tmpc, 1, NONE_BLOCKING);
+            // If data received
+            if (rLen) {
+                if(instance != nullptr) {
+                    instance->on_serial_char_received(tmpc);
+                }
+            } else {
+                // no more data
+                break;
+            }
+        }
+    }
 }
 
 void SerialConsole::init_uart(int baud_rate)
@@ -115,12 +160,13 @@ void SerialConsole::init_uart(int baud_rate)
     UART_IntConfig((LPC_UART_TypeDef *)LPC_UART, UART_INTCFG_RLS, DISABLE);
     UART_IntConfig((LPC_UART_TypeDef *)LPC_UART, UART_INTCFG_THRE, DISABLE);
 
+
     /* Enable Interrupt for UART channel */
     switch(uartn) {
-        case 0: NVIC_EnableIRQ(UART0_IRQn); break;
-        case 1: NVIC_EnableIRQ(UART1_IRQn); break;
-        case 2: NVIC_EnableIRQ(UART2_IRQn); break;
-        case 3: NVIC_EnableIRQ(UART3_IRQn); break;
+        case 0: NVIC_SetVector(UART0_IRQn, (uint32_t)&UART_IRQHandler); NVIC_EnableIRQ(UART0_IRQn); break;
+        case 1: NVIC_SetVector(UART1_IRQn, (uint32_t)&UART_IRQHandler); NVIC_EnableIRQ(UART1_IRQn); break;
+        case 2: NVIC_SetVector(UART2_IRQn, (uint32_t)&UART_IRQHandler); NVIC_EnableIRQ(UART2_IRQn); break;
+        case 3: NVIC_SetVector(UART3_IRQn, (uint32_t)&UART_IRQHandler); NVIC_EnableIRQ(UART3_IRQn); break;
     }
 }
 
@@ -143,55 +189,7 @@ void SerialConsole::on_module_loaded()
     THEKERNEL->streams->append_stream(this);
 }
 
-/*----------------- INTERRUPT SERVICE ROUTINES --------------------------*/
-/*********************************************************************/
-static void UART_IRQHandler(void)
-{
-    uint32_t intsrc, tmp;
-
-    /* Determine the interrupt source */
-    intsrc = UART_GetIntId((LPC_UART_TypeDef *)LPC_UART);
-    tmp = intsrc & UART_IIR_INTID_MASK;
-
-    // Receive Line Status
-    if (tmp == UART_IIR_INTID_RLS) {
-        // Check line status
-        uint32_t tmp1 = UART_GetLineStatus((LPC_UART_TypeDef *)LPC_UART);
-        // Mask out the Receive Ready and Transmit Holding empty status
-        tmp1 &= (UART_LSR_OE | UART_LSR_PE | UART_LSR_FE | UART_LSR_BI | UART_LSR_RXFE);
-        // If any error exist
-        if (tmp1) {
-            // UART_IntErr(&uart0, tmp1);
-        }
-    }
-
-    // Receive Data Available or Character time-out
-    if ((tmp == UART_IIR_INTID_RDA) || (tmp == UART_IIR_INTID_CTI)) {
-        uint8_t tmpc;
-        uint32_t rLen;
-
-        while(1) {
-            // Call UART read function in UART driver
-            rLen = UART_Receive((LPC_UART_TypeDef *)LPC_UART, &tmpc, 1, NONE_BLOCKING);
-            // If data received
-            if (rLen) {
-                if(instance != nullptr) {
-                    instance->on_serial_char_received(tmpc);
-                }
-            } else {
-                // no more data
-                break;
-            }
-        }
-    }
-}
-
-void UART0_IRQHandler(void) { UART_IRQHandler(); }
-void UART1_IRQHandler(void) { UART_IRQHandler(); }
-void UART2_IRQHandler(void) { UART_IRQHandler(); }
-void UART3_IRQHandler(void) { UART_IRQHandler(); }
-
-// Called on Serial::RxIrq interrupt, meaning we have received a char
+// Called on interrupt, meaning we have received a char
 void SerialConsole::on_serial_char_received(char received)
 {
     if(received == '?') {
@@ -245,7 +243,7 @@ void SerialConsole::on_main_loop(void * argument)
         received.reserve(20);
         while(1) {
             char c;
-            this->buffer.get(c);
+            if(!this->buffer.get(c)) return;
             if(c == '\n') {
                 --lf_count;
                 struct SerialMessage message;
@@ -275,11 +273,14 @@ int SerialConsole::_putc(int c)
 
 int SerialConsole::_getc()
 {
-    char c;
-    if(this->buffer.get(c)) {
-        return c;
+    while(1) {
+        char c;
+        if(this->buffer.get(c)) {
+            if(c == '\n') --lf_count;
+            return c;
+        }
+        safe_delay_ms(1);
     }
-    return -1;
 }
 
 extern "C" int UART_Write(const unsigned char*, unsigned int);
