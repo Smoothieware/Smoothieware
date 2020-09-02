@@ -271,6 +271,11 @@ int SerialConsole::_putc(int c)
     return 1;
 }
 
+bool SerialConsole::ready()
+{
+    return !this->buffer.empty();
+}
+
 int SerialConsole::_getc()
 {
     while(1) {

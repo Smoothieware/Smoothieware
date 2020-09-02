@@ -28,6 +28,7 @@ class SerialConsole : public Module, public StreamOutput {
         void init_uart(int baud_rate);
         int _putc(int c);
         int _getc(void);
+        bool ready();
         int puts(const char*);
 
         TSRingBuffer<char, 256> buffer;   // Receive buffer

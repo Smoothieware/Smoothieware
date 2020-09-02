@@ -491,7 +491,11 @@ void SimpleShell::upload_command( string parameters, StreamOutput *stream )
             continue;
         }
 
-        char c = stream->_getc();
+        int c = stream->_getc();
+        if(c == -1) {
+            stream->printf("error reading input, aborting\n");
+            return;
+        }
         if( c == 4 || c == 26) { // ctrl-D or ctrl-Z
             uploading = false;
             // close file
@@ -518,10 +522,15 @@ void SimpleShell::upload_command( string parameters, StreamOutput *stream )
         }
     }
     // we got an error so ignore everything until EOF
-    char c;
+    int c;
     do {
         if(stream->ready()) {
             c= stream->_getc();
+            if(c == -1) {
+                stream->printf("error reading input, aborting\n");
+                return;
+            }
+
         }else{
             THEKERNEL->call_event(ON_IDLE);
             c= 0;

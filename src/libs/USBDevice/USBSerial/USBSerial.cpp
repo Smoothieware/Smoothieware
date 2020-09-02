@@ -74,7 +74,7 @@ int USBSerial::_putc(int c)
 int USBSerial::_getc()
 {
     if (!attached)
-        return 0;
+        return -1;
     uint8_t c = 0;
     setled(4, 1);
     while (rxbuf.isEmpty()) { safe_delay_ms(1); }
@@ -316,7 +316,6 @@ void USBSerial::on_idle(void *argument)
         query_flag = false;
         puts(THEKERNEL->get_query_string().c_str());
     }
-
 }
 
 void USBSerial::on_main_loop(void *argument)
@@ -350,7 +349,8 @@ void USBSerial::on_main_loop(void *argument)
     if (nl_in_rx) {
         string received;
         while (available()) {
-            char c = _getc();
+            int c = _getc();
+            if(c == -1) break;
             if( c == '\n' || c == '\r') {
                 struct SerialMessage message;
                 message.message = received;
