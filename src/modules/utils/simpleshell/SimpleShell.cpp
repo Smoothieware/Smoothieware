@@ -286,6 +286,9 @@ void SimpleShell::on_console_line_received( void *argument )
         } else if (cmd == "fire") {
             // these are handled by Laser module
 
+        } else if (cmd == "sendSPIdrv") {
+            // these are handled by MotorDriverControl module
+
         } else if (cmd.substr(0, 2) == "ok") {
             // probably an echo so ignore the whole line
             //new_message.stream->printf("ok\n");

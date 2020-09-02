@@ -22,6 +22,7 @@ class MotorDriverControl : public Module {
 
         void on_module_loaded();
         void on_gcode_received(void *);
+        void on_console_line_received(void *);
         void on_halt(void *argument);
         void on_enable(void *argument);
         void on_idle(void *argument);
@@ -39,6 +40,7 @@ class MotorDriverControl : public Module {
 
         void enable(bool on);
         int sendSPI(uint8_t *b, int cnt, uint8_t *r);
+        void WriteReadSPIstr(const char *p, StreamOutput *stream);
 
         Pin spi_cs_pin;
         union {
@@ -48,6 +50,7 @@ class MotorDriverControl : public Module {
         int spi_channel;
 
         enum CHIP_TYPE {
+            SPIDRVR,
             DRV8711,
             TMC2660
         };
