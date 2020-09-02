@@ -113,17 +113,23 @@ void SerialConsole::init_uart(int baud_rate)
     PINSEL_CFG_Type PinCfg;
 
     /*
-     * Initialize UART0 pin connect
+     * Initialize UARTn pin connect
      */
-    PinCfg.Funcnum = 1;
+    int fnc, pinnum, portnum;
+    switch(uartn) {
+        case 0: fnc= 1; pinnum= 2; portnum= 0; break;
+        case 1: fnc= 2; pinnum= 0; portnum= 2; break;
+        case 2: fnc= 1; pinnum= 10; portnum= 0; break;
+        case 3: fnc= 2; pinnum= 0; portnum= 0; break;
+    }
+    PinCfg.Funcnum = fnc;
     PinCfg.OpenDrain = 0;
     PinCfg.Pinmode = 0;
-    PinCfg.Pinnum = 2;
-    PinCfg.Portnum = 0;
+    PinCfg.Pinnum = pinnum;
+    PinCfg.Portnum = portnum;
     PINSEL_ConfigPin(&PinCfg);
-    PinCfg.Pinnum = 3;
+    PinCfg.Pinnum = pinnum+1;
     PINSEL_ConfigPin(&PinCfg);
-
 
     /* Initialize UART Configuration parameter structure to default state:
      * Baudrate = 9600bps
