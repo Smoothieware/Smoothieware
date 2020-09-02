@@ -13,6 +13,7 @@ class DRV8711DRV;
 class TMC26X;
 class StreamOutput;
 class Gcode;
+class SWSPI;
 
 class MotorDriverControl : public Module {
     public:
@@ -40,7 +41,11 @@ class MotorDriverControl : public Module {
         int sendSPI(uint8_t *b, int cnt, uint8_t *r);
 
         Pin spi_cs_pin;
-        mbed::SPI *spi;
+        union {
+            mbed::SPI *spi;
+            SWSPI *swspi;
+        };
+        int spi_channel;
 
         enum CHIP_TYPE {
             DRV8711,

@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
  
-#include <mbed.h>
+#include "mbed.h"
 #include "SWSPI.h"
  
 SWSPI::SWSPI(PinName mosi_pin, PinName miso_pin, PinName sclk_pin)
