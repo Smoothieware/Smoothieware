@@ -14,6 +14,7 @@
 #include "checksumm.h"
 
 #include "mbed.h" // for SPI
+#include "SWSPI.h"
 
 #include "drivers/TMC26X/TMC26X.h"
 #include "drivers/DRV8711/drv8711.h"
@@ -39,6 +40,9 @@
 #define spi_channel_checksum           CHECKSUM("spi_channel")
 #define spi_cs_pin_checksum            CHECKSUM("spi_cs_pin")
 #define spi_frequency_checksum         CHECKSUM("spi_frequency")
+#define spi_mosi_pin_checksum          CHECKSUM("spi_mosi_pin")
+#define spi_miso_pin_checksum          CHECKSUM("spi_miso_pin")
+#define spi_sclk_pin_checksum          CHECKSUM("spi_sclk_pin")
 
 MotorDriverControl::MotorDriverControl(uint8_t id) : id(id)
 {
@@ -118,12 +122,20 @@ bool MotorDriverControl::config_module(uint16_t cs)
     }
 
     // select which SPI channel to use
-    int spi_channel = THEKERNEL->config->value(motor_driver_control_checksum, cs, spi_channel_checksum)->by_default(1)->as_number();
+    spi_channel = THEKERNEL->config->value(motor_driver_control_checksum, cs, spi_channel_checksum)->by_default(1)->as_number();
     int spi_frequency = THEKERNEL->config->value(motor_driver_control_checksum, cs, spi_frequency_checksum)->by_default(1000000)->as_number();
 
     // select SPI channel to use
     PinName mosi, miso, sclk;
-    if(spi_channel == 0) {
+    if (spi_channel == -1) {
+        Pin mosi_pin, miso_pin, sclk_pin;
+        mosi_pin.from_string(THEKERNEL->config->value(motor_driver_control_checksum, cs, spi_mosi_pin_checksum)->by_default("nc")->as_string());
+        miso_pin.from_string(THEKERNEL->config->value(motor_driver_control_checksum, cs, spi_miso_pin_checksum)->by_default("nc")->as_string());
+        sclk_pin.from_string(THEKERNEL->config->value(motor_driver_control_checksum, cs, spi_sclk_pin_checksum)->by_default("nc")->as_string());
+        mosi = port_pin((PortName)mosi_pin.port_number, mosi_pin.pin);
+        miso = port_pin((PortName)miso_pin.port_number, miso_pin.pin);
+        sclk = port_pin((PortName)sclk_pin.port_number, sclk_pin.pin);
+    } else if(spi_channel == 0) {
         mosi = P0_18; miso = P0_17; sclk = P0_15;
     } else if(spi_channel == 1) {
         mosi = P0_9; miso = P0_8; sclk = P0_7;
@@ -132,9 +144,15 @@ bool MotorDriverControl::config_module(uint16_t cs)
         return false;
     }
 
-    this->spi = new mbed::SPI(mosi, miso, sclk);
-    this->spi->frequency(spi_frequency);
-    this->spi->format(8, 3); // 8bit, mode3
+    if (spi_channel == -1) {
+        this->swspi = new SWSPI(mosi, miso, sclk);
+        this->swspi->frequency(spi_frequency);
+        this->swspi->format(8, 3);
+    } else {
+        this->spi = new mbed::SPI(mosi, miso, sclk);
+        this->spi->frequency(spi_frequency);
+        this->spi->format(8, 3); // 8bit, mode3
+    }
 
     // set default max currents for each chip, can be overidden in config
     switch(chip) {
@@ -466,7 +484,11 @@ int MotorDriverControl::sendSPI(uint8_t *b, int cnt, uint8_t *r)
 {
     spi_cs_pin.set(0);
     for (int i = 0; i < cnt; ++i) {
-        r[i]= spi->write(b[i]);
+        if (spi_channel == -1) {
+            r[i] = swspi->write(b[i]);
+        } else {
+            r[i] = spi->write(b[i]);
+        }
     }
     spi_cs_pin.set(1);
     return cnt;
