@@ -1370,6 +1370,8 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
         THECONVEYOR->wait_for_idle();
         THEKERNEL->set_stop_request(false);
         THECONVEYOR->set_controlled_stop(false);
+        // reset the position based on current actuator position
+        THEROBOT->reset_position_from_current_actuator_position();
 
     }else{
         THEROBOT->delta_move(delta, rate_mm_s*scale, n_motors);
