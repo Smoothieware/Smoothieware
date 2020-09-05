@@ -52,7 +52,7 @@
 /* Comment the line below to disable the specific peripheral inclusion */
 
 /* DEBUG_FRAMWORK ------------------------------ */
-#define _DBGFWK
+//#define _DBGFWK
 
 /* GPIO ------------------------------- */
 #define _GPIO
