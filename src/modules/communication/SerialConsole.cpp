@@ -233,6 +233,10 @@ void SerialConsole::on_idle(void * argument)
     if(halt_flag) {
         halt_flag = false;
         THEKERNEL->call_event(ON_HALT, nullptr);
+        char c;
+        while(this->buffer.get(c)) ; // flush the recieve buffer, hopefully upstream has stopped sending
+        lf_count= 0;
+
         if(THEKERNEL->is_grbl_mode()) {
             puts("ALARM: Abort during cycle\r\n");
         } else {
@@ -249,7 +253,10 @@ void SerialConsole::on_main_loop(void * argument)
         received.reserve(20);
         while(1) {
             char c;
-            if(!this->buffer.get(c)) return;
+            if(!this->buffer.get(c)) {
+                lf_count= 0; // be safe as this should not happen anyway
+                return;
+            }
             if(c == '\n') {
                 --lf_count;
                 struct SerialMessage message;
