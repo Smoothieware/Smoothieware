@@ -9,39 +9,36 @@
 #define SERIALCONSOLE_H
 
 #include "libs/Module.h"
-#include "Serial.h" // mbed.h lib
 #include "libs/Kernel.h"
 #include <vector>
 #include <string>
-using std::string;
-#include "libs/RingBuffer.h"
+
+#include "libs/TSRingBuffer.h"
 #include "libs/StreamOutput.h"
-
-
-#define baud_rate_setting_checksum CHECKSUM("baud_rate")
 
 class SerialConsole : public Module, public StreamOutput {
     public:
-        SerialConsole( PinName rx_pin, PinName tx_pin, int baud_rate );
+        SerialConsole(int ch);
+        virtual ~SerialConsole();
 
         void on_module_loaded();
-        void on_serial_char_received();
+        void on_serial_char_received(char c);
         void on_main_loop(void * argument);
         void on_idle(void * argument);
-        bool has_char(char letter);
-
+        void init_uart(int baud_rate);
         int _putc(int c);
         int _getc(void);
+        bool ready();
         int puts(const char*);
 
-        //string receive_buffer;                 // Received chars are stored here until a newline character is received
-        //vector<std::string> received_lines;    // Received lines are stored here until they are requested
-        RingBuffer<char,256> buffer;             // Receive buffer
-        mbed::Serial* serial;
+        TSRingBuffer<char, 256> buffer;   // Receive buffer
+
         struct {
           bool query_flag:1;
           bool halt_flag:1;
           bool last_char_was_cr:1;
+          uint8_t uartn:2;
+          uint8_t lf_count:8;
         };
 };
 
