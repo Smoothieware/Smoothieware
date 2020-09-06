@@ -1,4 +1,4 @@
-/* 
+/*
  * SoftSerial by Erik Olieman
  * Date: 05 Jul 2014
  * Revision: 10:236fce2e5b8c
@@ -13,7 +13,7 @@
 /** A software serial implementation
  *
  */
-class SoftSerial: public Stream {
+class SoftSerial {
 
 public:
     /**
@@ -25,7 +25,7 @@ public:
     */
     SoftSerial(PinName TX, PinName RX, const char* name = NULL);
     virtual ~SoftSerial();
-    
+
     /** Set the baud rate of the serial port
      *
      *  @param baudrate The baudrate of the serial port (default = 9600).
@@ -92,14 +92,14 @@ public:
 protected:
     DigitalOut *tx;
     InterruptIn *rx;
-    
+
     bool tx_en, rx_en;
     int bit_period;
     int _bits, _stop_bits, _total_bits;
     Parity _parity;
-    
+
     FunctionPointer fpointer[2];
-    
+
     //rx
     void rx_gpio_irq_handler(void);
     void rx_handler(void);
@@ -108,16 +108,16 @@ protected:
     volatile bool out_valid;
     bool rx_error;
     FlexTicker rxticker;
-    
+
     //tx
     void tx_handler(void);
     void prepare_tx(int c);
     FlexTicker txticker;
     int _char;
     volatile int tx_bit;
-    
-    
-    
+
+
+
     virtual int _getc();
     virtual int _putc(int c);
 };
