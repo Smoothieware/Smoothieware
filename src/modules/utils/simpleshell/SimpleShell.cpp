@@ -1340,7 +1340,14 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
     }
 
     //stream->printf("F%f\n", rate_mm_s*scale);
-    THEKERNEL->set_stop_request(false);
+    // There is a race condition where a quick press/release could send the ^Y before the $J -c is executed
+    // this would result in continuous movement, not a good thing.
+    // so check if stop request is true and abort if it is, this means we must leave stop request false after this
+    if(THEKERNEL->get_stop_request()) {
+        THEKERNEL->set_stop_request(false);
+        stream->printf("ok\n");
+        return;
+    }
     if(cont_mode) {
         // continuous jog mode
         float fr= rate_mm_s*scale;
