@@ -58,6 +58,7 @@ Network::Network()
     hostname = NULL;
     plan9_enabled= false;
     command_q= CommandQueue::getInstance();
+    flush_network_data = false;
 }
 
 Network::~Network()
@@ -242,6 +243,20 @@ void Network::on_idle(void *argument)
 
     } else {
 
+        if (flush_network_data) {
+            flush_network_data = false;
+
+            for (struct uip_conn *connr = &uip_conns[0]; connr <= &uip_conns[UIP_CONNS - 1]; ++connr) {
+                uip_poll_conn(connr);
+                /* If the above function invocation resulted in data that
+                   should be sent out on the network, the global variable
+                   uip_len is set to a value > 0. */
+                if (uip_len > 0) {
+                    uip_arp_out();
+                    tapdev_send(uip_buf, uip_len);
+                }
+            }
+        }
         if (timer_expired(&periodic_timer)) { /* no packet but periodic_timer time out (0.1s)*/
             timer_reset(&periodic_timer);
 
@@ -393,7 +408,9 @@ void Network::on_main_loop(void *argument)
     // }
 
     // issue one comamnd per iteration of main loop like USB serial does
-    command_q->pop();
+    if (command_q->pop()) {
+        flush_network_data = true;
+    }
 
 }
 
