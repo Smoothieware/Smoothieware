@@ -1348,6 +1348,7 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
         stream->printf("ok\n");
         return;
     }
+
     if(cont_mode) {
         // continuous jog mode
         float fr= rate_mm_s*scale;
@@ -1362,6 +1363,10 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
                 delta[i]= d * (delta[i]<0?-1:1);
             }
         }
+
+        // turn off any compensation transform so Z does not move as we jog
+        auto savect= THEROBOT->compensationTransform;
+        THEROBOT->compensationTransform= nullptr;
 
         // feed moves into planner until full then keep it topped up
         while(!THEKERNEL->get_stop_request()) {
@@ -1380,6 +1385,8 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
         // reset the position based on current actuator position
         THEROBOT->reset_position_from_current_actuator_position();
         stream->printf("ok\n");
+        // restore compensationTransform
+        THEROBOT->compensationTransform= savect;
 
     }else{
         THEROBOT->delta_move(delta, rate_mm_s*scale, n_motors);
