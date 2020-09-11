@@ -1216,6 +1216,18 @@ void Robot::reset_position_from_current_actuator_position()
     #endif
 }
 
+// this needs to be done if compensation is turned off for continuous jog
+void Robot::reset_compensated_machine_position()
+{
+    if(compensationTransform) {
+        compensationTransform= nullptr;
+        // we want to leave it where we have set Z, not where it ended up AFTER compensation so
+        // this should correct the Z position to the machine_position
+        is_g123= false; // we don't want the laser to fire
+        append_milestone(machine_position, this->seek_rate / 60.0F);
+    }
+}
+
 // Convert target (in machine coordinates) to machine_position, then convert to actuator position and append this to the planner
 // target is in machine coordinates without the compensation transform, however we save a compensated_machine_position that includes
 // all transforms and is what we actually convert to actuator positions

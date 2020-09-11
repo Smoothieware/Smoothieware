@@ -1366,7 +1366,7 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
 
         // turn off any compensation transform so Z does not move as we jog
         auto savect= THEROBOT->compensationTransform;
-        THEROBOT->compensationTransform= nullptr;
+        THEROBOT->reset_compensated_machine_position();
 
         // feed moves into planner until full then keep it topped up
         while(!THEKERNEL->get_stop_request()) {
@@ -1384,9 +1384,9 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
         THECONVEYOR->set_controlled_stop(false);
         // reset the position based on current actuator position
         THEROBOT->reset_position_from_current_actuator_position();
-        stream->printf("ok\n");
         // restore compensationTransform
         THEROBOT->compensationTransform= savect;
+        stream->printf("ok\n");
 
     }else{
         THEROBOT->delta_move(delta, rate_mm_s*scale, n_motors);
