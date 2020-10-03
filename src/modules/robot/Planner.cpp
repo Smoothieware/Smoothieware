@@ -49,13 +49,15 @@ void Planner::config_load()
 
 
 // Append a block to the queue, compute it's speed factors
-bool Planner::append_block( ActuatorCoordinates &actuator_pos, uint8_t n_motors, float rate_mm_s, float distance, float *unit_vec, float acceleration, float s_value, bool g123)
+bool Planner::append_block( ActuatorCoordinates &actuator_pos, uint8_t n_motors, float rate_mm_s, float distance, float *unit_vec, float acceleration, float *s_values, int s_count, bool g123)
 {
     // Create ( recycle ) a new block
     Block* block = THECONVEYOR->queue.head_ref();
 
     // Direction bits
     bool has_steps = false;
+	int bigaxis = 0;
+	int32_t bigsteps = 0;
     for (size_t i = 0; i < n_motors; i++) {
         int32_t steps = THEROBOT->actuators[i]->steps_to_target(actuator_pos[i]);
         // Update current position
@@ -68,16 +70,30 @@ bool Planner::append_block( ActuatorCoordinates &actuator_pos, uint8_t n_motors,
         block->direction_bits[i] = (steps < 0) ? 1 : 0;
         // save actual steps in block
         block->steps[i] = labs(steps);
+		if( labs(steps) > bigsteps ) {
+			bigaxis = i;
+			bigsteps = labs(steps);
+		}
     }
 
     // sometimes even though there is a detectable movement it turns out there are no steps to be had from such a small move
     if(!has_steps) {
         block->clear();
-        return false;
+        // we still return true so the tiny move will still be accumulated and eventually create steps
+        return true;
     }
 
     // info needed by laser
-    block->s_value = roundf(s_value*(1<<11)); // 1.11 fixed point
+	block->move_axis = bigaxis;
+	block->s_count = s_count;
+#ifdef CNC
+	for( int i=0; i<s_count; i++ ) {
+		block->s_values[i] = roundf(s_values[i]*(1<<11)); // 1.11 fixed point
+	}
+	block->s_value = block->s_values[0];
+#else
+	block->s_value = roundf(s_values[i]*(1<<11)); // 1.11 fixed point
+#endif
     block->is_g123 = g123;
 
     // use default JD

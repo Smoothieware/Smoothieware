@@ -75,6 +75,8 @@ class Robot : public Module {
         // Workspace coordinate systems
         wcs_t mcs2wcs(const wcs_t &pos) const;
         wcs_t mcs2wcs(const float *pos) const { return mcs2wcs(wcs_t(pos[X_AXIS], pos[Y_AXIS], pos[Z_AXIS])); }
+        wcs_t wcs2mcs(const wcs_t &pos) const;
+        wcs_t wcs2mcs(const float *pos) const { return wcs2mcs(wcs_t(pos[X_AXIS], pos[Y_AXIS], pos[Z_AXIS])); }
 
         struct {
             bool inch_mode:1;                                 // true for inch mode, false for millimeter mode ( default )
@@ -136,6 +138,8 @@ class Robot : public Module {
         float delta_segments_per_second;                     // Setting : Used to split lines into segments for delta based on speed
         float seconds_per_minute;                            // for realtime speed change
         float default_acceleration;                          // the defualt accleration if not set for each axis
+        float s_values[8];                                   // block S values
+		int   s_count;
         float s_value;                                       // modal S value
         float arc_milestone[3];                              // used as start of an arc command
 

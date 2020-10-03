@@ -20,7 +20,7 @@ public:
     friend class Robot; // for acceleration, junction deviation, minimum_planner_speed
 
 private:
-    bool append_block(ActuatorCoordinates &target, uint8_t n_motors, float rate_mm_s, float distance, float unit_vec[], float accleration, float s_value, bool g123);
+    bool append_block(ActuatorCoordinates &target, uint8_t n_motors, float rate_mm_s, float distance, float unit_vec[], float accleration, float *s_values, int s_count, bool g123);
     void recalculate();
     void config_load();
     float previous_unit_vec[N_PRIMARY_AXIS];

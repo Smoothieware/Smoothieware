@@ -25,7 +25,9 @@ class Gcode {
 
         const char* get_command() const { return command; }
         bool has_letter ( char letter ) const;
+		int  index_of_letter( char letter, int start = 0) const;
         float get_value ( char letter, char **ptr= nullptr ) const;
+        float get_value_at_index(int index) const;
         int get_int ( char letter, char **ptr= nullptr ) const;
         uint32_t get_uint ( char letter, char **ptr= nullptr ) const;
         int get_num_args() const;

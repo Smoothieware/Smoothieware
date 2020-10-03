@@ -115,7 +115,11 @@ void Laser::on_module_loaded()
 
     // no point in updating the power more than the PWM frequency, but not faster than 1KHz
     ms_per_tick = 1000 / std::min(1000UL, 1000000 / period);
+#ifdef CNC
+    THEKERNEL->slow_ticker->attach(std::min(4000UL, 1000000 / period), this, &Laser::set_proportional_power);
+#else
     THEKERNEL->slow_ticker->attach(std::min(1000UL, 1000000 / period), this, &Laser::set_proportional_power);
+#endif
 }
 
 void Laser::on_console_line_received( void *argument )
@@ -207,15 +211,15 @@ void Laser::on_gcode_received(void *argument)
 float Laser::current_speed_ratio(const Block *block) const
 {
     // find the primary moving actuator (the one with the most steps)
-    size_t pm = 0;
-    uint32_t max_steps = 0;
-    for (size_t i = 0; i < THEROBOT->get_number_registered_motors(); i++) {
-        // find the motor with the most steps
-        if(block->steps[i] > max_steps) {
-            max_steps = block->steps[i];
-            pm = i;
-        }
-    }
+    size_t pm = block->move_axis;
+    //uint32_t max_steps = 0;
+    //for (size_t i = 0; i < THEROBOT->get_number_registered_motors(); i++) {
+    //    // find the motor with the most steps
+    //    if(block->steps[i] > max_steps) {
+    //        max_steps = block->steps[i];
+    //        pm = i;
+    //    }
+    //}
 
     // figure out the ratio of its speed, from 0 to 1 based on where it is on the trapezoid,
     // this is based on the fraction it is of the requested rate (nominal rate)
@@ -232,10 +236,18 @@ bool Laser::get_laser_power(float& power) const
     // Note to avoid a race condition where the block is being cleared we check the is_ready flag which gets cleared first,
     // as this is an interrupt if that flag is not clear then it cannot be cleared while this is running and the block will still be valid (albeit it may have finished)
     if(block != nullptr && block->is_ready && block->is_g123) {
-        float requested_power = ((float)block->s_value / (1 << 11)) / this->laser_maximum_s_value; // s_value is 1.11 Fixed point
+
+#ifdef CNC
+		int axis = block->move_axis;
+		int shift_steps = block->tick_info[axis].steps_to_move / int(block->s_count);
+		int idx = block->tick_info[axis].step_count / shift_steps;
+
+        float requested_power = ((float)block->s_values[idx] * (1.f/(1<<11))) / this->laser_maximum_s_value; // s_value is 1.11 Fixed point
+#else
+        float requested_power = ((float)block->s_value * (1.f/(1<<11))) / this->laser_maximum_s_value; // s_value is 1.11 Fixed point
+#endif
         float ratio = current_speed_ratio(block);
         power = requested_power * ratio * scale;
-
         return true;
     }
 

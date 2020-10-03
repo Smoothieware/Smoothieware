@@ -78,6 +78,16 @@ bool Gcode::has_letter( char letter ) const
     return false;
 }
 
+int Gcode::index_of_letter( char letter, int start ) const
+{
+    for (size_t i = start; i < strlen(this->command); ++i) {
+        if( command[i] == letter ) {
+            return i;
+        }
+    }
+    return -1;
+}
+
 // Retrieve the value for a given letter
 float Gcode::get_value( char letter, char **ptr ) const
 {
@@ -95,6 +105,19 @@ float Gcode::get_value( char letter, char **ptr ) const
     if(ptr != nullptr) *ptr= nullptr;
     return 0;
 }
+
+// Retrieve the value for a given letter
+float Gcode::get_value_at_index( int index ) const
+{
+    const char *cs = command + index + 1;
+    char *cn = NULL;
+	float r = strtof(cs, &cn);
+	if(cn > cs)
+		return r;
+
+    return 0;
+}
+
 
 int Gcode::get_int( char letter, char **ptr ) const
 {
