@@ -29,6 +29,7 @@
 #include "Configurator.h"
 #include "SimpleShell.h"
 #include "TemperatureControlPublicAccess.h"
+#include "PlayerPublicAccess.h"
 
 #ifndef NO_TOOLS_LASER
 #include "Laser.h"
@@ -234,7 +235,6 @@ std::string Kernel::get_query_string()
         if(n > sizeof(buf)) n= sizeof(buf);
         str.append(buf, n);
 
-
         // current Laser power
         #ifndef NO_TOOLS_LASER
             Laser *plaser= nullptr;
@@ -298,6 +298,17 @@ std::string Kernel::get_query_string()
                 str.append(buf, n);
             }
         }
+    }
+
+    // if printing from SD card add progress
+    void *returned_data;
+    ok = PublicData::get_value(player_checksum, get_progress_checksum, &returned_data);
+    if (ok) {
+        struct pad_progress p =  *static_cast<struct pad_progress *>(returned_data);
+        char buf[32];
+        size_t n = snprintf(buf, sizeof(buf), "|SD:%lu,%u", p.elapsed_secs, p.percent_complete);
+        if(n > sizeof(buf)) n= sizeof(buf);
+        str.append(buf, n);
     }
 
     str.append(">\n");
