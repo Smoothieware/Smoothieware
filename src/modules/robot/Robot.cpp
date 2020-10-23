@@ -1115,7 +1115,6 @@ void Robot::process_move(Gcode *gcode, enum MOTION_MODE_T motion_mode)
 
         case CW_ARC:
         case CCW_ARC:
-            // Note arcs are not currently supported by extruder based machines, as 3D slicers do not use arcs (G2/G3)
             moved= this->compute_arc(gcode, offset, target, motion_mode);
             break;
     }
@@ -1543,7 +1542,6 @@ bool Robot::append_line(Gcode *gcode, const float target[], float rate_mm_s, flo
 
 
 // Append an arc to the queue ( cutting it into segments as needed )
-// TODO does not support any E parameters so cannot be used for 3D printing.
 bool Robot::append_arc(Gcode * gcode, const float target[], const float offset[], float radius, bool is_clockwise )
 {
     float rate_mm_s= this->feed_rate / seconds_per_minute;
@@ -1583,6 +1581,15 @@ bool Robot::append_arc(Gcode * gcode, const float target[], const float offset[]
         }
     }
 
+    // initialize linear travel for ABC
+    #if MAX_ROBOT_ACTUATORS > 3
+    float abc_travel[n_motors-3];
+    for (int i = A_AXIS; i < n_motors; i++) {
+        abc_travel[i-3]= target[i] - this->machine_position[i];
+    }
+    #endif
+
+
     // Find the distance for this gcode
     float millimeters_of_travel = hypotf(angular_travel * radius, fabsf(linear_travel));
 
@@ -1613,6 +1620,12 @@ bool Robot::append_arc(Gcode * gcode, const float target[], const float offset[]
     if(segments > 1) {
         float theta_per_segment = angular_travel / segments;
         float linear_per_segment = linear_travel / segments;
+        #if MAX_ROBOT_ACTUATORS > 3
+        float abc_per_segment[n_motors-3];
+        for (int i = 0; i < n_motors-3; i++) {
+            abc_per_segment[i]= abc_travel[i] / segments;
+        }
+        #endif
 
         /* Vector rotation by transformation matrix: r is the original vector, r_T is the rotated vector,
         and phi is the angle of rotation. Based on the solution approach by Jens Geisler.
@@ -1641,7 +1654,6 @@ bool Robot::append_arc(Gcode * gcode, const float target[], const float offset[]
         float cos_T = 1 - 0.5F * theta_per_segment * theta_per_segment; // Small angle approximation
         float sin_T = theta_per_segment;
 
-        // TODO we need to handle the ABC axis here by segmenting them
         float arc_target[n_motors];
         float sin_Ti;
         float cos_Ti;
@@ -1678,6 +1690,11 @@ bool Robot::append_arc(Gcode * gcode, const float target[], const float offset[]
             arc_target[this->plane_axis_0] = center_axis0 + r_axis0;
             arc_target[this->plane_axis_1] = center_axis1 + r_axis1;
             arc_target[this->plane_axis_2] += linear_per_segment;
+            #if MAX_ROBOT_ACTUATORS > 3
+            for (int a = A_AXIS; a < n_motors; a++) {
+                arc_target[a] += abc_per_segment[a-3];
+            }
+            #endif
 
             // Append this segment to the queue
             bool b= this->append_milestone(arc_target, rate_mm_s);
