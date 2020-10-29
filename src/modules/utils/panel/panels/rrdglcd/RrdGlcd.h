@@ -14,9 +14,12 @@
  */
 
 #include <mbed.h>
+#include "SWSPI.h"
 #include "libs/Kernel.h"
 #include "libs/utils.h"
 #include <libs/Pin.h>
+
+class SWSPI;
 
 
 class RrdGlcd {
@@ -54,8 +57,12 @@ public:
     // void setCursorPX(int x, int y);
 
 private:
+    bool sw_spi;
     Pin cs;
-    mbed::SPI* spi;
+    union {
+        mbed::SPI *spi;
+        SWSPI *swspi;
+    };
     void renderChar(uint8_t *fb, char c, int ox, int oy);
     void displayChar(int row, int column,char inpChr);
 

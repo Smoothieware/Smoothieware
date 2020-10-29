@@ -138,26 +138,34 @@ static const uint8_t font5x8[] = {
 
 #define ST7920_CS()              {cs.set(1);wait_us(10);}
 #define ST7920_NCS()             {cs.set(0);wait_us(10);}
-#define ST7920_WRITE_BYTE(a)     {this->spi->write((a)&0xf0);this->spi->write((a)<<4);wait_us(10);}
-#define ST7920_WRITE_BYTES(p,l)  {uint8_t i;for(i=0;i<l;i++){this->spi->write(*p&0xf0);this->spi->write(*p<<4);p++;} wait_us(10); }
-#define ST7920_SET_CMD()         {this->spi->write(0xf8);wait_us(10);}
-#define ST7920_SET_DAT()         {this->spi->write(0xfa);wait_us(10);}
+#define ST7920_WRITE_BYTE(a)     {if(sw_spi){this->swspi->write((a)&0xf0);this->swspi->write((a)<<4);}else{this->spi->write((a)&0xf0);this->spi->write((a)<<4);}wait_us(10);}
+#define ST7920_WRITE_BYTES(p,l)  {uint8_t i;for(i=0;i<l;i++){if(sw_spi){this->swspi->write(*p&0xf0);this->swspi->write(*p<<4);}else{this->spi->write(*p&0xf0);this->spi->write(*p<<4);}p++;} wait_us(10); }
+#define ST7920_SET_CMD()         {if(sw_spi){this->swspi->write(0xf8);}else{this->spi->write(0xf8);}wait_us(10);}
+#define ST7920_SET_DAT()         {if(sw_spi){this->swspi->write(0xfa);}else{this->spi->write(0xfa);}wait_us(10);}
 #define PAGE_HEIGHT 32  //512 byte framebuffer
 #define WIDTH 128
 #define HEIGHT 64
 #define FB_SIZE WIDTH*HEIGHT/8
 
 RrdGlcd::RrdGlcd(int spi_channel, Pin cs) {
+    sw_spi = false;
     PinName mosi, miso, sclk;
-    if(spi_channel == 0) {
+    if (spi_channel == -1) { // hardwired to 
+        sw_spi = true;
+        mosi = P1_18; miso = P1_21; sclk = P1_20;
+    } else if(spi_channel == 0) {
         mosi = P0_18; miso = P0_17; sclk = P0_15;
     } else if(spi_channel == 1) {
         mosi = P0_9; miso = P0_8; sclk = P0_7;
-    } else {
+    } else { // defaut to spi0
         mosi = P0_18; miso = P0_17; sclk = P0_15;
     }
 
-    this->spi = new mbed::SPI(mosi, miso, sclk);
+    if (sw_spi) {
+        this->swspi = new SWSPI(mosi, miso, sclk);
+    } else {
+        this->spi = new mbed::SPI(mosi, miso, sclk);
+    }
 
     //chip select
     this->cs= cs;
@@ -171,12 +179,20 @@ RrdGlcd::RrdGlcd(int spi_channel, Pin cs) {
 }
 
 RrdGlcd::~RrdGlcd() {
-    delete this->spi;
+    if (sw_spi) {
+        delete this->swspi;
+    } else {
+        delete this->spi;
+    }        
     AHB0.dealloc(fb);
 }
 
 void RrdGlcd::setFrequency(int freq) {
-       this->spi->frequency(freq);
+    if (sw_spi) {
+        this->swspi->frequency(freq);
+    } else {
+        this->spi->frequency(freq);
+    }
 }
 
 void RrdGlcd::initDisplay() {
