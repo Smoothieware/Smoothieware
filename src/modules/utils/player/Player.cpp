@@ -449,7 +449,7 @@ void Player::on_main_loop(void *argument)
                 }
 
                 struct SerialMessage message;
-                if(buf[len - 1] == '\n') {
+                if(buf[len-1] == '\n' || buf[len-1] == '\r') {
                     message.message.assign(buf, len-1); // we do not want to include the \n
                 }else{
                     message.message.assign(buf, len);
