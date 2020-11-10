@@ -66,6 +66,20 @@ void ToolManager::on_gcode_received(void *argument)
             }
         }
     }
+
+    if(gcode->has_g && gcode->g == 10 && gcode->has_letter('L') && gcode->get_int('L') == 1 && gcode->has_letter('P')) {
+        // Handle G10 L1 Pn Xnnn Ynnn Znnn
+        size_t n = gcode->get_uint('P')-1;
+        if(n < this->tools.size()) {
+            // Set the tool offset for this tool
+            if(gcode->has_letter('X')) tools[n]->set_offset(0, gcode->get_value('X'));
+            if(gcode->has_letter('Y')) tools[n]->set_offset(1, gcode->get_value('Y'));
+            if(gcode->has_letter('Z')) tools[n]->set_offset(2, gcode->get_value('Z'));
+
+        }else{
+            gcode->stream->printf("Error:invalid tool: %u", n);
+        }
+    }
 }
 
 void ToolManager::on_get_public_data(void* argument)
