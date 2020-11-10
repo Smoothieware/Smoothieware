@@ -41,7 +41,7 @@ class Robot : public Module {
         float get_seconds_per_minute() const { return seconds_per_minute; }
         float get_z_maxfeedrate() const { return this->max_speeds[Z_AXIS]; }
         float get_default_acceleration() const { return default_acceleration; }
-        void setToolOffset(const float offset[N_PRIMARY_AXIS]);
+        void set_tool_offset(const float offset[N_PRIMARY_AXIS]);
         float get_feed_rate() const;
         float get_s_value() const { return s_value; }
         void set_s_value(float s) { s_value= s; }
@@ -116,7 +116,7 @@ class Robot : public Module {
 
         float theta(float x, float y);
         void select_plane(uint8_t axis_0, uint8_t axis_1, uint8_t axis_2);
-        void clearToolOffset();
+        void clear_tool_offset();
         int get_active_extruder() const;
 
         std::array<wcs_t, MAX_WCS> wcs_offsets; // these are persistent once saved with M500
