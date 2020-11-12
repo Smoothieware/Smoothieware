@@ -75,9 +75,14 @@ void ToolManager::on_gcode_received(void *argument)
             if(gcode->has_letter('X')) tools[n]->set_offset(0, gcode->get_value('X'));
             if(gcode->has_letter('Y')) tools[n]->set_offset(1, gcode->get_value('Y'));
             if(gcode->has_letter('Z')) tools[n]->set_offset(2, gcode->get_value('Z'));
+            if((int)n == this->active_tool) {
+                // send updated tool_offsets to robot
+                const float *new_tool_offset = tools[n]->get_offset();
+                THEROBOT->set_tool_offset(new_tool_offset);
+            }
 
         }else{
-            gcode->stream->printf("Error:invalid tool: %u", n);
+            gcode->stream->printf("Error:invalid tool: %u\n", n);
         }
     }
 }
