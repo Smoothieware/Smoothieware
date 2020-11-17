@@ -3,8 +3,10 @@
 
 #include "LevelingStrategy.h"
 
+#include "Vector3.h"
 #include <string.h>
 #include <tuple>
+
 
 #define three_point_leveling_strategy_checksum CHECKSUM("three-point-leveling")
 
@@ -36,6 +38,9 @@ private:
         bool save:1;
     };
     float tolerance;
+
+    Vector3 correctPoint(float x, float y, float z);
+    Vector3 uncorrectPoint(float x, float y, float z);
 };
 
 #endif
