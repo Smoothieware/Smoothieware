@@ -366,9 +366,9 @@ void ThreePointStrategy::setAdjustFunction(bool on)
         THEROBOT->compensationTransform= [this](float *target, bool inverse) {
             Vector3 result;
             if (inverse) {
-                result = this->correctPoint(target[0], target[1], target[2]);
-            } else {
                 result = this->uncorrectPoint(target[0], target[1], target[2]);
+            } else {
+                result = this->correctPoint(target[0], target[1], target[2]);
             }
             target[0] = result.data()[0];
             target[1] = result.data()[1];
@@ -409,9 +409,6 @@ Vector3 ThreePointStrategy::uncorrectPoint(float x, float y, float z)
     Vector3 intersectionPoint = rayDirection.mul(intersectionDistance).add(rayOrigin);
     return Vector3(intersectionPoint.data()[0], intersectionPoint.data()[1], intersectionDistance);
 }
-
-
-
 
 // parse a "X,Y" string return x,y
 std::tuple<float, float> ThreePointStrategy::parseXY(const char *str)

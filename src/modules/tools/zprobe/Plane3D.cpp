@@ -50,7 +50,7 @@ Vector3 Plane3D::getNormal() const
 
 Vector3 Plane3D::getUpwardsNormal() const
 {
-    if (normal.data()[2] >=0) {
+    if (normal.data()[2] >= 0) {
         return normal;
     }
     return normal.mul(-1);
