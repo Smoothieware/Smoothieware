@@ -155,7 +155,7 @@ uint32_t ZProbe::read_probe(uint32_t dummy)
     // we check all axis as it maybe a G38.2 X10 for instance, not just a probe in Z
     if(STEPPER[X_AXIS]->is_moving() || STEPPER[Y_AXIS]->is_moving() || STEPPER[Z_AXIS]->is_moving()) {
         // if it is moving then we check the probe, and debounce it
-        if(this->pin.get() != invert_probe) {
+        if(this->pin.get()) {
             if(debounce < debounce_ms) {
                 debounce++;
             } else {
@@ -258,7 +258,6 @@ void ZProbe::on_gcode_received(void *argument)
 
     if( gcode->has_g && gcode->g >= 29 && gcode->g <= 32) {
 
-        invert_probe = false;
         // make sure the probe is defined and not already triggered before moving motors
         if(!this->pin.connected()) {
             gcode->stream->printf("ZProbe pin not configured.\n");
@@ -341,14 +340,18 @@ void ZProbe::on_gcode_received(void *argument)
         }
 
         if(gcode->subcode == 4 || gcode->subcode == 5) {
-            invert_probe = true;
-        } else {
-            invert_probe = false;
+            // we need to invert the probe sense (Note it may already be overrided)
+            invert_override= !invert_override;
+            pin.set_inverting(pin.is_inverting() != invert_override); // XOR so inverted pin is not inverted and vice versa
         }
 
         probe_XYZ(gcode);
 
-        invert_probe = false;
+        if(gcode->subcode == 4 || gcode->subcode == 5) {
+            // restore probe sense invert
+            pin.set_inverting(pin.is_inverting() != invert_override); // XOR so inverted pin is not inverted and vice versa
+            invert_override= !invert_override;
+        }
 
         return;
 
@@ -444,7 +447,7 @@ void ZProbe::probe_XYZ(Gcode *gcode)
     // first wait for all moves to finish
     THEKERNEL->conveyor->wait_for_idle();
 
-    if(this->pin.get() != invert_probe) {
+    if(this->pin.get()) {
         gcode->stream->printf("error:ZProbe triggered before move, aborting command.\n");
         return;
     }
