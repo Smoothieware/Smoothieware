@@ -36,11 +36,12 @@ private:
     struct {
         bool home:1;
         bool save:1;
+        bool correct_skew:1;
     };
     float tolerance;
 
-    Vector3 correctPoint(float x, float y, float z);
-    Vector3 uncorrectPoint(float x, float y, float z);
+    void legacyCompensationTransform(float *target, bool inverse);
+    void skewCorrectingCompensationTransform(float *target, bool inverse);
 };
 
 #endif
