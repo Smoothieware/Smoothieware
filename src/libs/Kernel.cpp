@@ -254,17 +254,19 @@ std::string Kernel::get_query_string()
         // return the last milestone if idle
         char buf[128];
         // machine position
-        Robot::wcs_t mpos = robot->get_axis_position();
-        size_t n = snprintf(buf, sizeof(buf), "%1.4f,%1.4f,%1.4f", robot->from_millimeters(std::get<X_AXIS>(mpos)), robot->from_millimeters(std::get<Y_AXIS>(mpos)), robot->from_millimeters(std::get<Z_AXIS>(mpos)));
+        int nmotors= robot->get_number_registered_motors();
+        float mpos[nmotors];
+        robot->get_axis_position(mpos, nmotors);
+        size_t n = snprintf(buf, sizeof(buf), "%1.4f,%1.4f,%1.4f", robot->from_millimeters(mpos[X_AXIS]), robot->from_millimeters(mpos[Y_AXIS]), robot->from_millimeters(mpos[Z_AXIS]));
         if(n > sizeof(buf)) n= sizeof(buf);
 
         str.append("|MPos:").append(buf, n);
 
 #if MAX_ROBOT_ACTUATORS > 3
         // deal with the ABC axis (E will be A)
-        for (int i = A_AXIS; i < robot->get_number_registered_motors(); ++i) {
-            // current actuator position
-            n = snprintf(buf, sizeof(buf), ",%1.4f", robot->actuators[i]->get_current_position());
+        for (int i = A_AXIS; i < nmotors; ++i) {
+            // machine position
+            n = snprintf(buf, sizeof(buf), ",%1.4f", mpos[i]);
             if(n > sizeof(buf)) n= sizeof(buf);
             str.append(buf, n);
         }
