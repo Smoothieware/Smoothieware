@@ -50,6 +50,10 @@ class Robot : public Module {
         void check_max_actuator_speeds();
         float to_millimeters( float value ) const { return this->inch_mode ? value * 25.4F : value; }
         float from_millimeters( float value) const { return this->inch_mode ? value/25.4F : value;  }
+        float to_rotary_scale( float value, int axis );
+        float from_rotary_scale( float value, int axis);
+        float to_unit_scale( float value, int axis);
+        float from_unit_scale( float value, int axis);
         float get_axis_position(int axis) const { return(this->machine_position[axis]); }
         void get_axis_position(float position[], size_t n= 3) const { memcpy(position, this->machine_position, n*sizeof(float)); }
         wcs_t get_axis_position() const { return wcs_t(machine_position[X_AXIS], machine_position[Y_AXIS], machine_position[Z_AXIS]); }
@@ -149,7 +153,7 @@ class Robot : public Module {
         int arc_correction;                                  // Setting : how often to rectify arc computation
         float max_speeds[3];                                 // Setting : max allowable speed in mm/s for each axis
         float max_speed;                                     // Setting : maximum feedrate in mm/s as specified by F parameter
-
+        float rotary_scale[6];                               // Setting : rotary axis scale to fix A,B, and C axis feedrates and accelerations
         float soft_endstop_min[3], soft_endstop_max[3];
 
         uint8_t n_motors;                                    //count of the motors/axis registered

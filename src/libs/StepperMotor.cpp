@@ -21,6 +21,7 @@ StepperMotor::StepperMotor(Pin &step, Pin &dir, Pin &en) : step_pin(step), dir_p
 
     steps_per_mm         = 1.0F;
     max_rate             = 50.0F;
+    unit_scale           = 1.0F;
 
     last_milestone_steps = 0;
     last_milestone_mm    = 0.0F;

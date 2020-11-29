@@ -125,6 +125,9 @@ Robot::Robot()
     this->disable_segmentation= false;
     this->disable_arm_solution= false;
     this->n_motors= 0;
+    this->rotary_scale[A_AXIS]=1;
+    this->rotary_scale[B_AXIS]=1;
+    this->rotary_scale[C_AXIS]=1;
 }
 
 //Called when the module has just been loaded
@@ -142,7 +145,8 @@ void Robot::on_module_loaded()
     CHECKSUM(X "_en_pin"),          \
     CHECKSUM(X "_steps_per_mm"),    \
     CHECKSUM(X "_max_rate"),        \
-    CHECKSUM(X "_acceleration")     \
+    CHECKSUM(X "_acceleration"),    \
+    CHECKSUM(X "_unit_scale")       \
 }
 
 void Robot::load_config()
@@ -209,7 +213,7 @@ void Robot::load_config()
     this->s_value             = THEKERNEL->config->value(laser_module_default_power_checksum)->by_default(0.8F)->as_number();
 
      // Make our Primary XYZ StepperMotors, and potentially A B C
-    uint16_t const motor_checksums[][6] = {
+    uint16_t const motor_checksums[][7] = {
         ACTUATOR_CHECKSUMS("alpha"), // X
         ACTUATOR_CHECKSUMS("beta"),  // Y
         ACTUATOR_CHECKSUMS("gamma"), // Z
@@ -255,6 +259,7 @@ void Robot::load_config()
         actuators[a]->change_steps_per_mm(THEKERNEL->config->value(motor_checksums[a][3])->by_default(a == 2 ? 2560.0F : 80.0F)->as_number());
         actuators[a]->set_max_rate(THEKERNEL->config->value(motor_checksums[a][4])->by_default(30000.0F)->as_number()/60.0F); // it is in mm/min and converted to mm/sec
         actuators[a]->set_acceleration(THEKERNEL->config->value(motor_checksums[a][5])->by_default(NAN)->as_number()); // mm/secs²
+        actuators[a]->set_unit_scale(THEKERNEL->config->value(motor_checksums[a][6])->by_default(1.0F)->as_number()); // unit scale to correct A,B, and C rotary axis
     }
 
     check_max_actuator_speeds(); // check the configs are sane
@@ -868,6 +873,46 @@ void Robot::on_gcode_received(void *argument)
                 }
                 break;
 
+            case 250: // M250 - set unit scale
+                for (size_t i = X_AXIS; i <= Z_AXIS; i++) {
+                     int axis= 'X' + i;
+                     if(gcode->has_letter(axis)) {
+                        actuators[i]->set_unit_scale(gcode->get_value(axis));
+                      }
+                }
+                for (size_t i = A_AXIS; i < n_motors; i++) {
+                     int axis= 'A' + i - A_AXIS;
+                     if(gcode->has_letter(axis)) {
+                        actuators[i]->set_unit_scale(gcode->get_value(axis));
+                      }
+                }
+                for (size_t i = X_AXIS; i <= Z_AXIS; i++) {
+//                     int axis= 'X' + i;
+                     gcode->stream->printf("%c: %5.3f ", 'X'+i, actuators[i]->get_unit_scale());
+                }
+                for (size_t i = A_AXIS; i < n_motors; i++) {
+                    // int axis= 'A' + i - A_AXIS;
+                     gcode->stream->printf("%c: %5.3f ", 'A'+i-A_AXIS, actuators[i]->get_unit_scale());
+                }
+                gcode->stream->printf(" unit scale factors\n");
+                
+
+                break;
+                
+            case 251: // M251 - set rotary axis scale
+                for (size_t i = A_AXIS; i < n_motors; i++) {
+                     int axis= 'A' + i - A_AXIS;
+                     if(gcode->has_letter(axis)) {
+                          rotary_scale[i]= gcode->get_value(axis);
+                      }
+                }
+                for (size_t i = A_AXIS; i < n_motors; i++) {
+                    // int axis= 'A' + i - A_AXIS;
+                     gcode->stream->printf("%c: %5.3f ", 'A'+i-A_AXIS, rotary_scale[i]);
+                }
+                gcode->stream->printf(" rotary scale factors\n");
+                break;
+
             case 400: // wait until all moves are done up to this point
                 THEKERNEL->conveyor->wait_for_idle();
                 break;
@@ -1010,14 +1055,14 @@ void Robot::process_move(Gcode *gcode, enum MOTION_MODE_T motion_mode)
     for(int i= X_AXIS; i <= Z_AXIS; ++i) {
         char letter= 'X'+i;
         if( gcode->has_letter(letter) ) {
-            param[i] = this->to_millimeters(gcode->get_value(letter));
+            param[i] = this->to_unit_scale(this->to_millimeters(gcode->get_value(letter)),i);
         }
     }
 
     float offset[3]{0,0,0};
     for(char letter = 'I'; letter <= 'K'; letter++) {
         if( gcode->has_letter(letter) ) {
-            offset[letter - 'I'] = this->to_millimeters(gcode->get_value(letter));
+            offset[letter - 'I'] = this->to_unit_scale(this->to_millimeters(gcode->get_value(letter)),letter - 'I');
         }
     }
 
@@ -1079,7 +1124,7 @@ void Robot::process_move(Gcode *gcode, enum MOTION_MODE_T motion_mode)
     for (int i = A_AXIS; i < n_motors; ++i) {
         char letter= 'A'+i-A_AXIS;
         if(gcode->has_letter(letter)) {
-            float p= gcode->get_value(letter);
+            float p= this->to_rotary_scale(this->to_unit_scale(gcode->get_value(letter),i),i);
             if(this->absolute_mode) {
                 target[i]= p;
             }else{
@@ -1225,6 +1270,26 @@ void Robot::reset_compensated_machine_position()
         is_g123= false; // we don't want the laser to fire
         append_milestone(machine_position, this->seek_rate / 60.0F);
     }
+}
+
+float Robot::to_rotary_scale( float value, int axis)
+{
+   return value * rotary_scale[axis]; 
+}
+
+float Robot::from_rotary_scale( float value, int axis)
+{
+   return value / rotary_scale[axis];
+}
+
+float Robot::to_unit_scale( float value, int axis)
+{
+   return value * actuators[axis]->get_unit_scale(); 
+}
+
+float Robot::from_unit_scale( float value, int axis)
+{
+   return value / actuators[axis]->get_unit_scale();
 }
 
 // Convert target (in machine coordinates) to machine_position, then convert to actuator position and append this to the planner

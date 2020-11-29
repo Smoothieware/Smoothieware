@@ -49,6 +49,8 @@ class StepperMotor  : public Module {
         void set_max_rate(float mr) { max_rate= mr; }
         void set_acceleration(float a) { acceleration= a; }
         float get_acceleration() const { return acceleration; }
+        float get_unit_scale(void) const { return unit_scale; }
+        void set_unit_scale(float us) { unit_scale= us; }
         bool is_selected() const { return selected; }
         void set_selected(bool b) { selected= b; }
         bool is_extruder() const { return extruder; }
@@ -69,6 +71,7 @@ class StepperMotor  : public Module {
         float steps_per_mm;
         float max_rate; // this is not really rate it is in mm/sec, misnamed used in Robot and Extruder
         float acceleration;
+        float unit_scale; // this is used to scale the A,B, and C axis to correct units after steps/mm are set to allow the same feedrates and accelerations X, Y, and Z use
 
         volatile int32_t current_position_steps;
         int32_t last_milestone_steps;
