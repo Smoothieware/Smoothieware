@@ -1278,7 +1278,7 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
     // $J is first parameter
     shift_parameter(parameters);
     if(parameters.empty()) {
-        stream->printf("usage: $J X0.01 [S0.5] - axis can be XYZABC, optional speed is scale of max_rate\n");
+        stream->printf("usage: $J [-c] X0.01 [S0.5] - axis can be XYZABC, optional speed is scale of max_rate. -c turns on continuous jog mode\n");
         return;
     }
 

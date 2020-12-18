@@ -423,11 +423,7 @@ void Endstops::on_idle(void*)
         trigger_halt= false;
         char d= triggered_direction ? '-' : '+';
         char a= triggered_axis < 3 ? 'X' + triggered_axis : 'A' + triggered_axis-3;
-        if(!THEKERNEL->is_grbl_mode()) {
-            THEKERNEL->streams->printf("Limit switch %c%c was hit\n", d, a);
-        }else{
-            THEKERNEL->streams->printf("ALARM: Hard limit %c%c\n", d, a);
-        }
+        THEKERNEL->streams->printf("ALARM: Hard limit %c%c\n", d, a);
         THEKERNEL->streams->printf("// NOTICE limits are disabled until all have been cleared\n");
 
         // disables heaters and motors
