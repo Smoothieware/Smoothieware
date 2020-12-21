@@ -712,13 +712,13 @@ void CartGridStrategy::doCompensation(float *target, bool inverse)
 {
     // Adjust print surface height by linear interpolation over the bed_level array.
     // offset scale: 1 for default (use offset as is)
-    float scale = 1.0;
+    float scale = 1.0F;
     if (!isnan(this->damping_interval)) {
         // if the height is below our compensation limit:
         if(target[Z_AXIS] <= this->height_limit) {
             // scale the offset as necessary:
             if(target[Z_AXIS] >= this->dampening_start) {
-                scale = (1.0 - ((target[Z_AXIS] - this->dampening_start) / this->damping_interval));
+                scale = (1.0F - ((target[Z_AXIS] - this->dampening_start) / this->damping_interval));
             } // else leave scale at 1.0;
         } else {
             return; // if Z is higher than max, no compensation
@@ -755,9 +755,9 @@ void CartGridStrategy::doCompensation(float *target, bool inverse)
     if(isnan(offset)) return;
 
     if (inverse) {
-        target[Z_AXIS] -= offset * scale;
+        target[Z_AXIS] -= (offset * scale);
     } else {
-        target[Z_AXIS] += offset * scale;
+        target[Z_AXIS] += (offset * scale);
     }
 
 #if 0

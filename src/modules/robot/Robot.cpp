@@ -1223,7 +1223,9 @@ void Robot::reset_compensated_machine_position()
         // we want to leave it where we have set Z, not where it ended up AFTER compensation so
         // this should correct the Z position to the machine_position
         is_g123= false; // we don't want the laser to fire
-        append_milestone(machine_position, this->seek_rate / 60.0F);
+        if(!append_milestone(machine_position, this->seek_rate / 60.0F)) {
+            reset_axis_position(machine_position[X_AXIS], machine_position[Y_AXIS], machine_position[Z_AXIS]);
+        }
     }
 }
 
