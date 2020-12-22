@@ -1354,7 +1354,7 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
         float fr= rate_mm_s*scale;
         // calculate minimum distance to travel to accomodate acceleration and feedrate
         float acc= THEROBOT->get_default_acceleration();
-        float t= fr/acc; // time to reach frame rate
+        float t= fr/acc; // time to reach feed rate
         float d= 0.5F * acc * powf(t, 2); // distance required to accelerate (or decelerate)
 
         // we need to move at least this distance to reach full speed
@@ -1370,9 +1370,14 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
 
         // feed moves into planner until full then keep it topped up
         while(!THEKERNEL->get_stop_request()) {
+            int cnt= 0;
             while(!THECONVEYOR->is_queue_full()) {
                 if(THEKERNEL->get_stop_request() || THEKERNEL->is_halted()) break;
                 THEROBOT->delta_move(delta, fr, n_motors);
+                if(++cnt >= 16) {
+                    THEKERNEL->call_event(ON_IDLE);
+                    cnt= 0;
+                }
             }
             if(THEKERNEL->is_halted()) break;
             THEKERNEL->call_event(ON_IDLE);
