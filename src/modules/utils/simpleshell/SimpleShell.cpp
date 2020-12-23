@@ -1331,7 +1331,6 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
             }else{
                 rate_mm_s = std::min(rate_mm_s, THEROBOT->actuators[i]->get_max_rate());
             }
-            //stream->printf("%d %f S%f\n", i, delta[i], rate_mm_s);
         }
     }
     if(!ok) {
@@ -1339,7 +1338,6 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
         return;
     }
 
-    //stream->printf("F%f\n", rate_mm_s*scale);
     // There is a race condition where a quick press/release could send the ^Y before the $J -c is executed
     // this would result in continuous movement, not a good thing.
     // so check if stop request is true and abort if it is, this means we must leave stop request false after this
@@ -1363,12 +1361,16 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
                 delta[i]= d * (delta[i]<0?-1:1);
             }
         }
+        // stream->printf("distance: %f, time:%f, X%f Y%f Z%f, speed:%f\n", d, t, delta[0], delta[1], delta[2], fr);
 
         // turn off any compensation transform so Z does not move as we jog
         // auto savect= THEROBOT->compensationTransform;
         // THEROBOT->reset_compensated_machine_position();
 
         // feed moves into planner until full then keep it topped up
+        // NOTE if feed rate is very high this cannot keep the queue full which
+        // can cause issues when we try to stop (at least on deltas)
+        // Also as it can feed a long move to fill the buffer deltas may get an error for out of bound move
         while(!THEKERNEL->get_stop_request()) {
             int cnt= 0;
             while(!THECONVEYOR->is_queue_full()) {

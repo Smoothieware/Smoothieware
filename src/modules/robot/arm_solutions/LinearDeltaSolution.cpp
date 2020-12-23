@@ -5,6 +5,7 @@
 #include "libs/Kernel.h"
 #include "libs/nuts_bolts.h"
 #include "libs/Config.h"
+#include "StreamOutputPool.h"
 
 #include <fastmath.h>
 #include "Vector3.h"
@@ -19,6 +20,7 @@
 #define tower1_angle_checksum       CHECKSUM("delta_tower1_angle")
 #define tower2_angle_checksum       CHECKSUM("delta_tower2_angle")
 #define tower3_angle_checksum       CHECKSUM("delta_tower3_angle")
+#define delta_halt_on_error_checksum    CHECKSUM("delta_halt_on_error")
 
 #define SQ(x) powf(x, 2)
 #define ROUND(x, y) (roundf(x * (float)(1e ## y)) / (float)(1e ## y))
@@ -37,6 +39,7 @@ LinearDeltaSolution::LinearDeltaSolution(Config* config)
     tower1_offset = config->value(tower1_offset_checksum)->by_default(0.0f)->as_number();
     tower2_offset = config->value(tower2_offset_checksum)->by_default(0.0f)->as_number();
     tower3_offset = config->value(tower3_offset_checksum)->by_default(0.0f)->as_number();
+    halt_on_error= config->value(delta_halt_on_error_checksum)->by_default(true)->as_bool();
 
     init();
 }
@@ -71,6 +74,15 @@ void LinearDeltaSolution::cartesian_to_actuator(const float cartesian_mm[], Actu
                                        - SQ(delta_tower3_x - cartesian_mm[X_AXIS])
                                        - SQ(delta_tower3_y - cartesian_mm[Y_AXIS])
                                       ) + cartesian_mm[Z_AXIS];
+
+    if(!halt_on_error) return;
+
+    for (int i = 0; i < 3; ++i) {
+        if(isnan(actuator_mm[i])) {
+            THEKERNEL->streams->printf("error: LinearDelta illegal move. HALTED\n");
+            THEKERNEL->call_event(ON_HALT, nullptr);
+        }
+    }
 }
 
 void LinearDeltaSolution::actuator_to_cartesian(const ActuatorCoordinates &actuator_mm, float cartesian_mm[] ) const
