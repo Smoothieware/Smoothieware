@@ -454,8 +454,11 @@ void Robot::check_max_actuator_speeds()
         if(actuators[i]->is_extruder()) continue; //extruders are not included in this check
 
         float step_freq = actuators[i]->get_max_rate() * actuators[i]->get_steps_per_mm();
-        if (step_freq > THEKERNEL->base_stepping_frequency) {
-            actuators[i]->set_max_rate(floorf(THEKERNEL->base_stepping_frequency / actuators[i]->get_steps_per_mm()));
+        if (step_freq >= THEKERNEL->base_stepping_frequency) {
+            float s= floorf(THEKERNEL->base_stepping_frequency / actuators[i]->get_steps_per_mm());
+            // derate by 1% so it is not right up against the maximum
+            s -= (s*0.01);
+            actuators[i]->set_max_rate(s);
             THEKERNEL->streams->printf("WARNING: actuator %d rate exceeds base_stepping_frequency * ..._steps_per_mm: %f, setting to %f\n", i, step_freq, actuators[i]->get_max_rate());
         }
     }
