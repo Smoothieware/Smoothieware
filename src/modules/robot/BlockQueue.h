@@ -20,9 +20,6 @@ public:
     Block& head();
     Block& tail();
 
-    // void push_front(Block&) __attribute__ ((warning("Not thread-safe if pop_back() is used in ISR context!"))); // instead, prepare(head_ref()); produce_head();
-    // Block& pop_back(void) __attribute__ ((warning("Not thread-safe if head_ref() is used to prepare new items, or push_front() is used in ISR context!"))); // instead, consume(tail_ref()); consume_tail();
-
     /*
      * pointer accessors
      */
@@ -44,17 +41,6 @@ public:
      * returns true on success, or false if queue is not empty or not enough memory available
      */
     bool resize(unsigned int);
-
-    /*
-     * provide
-     * Block*      - new buffer pointer
-     * int length - number of items in buffer (NOT size in bytes!)
-     *
-     * cause BlockQueue to use a specific memory location instead of allocating its own
-     *
-     * returns true on success, or false if queue is not empty
-     */
-    //bool provide(Block*, unsigned int length);
 
 protected:
     /*

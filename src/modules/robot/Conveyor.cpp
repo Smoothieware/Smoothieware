@@ -63,7 +63,8 @@ Conveyor::Conveyor()
     running = false;
     allow_fetch = false;
     flush= false;
-    controlled_stop = false;
+    continuous_mode = false;
+    hold_queue= false;
 }
 
 void Conveyor::on_module_loaded()
@@ -90,6 +91,8 @@ void Conveyor::on_halt(void* argument)
     if(argument == nullptr) {
         // marks queue to be flushed next time get_next_block() is called
         flush_queue();
+        hold_queue= false;
+        continuous_mode= false;
     }
 }
 
@@ -195,9 +198,41 @@ void Conveyor::check_queue(bool force)
     }
 }
 
+bool Conveyor::set_continuous_mode(bool f)
+{
+    if(f) {
+        if(queue.is_empty()) return false;
+
+        // copy the tickinfo of the second block on the queue
+        auto n_actuators= THEROBOT->get_number_registered_motors();
+        Block* b= queue.item_ref(queue.next(queue.tail_i));
+        Block::tickinfo_t *saved= new Block::tickinfo_t[n_actuators];
+        if(saved == nullptr) return false;
+        for(int i = 0; i < n_actuators; ++i) {
+            saved[i]= b->tick_info[i];
+        }
+
+        saved_block= saved;
+        continuous_mode= 1;
+
+    }else{
+        if(saved_block != nullptr) {
+            Block::tickinfo_t *saved= static_cast<Block::tickinfo_t *>(saved_block);
+            delete [] saved;
+            saved_block= nullptr;
+        }
+        continuous_mode= 0;
+    }
+    return true;
+}
+
 // called from step ticker ISR
 bool Conveyor::get_next_block(Block **block)
 {
+    // this is used to allow us to put blocks onto an empty queue and not start until we say so
+    // do not use to hold the queue when it is running otherwise it will stop with zero deceleration
+    if(hold_queue) return false;
+
     if(flush){
         // mark entire queue for GC if flush flag is asserted
         while (queue.isr_tail_i != queue.head_i) {
@@ -206,20 +241,23 @@ bool Conveyor::get_next_block(Block **block)
         flush = false;
     }
 
-    if(controlled_stop){
-        // fast forward to all but the last block (which should be a full deceleration block)
-        // can only be used if we know each block has full acceleration move
-        // We could also search for the first block which has zero exit speed
-        while (queue.isr_tail_i != queue.head_i && queue.next(queue.isr_tail_i) != queue.head_i) {
-            queue.isr_tail_i = queue.next(queue.isr_tail_i);
-        }
-        controlled_stop= false;
-    }
 
-    // default the feerate to zero if there is no block available
+    // default the feedrate to zero if there is no block available
     this->current_feedrate= 0;
 
     if(THEKERNEL->is_halted() || queue.isr_tail_i == queue.head_i) return false; // we do not have anything to give
+
+    if(continuous_mode > 1){
+        // keep feeding the second in the queue
+        Block *b= queue.item_ref(queue.isr_tail_i);
+        // reset variable parts of the block
+        b->reset(static_cast<Block::tickinfo_t*>(saved_block));
+        b->is_ticking= true;
+        b->recalculate_flag= false;
+        this->current_feedrate= b->nominal_speed;
+        *block= b;
+        return true;
+    }
 
     // wait for queue to fill up, optimizes planning
     if(!allow_fetch) return false;
@@ -240,10 +278,14 @@ bool Conveyor::get_next_block(Block **block)
 }
 
 // called from step ticker ISR when block is finished, do not do anything slow here
+// if in continuous mode we keep feeding the same block
 void Conveyor::block_finished()
 {
-    // we increment the isr_tail_i so we can get the next block
-    queue.isr_tail_i= queue.next(queue.isr_tail_i);
+    if(continuous_mode <= 1){
+        // we increment the isr_tail_i so we can get the next block
+        queue.isr_tail_i= queue.next(queue.isr_tail_i);
+        if(continuous_mode == 1) continuous_mode= 2;
+    }
 }
 
 /*
@@ -264,11 +306,11 @@ void Conveyor::flush_queue()
 // Debug function
 void Conveyor::dump_queue()
 {
-    for (unsigned int index = queue.tail_i, i = 0; true; index = queue.next(index), i++ ) {
-        THEKERNEL->streams->printf("block %03d > ", i);
+    int i = 0;
+    unsigned int index = queue.tail_i;
+    while(index != queue.head_i) {
+        THEKERNEL->streams->printf("block %03d > ", ++i);
         queue.item_ref(index)->debug();
-
-        if (index == queue.head_i)
-            break;
+        index = queue.next(index);
     }
 }

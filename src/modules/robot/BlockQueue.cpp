@@ -84,19 +84,6 @@ Block& BlockQueue::item(unsigned int i)
     return ring[i];
 }
 
-// void BlockQueue::push_front(Block& item)
-// {
-//     ring[head_i] = item;
-//     head_i = next(head_i);
-// }
-
-// Block& BlockQueue::pop_back()
-// {
-//     Block& r = ring[tail_i];
-//     tail_i = next(tail_i);
-//     return r;
-// }
-
 /*
  * pointer accessors
  */
@@ -212,30 +199,3 @@ bool BlockQueue::resize(unsigned int length)
 
     return false;
 }
-
-// bool BlockQueue::provide(Block* buffer, unsigned int length)
-// {
-//     __disable_irq();
-
-//     if (is_empty())
-//     {
-//         Block* oldring = ring;
-
-//         if ((buffer != nullptr) && (length > 0))
-//         {
-//             ring = buffer;
-//             this->length = length;
-//             head_i = tail_i = 0;
-
-//             __enable_irq();
-
-//             if (oldring != nullptr)
-//                 delete [] oldring;
-//             return true;
-//         }
-//     }
-
-//     __enable_irq();
-
-//     return false;
-// }

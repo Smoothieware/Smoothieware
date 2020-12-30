@@ -1364,35 +1364,39 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
         // stream->printf("distance: %f, time:%f, X%f Y%f Z%f, speed:%f\n", d, t, delta[0], delta[1], delta[2], fr);
 
         // turn off any compensation transform so Z does not move as we jog
-        // auto savect= THEROBOT->compensationTransform;
-        // THEROBOT->reset_compensated_machine_position();
+        auto savect= THEROBOT->compensationTransform;
+        THEROBOT->reset_compensated_machine_position();
 
-        // feed moves into planner until full then keep it topped up
-        // NOTE if feed rate is very high this cannot keep the queue full which
-        // can cause issues when we try to stop (at least on deltas)
-        // Also as it can feed a long move to fill the buffer deltas may get an error for out of bound move
-        while(!THEKERNEL->get_stop_request()) {
-            int cnt= 0;
-            while(!THECONVEYOR->is_queue_full()) {
-                if(THEKERNEL->get_stop_request() || THEKERNEL->is_halted()) break;
-                THEROBOT->delta_move(delta, fr, n_motors);
-                if(++cnt >= 16) {
-                    THEKERNEL->call_event(ON_IDLE);
-                    cnt= 0;
-                }
-            }
-            if(THEKERNEL->is_halted()) break;
-            THEKERNEL->call_event(ON_IDLE);
+        // feed three blocks that allow full acceleration, full speed and full deceleration
+        THECONVEYOR->set_hold(true);
+        THEROBOT->delta_move(delta, fr, n_motors); // accelerates upto speed
+        THEROBOT->delta_move(delta, fr, n_motors); // continues at full speed
+        THEROBOT->delta_move(delta, fr, n_motors); // decelerates to zero
+
+        // DEBUG
+        // THECONVEYOR->dump_queue();
+
+        // tell it to run the second block until told to stop
+        if(!THECONVEYOR->set_continuous_mode(true)) {
+            stream->printf("error:Not enough memory to run continuous mode\n");
+            return;
         }
-        // fast foward all blocks but the last which is a deceleration block
-        THECONVEYOR->set_controlled_stop(true);
-        THECONVEYOR->wait_for_idle();
+
+        THECONVEYOR->set_hold(false);
+        THECONVEYOR->force_queue();
+
+        while(!THEKERNEL->get_stop_request()) {
+            THEKERNEL->call_event(ON_IDLE);
+            if(THEKERNEL->is_halted()) break;
+        }
+        THECONVEYOR->set_continuous_mode(false);
         THEKERNEL->set_stop_request(false);
-        THECONVEYOR->set_controlled_stop(false);
+        THECONVEYOR->wait_for_idle();
+
         // reset the position based on current actuator position
         THEROBOT->reset_position_from_current_actuator_position();
         // restore compensationTransform
-        // THEROBOT->compensationTransform= savect;
+        THEROBOT->compensationTransform= savect;
         stream->printf("ok\n");
 
     }else{
