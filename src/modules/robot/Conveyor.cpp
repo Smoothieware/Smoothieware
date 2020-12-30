@@ -216,12 +216,12 @@ bool Conveyor::set_continuous_mode(bool f)
         continuous_mode= 1;
 
     }else{
+        continuous_mode= 0;
         if(saved_block != nullptr) {
             Block::tickinfo_t *saved= static_cast<Block::tickinfo_t *>(saved_block);
             delete [] saved;
             saved_block= nullptr;
         }
-        continuous_mode= 0;
     }
     return true;
 }
