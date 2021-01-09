@@ -159,7 +159,7 @@ bool CartGridStrategy::handleConfig()
     this->height_limit = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, height_limit_checksum)->by_default(NAN)->as_number();
     this->dampening_start = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, dampening_start_checksum)->by_default(NAN)->as_number();
 
-    if(!isnan(this->height_limit) && !isnan(this->dampening_start)) {
+    if(!isnan(this->height_limit) && !isnan(this->dampening_start) && this->height_limit > 0.0001F) {
         this->damping_interval = height_limit - dampening_start;
     } else {
         this->damping_interval = NAN;
