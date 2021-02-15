@@ -9,6 +9,8 @@
 #include "Gcode.h"
 #include "libs/StreamOutput.h"
 #include "utils.h"
+#include "nist_float.h"
+
 #include <stdlib.h>
 #include <algorithm>
 
@@ -86,7 +88,7 @@ float Gcode::get_value( char letter, char **ptr ) const
     for (; *cs; cs++) {
         if( letter == *cs ) {
             cs++;
-            float r = strtof(cs, &cn);
+            float r = parse_float(cs, &cn);
             if(ptr != nullptr) *ptr= cn;
             if (cn > cs)
                 return r;
@@ -224,7 +226,7 @@ void Gcode::strip_parameters()
             }
             // find the end of the parameter and its value
             char *eos;
-            strtof(pch+1, &eos);
+            parse_float(pch+1, &eos);
             cn= eos; // point to end of last parameter
             pch= strpbrk(cn, "XYZIJK"); // find next parameter
         }
