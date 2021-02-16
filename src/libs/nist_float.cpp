@@ -3,7 +3,7 @@
 
 float parse_float(const char* nptr, char** endptr)
 {
-	const int kStrtofMaxDigits = 16;
+	const int kStrtofMaxDigits = 8;
 	const char *p = nptr;
 	// Skip leading white space, if any. Not necessary
 	while (isspace(*p) ) ++p;
