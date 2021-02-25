@@ -27,7 +27,7 @@ private:
     int new_pt1000_reading();
     float adc_value_to_temperature(uint32_t adc_value);
 
-	Pin amplifier_pin;
+    Pin amplifier_pin;
     float min_temp, max_temp;
 };
 
