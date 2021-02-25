@@ -57,10 +57,16 @@ float PT1000::adc_value_to_temperature(uint32_t adc_value)
         return infinityf();
 
     // polynomial approximation for PT1000, using 4.7kOhm and 1kOhm (PT1000) 3.3V.
+    // error +- 2 deg (max 5)   deg |2: 373.4f ;  80.5f  ; -173.3f
+    // error +- 0.15 (max 0.5)  deg |3: 202.1f ; -140.0f ; 494.7f; -278.3f
+    // error +- 0.02 (max 0.06) deg |4: 117.9f ; -195.3f ; 345.3f; 241.4f ; -230.9f
     float x = (adc_value / (float)max_adc_value);
     float x2 = (x * x);
     float x3 = (x2 * x);
-    float t = (233.5f * x3) - (228.3 * x2) + (575.5f * x) - 302.3f;
+    float x4 = (x3 * x);
+    // float t = (107.0f * x2) + (798.6f * x1) + (173.5f);
+    // float t = (202.1f * x3) + (-140.0f * x2) + (494.7f * x) + (-278.3f);
+    float t = (117.9f * x4) + (-195.3f * x3) + (345.3f * x2) + (241.4f * x) + (-230.9f);
 
     return t;
 }
