@@ -14,7 +14,7 @@
 #include "ConfigValue.h"
 #include "StreamOutputPool.h"
 
-#define PT1000_amplifier_pin_checksum  CHECKSUM("PT1000_amplifier_pin")
+#define PT1000_pin_checksum  CHECKSUM("PT1000_pin")
 
 PT1000::PT1000()
 {
@@ -28,8 +28,8 @@ PT1000::~PT1000()
 void PT1000::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
 {
 	// Pin used for ADC readings
-    this->amplifier_pin.from_string(THEKERNEL->config->value(module_checksum, name_checksum, PT1000_amplifier_pin_checksum)->required()->as_string());
-    THEKERNEL->adc->enable_pin(&amplifier_pin);
+    this->pt1000_pin.from_string(THEKERNEL->config->value(module_checksum, name_checksum, PT1000_pin_checksum)->required()->as_string());
+    THEKERNEL->adc->enable_pin(&pt1000_pin);
 }
 
 float PT1000::get_temperature()
@@ -57,21 +57,18 @@ float PT1000::adc_value_to_temperature(uint32_t adc_value)
         return infinityf();
 
     // polynomial approximation for PT1000, using 4.7kOhm and 1kOhm (PT1000) 3.3V.
-    // error +- 2 deg (max 5)   deg |2: 373.4f ;  80.5f  ; -173.3f
-    // error +- 0.15 (max 0.5)  deg |3: 202.1f ; -140.0f ; 494.7f; -278.3f
-    // error +- 0.02 (max 0.06) deg |4: 117.9f ; -195.3f ; 345.3f; 241.4f ; -230.9f
-    float x = (adc_value / (float)max_adc_value);
+
+    float x = (adc_value) / ((float)max_adc_value);
     float x2 = (x * x);
     float x3 = (x2 * x);
     float x4 = (x3 * x);
-    // float t = (107.0f * x2) + (798.6f * x1) + (173.5f);
-    // float t = (202.1f * x3) + (-140.0f * x2) + (494.7f * x) + (-278.3f);
-    float t = (117.9f * x4) + (-195.3f * x3) + (345.3f * x2) + (241.4f * x) + (-230.9f);
+
+    float t = (13980.0f * x4) + (-7019.0f * x3) + (3760.0f * x2) + (796.7f * x) + (-230.9f);
 
     return t;
 }
 
 int PT1000::new_pt1000_reading()
 {
-    return THEKERNEL->adc->read(&amplifier_pin);
+    return THEKERNEL->adc->read(&pt1000_pin);
 }
