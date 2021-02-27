@@ -234,6 +234,8 @@ bool DeltaGridStrategy::probe_grid(int n, float radius, StreamOutput *stream)
         return true;
     }
 
+    stream->printf("Grid Test Probe...\n");
+
     float initial_z = findBed();
     if(isnan(initial_z)) return false;
 
@@ -264,6 +266,7 @@ bool DeltaGridStrategy::probe_grid(int n, float radius, StreamOutput *stream)
 // taken from Oskars PR #713
 bool DeltaGridStrategy::probe_spiral(int n, float radius, StreamOutput *stream)
 {
+    stream->printf("Spiral Test Probe...\n");
     float a = radius / (2 * sqrtf(n * M_PI));
     float step_length = radius * radius / (2 * a * n);
 
