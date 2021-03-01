@@ -28,13 +28,13 @@ PT1000::~PT1000()
 void PT1000::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
 {
 	// Pin used for ADC readings
-    this->pt1000_pin.from_string(THEKERNEL->config->value(module_checksum, name_checksum, PT1000_pin_checksum)->required()->as_string());
-    THEKERNEL->adc->enable_pin(&pt1000_pin);
+    this->PT1000_pin.from_string(THEKERNEL->config->value(module_checksum, name_checksum, PT1000_pin_checksum)->required()->as_string());
+    THEKERNEL->adc->enable_pin(&PT1000_pin);
 }
 
 float PT1000::get_temperature()
 {
-    float t = adc_value_to_temperature(new_pt1000_reading());
+    float t = adc_value_to_temperature(new_PT1000_reading());
     // keep track of min/max for M305
     if (t > max_temp) max_temp = t;
     if (t < min_temp) min_temp = t;
@@ -43,8 +43,8 @@ float PT1000::get_temperature()
 
 void PT1000::get_raw()
 {
-    int adc_value= new_pt1000_reading();
-    float t = adc_value_to_temperature(new_pt1000_reading());
+    int adc_value= new_PT1000_reading();
+    float t = adc_value_to_temperature(new_PT1000_reading());
     THEKERNEL->streams->printf("PT1000: adc= %d, temp= %f\n", adc_value, t);
     // reset the min/max
     min_temp = max_temp = t;
@@ -68,7 +68,7 @@ float PT1000::adc_value_to_temperature(uint32_t adc_value)
     return t;
 }
 
-int PT1000::new_pt1000_reading()
+int PT1000::new_PT1000_reading()
 {
-    return THEKERNEL->adc->read(&pt1000_pin);
+    return THEKERNEL->adc->read(&PT1000_pin);
 }

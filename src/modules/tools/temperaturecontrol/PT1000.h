@@ -24,10 +24,10 @@ public:
 	void get_raw();
 
 private:
-    int new_pt1000_reading();
+    int new_PT1000_reading();
     float adc_value_to_temperature(uint32_t adc_value);
 
-	Pin pt1000_pin;
+	Pin PT1000_pin;
     float min_temp, max_temp;
 };
 

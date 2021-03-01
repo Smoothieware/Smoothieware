@@ -183,7 +183,7 @@ void TemperatureControl::load_config()
         sensor = new AD8495();
     } else if(sensor_type.compare("pt100_e3d") == 0) {
         sensor = new PT100_E3D();
-    } else if(sensor_type.compare("pt1000") == 0) {
+    } else if(sensor_type.compare("PT1000") == 0) {
         sensor = new PT1000();
     } else {
         sensor = new TempSensor(); // A dummy implementation
@@ -285,7 +285,7 @@ void TemperatureControl::on_gcode_received(void *argument)
                 }
 
             }else if(gcode->get_num_args() == 0) {
-                gcode->stream->printf("Maximum temperature for %s(%d) is %fÂ°C\n", this->designator.c_str(), this->pool_index, max_temp);
+                gcode->stream->printf("Maximum temperature for %s(%d) is %f°C\n", this->designator.c_str(), this->pool_index, max_temp);
             }
 
         } else if (gcode->m == 301) {
