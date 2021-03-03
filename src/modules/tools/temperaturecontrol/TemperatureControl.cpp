@@ -31,7 +31,7 @@
 #include "max31855.h"
 #include "AD8495.h"
 #include "PT100_E3D.h"
-
+#include "PT100.h"
 #include "MRI_Hooks.h"
 
 #define UNDEFINED -1
@@ -182,6 +182,8 @@ void TemperatureControl::load_config()
         sensor = new AD8495();
     } else if(sensor_type.compare("pt100_e3d") == 0) {
         sensor = new PT100_E3D();
+    } else if(sensor_type.compare("pt100") == 0) {
+        sensor = new PT100();
     } else {
         sensor = new TempSensor(); // A dummy implementation
     }
