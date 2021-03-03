@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 
 To use multi-axis and ABC axis
 ==============================
@@ -82,6 +83,12 @@ To upgrade from old master or very old edge to the new motion control firmware
 
 for builds prior to July 1, 2016 you must do the following....
 
+=======
+To upgrade from an old master or old edge to the new motion control firmware
+----------------------------------------------------------------------------
+
+If upgrading from a build prior to July 1, 2016....
+>>>>>>> 96eb5ef3a6dafe3af7de6c9826694904e5b4d8ac
 
 The following changes must be made to your config
 
