@@ -31,6 +31,7 @@
 #include "max31855.h"
 #include "AD8495.h"
 #include "PT100_E3D.h"
+#include "PT1000.h"
 
 #include "MRI_Hooks.h"
 
