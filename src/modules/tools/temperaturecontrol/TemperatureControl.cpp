@@ -182,6 +182,8 @@ void TemperatureControl::load_config()
         sensor = new AD8495();
     } else if(sensor_type.compare("pt100_e3d") == 0) {
         sensor = new PT100_E3D();
+    } else if(sensor_type.compare("PT1000") == 0) {
+        sensor = new PT1000();
     } else {
         sensor = new TempSensor(); // A dummy implementation
     }
