@@ -14,7 +14,7 @@
     Parameters
 
     P0-02   2      Command source selection
-    P0-03   9      Main frequenty source 9 = comunication settings
+    P0-03   9      Main frequency source 9 = communication settings
     PD-00   6005   Baud rate   
     PD-01   3      Modbus data format, 8N1
     PD-02   1      Local address: 1
@@ -158,7 +158,7 @@ void SakoSpindleControl::report_speed()
     for(int i=0; i<8; i++) {
         speed[i] = modbus->serial->getc();
     }
-    // get the Hz value from trhe answer and convert it into an RPM value
+    // get the Hz value from the answer and convert it into an RPM value
     unsigned int hz = (speed[3] << 8) | speed[4];
     unsigned int rpm = hz / 100 * 60;
 
