@@ -130,7 +130,7 @@ void HuanyangSpindleControl::report_speed()
     }
 
     // prepare data for the get speed command
-    char get_speed_msg[8] = { 0x01, 0x03, 0x10, 0x07, 0x00, 0x00, 0xF0, 0xCB };
+    char get_speed_msg[8] = { 0x01, 0x03, 0x10, 0x01, 0x00, 0x01, 0xD1, 0x0A };
     // calculate CRC16 checksum  CBF0
     //unsigned int crc = modbus->crc16(get_speed_msg, sizeof(get_speed_msg)-2);
     //get_speed_msg[6] = crc & 0xFF;
@@ -151,14 +151,14 @@ void HuanyangSpindleControl::report_speed()
     // wait for the complete message to be received
     modbus->delay((int) ceil(8 * modbus->delay_time));
     // prepare an array for the answer
-    char speed[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    char speed[7] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
     // read the answer into the buffer
     for(int i=0; i<8; i++) {
         speed[i] = modbus->serial->getc();
     }
     // get the Hz value from trhe answer and convert it into an RPM value
-    unsigned int hz = (speed[4] << 8) | speed[5];
+    unsigned int hz = (speed[3] << 8) | speed[4];
     unsigned int rpm = hz / 100 * 60;
 
     // report the current RPM value
