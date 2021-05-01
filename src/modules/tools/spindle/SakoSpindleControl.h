@@ -5,8 +5,8 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef Sako_SPINDLE_CONTROL_MODULE_H
-#define Sako_SPINDLE_CONTROL_MODULE_H
+#ifndef SAKO_SPINDLE_CONTROL_MODULE_H
+#define SAKO_SPINDLE_CONTROL_MODULE_H
 
 #include "ModbusSpindleControl.h"
 #include <stdint.h>
