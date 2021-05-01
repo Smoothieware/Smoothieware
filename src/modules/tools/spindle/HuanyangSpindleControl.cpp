@@ -100,7 +100,7 @@ void HuanyangSpindleControl::turn_on()
 
 }
 
-void HuanyangSpindleControl::turn_off()
+void HuanyangSpindleControl::turn_off() 
 {
     // prepare data for the spindle off command
     char turn_off_msg[6] = { 0x01, 0x03, 0x01, 0x08, 0x00, 0x00 };
@@ -130,7 +130,7 @@ void HuanyangSpindleControl::set_speed(int target_rpm)
     // prepare data for the set speed command
     char set_speed_msg[7] = { 0x01, 0x05, 0x02, 0x00, 0x00, 0x00, 0x00 };
     // convert RPM into Hz
-    unsigned int hz = target_rpm / 60 * 100;
+    unsigned int hz = target_rpm / 60 * 100; 
     set_speed_msg[3] = (hz >> 8);
     set_speed_msg[4] = hz & 0xFF;
     // calculate CRC16 checksum
@@ -182,7 +182,7 @@ void HuanyangSpindleControl::report_speed()
     modbus->delay((int) ceil(8 * modbus->delay_time));
     // prepare an array for the answer
     char speed[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-
+   
     // read the answer into the buffer
     for(int i=0; i<8; i++) {
         speed[i] = modbus->serial->getc();
@@ -193,4 +193,4 @@ void HuanyangSpindleControl::report_speed()
 
     // report the current RPM value
     THEKERNEL->streams->printf("Current RPM: %d\n", rpm);
-}   
+}
