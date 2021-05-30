@@ -109,8 +109,8 @@ class Robot : public Module {
         void load_config();
         bool append_milestone(const float target[], float rate_mm_s);
         bool append_line( Gcode* gcode, const float target[], float rate_mm_s, float delta_e);
-        bool append_arc( Gcode* gcode, const float target[], const float offset[], float radius, bool is_clockwise );
-        bool compute_arc(Gcode* gcode, const float offset[], const float target[], enum MOTION_MODE_T motion_mode);
+        bool append_arc(Gcode * gcode, const float target[], const float offset[], float radius, bool is_clockwise, float delta_e);
+        bool compute_arc(Gcode* gcode, const float offset[], const float target[], enum MOTION_MODE_T motion_mode, float delta_e);
         void process_move(Gcode *gcode, enum MOTION_MODE_T);
         bool is_homed(uint8_t i) const;
 

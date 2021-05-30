@@ -1118,7 +1118,7 @@ void Robot::process_move(Gcode *gcode, enum MOTION_MODE_T motion_mode)
 
         case CW_ARC:
         case CCW_ARC:
-            moved= this->compute_arc(gcode, offset, target, motion_mode);
+            moved= this->compute_arc(gcode, offset, target, motion_mode, delta_e);
             break;
     }
 
@@ -1547,7 +1547,7 @@ bool Robot::append_line(Gcode *gcode, const float target[], float rate_mm_s, flo
 
 
 // Append an arc to the queue ( cutting it into segments as needed )
-bool Robot::append_arc(Gcode * gcode, const float target[], const float offset[], float radius, bool is_clockwise )
+bool Robot::append_arc(Gcode * gcode, const float target[], const float offset[], float radius, bool is_clockwise, float delta_e)
 {
     float rate_mm_s= this->feed_rate / seconds_per_minute;
     // catch negative or zero feed rates and return the same error as GRBL does
@@ -1616,7 +1616,17 @@ bool Robot::append_arc(Gcode * gcode, const float target[], const float offset[]
     if(arc_segment < 0.0001F) {
         arc_segment= 0.5F; /// the old default, so we avoid the divide by zero
     }
-
+    
+    /*
+        G2/G3 addon - from Linear move code
+    */
+    if(!isnan(delta_e)) {
+        float data[2]= {delta_e, rate_mm_s / millimeters_of_travel};
+        if(PublicData::set_value(extruder_checksum, target_checksum, data)) {
+            rate_mm_s *= data[1]; // adjust the feedrate
+        }
+    }
+    
     // Figure out how many segments for this gcode
     // TODO for deltas we need to make sure we are at least as many segments as requested, also if mm_per_line_segment is set we need to use the
     uint16_t segments = floorf(millimeters_of_travel / arc_segment);
@@ -1714,7 +1724,7 @@ bool Robot::append_arc(Gcode * gcode, const float target[], const float offset[]
 }
 
 // Do the math for an arc and add it to the queue
-bool Robot::compute_arc(Gcode * gcode, const float offset[], const float target[], enum MOTION_MODE_T motion_mode)
+bool Robot::compute_arc(Gcode * gcode, const float offset[], const float target[], enum MOTION_MODE_T motion_mode, float delta_e)
 {
 
     // Find the radius
@@ -1727,7 +1737,7 @@ bool Robot::compute_arc(Gcode * gcode, const float offset[], const float target[
     }
 
     // Append arc
-    return this->append_arc(gcode, target, offset,  radius, is_clockwise );
+    return this->append_arc(gcode, target, offset,  radius, is_clockwise, delta_e);
 }
 
 
