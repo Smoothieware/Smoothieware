@@ -34,4 +34,7 @@ class LinearDeltaSolution : public BaseSolution {
         float tower1_angle;
         float tower2_angle;
         float tower3_angle;
+        float arm1_trim;
+        float arm2_trim;
+        float arm3_trim;
 };
