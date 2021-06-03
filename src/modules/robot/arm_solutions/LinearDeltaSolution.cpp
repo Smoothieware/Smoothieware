@@ -95,45 +95,6 @@ void LinearDeltaSolution::cartesian_to_actuator(const float cartesian_mm[], Actu
     }
 }
 
-// void LinearDeltaSolution::actuator_to_cartesian(const ActuatorCoordinates &actuator_mm, float cartesian_mm[] ) const
-// {
-//     // from http://en.wikipedia.org/wiki/Circumscribed_circle#Barycentric_coordinates_from_cross-_and_dot-products
-//     // based on https://github.com/ambrop72/aprinter/blob/2de69a/aprinter/printer/DeltaTransform.h#L81
-//     Vector3 tower1( delta_tower1_x, delta_tower1_y, actuator_mm[0] );
-//     Vector3 tower2( delta_tower2_x, delta_tower2_y, actuator_mm[1] );
-//     Vector3 tower3( delta_tower3_x, delta_tower3_y, actuator_mm[2] );
-
-//     Vector3 s12 = tower1.sub(tower2);
-//     Vector3 s23 = tower2.sub(tower3);
-//     Vector3 s13 = tower1.sub(tower3);
-
-//     Vector3 normal = s12.cross(s23);
-
-//     float magsq_s12 = s12.magsq();
-//     float magsq_s23 = s23.magsq();
-//     float magsq_s13 = s13.magsq();
-
-//     float inv_nmag_sq = 1.0F / normal.magsq();
-//     float q = 0.5F * inv_nmag_sq;
-
-//     float a = q * magsq_s23 * s12.dot(s13);
-//     float b = q * magsq_s13 * s12.dot(s23) * -1.0F; // negate because we use s12 instead of s21
-//     float c = q * magsq_s12 * s13.dot(s23);
-
-//     Vector3 circumcenter( delta_tower1_x * a + delta_tower2_x * b + delta_tower3_x * c,
-//                           delta_tower1_y * a + delta_tower2_y * b + delta_tower3_y * c,
-//                           actuator_mm[0] * a + actuator_mm[1] * b + actuator_mm[2] * c );
-
-//     float r_sq = 0.5F * q * magsq_s12 * magsq_s23 * magsq_s13;
-//     float dist = sqrtf(inv_nmag_sq * (arm_length_squared - r_sq));
-
-//     Vector3 cartesian = circumcenter.sub(normal.mul(dist));
-
-//     cartesian_mm[0] = ROUND(cartesian[0], 4);
-//     cartesian_mm[1] = ROUND(cartesian[1], 4);
-//     cartesian_mm[2] = ROUND(cartesian[2], 4);
-// }
-
 void LinearDeltaSolution::actuator_to_cartesian(const ActuatorCoordinates &actuator_mm, float cartesian_mm[] ) const
 {
     Vector3 tower1( delta_tower1_x, delta_tower1_y, actuator_mm[0] );

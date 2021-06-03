@@ -26,7 +26,7 @@ This is aprt of the Smoothie test framework, it generates a Mockable Kernl so ke
 #include "modules/communication/GcodeDispatch.h"
 #include "modules/robot/Planner.h"
 #include "modules/robot/Robot.h"
-// #include "modules/robot/Stepper.h"
+#include "modules/robot/Stepper.h"
 #include "modules/robot/Conveyor.h"
 
 #include "Config.h"
@@ -45,8 +45,7 @@ Kernel::Kernel(){
 
     // serial first at fixed baud rate (DEFAULT_SERIAL_BAUD_RATE) so config can report errors to serial
     // Set to UART0, this will be changed to use the same UART as MRI if it's enabled
-    this->serial = new SerialConsole(0);
-    this->serial->init_uart(DEFAULT_SERIAL_BAUD_RATE);
+    this->serial = new SerialConsole(USBTX, USBRX, DEFAULT_SERIAL_BAUD_RATE);
 
 
     // Config next, but does not load cache yet
@@ -61,7 +60,7 @@ Kernel::Kernel(){
     this->slow_ticker = new SlowTicker();
 
     // dummies (would be nice to refactor to not have to create a conveyor)
-    this->add_module( this->conveyor       = new Conveyor()      );
+    this->conveyor= new Conveyor();
 
     // Configure UART depending on MRI config
     // Match up the SerialConsole to MRI UART. This makes it easy to use only one UART for both debug and actual commands.
