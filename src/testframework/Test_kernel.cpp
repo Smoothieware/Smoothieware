@@ -47,7 +47,6 @@ Kernel::Kernel(){
     // Set to UART0, this will be changed to use the same UART as MRI if it's enabled
     this->serial = new SerialConsole(USBTX, USBRX, DEFAULT_SERIAL_BAUD_RATE);
 
-
     // Config next, but does not load cache yet
     // loads config from in memory source for test framework must be loaded by test
     this->config = nullptr;
