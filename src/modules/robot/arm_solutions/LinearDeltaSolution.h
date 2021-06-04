@@ -3,6 +3,8 @@
 #include "libs/Module.h"
 #include "BaseSolution.h"
 
+#include <functional>
+
 class Config;
 
 class LinearDeltaSolution : public BaseSolution {
@@ -21,20 +23,31 @@ class LinearDeltaSolution : public BaseSolution {
         float arm_length;
         float arm_radius;
         float arm_length_squared;
-
         float delta_tower1_x;
         float delta_tower1_y;
         float delta_tower2_x;
         float delta_tower2_y;
         float delta_tower3_x;
         float delta_tower3_y;
-        float tower1_offset;
-        float tower2_offset;
-        float tower3_offset;
-        float tower1_angle;
-        float tower2_angle;
-        float tower3_angle;
-        float arm1_trim;
-        float arm2_trim;
-        float arm3_trim;
+
+        void cartesian_to_actuator_no(const float[], ActuatorCoordinates &) const;
+        void actuator_to_cartesian_no(const ActuatorCoordinates &, float[] ) const;
+        void cartesian_to_actuator_offs(const float[], ActuatorCoordinates &) const;
+        void actuator_to_cartesian_offs(const ActuatorCoordinates &, float[] ) const;
+        std::function<void (const float[], ActuatorCoordinates &)> ik_fnc;
+        std::function<void (const ActuatorCoordinates &, float[])> fk_fnc;
+
+        float *offsets;
+        enum OFFSETS {
+            tower1_offset,
+            tower2_offset,
+            tower3_offset,
+            tower1_angle,
+            tower2_angle,
+            tower3_angle,
+            arm1_trim,
+            arm2_trim,
+            arm3_trim,
+            N_OFFSETS
+        };
 };
