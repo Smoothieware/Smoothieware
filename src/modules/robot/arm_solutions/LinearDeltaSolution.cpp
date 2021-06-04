@@ -276,6 +276,8 @@ bool LinearDeltaSolution::set_optional(const arm_options_t& options)
         }
     }
 
+    // TODO if we went from offsets to no offsets delete the offsets array
+
     init();
     return true;
 }
