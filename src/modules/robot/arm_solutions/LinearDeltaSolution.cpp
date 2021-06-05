@@ -283,7 +283,20 @@ bool LinearDeltaSolution::set_optional(const arm_options_t& options)
         }
     }
 
-    // TODO if we went from offsets to no offsets delete the offsets array
+    // if we went from offsets to no offsets delete the offsets array
+    if(offsets != nullptr) {
+        bool all_zero= true;
+        for (int i = 0; i < N_OFFSETS; ++i) {
+            if(offsets[i] != 0.0F) {
+                all_zero= false;
+                break;
+            }
+        }
+        if(all_zero) {
+            delete [] offsets;
+            offsets= nullptr;
+        }
+    }
 
     init();
     return true;
