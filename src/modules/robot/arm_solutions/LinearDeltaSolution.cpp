@@ -63,6 +63,13 @@ LinearDeltaSolution::LinearDeltaSolution(Config* config)
     init();
 }
 
+LinearDeltaSolution::~LinearDeltaSolution()
+{
+    if(offsets != nullptr) {
+        delete [] offsets;
+    }
+}
+
 void LinearDeltaSolution::init()
 {
     arm_length_squared = SQ(arm_length);

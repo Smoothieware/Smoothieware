@@ -10,6 +10,7 @@ class Config;
 class LinearDeltaSolution : public BaseSolution {
     public:
         LinearDeltaSolution(Config*);
+        virtual ~LinearDeltaSolution();
         void cartesian_to_actuator(const float[], ActuatorCoordinates &) const override;
         void actuator_to_cartesian(const ActuatorCoordinates &, float[] ) const override;
 
