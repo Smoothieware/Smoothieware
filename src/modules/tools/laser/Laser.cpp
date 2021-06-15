@@ -45,6 +45,7 @@ Laser::Laser()
     scale = 1;
     manual_fire = false;
     fire_duration = 0;
+    disable_auto_power= false;
 }
 
 void Laser::on_module_loaded()
@@ -93,6 +94,7 @@ void Laser::on_module_loaded()
 
     uint32_t period = THEKERNEL->config->value(laser_module_pwm_period_checksum)->by_default(20)->as_number();
     this->pwm_pin->period_us(period);
+    pwm_frequency= 1E6F / period;
     this->pwm_pin->write(this->pwm_inverting ? 1 : 0);
     this->laser_maximum_power = THEKERNEL->config->value(laser_module_maximum_power_checksum)->by_default(1.0f)->as_number() ;
 
@@ -114,7 +116,7 @@ void Laser::on_module_loaded()
     this->register_for_event(ON_GET_PUBLIC_DATA);
 
     // no point in updating the power more than the PWM frequency, but not faster than 1KHz
-    ms_per_tick = 1000 / std::min(1000UL, 1000000 / period);
+    ms_per_tick = 1000 / std::min(1000UL, (uint32_t)pwm_frequency);
     THEKERNEL->slow_ticker->attach(std::min(1000UL, 1000000 / period), this, &Laser::set_proportional_power);
 }
 
@@ -193,11 +195,19 @@ void Laser::on_gcode_received(void *argument)
     // M codes execute immediately
     if (gcode->has_m) {
         if (gcode->m == 221) { // M221 S100 change laser power by percentage S
+            if(gcode->get_num_args() == 0) {
+                gcode->stream->printf("Laser power: %6.2f %%, disable auto power: %d, PWM frequency: %f Hz\n", this->scale * 100.0F, disable_auto_power, pwm_frequency);
+                return;
+            }
             if(gcode->has_letter('S')) {
                 this->scale = gcode->get_value('S') / 100.0F;
-
-            } else {
-                gcode->stream->printf("Laser power scale at %6.2f %%\n", this->scale * 100.0F);
+            }
+            if(gcode->has_letter('P')) {
+                this->disable_auto_power= gcode->get_uint('P') > 0;
+            }
+            if(gcode->has_letter('R')) {
+                pwm_frequency= gcode->get_value('R');
+                pwm_pin->period(1.0F/pwm_frequency);
             }
         }
     }
@@ -233,7 +243,10 @@ bool Laser::get_laser_power(float& power) const
     // as this is an interrupt if that flag is not clear then it cannot be cleared while this is running and the block will still be valid (albeit it may have finished)
     if(block != nullptr && block->is_ready && block->is_g123) {
         float requested_power = ((float)block->s_value / (1 << 11)) / this->laser_maximum_s_value; // s_value is 1.11 Fixed point
-        float ratio = current_speed_ratio(block);
+        float ratio = 1.0F;
+        if(!disable_auto_power) { // true to disable auto power
+            ratio= current_speed_ratio(block);
+        }
         power = requested_power * ratio * scale;
 
         return true;
