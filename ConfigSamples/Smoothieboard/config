@@ -14,7 +14,7 @@ mm_max_arc_error                             0.01             # The maximum erro
 # Arm solution configuration : Cartesian robot. Translates mm positions into stepper positions
 # See http://smoothieware.org/stepper-motors
 alpha_steps_per_mm                           80               # Steps per mm for alpha ( X ) stepper
-beta_steps_per_mm                            80               # Steps per mm for beta ( Y ) stepper
+beta_steps_per_mm                            333.3333         # Steps per mm for beta ( Y ) stepper
 gamma_steps_per_mm                           1600             # Steps per mm for gamma ( Z ) stepper
 
 # Planner module configuration : Look-ahead and acceleration configuration
