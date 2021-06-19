@@ -37,6 +37,7 @@
 #define laser_module_tickle_power_checksum      CHECKSUM("laser_module_tickle_power")
 #define laser_module_max_power_checksum         CHECKSUM("laser_module_max_power")
 #define laser_module_maximum_s_value_checksum   CHECKSUM("laser_module_maximum_s_value")
+#define laser_module_proportional_power_checksum   CHECKSUM("laser_module_proportional_power")
 
 
 Laser::Laser()
@@ -45,7 +46,6 @@ Laser::Laser()
     scale = 1;
     manual_fire = false;
     fire_duration = 0;
-    disable_auto_power= false;
 }
 
 void Laser::on_module_loaded()
@@ -91,6 +91,7 @@ void Laser::on_module_loaded()
         ttl_pin = NULL;
     }
 
+    disable_auto_power= !THEKERNEL->config->value(laser_module_proportional_power_checksum)->by_default(true)->as_bool();
 
     uint32_t period = THEKERNEL->config->value(laser_module_pwm_period_checksum)->by_default(20)->as_number();
     this->pwm_pin->period_us(period);
