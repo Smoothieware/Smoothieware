@@ -57,8 +57,8 @@ float PT1000::adc_value_to_temperature(uint32_t adc_value)
         return infinityf();
 
     // polynomial approximation for PT1000, using 4.7kOhm and 1kOhm (PT1000) 3.3V.
-
-    float x = (adc_value) / ((float)max_adc_value);
+    
+    float x = (adc_value / (float)max_adc_value);
     float x2 = (x * x);
     float x3 = (x2 * x);
     float x4 = (x3 * x);
