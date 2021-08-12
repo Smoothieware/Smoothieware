@@ -669,6 +669,7 @@ void Robot::on_gcode_received(void *argument)
                 if(!THEKERNEL->is_grbl_mode()) break;
                 // fall through to M2
             case 2: // M2 end of program
+                THEKERNEL->conveyor->wait_for_idle();
                 current_wcs = 0;
                 absolute_mode = true;
                 seconds_per_minute= 60;
