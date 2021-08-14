@@ -63,7 +63,7 @@ Conveyor::Conveyor()
     running = false;
     allow_fetch = false;
     flush= false;
-    continuous_mode = false;
+    continuous_mode = 0;
     hold_queue= false;
 }
 
@@ -92,7 +92,7 @@ void Conveyor::on_halt(void* argument)
         // marks queue to be flushed next time get_next_block() is called
         flush_queue();
         hold_queue= false;
-        continuous_mode= false;
+        continuous_mode= 0;
     }
 }
 
@@ -201,7 +201,7 @@ void Conveyor::check_queue(bool force)
 bool Conveyor::set_continuous_mode(bool f)
 {
     if(f) {
-        if(queue.is_empty()) return false;
+        if(queue.is_empty() || !hold_queue) return false;
 
         // copy the tickinfo of the second block on the queue
         auto n_actuators= THEROBOT->get_number_registered_motors();
