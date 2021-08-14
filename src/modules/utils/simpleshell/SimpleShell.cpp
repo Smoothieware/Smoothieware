@@ -1363,6 +1363,8 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
         }
         // stream->printf("distance: %f, time:%f, X%f Y%f Z%f, speed:%f\n", d, t, delta[0], delta[1], delta[2], fr);
 
+        THECONVEYOR->wait_for_idle();
+
         // turn off any compensation transform so Z does not move as we jog
         auto savect= THEROBOT->compensationTransform;
         THEROBOT->reset_compensated_machine_position();
