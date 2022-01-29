@@ -177,7 +177,7 @@ void Network::on_module_loaded()
             printf("Invalid IP Mask: %s\n", s.c_str());
             bad = true;
         }
-        s = THEKERNEL->config->value( network_checksum, network_ip_gateway_checksum )->by_default("192.168.3.1")->as_string();
+        s = THEKERNEL->config->value( network_checksum, network_ip_gateway_checksum )->by_default("192.168.1.254")->as_string();
         if (!parse_ip_str(s, ipgw, 4)) {
             printf("Invalid IP gateway: %s\n", s.c_str());
             bad = true;
@@ -395,6 +395,11 @@ void Network::on_main_loop(void *argument)
     // issue one comamnd per iteration of main loop like USB serial does
     command_q->pop();
 
+}
+
+extern "C" const char *get_query_string()
+{
+    return THEKERNEL->get_query_string().c_str();
 }
 
 // select between webserver and telnetd server

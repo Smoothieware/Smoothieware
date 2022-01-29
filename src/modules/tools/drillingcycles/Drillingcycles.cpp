@@ -98,7 +98,7 @@ void Drillingcycles::update_sticky(Gcode *gcode)
     if (gcode->has_letter('R')) this->sticky_r = gcode->get_value('R');
     if (gcode->has_letter('F')) this->sticky_f = gcode->get_value('F');
     if (gcode->has_letter('Q')) this->sticky_q = gcode->get_value('Q');
-    if (gcode->has_letter('P')) this->sticky_p = gcode->get_int('P');
+    if (gcode->has_letter('P')) this->sticky_p = gcode->get_value('P');
 
     // set retract plane
     if (this->retract_type == RETRACT_TO_Z)
@@ -132,7 +132,7 @@ void Drillingcycles::peck_hole()
     // start values
     float depth  = this->sticky_r - this->sticky_z; // travel depth
     float cycles = depth / this->sticky_q;          // cycles count
-    float rest   = fmod(depth, this->sticky_q);     // final pass
+    float rest   = fmodf(depth, this->sticky_q);     // final pass
     float z_pos  = this->sticky_r;                  // current z position
 
     // for each cycle
@@ -176,12 +176,19 @@ void Drillingcycles::make_hole(Gcode *gcode)
 
     // if dwell, wait for x seconds
     if (this->sticky_p > 0) {
-        // dwell exprimed in seconds
-        if (this->dwell_units == DWELL_UNITS_S)
-            this->send_gcode("G4 S%u", this->sticky_p);
-        // dwell exprimed in milliseconds
-        else
-            this->send_gcode("G4 P%u", this->sticky_p);
+        if (this->dwell_units == DWELL_UNITS_S){
+            // dwell exprimed in seconds
+            this->send_gcode("G4 S%f", this->sticky_p);
+        }else{
+            // dwell exprimed in milliseconds
+            if(THEKERNEL->is_grbl_mode()) {
+                // in grbl mode (and linuxcnc) P is decimal seconds
+                this->send_gcode("G4 P%f", this->sticky_p * 1000.0);
+            }else{
+                // in reprap P is milliseconds, they always have to be different!
+                this->send_gcode("G4 P%f", this->sticky_p);
+            }
+        }
     }
 
     // rapids retract at R-Plane (Initial-Z or R)

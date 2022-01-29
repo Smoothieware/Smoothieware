@@ -4,6 +4,7 @@
 /* This is a stub disk I/O module that acts as front end of the existing */
 /* disk I/O modules and attach it to FatFs module with common interface. */
 /*-----------------------------------------------------------------------*/
+#pragma GCC diagnostic ignored "-Wcast-qual"
 
 #include "diskio.h"
 #include <stdio.h>

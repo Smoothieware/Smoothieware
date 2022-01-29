@@ -29,11 +29,15 @@ public:
     static void version_command(string parameters, StreamOutput *stream );
 
 private:
+
+    void jog(string params, StreamOutput *stream);
+
     static void ls_command(string parameters, StreamOutput *stream );
     static void cd_command(string parameters, StreamOutput *stream );
     static void delete_file_command(string parameters, StreamOutput *stream );
     static void pwd_command(string parameters, StreamOutput *stream );
     static void cat_command(string parameters, StreamOutput *stream );
+    static void echo_command(string parameters, StreamOutput *stream );
     static void rm_command(string parameters, StreamOutput *stream );
     static void mv_command(string parameters, StreamOutput *stream );
     static void mkdir_command(string parameters, StreamOutput *stream );

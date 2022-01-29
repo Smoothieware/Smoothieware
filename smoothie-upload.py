@@ -8,6 +8,7 @@ import sys
 import argparse
 import socket
 import os
+import re
 # Define command line argument interface
 parser = argparse.ArgumentParser(description='Upload a file to Smoothie over network.')
 parser.add_argument('file', type=argparse.FileType('r'),
@@ -20,6 +21,8 @@ parser.add_argument('-o','--output',
         help='Set output filename')
 parser.add_argument('-q','--quiet',action='store_true',
         help='suppress all output to terminal')
+parser.add_argument('-s','--space',action='store_true',
+        help='Leave whitespaces in output filename')
 
 args = parser.parse_args()
 
@@ -28,6 +31,8 @@ verbose = args.verbose
 output = args.output
 if output == None :
     output= args.file.name
+if not args.space:
+    output = re.sub("\s", "_", output)
 
 filesize= os.path.getsize(args.file.name)
 

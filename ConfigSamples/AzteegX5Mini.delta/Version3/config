@@ -191,9 +191,9 @@ alpha_homing_retract_mm                      5                # distance in mm
 beta_homing_retract_mm                       5                # "
 gamma_homing_retract_mm                      5                # "
 
-alpha_trim                                   0                 # software trim for alpha stepper endstop (in mm) - moves down
-beta_trim                                    0                 # software trim for beta stepper endstop (in mm)
-gamma_trim                                   0                 # software trim for gamma stepper endstop (in mm)
+alpha_trim_mm                                   0                 # software trim for alpha stepper endstop (in mm) - moves down
+beta_trim_mm                                    0                 # software trim for beta stepper endstop (in mm)
+gamma_trim_mm                                   0                 # software trim for gamma stepper endstop (in mm)
 
 # optional enable limit switches, actions will stop if any enabled limit switch is triggered
 #alpha_limit_enable                          false            # set to true to enable X min and max limit switches

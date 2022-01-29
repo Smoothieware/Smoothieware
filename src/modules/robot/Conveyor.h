@@ -34,6 +34,9 @@ public:
     void dump_queue(void);
     void flush_queue(void);
     float get_current_feedrate() const { return current_feedrate; }
+    void force_queue() { check_queue(true); }
+    bool set_continuous_mode(bool f);
+    void set_hold(bool f) { hold_queue= f; }
 
     friend class Planner; // for queue
 
@@ -43,15 +46,18 @@ private:
 
     using  Queue_t= BlockQueue;
     Queue_t queue;  // Queue of Blocks
+    void *saved_block;
 
     uint32_t queue_delay_time_ms;
     size_t queue_size;
     float current_feedrate{0}; // actual nominal feedrate that current block is running at in mm/sec
 
-    struct {
+    volatile struct {
         volatile bool running:1;
         volatile bool allow_fetch:1;
-        bool flush:1;
+        volatile bool flush:1;
+        volatile bool hold_queue:1;
+        volatile uint8_t continuous_mode:2;
     };
 
 };

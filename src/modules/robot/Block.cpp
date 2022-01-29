@@ -92,6 +92,15 @@ void Block::clear()
     }
 }
 
+// Only used for continuous mode to reuse the same block over and over
+void Block::reset(tickinfo_t *saved)
+{
+    for(int i = 0; i < n_actuators; ++i) {
+        if(saved[i].steps_to_move == 0) continue;
+        tick_info[i]= saved[i];
+    }
+}
+
 void Block::debug() const
 {
     THEKERNEL->streams->printf("%p: steps-X:%lu Y:%lu Z:%lu ", this, this->steps[0], this->steps[1], this->steps[2]);

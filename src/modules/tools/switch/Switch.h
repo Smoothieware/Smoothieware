@@ -5,13 +5,12 @@
       you should have received a copy of the gnu general public license along with smoothie. if not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SWITCH_H
-#define SWITCH_H
-
+#pragma once
 #include "Pin.h"
 #include "Pwm.h"
-#include <math.h>
+#include "SoftPWM.h"
 
+#include <math.h>
 #include <string>
 
 class Gcode;
@@ -35,7 +34,7 @@ class Switch : public Module {
         void on_halt(void *arg);
 
         uint32_t pinpoll_tick(uint32_t dummy);
-        enum OUTPUT_TYPE {NONE, SIGMADELTA, DIGITAL, HWPWM};
+        enum OUTPUT_TYPE {NONE, SIGMADELTA, DIGITAL, HWPWM, SWPWM};
 
     private:
         void flip();
@@ -43,30 +42,32 @@ class Switch : public Module {
         bool match_input_on_gcode(const Gcode* gcode) const;
         bool match_input_off_gcode(const Gcode* gcode) const;
 
-        Pin       input_pin;
-        float     switch_value;
+        float switch_value;
+        float default_on_value;
+
         OUTPUT_TYPE output_type;
         union {
+            Pin          *input_pin;
             Pin          *digital_pin;
             Pwm          *sigmadelta_pin;
             mbed::PwmOut *pwm_pin;
+            SoftPWM      *swpwm_pin;
         };
         std::string    output_on_command;
         std::string    output_off_command;
-        uint16_t  name_checksum;
-        uint16_t  input_pin_behavior;
-        uint16_t  input_on_command_code;
-        uint16_t  input_off_command_code;
-        char      input_on_command_letter;
-        char      input_off_command_letter;
         struct {
+            uint16_t  name_checksum:16;
+            uint16_t  input_pin_behavior:16;
+            uint16_t  input_on_command_code:16;
+            uint16_t  input_off_command_code:16;
+            char      input_on_command_letter:8;
+            char      input_off_command_letter:8;
             uint8_t   subcode:4;
             bool      switch_changed:1;
             bool      input_pin_state:1;
             bool      switch_state:1;
             bool      ignore_on_halt:1;
-            uint8_t   failsafe:1;
+            bool      failsafe:1;
+            bool      haltsetting:1;
         };
 };
-
-#endif // SWITCH_H

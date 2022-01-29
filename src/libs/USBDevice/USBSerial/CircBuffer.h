@@ -41,30 +41,52 @@ public:
         return (read == write);
     };
 
-    void queue(T k) {
-		__disable_irq();
+    void iqueue(T k) {
         if (isFull()) {
             read++;
             read %= size;
         }
         buf[write++] = k;
         write %= size;
-		__enable_irq();
+    }
+
+    void queue(T k) {
+        __disable_irq();
+        if (isFull()) {
+            read++;
+            read %= size;
+        }
+        buf[write++] = k;
+        write %= size;
+        __enable_irq();
     }
 
     // pop last entered character
-    void pop() {
+    // void pop() {
+    //     __disable_irq();
+    //     if(!isEmpty()) {
+    //         write--;
+    //         write %= size;
+    //     }
+    //     __enable_irq();
+    // }
+
+    // pop last entered character from ISR
+    void ipop() {
         if(!isEmpty()) {
             write--;
             write %= size;
         }
     }
 
+    uint16_t iavailable() {
+		return (write >= read) ? write - read : (size - read) + write;
+    };
     uint16_t available() {
-		__disable_irq();
-		uint16_t i= (write >= read) ? write - read : (size - read) + write;
-		__enable_irq();
-		return i;
+        __disable_irq();
+        uint16_t i= (write >= read) ? write - read : (size - read) + write;
+        __enable_irq();
+        return i;
     };
     uint16_t free() {
         return size - available() - 1;
@@ -75,11 +97,13 @@ public:
     }
 
     bool dequeue(T * c) {
+        __disable_irq();
         bool empty = isEmpty();
         if (!empty) {
             *c = buf[read++];
             read %= size;
         }
+        __enable_irq();
         return(!empty);
     };
 

@@ -26,7 +26,7 @@ void  operator delete(void* p)
 }
 
 
-#define offset(x) (((uint8_t*) x) - ((uint8_t*) this->base))
+#define offset(x) ((uint32_t)(((uint8_t*) x) - ((uint8_t*) this->base)))
 
 typedef struct __attribute__ ((packed))
 {
@@ -129,7 +129,7 @@ void* MemoryPool::alloc(size_t nbytes)
         p = (_poolregion*) (((uint8_t*) p) + p->next);
 
         // make sure we don't walk off the end
-    } while (p <= (_poolregion*) (((uint8_t*)base) + size));
+    } while (p < (_poolregion*) (((uint8_t*)base) + size));
 
     // fell off the end of the region!
     return NULL;
@@ -144,6 +144,11 @@ void MemoryPool::dealloc(void* d)
 
     // combine next block if it's free
     _poolregion* q = (_poolregion*) (((uint8_t*) p) + p->next);
+    if(q >= (_poolregion*) (((uint8_t*) base) + size)) {
+        // we are beyond the end of the pool, ie last block
+        return;
+    }
+
     if (q->used == 0)
     {
         MDEBUG("\t\tCombining with next free region at %p, new size is %d\n", q, p->next + q->next);
@@ -173,7 +178,7 @@ void MemoryPool::dealloc(void* d)
                 q->next += p->next;
 
                 // sanity check
-                if ((offset(p) + p->next) >= size)
+                if ((offset(p) + p->next) > size)
                 {
                     // captain, we have a problem!
                     // this can only happen if something has corrupted our heap, since we should simply fail to find a free block if it's full
@@ -208,7 +213,7 @@ void MemoryPool::debug(StreamOutput* str)
     uint32_t free = 0;
     str->printf("Start: %ub MemoryPool at %p\n", size, p);
     do {
-        str->printf("\tChunk at %p (%+4d): %s, %lu bytes\n", p, offset(p), (p->used?"used":"free"), p->next);
+        str->printf("\tChunk at %p (%4lu): %s, %lu bytes\n", p, offset(p), (p->used?"used":"free"), p->next);
         tot += p->next;
         if (p->used == 0)
             free += p->next;

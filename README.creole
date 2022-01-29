@@ -1,11 +1,9 @@
-Current build status: {{https://travis-ci.org/Smoothieware/Smoothieware.svg?branch=edge}}
-
 ==Overview
 Smoothie is a free, opensource, high performance G-code interpreter and CNC controller written in Object-Oriented C++ for the LPC17xx micro-controller ( ARM Cortex M3 architecture ). It will run on a mBed, a LPCXpresso, a SmoothieBoard, R2C2 or any other LPC17xx-based board. The motion control part is a port of the awesome grbl.
 
 Documentation can be found here : [[http://smoothieware.org/]]
 
-NOTE it is not necessary to build Smoothie yourself unless you want to. prebuilt binaries are available here: [[http://triffid-hunter.no-ip.info/Smoothie.html|Nightly builds]] and here: [[https://github.com/Smoothieware/Smoothieware/blob/edge/FirmwareBin/firmware.bin?raw=true|recent stable build]]
+NOTE it is not necessary to build Smoothie yourself unless you want to. prebuilt binaries are available here: [[https://github.com/Smoothieware/Smoothieware/blob/edge/FirmwareBin/firmware.bin?raw=true|recent stable build]]
 
 ==Quick Start
 These are the quick steps to get Smoothie dependencies installed on your computer:
@@ -51,7 +49,7 @@ Contributions very welcome !
 
 ==Donate
 The Smoothie firmware is free software developed by volunteers. If you find this software useful, want to say thanks and encourage development, please consider a 
-[[https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=9QDYFXXBPM6Y6&lc=US&item_name=Smoothieware%20development&currency_code=USD&bn=PP%2dDonationsBF%3abtn_donate_SM%2egif%3aNonHosted|Donation]]
+[[https://paypal.me/smoothieware|Donation]]
 
 ==License
 

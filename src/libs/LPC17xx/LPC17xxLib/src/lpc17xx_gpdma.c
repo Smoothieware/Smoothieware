@@ -1,5 +1,5 @@
 #ifdef __LPC17XX__
-
+#pragma GCC diagnostic ignored "-Wcast-qual"
 /**********************************************************************
 * $Id$		lpc17xx_gpdma.c				2010-03-21
 *//**
@@ -368,7 +368,7 @@ void GPDMA_ChannelCmd(uint8_t channelNum, FunctionalState NewState)
 	LPC_GPDMACH_TypeDef *pDMAch;
 
 	// Get Channel pointer
-	pDMAch = (const LPC_GPDMACH_TypeDef *) pGPDMACh[channelNum];
+	pDMAch = (LPC_GPDMACH_TypeDef *) pGPDMACh[channelNum];
 
 	if (NewState == ENABLE) {
 		pDMAch->DMACCConfig |= GPDMA_DMACCxConfig_E;

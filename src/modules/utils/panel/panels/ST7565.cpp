@@ -18,9 +18,11 @@
 
 //definitions for lcd
 #define LCDWIDTH 128
+#define LCDWIDTH_SH1106 132
 #define LCDHEIGHT 64
 #define LCDPAGES  (LCDHEIGHT+7)/8
 #define FB_SIZE LCDWIDTH*LCDPAGES
+#define FB_SIZE_SH1106 LCDWIDTH_SH1106*LCDPAGES
 #define FONT_SIZE_X 6
 #define FONT_SIZE_Y 8
 
@@ -51,6 +53,7 @@ ST7565::ST7565(uint8_t variant)
     is_viki2 = false;
     is_mini_viki2 = false;
     is_ssd1306= false;
+    is_sh1106= false;
 
     // set the variant
     switch(variant) {
@@ -69,6 +72,13 @@ ST7565::ST7565(uint8_t variant)
             is_ssd1306= true;
             this->reversed = false;
             this->contrast = 9;
+            break;
+        case 4: // SH1106 OLED
+            // set default for sub variants
+            is_sh1106= true;
+            //is_ssd1306= true;
+            this->reversed = false;
+            this->contrast = 15;
             break;
        default:
             // set default for sub variants
@@ -150,7 +160,7 @@ ST7565::ST7565(uint8_t variant)
     // reverse display
     this->reversed = THEKERNEL->config->value(panel_checksum, reverse_checksum)->by_default(this->reversed)->as_bool();
 
-    framebuffer = (uint8_t *)AHB0.alloc(FB_SIZE); // grab some memory from USB_RAM
+    framebuffer = (uint8_t *)AHB0.alloc((is_sh1106)?FB_SIZE_SH1106:FB_SIZE); // grab some memory from USB_RAM
     if(framebuffer == NULL) {
         THEKERNEL->streams->printf("Not enough memory available for frame buffer");
     }
@@ -189,16 +199,19 @@ void ST7565::send_data(const unsigned char *buf, size_t size)
 //clearing screen
 void ST7565::clear()
 {
-    memset(framebuffer, 0, FB_SIZE);
+    int size  = (is_sh1106)?FB_SIZE_SH1106:FB_SIZE;
+    memset(framebuffer, 0, size);
     this->tx = 0;
     this->ty = 0;
+    this->text_color = 1;
+    this->text_background = true;
 }
 
 void ST7565::send_pic(const unsigned char *data)
 {
     for (int i = 0; i < LCDPAGES; i++) {
         set_xy(0, i);
-        send_data(data + i * LCDWIDTH, LCDWIDTH);
+        send_data(data + i * LCDWIDTH, (is_sh1106)?LCDWIDTH_SH1106:LCDWIDTH);
     }
 }
 
@@ -231,6 +244,22 @@ void ST7565::setCursor(uint8_t col, uint8_t row)
 {
     this->tx = col * 6;
     this->ty = row * 8;
+}
+
+void ST7565::setCursorPX(int x, int y)
+{
+    this->tx = x;
+    this->ty = y;
+}
+
+void ST7565::setColor(int c)
+{
+    this->text_color = c;
+}
+
+void ST7565::setBackground(bool bg)
+{
+    this->text_background = bg;
 }
 
 void ST7565::home()
@@ -298,7 +327,7 @@ void ST7565::init()
     }else{
         const unsigned char init_seq[] = {
             0x40,    //Display start line 0
-            (unsigned char)(reversed ? 0xa0 : 0xa1), // ADC
+            (unsigned char)((reversed^is_sh1106) ? 0xa0 : 0xa1), // ADC
             (unsigned char)(reversed ? 0xc8 : 0xc0), // COM select
             0xa6,    //Display normal
             0xa2,    //Set Bias 1/9 (Duty 1/65)
@@ -329,30 +358,45 @@ void ST7565::setContrast(uint8_t c)
     send_commands(contrast_seq, sizeof(contrast_seq));
 }
 
-int ST7565::drawChar(int x, int y, unsigned char c, int color)
+/**
+* @brief Draws a character to the screen buffer
+* @param x   X coordinate
+* @param y   Y coordinate
+* @param c   Character to print
+* @param color Drawing mode for foreground.
+* @param bg  True: Draw background, False: Transparent background)
+*/
+int ST7565::drawChar(int x, int y, unsigned char c, int color, bool bg)
 {
     int retVal = -1;
-    if(c == '\n') {
+
+    if (c == '\n') {
         this->ty += 8;
         retVal = -tx;
-    }
-    if(c == '\r') {
+    } else if (c == '\r') {
         retVal = -tx;
     } else {
         for (uint8_t i = 0; i < 5; i++ ) {
-            if(color == 0) {
-                framebuffer[x + (y / 8 * 128) ] = ~(glcd_font[(c * 5) + i] << y % 8);
-                if(y + 8 < 63) {
-                    framebuffer[x + ((y + 8) / 8 * 128) ] = ~(glcd_font[(c * 5) + i] >> (8 - (y % 8)));
+            if (x < LCDWIDTH) {     // Guard against drawing off screen
+                // Character glyph may cross two screen pages
+                int page = y / 8;
+                // Draw the first byte
+                if (page < LCDPAGES) {
+                    int screenIndex = page * LCDWIDTH + x;
+                    uint8_t fontByte = glcd_font[(c * 5) + i] << (y % 8);
+                    if (bg) drawByte(screenIndex, 0xFF << (y % 8), !color);
+                    drawByte(screenIndex, fontByte, color);
                 }
-            }
-            if(color == 1) {
-                framebuffer[x + ((y) / 8 * 128) ] = glcd_font[(c * 5) + i] << (y % 8);
-                if(y + 8 < 63) {
-                    framebuffer[x + ((y + 8) / 8 * 128) ] = glcd_font[(c * 5) + i] >> (8 - (y % 8));
+                // Draw the second byte
+                page++;
+                if (page < LCDPAGES) {
+                    int screenIndex = page * LCDWIDTH + x;
+                    uint8_t fontByte = glcd_font[(c * 5) + i] >> (8 - (y % 8));
+                    if (bg) drawByte(screenIndex, 0xFF >> (8 - (y % 8)), !color);
+                    drawByte(screenIndex, fontByte, color);
                 }
+                x++;
             }
-            x++;
         }
         retVal = 6;
         this->tx += 6;
@@ -364,7 +408,7 @@ int ST7565::drawChar(int x, int y, unsigned char c, int color)
 //write single char to screen
 void ST7565::write_char(char value)
 {
-    drawChar(this->tx, this->ty, value, 1);
+    drawChar(this->tx, this->ty, value, this->text_color, this->text_background);
 }
 
 void ST7565::write(const char *line, int len)
@@ -454,15 +498,68 @@ void ST7565::renderGlyph(int x, int y, const uint8_t *g, int w, int h)
     }
 }
 
-void ST7565::pixel(int x, int y, int colour)
+void ST7565::drawByte(int index, uint8_t mask, int color)
+{
+    int shift = (is_sh1106)? 2 : 0; // 2 pixels as border on wide OLED
+    index += shift;
+    if (color == 1) {
+        framebuffer[index] |= mask;
+    } else if (color == 0) {
+        framebuffer[index] &= ~mask;
+    } else {
+        framebuffer[index] ^= mask;
+    }
+}
+
+void ST7565::pixel(int x, int y, int color)
 {
     int page = y / 8;
     unsigned char mask = 1 << (y % 8);
-    unsigned char *byte = &framebuffer[page * LCDWIDTH + x];
-    if ( colour == 0 )
-        *byte &= ~mask; // clear pixel
-    else
-        *byte |= mask; // set pixel
+    drawByte(page * LCDWIDTH + x, mask, color);
+}
+
+void ST7565::drawHLine(int x, int y, int w, int color)
+{
+    int page = y / 8;
+    uint8_t mask = 1 << (y % 8);
+    for (int i = 0; i < w; i++) {
+        drawByte(page * LCDWIDTH + x + i, mask, color);
+    }
+}
+
+void ST7565::drawVLine(int x, int y, int h, int color){
+    int page = y / 8;
+    if (page >= LCDPAGES) return;
+    // First byte. Start with all on and shift to turn of the
+    // bits before the start of the line
+    int startbit = y % 8;
+    uint8_t mask = 0xff << startbit;
+    // Account for when the start and end of the line fall on the
+    // same byte
+    if (h < 8) {
+        mask &= 0xff >> (8 - (startbit + h));
+    }
+    drawByte(page * LCDWIDTH + x, mask, color);
+    h -= 8 - (y % 8);
+    // Draw any completely filled bytes along the line
+    while (h > 8) {
+        page++;
+        if (page >= LCDPAGES) return;
+        mask = 0xff;
+        drawByte(page * LCDWIDTH + x, mask, color);
+        h -= 8;
+    }
+    page++;
+    if (page >= LCDPAGES) return;
+    // Last byte. Start filled and shift by 8 - number of pixels remaining
+    mask = 0xff >> (8 - h);
+    drawByte(page * LCDWIDTH + x, mask, color);
+}
+
+void ST7565::drawBox(int x, int y, int w, int h, int color) {
+    for (int i = 0; i < w; i++) {
+        drawVLine(x + i, y, h, color);
+    }
 }
 
 // cycle the buzzer pin at a certain frequency (hz) for a certain duration (ms)

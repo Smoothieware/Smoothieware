@@ -24,13 +24,16 @@
 #include "libs/Kernel.h"
 #include "libs/SerialMessage.h"
 #include "StreamOutputPool.h"
+#include "utils.h"
+
+#include "mbed.h"
 
 // extern void setled(int, bool);
 #define setled(a, b) do {} while (0)
 
 #define iprintf(...) do { } while (0)
 
-USBSerial::USBSerial(USB *u): USBCDC(u), rxbuf(256 + 8), txbuf(128 + 8)
+USBSerial::USBSerial(USB *u): USBCDC(u), rxbuf(256), txbuf(128 + 8)
 {
     usb = u;
     nl_in_rx = 0;
@@ -38,23 +41,31 @@ USBSerial::USBSerial(USB *u): USBCDC(u), rxbuf(256 + 8), txbuf(128 + 8)
     flush_to_nl = false;
     halt_flag = false;
     query_flag = false;
-    last_char_was_dollar = false;
+    last_char_was_cr = false;
 }
 
-void USBSerial::ensure_tx_space(int space)
+bool USBSerial::ensure_tx_space(int space)
 {
+    // we need some kind of timeout here or it will hang if upstream stalls
+    uint32_t start = us_ticker_read();
     while (txbuf.free() < space) {
+        if((us_ticker_read() - start) > 1000000) {
+            // 1 second timeout
+            return false;
+        }
         usb->endpointSetInterrupt(CDC_BulkIn.bEndpointAddress, true);
         usb->usbisr();
     }
+    return true;
 }
 
 int USBSerial::_putc(int c)
 {
     if (!attached)
         return 1;
-    ensure_tx_space(1);
-    txbuf.queue(c);
+    if(ensure_tx_space(1)) {
+        txbuf.queue(c);
+    }
 
     usb->endpointSetInterrupt(CDC_BulkIn.bEndpointAddress, true);
     return 1;
@@ -63,9 +74,11 @@ int USBSerial::_putc(int c)
 int USBSerial::_getc()
 {
     if (!attached)
-        return 0;
+        return -1;
     uint8_t c = 0;
-    setled(4, 1); while (rxbuf.isEmpty()); setled(4, 0);
+    setled(4, 1);
+    while (rxbuf.isEmpty()) { safe_delay_ms(1); }
+    setled(4, 0);
     rxbuf.dequeue(&c);
     if (rxbuf.free() == MAX_PACKET_SIZE_EPBULK) {
         usb->endpointSetInterrupt(CDC_BulkOut.bEndpointAddress, true);
@@ -91,7 +104,7 @@ int USBSerial::puts(const char *str)
         return strlen(str);
     int i = 0;
     while (*str) {
-        ensure_tx_space(1);
+        if(!ensure_tx_space(1)) break;
         txbuf.queue(*str);
         if ((txbuf.available() % 64) == 0)
             usb->endpointSetInterrupt(CDC_BulkIn.bEndpointAddress, true);
@@ -180,55 +193,68 @@ bool USBSerial::USBEvent_EPOut(uint8_t bEP, uint8_t bEPStatus)
     readEP(c, &size);
     iprintf("Read %ld bytes:\n\t", size);
     for (uint8_t i = 0; i < size; i++) {
+        char b= c[i];
 
         // handle backspace and delete by deleting the last character in the buffer if there is one
-        if(c[i] == 0x08 || c[i] == 0x7F) {
-            if(!rxbuf.isEmpty()) rxbuf.pop();
+        if(b == 0x08 || b == 0x7F) {
+            if(!rxbuf.isEmpty()) rxbuf.ipop();
             continue;
         }
 
-        if(c[i] == 'X' - 'A' + 1) { // ^X
+        if(b == 'X' - 'A' + 1) { // ^X
             //THEKERNEL->set_feed_hold(false); // required to free stuff up
             halt_flag = true;
             continue;
         }
 
-        if(c[i] == '?') { // ?
+        if(b == 'Y' - 'A' + 1) { // ^Y
+            THEKERNEL->set_stop_request(true); // generic stop what you are doing request
+            continue;
+        }
+
+        if(b == '?') { // ?
             query_flag = true;
             continue;
         }
 
-        if(THEKERNEL->is_grbl_mode() || THEKERNEL->is_feed_hold_enabled()) {
-            if(c[i] == '!') { // safe pause
+        if(THEKERNEL->is_feed_hold_enabled()) {
+            if(b == '!') { // safe pause
                 THEKERNEL->set_feed_hold(true);
                 continue;
             }
 
-            if(c[i] == '~') { // safe resume
+            if(b == '~') { // safe resume
                 THEKERNEL->set_feed_hold(false);
                 continue;
             }
         }
 
-        last_char_was_dollar = (c[i] == '$');
+        if(b == '\n' && last_char_was_cr) {
+            // handle \r\n as single line terminator
+            last_char_was_cr= false;
+            continue;
+        }
+
+        last_char_was_cr = (b=='\r');
 
         if (flush_to_nl == false)
-            rxbuf.queue(c[i]);
+            rxbuf.iqueue(b);
 
-        // if (c[i] >= 32 && c[i] < 128)
+        // if (b >= 32 && b < 128)
         // {
-        //     iprintf("%c", c[i]);
+        //     iprintf("%c", b);
         // }
         // else
         // {
-        //     iprintf("\\x%02X", c[i]);
+        //     iprintf("\\x%02X", b);
         // }
 
-        if (c[i] == '\n' || c[i] == '\r') {
-            if (flush_to_nl)
+        if (b == '\n' || b == '\r') {
+            if (flush_to_nl) {
                 flush_to_nl = false;
-            else
+            }else{
                 nl_in_rx++;
+            }
         } else if (rxbuf.isFull() && (nl_in_rx == 0)) {
             // to avoid a deadlock with very long lines, we must dump the buffer
             // and continue flushing to the next newline
@@ -291,7 +317,6 @@ void USBSerial::on_idle(void *argument)
         query_flag = false;
         puts(THEKERNEL->get_query_string().c_str());
     }
-
 }
 
 void USBSerial::on_main_loop(void *argument)
@@ -305,6 +330,11 @@ void USBSerial::on_main_loop(void *argument)
             attached = true;
             THEKERNEL->streams->append_stream(this);
             puts("Smoothie\r\nok\r\n");
+            #if 0
+            if(THEKERNEL->is_bad_mcu()) {
+                puts("WARNING: This is not a sanctioned board and may be unreliable and even dangerous. This MCU is deprecated, and cannot guarantee proper function\n");
+            }
+            #endif
         } else {
             attached = false;
             THEKERNEL->streams->remove_stream(this);
@@ -320,7 +350,8 @@ void USBSerial::on_main_loop(void *argument)
     if (nl_in_rx) {
         string received;
         while (available()) {
-            char c = _getc();
+            int c = _getc();
+            if(c == -1) break;
             if( c == '\n' || c == '\r') {
                 struct SerialMessage message;
                 message.message = received;

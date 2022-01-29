@@ -20,6 +20,7 @@
 #define tool_offset_checksum            CHECKSUM("delta_tool_offset")
 
 #define delta_mirror_xy_checksum        CHECKSUM("delta_mirror_xy")
+#define delta_halt_on_error_checksum    CHECKSUM("delta_halt_on_error")
 
 const static float pi     = 3.14159265358979323846;    // PI
 const static float two_pi = 2 * pi;
@@ -54,7 +55,9 @@ RotaryDeltaSolution::RotaryDeltaSolution(Config *config)
     tool_offset = config->value(tool_offset_checksum)->by_default(30.500F)->as_number();
 
     // mirror the XY axis
-    mirror_xy= config->value(delta_mirror_xy_checksum)->by_default(true)->as_bool();
+    mirror_xy= config->value(delta_mirror_xy_checksum)->by_default(false)->as_bool();
+
+    halt_on_error= config->value(delta_halt_on_error_checksum)->by_default(true)->as_bool();
 
     debug_flag= false;
     init();
@@ -178,6 +181,12 @@ void RotaryDeltaSolution::cartesian_to_actuator(const float cartesian_mm[], Actu
             THEKERNEL->streams->printf("// CalcZ= %f\n", z_calc_offset);
             THEKERNEL->streams->printf("// Offz= %f\n", z_with_offset);
         }
+
+        if(halt_on_error) {
+            THEKERNEL->streams->printf("error: RotaryDelta illegal move. reset or $X or M999 required\n");
+            THEKERNEL->call_event(ON_HALT, nullptr);
+        }
+
     } else {
         actuator_mm[ALPHA_STEPPER] = alpha_theta;
         actuator_mm[BETA_STEPPER ] = beta_theta;

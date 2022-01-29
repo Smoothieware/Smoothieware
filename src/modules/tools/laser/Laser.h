@@ -45,6 +45,7 @@ class Laser : public Module{
         float scale;
         int32_t fire_duration; // manual fire command duration
         int32_t ms_per_tick; // ms between each ticks, depends on PWM frequency
+        float pwm_frequency;
 
         struct {
             bool laser_on:1;      // set if the laser is on
@@ -52,5 +53,6 @@ class Laser : public Module{
             bool ttl_used:1;        // stores whether we have a TTL output
             bool ttl_inverting:1;   // stores whether the TTL output should be inverted
             bool manual_fire:1;     // set when manually firing
+            bool disable_auto_power:1; // true to disable auto power
         };
 };

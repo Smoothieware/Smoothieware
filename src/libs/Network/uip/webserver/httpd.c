@@ -95,9 +95,10 @@
 #define ISO_slash   0x2f
 #define ISO_colon   0x3a
 
-#define DEBUG_PRINTF printf
-//#define DEBUG_PRINTF(...)
+//#define DEBUG_PRINTF printf
+#define DEBUG_PRINTF(...)
 
+extern const char *get_query_string();
 
 // this callback gets the results of a command, line by line. need to check if
 // we need to stall the upstream sender return 0 if stalled 1 if ok to keep
@@ -318,6 +319,7 @@ static PT_THREAD(send_headers(struct httpd_state *s, const char *statushdr))
 static
 PT_THREAD(handle_output(struct httpd_state *s))
 {
+    char qstr[132];
     PT_BEGIN(&s->outputpt);
 
     if (s->method == OPTIONS) {
@@ -355,7 +357,13 @@ PT_THREAD(handle_output(struct httpd_state *s))
 
     } else {
         // Presume method GET
-        if (!fs_open(s)) { // Note this has the side effect of opening the file
+
+        if (strcmp(s->filename, "/query") == 0) { // query short cut
+            PT_WAIT_THREAD(&s->outputpt, send_headers(s, http_header_200));
+            strncpy(qstr, get_query_string(), sizeof(qstr) - 1);
+            PSOCK_SEND_STR(&s->sout, qstr);
+
+        } else if (!fs_open(s)) { // Note this has the side effect of opening the file
             DEBUG_PRINTF("404 file not found\n");
             httpd_fs_open(http_404_html, &s->file);
             strcpy(s->filename, http_404_html);
