@@ -234,6 +234,8 @@ bool DeltaGridStrategy::probe_grid(int n, float radius, StreamOutput *stream)
         return true;
     }
 
+    stream->printf("Grid Test Probe...\n");
+
     float initial_z = findBed();
     if(isnan(initial_z)) return false;
 
@@ -264,6 +266,7 @@ bool DeltaGridStrategy::probe_grid(int n, float radius, StreamOutput *stream)
 // taken from Oskars PR #713
 bool DeltaGridStrategy::probe_spiral(int n, float radius, StreamOutput *stream)
 {
+    stream->printf("Spiral Test Probe...\n");
     float a = radius / (2 * sqrtf(n * M_PI));
     float step_length = radius * radius / (2 * a * n);
 
@@ -354,6 +357,11 @@ bool DeltaGridStrategy::handleGcode(Gcode *gcode)
         } else if(gcode->m == 375) { // M375: load grid, M375.1 display grid
             if(gcode->subcode == 1) {
                 print_bed_level(gcode->stream);
+                if(THEROBOT->compensationTransform == nullptr){
+                    gcode->stream->printf("Grid is currently disabled\n");
+                }else{
+                    gcode->stream->printf("Grid is currently enabled\n");
+                }
             } else {
                 __disable_irq();
                 if(load_grid(gcode->stream)) setAdjustFunction(true);

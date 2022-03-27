@@ -459,8 +459,11 @@ void Robot::check_max_actuator_speeds()
         if(actuators[i]->is_extruder()) continue; //extruders are not included in this check
 
         float step_freq = actuators[i]->get_max_rate() * actuators[i]->get_steps_per_mm();
-        if (step_freq > THEKERNEL->base_stepping_frequency) {
-            actuators[i]->set_max_rate(floorf(THEKERNEL->base_stepping_frequency / actuators[i]->get_steps_per_mm()));
+        if (step_freq >= THEKERNEL->base_stepping_frequency) {
+            float s= floorf(THEKERNEL->base_stepping_frequency / actuators[i]->get_steps_per_mm());
+            // derate by 1% so it is not right up against the maximum
+            s -= (s*0.01);
+            actuators[i]->set_max_rate(s);
             THEKERNEL->streams->printf("WARNING: actuator %d rate exceeds base_stepping_frequency * ..._steps_per_mm: %f, setting to %f\n", i, step_freq, actuators[i]->get_max_rate());
         }
     }
@@ -601,9 +604,9 @@ void Robot::on_gcode_received(void *argument)
                 } else if(gcode->subcode == 4) {
                     // G92.4 is a smoothie special it sets manual homing for X,Y,Z
                     // do a manual homing based on given coordinates, no endstops required
-                    if(gcode->has_letter('X')){ THEROBOT->reset_axis_position(gcode->get_value('X'), X_AXIS); }
-                    if(gcode->has_letter('Y')){ THEROBOT->reset_axis_position(gcode->get_value('Y'), Y_AXIS); }
-                    if(gcode->has_letter('Z')){ THEROBOT->reset_axis_position(gcode->get_value('Z'), Z_AXIS); }
+                    if(gcode->has_letter('X')){ THEROBOT->reset_axis_position(to_millimeters(gcode->get_value('X')), X_AXIS); }
+                    if(gcode->has_letter('Y')){ THEROBOT->reset_axis_position(to_millimeters(gcode->get_value('Y')), Y_AXIS); }
+                    if(gcode->has_letter('Z')){ THEROBOT->reset_axis_position(to_millimeters(gcode->get_value('Z')), Z_AXIS); }
 
                 } else if(gcode->subcode == 3) {
                     // initialize G92 to the specified values, only used for saving it with M500
@@ -671,6 +674,7 @@ void Robot::on_gcode_received(void *argument)
                 if(!THEKERNEL->is_grbl_mode()) break;
                 // fall through to M2
             case 2: // M2 end of program
+                THEKERNEL->conveyor->wait_for_idle();
                 current_wcs = 0;
                 absolute_mode = true;
                 seconds_per_minute= 60;
@@ -1268,7 +1272,9 @@ void Robot::reset_compensated_machine_position()
         // we want to leave it where we have set Z, not where it ended up AFTER compensation so
         // this should correct the Z position to the machine_position
         is_g123= false; // we don't want the laser to fire
-        append_milestone(machine_position, this->seek_rate / 60.0F);
+        if(!append_milestone(machine_position, this->seek_rate / 60.0F)) {
+            reset_axis_position(machine_position[X_AXIS], machine_position[Y_AXIS], machine_position[Z_AXIS]);
+        }
     }
 }
 

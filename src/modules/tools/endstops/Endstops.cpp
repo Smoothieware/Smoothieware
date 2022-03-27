@@ -423,11 +423,7 @@ void Endstops::on_idle(void*)
         trigger_halt= false;
         char d= triggered_direction ? '-' : '+';
         char a= triggered_axis < 3 ? 'X' + triggered_axis : 'A' + triggered_axis-3;
-        if(!THEKERNEL->is_grbl_mode()) {
-            THEKERNEL->streams->printf("Limit switch %c%c was hit\n", d, a);
-        }else{
-            THEKERNEL->streams->printf("ALARM: Hard limit %c%c\n", d, a);
-        }
+        THEKERNEL->streams->printf("ALARM: Hard limit %c%c\n", d, a);
         THEKERNEL->streams->printf("// NOTICE limits are disabled until all have been cleared\n");
 
         // disables heaters and motors
@@ -523,7 +519,7 @@ void Endstops::move_to_origin(axis_bitmap_t axis)
 
     // Move to center using a regular move, use slower of X and Y fast rate in mm/sec
     float rate = std::min(homing_axis[X_AXIS].fast_rate, homing_axis[Y_AXIS].fast_rate) * 60.0F;
-    char buf[32];
+    char buf[28];
     THEROBOT->push_state();
     THEROBOT->absolute_mode = true;
     snprintf(buf, sizeof(buf), "G53 G0 X0 Y0 F%1.4f", THEROBOT->from_millimeters(rate)); // must use machine coordinates in case G92 or WCS is in effect
@@ -1033,11 +1029,9 @@ void Endstops::handle_park()
     // TODO: spec says if XYZ specified move to them first then move to MCS of specifed axis
     THEROBOT->push_state();
     THEROBOT->absolute_mode = true;
-    char buf[32];
-    snprintf(buf, sizeof(buf), "G53 G0 X%f Y%f", THEROBOT->from_millimeters(saved_position[X_AXIS]), THEROBOT->from_millimeters(saved_position[Y_AXIS])); // must use machine coordinates in case G92 or WCS is in effect
-    struct SerialMessage message;
-    message.message = buf;
-    message.stream = &(StreamOutput::NullStream);
+    char buf[30];
+    snprintf(buf, sizeof(buf), "G53 G0 X%1.4f Y%1.4f", THEROBOT->from_millimeters(saved_position[X_AXIS]), THEROBOT->from_millimeters(saved_position[Y_AXIS])); // must use machine coordinates in case G92 or WCS is in effect
+    struct SerialMessage message{&StreamOutput::NullStream, buf};
     THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message ); // as it is a multi G code command
     // Wait for above to finish
     THECONVEYOR->wait_for_idle();
