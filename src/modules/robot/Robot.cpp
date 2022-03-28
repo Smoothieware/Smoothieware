@@ -632,7 +632,7 @@ void Robot::on_gcode_received(void *argument)
                 }
 
                 #if MAX_ROBOT_ACTUATORS > 3
-                if(gcode->subcode == 0 && (gcode->has_letter('E') || gcode->get_num_args() == 0)){
+                if((gcode->subcode == 0 || gcode->subcode == 4) && (gcode->has_letter('E') || gcode->get_num_args() == 0)){
                     // reset the E position, legacy for 3d Printers to be reprap compatible
                     // find the selected extruder
                     int selected_extruder= get_active_extruder();
@@ -642,7 +642,7 @@ void Robot::on_gcode_received(void *argument)
                         actuators[selected_extruder]->change_last_milestone(get_e_scale_fnc ? e*get_e_scale_fnc() : e);
                     }
                 }
-                if(gcode->subcode == 0 && gcode->get_num_args() > 0) {
+                if((gcode->subcode == 0 || gcode->subcode == 4) && gcode->get_num_args() > 0) {
                     for (int i = A_AXIS; i < n_motors; i++) {
                         // ABC just need to set machine_position and compensated_machine_position if specified
                         char axis= 'A'+i-3;
