@@ -373,7 +373,7 @@ void Robot::print_position(uint8_t subcode, std::string& res, bool ignore_extrud
     char buf[64];
     if(subcode == 0) { // M114 print WCS
         wcs_t pos= mcs2wcs(machine_position);
-        n = snprintf(buf, sizeof(buf), "C: X:%1.4f Y:%1.4f Z:%1.4f", from_millimeters(std::get<X_AXIS>(pos)), from_millimeters(std::get<Y_AXIS>(pos)), from_millimeters(std::get<Z_AXIS>(pos)));
+        n = snprintf(buf, sizeof(buf), "C: X:%1.4f Y:%1.4f Z:%1.4f", from_unit_scale(from_millimeters(std::get<X_AXIS>(pos)),0), from_unit_scale(from_millimeters(std::get<Y_AXIS>(pos)),1), from_unit_scale(from_millimeters(std::get<Z_AXIS>(pos)),2));
 
     } else if(subcode == 4) {
         // M114.4 print last milestone
@@ -394,7 +394,7 @@ void Robot::print_position(uint8_t subcode, std::string& res, bool ignore_extrud
 
         if(subcode == 1) { // M114.1 print realtime WCS
             wcs_t pos= mcs2wcs(mpos);
-            n = snprintf(buf, sizeof(buf), "WCS: X:%1.4f Y:%1.4f Z:%1.4f", from_millimeters(std::get<X_AXIS>(pos)), from_millimeters(std::get<Y_AXIS>(pos)), from_millimeters(std::get<Z_AXIS>(pos)));
+            n = snprintf(buf, sizeof(buf), "WCS: X:%1.4f Y:%1.4f Z:%1.4f", from_unit_scale(from_millimeters(std::get<X_AXIS>(pos)),0), from_unit_scale(from_millimeters(std::get<Y_AXIS>(pos)),1), from_unit_scale(from_millimeters(std::get<Z_AXIS>(pos)),2));
 
         } else if(subcode == 2) { // M114.2 print realtime Machine coordinate system
             n = snprintf(buf, sizeof(buf), "MCS: X:%1.4f Y:%1.4f Z:%1.4f", mpos[X_AXIS], mpos[Y_AXIS], mpos[Z_AXIS]);
