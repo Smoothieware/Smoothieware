@@ -625,13 +625,13 @@ void Robot::on_gcode_received(void *argument)
 
                     // adjust g92 offset to make the current wpos == the value requested
                     if(gcode->has_letter('X')){
-                        x += to_millimeters(gcode->get_value('X')) - std::get<X_AXIS>(pos);
+                        x += to_unit_scale(to_millimeters(gcode->get_value('X')),0) - std::get<X_AXIS>(pos);
                     }
                     if(gcode->has_letter('Y')){
-                        y += to_millimeters(gcode->get_value('Y')) - std::get<Y_AXIS>(pos);
+                        y += to_unit_scale(to_millimeters(gcode->get_value('Y')),1) - std::get<Y_AXIS>(pos);
                     }
                     if(gcode->has_letter('Z')) {
-                        z += to_millimeters(gcode->get_value('Z')) - std::get<Z_AXIS>(pos);
+                        z += to_unit_scale(to_millimeters(gcode->get_value('Z')),2) - std::get<Z_AXIS>(pos);
                     }
                     g92_offset = wcs_t(x, y, z);
                 }
@@ -651,7 +651,7 @@ void Robot::on_gcode_received(void *argument)
                     for (int i = A_AXIS; i < n_motors; i++) {
                         // ABC just need to set machine_position and compensated_machine_position if specified
                         char axis= 'A'+i-3;
-                        float ap= gcode->get_value(axis);
+                        float ap= to_rotary_scale(to_unit_scale(gcode->get_value(axis),i),i);
                         if((!actuators[i]->is_extruder() || ap == 0) && gcode->has_letter(axis)) {
                             machine_position[i]= compensated_machine_position[i]= ap;
                             actuators[i]->change_last_milestone(ap); // this updates the last_milestone in the actuator
@@ -1128,7 +1128,7 @@ void Robot::process_move(Gcode *gcode, enum MOTION_MODE_T motion_mode)
     for (int i = A_AXIS; i < n_motors; ++i) {
         char letter= 'A'+i-A_AXIS;
         if(gcode->has_letter(letter)) {
-            float p= this->to_rotary_scale(this->to_unit_scale(gcode->get_value(letter),i),i);
+            float p= to_rotary_scale(to_unit_scale(gcode->get_value(letter),i),i);
             if(this->absolute_mode) {
                 target[i]= p;
             }else{
@@ -1278,22 +1278,22 @@ void Robot::reset_compensated_machine_position()
     }
 }
 
-float Robot::to_rotary_scale( float value, int axis)
+float Robot::to_rotary_scale( float value, int axis) const
 {
    return value * rotary_scale[axis]; 
 }
 
-float Robot::from_rotary_scale( float value, int axis)
+float Robot::from_rotary_scale( float value, int axis) const
 {
    return value / rotary_scale[axis];
 }
 
-float Robot::to_unit_scale( float value, int axis)
+float Robot::to_unit_scale( float value, int axis) const
 {
    return value * actuators[axis]->get_unit_scale(); 
 }
 
-float Robot::from_unit_scale( float value, int axis)
+float Robot::from_unit_scale( float value, int axis) const
 {
    return value / actuators[axis]->get_unit_scale();
 }
