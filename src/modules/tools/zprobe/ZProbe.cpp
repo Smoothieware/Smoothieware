@@ -226,7 +226,7 @@ bool ZProbe::run_probe(float& mm, float feedrate, float max_dist, bool reverse)
 // do probe then return to start position
 bool ZProbe::run_probe_return(float& mm, float feedrate, float max_dist, bool reverse)
 {
-    float save_z_pos= THEROBOT->from_millimeters(THEROBOT->get_axis_position(Z_AXIS));
+    float save_z_pos= THEROBOT->get_axis_position(Z_AXIS);
 
     bool ok= run_probe(mm, feedrate, max_dist, reverse);
 
@@ -523,6 +523,7 @@ void ZProbe::coordinated_move(float x, float y, float z, float feedrate, bool re
 
     // send as a command line as may have multiple G codes in it
     THEROBOT->push_state();
+    THEROBOT->inch_mode = false; //turn off inch_mode.  No need to restore it as the pop_state will do that
     struct SerialMessage message;
     message.message = cmd;
     delete [] cmd;
