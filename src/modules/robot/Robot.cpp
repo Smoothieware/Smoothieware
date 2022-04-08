@@ -604,9 +604,9 @@ void Robot::on_gcode_received(void *argument)
                 } else if(gcode->subcode == 4) {
                     // G92.4 is a smoothie special it sets manual homing for X,Y,Z
                     // do a manual homing based on given coordinates, no endstops required
-                    if(gcode->has_letter('X')){ THEROBOT->reset_axis_position(to_millimeters(gcode->get_value('X')), X_AXIS); }
-                    if(gcode->has_letter('Y')){ THEROBOT->reset_axis_position(to_millimeters(gcode->get_value('Y')), Y_AXIS); }
-                    if(gcode->has_letter('Z')){ THEROBOT->reset_axis_position(to_millimeters(gcode->get_value('Z')), Z_AXIS); }
+                    if(gcode->has_letter('X')){ THEROBOT->reset_axis_position(to_unit_scale(to_millimeters(gcode->get_value('X')),0), X_AXIS); }
+                    if(gcode->has_letter('Y')){ THEROBOT->reset_axis_position(to_unit_scale(to_millimeters(gcode->get_value('Y')),1), Y_AXIS); }
+                    if(gcode->has_letter('Z')){ THEROBOT->reset_axis_position(to_unit_scale(to_millimeters(gcode->get_value('Z')),2), Z_AXIS); }
 
                 } else if(gcode->subcode == 3) {
                     // initialize G92 to the specified values, only used for saving it with M500
