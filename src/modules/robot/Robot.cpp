@@ -632,7 +632,7 @@ void Robot::on_gcode_received(void *argument)
                 }
 
                 #if MAX_ROBOT_ACTUATORS > 3
-                if(gcode->subcode == 0  && (gcode->has_letter('E') || gcode->get_num_args() == 0)){
+                if(gcode->subcode == 0 && (gcode->has_letter('E') || gcode->get_num_args() == 0)){
                     // reset the E position, legacy for 3d Printers to be reprap compatible
                     // find the selected extruder
                     int selected_extruder= get_active_extruder();
