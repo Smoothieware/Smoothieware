@@ -277,7 +277,7 @@ void ZProbe::on_gcode_received(void *argument)
             bool set_z= (gcode->has_letter('Z') && !is_rdelta);
             bool probe_result;
             bool reverse= (gcode->has_letter('R') && gcode->get_value('R') != 0); // specify to probe in reverse direction
-            float rate= gcode->has_letter('F') ? THEROBOT->to_millimeters(gcode->get_value('F') / 60) : this->slow_feedrate;
+            float rate= gcode->has_letter('F') ? THEROBOT->to_millimeters(gcode->get_value('F')) / 60 : this->slow_feedrate;
             float mm;
 
             // if not setting Z ( and not subcode 1) then return probe to where it started, otherwise leave it where it is
