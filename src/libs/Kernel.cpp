@@ -205,7 +205,7 @@ std::string Kernel::get_query_string()
 
         char buf[128];
         // machine position
-        size_t n = snprintf(buf, sizeof(buf), "%1.4f,%1.4f,%1.4f", robot->from_unit_scale(robot->from_millimeters(mpos[0]),0), robot->from_unit_scale(robot->from_millimeters(mpos[1]),1), robot->from_unit_scale(robot->from_millimeters(mpos[2]),2));
+        size_t n = snprintf(buf, sizeof(buf), "%1.4f,%1.4f,%1.4f", robot->from_unit_scale(robot->from_millimeters(mpos[X_AXIS]),X_AXIS), robot->from_unit_scale(robot->from_millimeters(mpos[Y_AXIS]),Y_AXIS), robot->from_unit_scale(robot->from_millimeters(mpos[Z_AXIS]),Z_AXIS));
         if(n > sizeof(buf)) n= sizeof(buf);
 
         str.append("|MPos:").append(buf, n);
@@ -222,7 +222,7 @@ std::string Kernel::get_query_string()
 
         // work space position
         Robot::wcs_t pos = robot->mcs2wcs(mpos);
-        n = snprintf(buf, sizeof(buf), "%1.4f,%1.4f,%1.4f", robot->from_unit_scale(robot->from_millimeters(std::get<X_AXIS>(pos)),0), robot->from_unit_scale(robot->from_millimeters(std::get<Y_AXIS>(pos)),1), robot->from_unit_scale(robot->from_millimeters(std::get<Z_AXIS>(pos)),2));
+        n = snprintf(buf, sizeof(buf), "%1.4f,%1.4f,%1.4f", robot->from_unit_scale(robot->from_millimeters(std::get<X_AXIS>(pos)),X_AXIS), robot->from_unit_scale(robot->from_millimeters(std::get<Y_AXIS>(pos)),Y_AXIS), robot->from_unit_scale(robot->from_millimeters(std::get<Z_AXIS>(pos)),Z_AXIS));
         if(n > sizeof(buf)) n= sizeof(buf);
 
         str.append("|WPos:").append(buf, n);
@@ -257,7 +257,7 @@ std::string Kernel::get_query_string()
         int nmotors= robot->get_number_registered_motors();
         float mpos[nmotors];
         robot->get_axis_position(mpos, nmotors);
-        size_t n = snprintf(buf, sizeof(buf), "%1.4f,%1.4f,%1.4f", robot->from_unit_scale(robot->from_millimeters(mpos[X_AXIS]),0), robot->from_unit_scale(robot->from_millimeters(mpos[Y_AXIS]),1), robot->from_unit_scale(robot->from_millimeters(mpos[Z_AXIS]),2));
+        size_t n = snprintf(buf, sizeof(buf), "%1.4f,%1.4f,%1.4f", robot->from_unit_scale(robot->from_millimeters(mpos[X_AXIS]),X_AXIS), robot->from_unit_scale(robot->from_millimeters(mpos[Y_AXIS]),Y_AXIS), robot->from_unit_scale(robot->from_millimeters(mpos[Z_AXIS]),Z_AXIS));
         if(n > sizeof(buf)) n= sizeof(buf);
 
         str.append("|MPos:").append(buf, n);
@@ -274,7 +274,7 @@ std::string Kernel::get_query_string()
 
         // work space position
         Robot::wcs_t pos = robot->mcs2wcs(mpos);
-        n = snprintf(buf, sizeof(buf), "%1.4f,%1.4f,%1.4f", robot->from_unit_scale(robot->from_millimeters(std::get<X_AXIS>(pos)),0), robot->from_unit_scale(robot->from_millimeters(std::get<Y_AXIS>(pos)),1), robot->from_unit_scale(robot->from_millimeters(std::get<Z_AXIS>(pos)),2));
+        n = snprintf(buf, sizeof(buf), "%1.4f,%1.4f,%1.4f", robot->from_unit_scale(robot->from_millimeters(std::get<X_AXIS>(pos)),X_AXIS), robot->from_unit_scale(robot->from_millimeters(std::get<Y_AXIS>(pos)),Y_AXIS), robot->from_unit_scale(robot->from_millimeters(std::get<Z_AXIS>(pos)),Z_AXIS));
         if(n > sizeof(buf)) n= sizeof(buf);
         str.append("|WPos:").append(buf, n);
 
