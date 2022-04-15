@@ -385,7 +385,7 @@ void Player::abort_command( string parameters, StreamOutput *stream )
             this->saved_temperatures.clear();
             this->was_playing_file= false;
             this->suspend_loops= 0;
-            THEKERNEL->streams->printf("// Suspend cleared\n");
+            THEKERNEL->streams->printf("Suspend cleared\n");
         }
         return;
     }
@@ -395,7 +395,7 @@ void Player::abort_command( string parameters, StreamOutput *stream )
         this->saved_temperatures.clear();
         this->was_playing_file= false;
         this->suspend_loops= 0;
-        THEKERNEL->streams->printf("// Suspend cleared\n");
+        THEKERNEL->streams->printf("Suspend cleared\n");
         suspended= false;
     }
 
