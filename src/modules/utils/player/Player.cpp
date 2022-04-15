@@ -675,10 +675,12 @@ void Player::resume_command(string parameters, StreamOutput *stream )
 
             if(THEKERNEL->is_halted()) {
                 // abort temp wait and rest of resume
-                THEKERNEL->streams->printf("Resume aborted by kill\n");
-                THEROBOT->pop_state();
-                this->saved_temperatures.clear();
-                suspended= false;
+                if(suspended) {
+                    THEKERNEL->streams->printf("Resume aborted by kill\n");
+                    THEROBOT->pop_state();
+                    this->saved_temperatures.clear();
+                    suspended= false;
+                }
                 return;
             }
         }
