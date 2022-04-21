@@ -396,7 +396,6 @@ void Player::abort_command( string parameters, StreamOutput *stream )
         this->was_playing_file= false;
         this->suspend_loops= 0;
         THEKERNEL->streams->printf("Suspend cleared\n");
-        suspended= false;
     }
 
     playing_file = false;

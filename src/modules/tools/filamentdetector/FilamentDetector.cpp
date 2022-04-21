@@ -134,7 +134,7 @@ void FilamentDetector::on_gcode_received(void *argument)
 {
     Gcode *gcode = static_cast<Gcode *>(argument);
     if (gcode->has_m) {
-        if (gcode->m == 404) { // set filament detector parameters S seconds per check, P pulses per mm
+        if (gcode->m == 404) { // temporarily set filament detector parameters S seconds per check, P pulses per mm
             if(gcode->has_letter('S')){
                 seconds_per_check= gcode->get_value('S');
                 seconds_passed= 0;
@@ -145,6 +145,7 @@ void FilamentDetector::on_gcode_received(void *argument)
             gcode->stream->printf("// pulses per mm: %f, seconds per check: %d\n", pulses_per_mm, seconds_per_check);
 
         } else if (gcode->m == 405) { // disable filament detector
+            this->pulses= 0;
             active= false;
             e_last_moved= get_emove();
 
