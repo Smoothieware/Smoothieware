@@ -19,6 +19,7 @@
 #include "utils.h"
 #include "Gcode.h"
 #include "ExtruderPublicAccess.h"
+#include "PlayerPublicAccess.h"
 
 #include "InterruptIn.h" // mbed
 #include "us_ticker_api.h" // mbed
@@ -34,7 +35,6 @@
 
 FilamentDetector::FilamentDetector()
 {
-    suspended= false;
     filament_out_alarm= false;
     bulge_detected= false;
     active= true;
@@ -111,15 +111,14 @@ void FilamentDetector::send_command(std::string msg, StreamOutput *stream)
 // needed to detect when we resume
 void FilamentDetector::on_console_line_received( void *argument )
 {
-    if(!suspended) return;
+    if(!active) return;
 
     SerialMessage new_message = *static_cast<SerialMessage *>(argument);
     string possible_command = new_message.message;
     string cmd = shift_parameter(possible_command);
-    if(cmd == "resume" || cmd == "M601") {
+    if(cmd == "resume") {
         this->pulses= 0;
         e_last_moved= NAN;
-        suspended= false;
     }
 }
 
@@ -162,11 +161,28 @@ void FilamentDetector::on_gcode_received(void *argument)
             }
 
             gcode->stream->printf("Encoder pulses: %u\n", pulses.load());
-            if(this->suspended) gcode->stream->printf("Filament detector triggered\n");
+            if(is_suspended()) gcode->stream->printf("Filament detector triggered/suspended\n");
             gcode->stream->printf("Filament detector is %s\n", active?"enabled":"disabled");
+
+        }else if (gcode->m == 601) { // resume resets
+            this->pulses= 0;
+            e_last_moved= NAN;
         }
     }
 }
+
+bool FilamentDetector::is_suspended() const
+{
+    void *returned_data;
+
+    bool ok = PublicData::get_value( player_checksum, is_suspended_checksum, &returned_data );
+    if (ok) {
+        bool b = *static_cast<bool *>(returned_data);
+        return b;
+    }
+    return false;
+}
+
 
 void FilamentDetector::on_main_loop(void *argument)
 {
@@ -179,8 +195,7 @@ void FilamentDetector::on_main_loop(void *argument)
             THEKERNEL->streams->printf("// Filament Detector has detected a filament jam\n");
         }
 
-        if(!suspended) {
-            this->suspended= true;
+        if(!is_suspended()) {
             // fire suspend command
             this->send_command( "M600", &(StreamOutput::NullStream) );
         }
@@ -203,7 +218,7 @@ void FilamentDetector::on_pin_rise()
 
 void FilamentDetector::check_encoder()
 {
-    if(suspended) return; // already suspended
+    if(is_suspended()) return; // already suspended
     if(!active) return;  // not enabled
 
     uint32_t pulse_cnt= this->pulses.exchange(0); // atomic load and reset
@@ -235,7 +250,7 @@ void FilamentDetector::check_encoder()
 
 uint32_t FilamentDetector::button_tick(uint32_t dummy)
 {
-    if(!bulge_pin.connected() || suspended || !active) return 0;
+    if(!bulge_pin.connected() || !active || is_suspended()) return 0;
 
     if(bulge_pin.get()) {
         // we got a trigger from the bulge detector
