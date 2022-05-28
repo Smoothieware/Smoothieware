@@ -32,6 +32,7 @@
 #define bulge_pin_checksum          CHECKSUM("bulge_pin")
 #define seconds_per_check_checksum  CHECKSUM("seconds_per_check")
 #define pulses_per_mm_checksum      CHECKSUM("pulses_per_mm")
+#define leave_heaters_on_checksum   CHECKSUM("leave_heaters_on")
 
 FilamentDetector::FilamentDetector()
 {
@@ -89,6 +90,9 @@ void FilamentDetector::on_module_loaded()
     // the number of pulses per mm of filament moving through the detector, can be fractional
     pulses_per_mm= THEKERNEL->config->value(filament_detector_checksum, pulses_per_mm_checksum)->by_default(1)->as_number();
 
+    // leave heaters on when it suspends
+    leave_heaters_on= THEKERNEL->config->value(filament_detector_checksum, leave_heaters_on_checksum )->by_default(false)->as_bool();
+
     // register event-handlers
     if (this->encoder_pin != nullptr) {
         //This event is only valid if we are using the encodeer.
@@ -134,7 +138,7 @@ void FilamentDetector::on_gcode_received(void *argument)
 {
     Gcode *gcode = static_cast<Gcode *>(argument);
     if (gcode->has_m) {
-        if (gcode->m == 404) { // temporarily set filament detector parameters S seconds per check, P pulses per mm
+        if (gcode->m == 404) { // temporarily set filament detector parameters S seconds per check, P pulses per mm, H leave heaters on
             if(gcode->has_letter('S')){
                 seconds_per_check= gcode->get_value('S');
                 seconds_passed= 0;
@@ -142,7 +146,11 @@ void FilamentDetector::on_gcode_received(void *argument)
             if(gcode->has_letter('P')){
                 pulses_per_mm= gcode->get_value('P');
             }
-            gcode->stream->printf("// pulses per mm: %f, seconds per check: %d\n", pulses_per_mm, seconds_per_check);
+            if(gcode->has_letter('H')){
+                leave_heaters_on= gcode->get_value('H') >= 1;
+            }
+
+            gcode->stream->printf("// pulses per mm: %f, seconds per check: %d, heaters: %s\n", pulses_per_mm, seconds_per_check, leave_heaters_on?"on":"off");
 
         } else if (gcode->m == 405) { // disable filament detector
             this->pulses= 0;
@@ -198,7 +206,7 @@ void FilamentDetector::on_main_loop(void *argument)
 
         if(!is_suspended()) {
             // fire suspend command
-            this->send_command( "M600", &(StreamOutput::NullStream) );
+            this->send_command(leave_heaters_on?"M600.1":"M600", &(StreamOutput::NullStream));
         }
     }
 }
