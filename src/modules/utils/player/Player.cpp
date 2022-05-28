@@ -735,8 +735,9 @@ void Player::resume_command(string parameters, StreamOutput *stream )
     THEROBOT->absolute_mode= true;
     {
         // NOTE position was saved in WCS (for tool change which may change WCS expecially the Z)
+        // move to saed XY first then restore Z
         char buf[128];
-        snprintf(buf, sizeof(buf), "G0 X%f Y%f Z%f", saved_position[0], saved_position[1], saved_position[2]);
+        snprintf(buf, sizeof(buf), "G0 X%f Y%f G0 Z%f", saved_position[0], saved_position[1], saved_position[2]);
         struct SerialMessage message;
         message.message = buf;
         message.stream = &(StreamOutput::NullStream);

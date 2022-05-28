@@ -172,6 +172,7 @@ void FilamentDetector::on_gcode_received(void *argument)
             gcode->stream->printf("Encoder pulses: %u\n", pulses.load());
             if(is_suspended()) gcode->stream->printf("Filament detector triggered/suspended\n");
             gcode->stream->printf("Filament detector is %s\n", active?"enabled":"disabled");
+            gcode->stream->printf("Leave heaters on is %s\n", leave_heaters_on?"true":"false");
 
         }else if (gcode->m == 601) { // resume resets
             this->pulses= 0;
