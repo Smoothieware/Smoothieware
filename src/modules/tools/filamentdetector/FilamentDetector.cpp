@@ -39,6 +39,7 @@ FilamentDetector::FilamentDetector()
     bulge_detected= false;
     active= true;
     e_last_moved= NAN;
+    was_retract= false;
 }
 
 FilamentDetector::~FilamentDetector()
@@ -232,8 +233,18 @@ void FilamentDetector::check_encoder()
 
     float delta= e_moved - e_last_moved;
     e_last_moved= e_moved;
-    if(delta < 0) {
+    if(delta == 0) {
+        // no movemement
+        return;
+
+    }else if(delta < 0) {
         // we ignore retracts for the purposes of jam detection
+        was_retract= true;
+        return;
+
+    }else if(delta > 0 && was_retract) {
+        // ignore first extrude after a retract
+        was_retract= false;
         return;
     }
 

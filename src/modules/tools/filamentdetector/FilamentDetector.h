@@ -44,5 +44,6 @@ private:
         bool filament_out_alarm:1;
         bool bulge_detected:1;
         bool active:1;
+        bool was_retract:1;
     };
 };
