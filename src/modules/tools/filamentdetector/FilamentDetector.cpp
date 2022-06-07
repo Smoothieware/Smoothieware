@@ -247,6 +247,7 @@ void FilamentDetector::check_encoder()
         return;
 
     }else if(delta < 0) {
+        // if E is reset then we will be negative, this usually happens after a retract
         // we ignore retracts for the purposes of jam detection
         was_retract= true;
         return;
