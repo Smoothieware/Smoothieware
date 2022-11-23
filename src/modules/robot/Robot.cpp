@@ -1731,21 +1731,6 @@ bool Robot::compute_arc(Gcode * gcode, const float offset[], const float target[
     return this->append_arc(gcode, target, offset,  radius, is_clockwise );
 }
 
-
-float Robot::theta(float x, float y)
-{
-    float t = atanf(x / fabs(y));
-    if (y > 0) {
-        return(t);
-    } else {
-        if (t > 0) {
-            return(PI - t);
-        } else {
-            return(-PI - t);
-        }
-    }
-}
-
 void Robot::select_plane(uint8_t axis_0, uint8_t axis_1, uint8_t axis_2)
 {
     this->plane_axis_0 = axis_0;

@@ -420,7 +420,8 @@ void ZProbe::on_gcode_received(void *argument)
     }
 }
 
-// special way to probe in the X or Y or Z direction using planned moves, should work with any kinematics
+// special way to probe in the X or Y or Z direction using planned moves
+// NOTE this will not work as expected on a delta as the move is not segmented and the head will dip
 void ZProbe::probe_XYZ(Gcode *gcode)
 {
     float x= 0, y= 0, z= 0;
