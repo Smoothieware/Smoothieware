@@ -1354,6 +1354,13 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
         float acc= THEROBOT->get_default_acceleration();
         float t= fr/acc; // time to reach feed rate
         float d= 0.5F * acc * powf(t, 2); // distance required to accelerate (or decelerate)
+        d = std::max(d, 0.3333F); // take minimum being 1mm overall so 0.3333mm
+        // we need to check if the feedrate is too slow, for continuous jog if it takes over 5 seconds it is too slow
+        t= d*3 / fr; // time it will take to do all three blocks
+        if(t > 5) {
+            // increase feedrate so it will not take more than 5 seconds
+            fr= (d*3)/5;
+        }
 
         // we need to move at least this distance to reach full speed
         for (int i = 0; i < n_motors; ++i) {
