@@ -1305,6 +1305,7 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
         if(ax == 'S') {
             // get speed scale
             scale= strtof(p.substr(1).c_str(), NULL);
+            fr= NAN;
             continue;
         }else if(ax == 'F') {
             // OR specify feedrate (last one wins)
