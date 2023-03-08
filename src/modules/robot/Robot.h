@@ -32,6 +32,7 @@ class Robot : public Module {
         Robot();
         void on_module_loaded();
         void on_gcode_received(void* argument);
+        void after_config();
 
         void reset_axis_position(float position, int axis);
         void reset_axis_position(float x, float y, float z);
