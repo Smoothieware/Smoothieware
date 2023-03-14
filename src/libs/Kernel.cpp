@@ -296,7 +296,7 @@ std::string Kernel::get_query_string()
         if(plaser == nullptr) {
             // S is spindle RPM
             float sr= robot->get_s_value();
-            n = snprintf(buf, sizeof(buf), "|S:%1.2f", sr);
+            n = snprintf(buf, sizeof(buf), "|S:%1.4f", sr);
             if(n > sizeof(buf)) n= sizeof(buf);
             str.append(buf, n);
         }
