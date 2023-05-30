@@ -335,7 +335,7 @@ void Switch::on_gcode_received(void *argument)
                 if(v > 100) v= 100;
                 else if(v < 0) v= 0;
                 this->pwm_pin->write(v/100.0F);
-                this->switch_state= (ROUND2DP(v) != ROUND2DP(this->switch_value));
+                this->switch_state= !(ROUND2DP(v) <= ROUND2DP(this->switch_value));
             } else {
                 this->pwm_pin->write(this->default_on_value/100.0F);
                 this->switch_state= true;
@@ -350,7 +350,7 @@ void Switch::on_gcode_received(void *argument)
                 if(v > 100) v= 100;
                 else if(v < 0) v= 0;
                 this->swpwm_pin->write(v/100.0F);
-                this->switch_state= (ROUND2DP(v) != ROUND2DP(this->switch_value));
+                this->switch_state= !(ROUND2DP(v) <= ROUND2DP(this->switch_value));
             } else {
                 this->swpwm_pin->write(this->default_on_value/100.0F);
                 this->switch_state= true;

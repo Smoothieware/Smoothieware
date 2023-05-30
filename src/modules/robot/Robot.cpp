@@ -205,8 +205,8 @@ void Robot::load_config()
         }
     }
 
-    // default s value for laser
-    this->s_value             = THEKERNEL->config->value(laser_module_default_power_checksum)->by_default(0.8F)->as_number();
+    // default s value for laser, need to change to spindle RPM if laser is not enabled later
+    this->s_value = THEKERNEL->config->value(laser_module_default_power_checksum)->by_default(0.8F)->as_number();
 
      // Make our Primary XYZ StepperMotors, and potentially A B C
     uint16_t const motor_checksums[][6] = {
@@ -293,6 +293,21 @@ void Robot::load_config()
     soft_endstop_max[X_AXIS]= THEKERNEL->config->value(soft_endstop_checksum, xmax_checksum)->by_default(NAN)->as_number();
     soft_endstop_max[Y_AXIS]= THEKERNEL->config->value(soft_endstop_checksum, ymax_checksum)->by_default(NAN)->as_number();
     soft_endstop_max[Z_AXIS]= THEKERNEL->config->value(soft_endstop_checksum, zmax_checksum)->by_default(NAN)->as_number();
+}
+
+void Robot::after_config()
+{
+    // everything has been configured at this point
+#ifndef NO_TOOLS_LASER
+#define laser_checksum CHECKSUM("laser")
+    // if laser is not enabled then s_value becomes a sticky RPM for spindle so set to 0
+    void *plaser= nullptr;
+    if(!PublicData::get_value(laser_checksum, (void *)&plaser)) {
+        s_value= 0;
+    }
+#else
+    s_value= 0;
+#endif
 }
 
 uint8_t Robot::register_motor(StepperMotor *motor)
@@ -599,9 +614,9 @@ void Robot::on_gcode_received(void *argument)
                 } else if(gcode->subcode == 4) {
                     // G92.4 is a smoothie special it sets manual homing for X,Y,Z
                     // do a manual homing based on given coordinates, no endstops required
-                    if(gcode->has_letter('X')){ THEROBOT->reset_axis_position(gcode->get_value('X'), X_AXIS); }
-                    if(gcode->has_letter('Y')){ THEROBOT->reset_axis_position(gcode->get_value('Y'), Y_AXIS); }
-                    if(gcode->has_letter('Z')){ THEROBOT->reset_axis_position(gcode->get_value('Z'), Z_AXIS); }
+                    if(gcode->has_letter('X')){ THEROBOT->reset_axis_position(to_millimeters(gcode->get_value('X')), X_AXIS); }
+                    if(gcode->has_letter('Y')){ THEROBOT->reset_axis_position(to_millimeters(gcode->get_value('Y')), Y_AXIS); }
+                    if(gcode->has_letter('Z')){ THEROBOT->reset_axis_position(to_millimeters(gcode->get_value('Z')), Z_AXIS); }
 
                 } else if(gcode->subcode == 3) {
                     // initialize G92 to the specified values, only used for saving it with M500
@@ -642,7 +657,7 @@ void Robot::on_gcode_received(void *argument)
                         actuators[selected_extruder]->change_last_milestone(get_e_scale_fnc ? e*get_e_scale_fnc() : e);
                     }
                 }
-                if(gcode->subcode == 0 && gcode->get_num_args() > 0) {
+                if((gcode->subcode == 0 || gcode->subcode == 4) && gcode->get_num_args() > 0) {
                     for (int i = A_AXIS; i < n_motors; i++) {
                         // ABC just need to set machine_position and compensated_machine_position if specified
                         char axis= 'A'+i-3;
@@ -674,6 +689,15 @@ void Robot::on_gcode_received(void *argument)
                 absolute_mode = true;
                 seconds_per_minute= 60;
                 break;
+
+            case 3: // M3 is a spindle command and maybe handled elsewhere but we want to set the sticky S value
+                if(gcode->has_letter('S')) s_value= gcode->get_value('S');
+                break;
+
+            case 5: // M5 is a spindle command and maybe handled elsewhere but we want to set the sticky S value
+                s_value= 0;
+                break;
+
             case 17:
                 THEKERNEL->call_event(ON_ENABLE, (void*)1); // turn all enable pins on
                 break;
@@ -983,7 +1007,10 @@ void Robot::on_gcode_received(void *argument)
         }
     }
 
+
     if( motion_mode != NONE) {
+        // S is modal When specified on a G0/1/2/3 or M3 command
+        if(gcode->has_letter('S')) s_value= gcode->get_value('S');
         is_g123= motion_mode != SEEK;
         process_move(gcode, motion_mode);
 
@@ -1099,9 +1126,6 @@ void Robot::process_move(Gcode *gcode, enum MOTION_MODE_T motion_mode)
         else
             this->feed_rate = this->to_millimeters( gcode->get_value('F') );
     }
-
-    // S is modal When specified on a G0/1/2/3 command
-    if(gcode->has_letter('S')) s_value= gcode->get_value('S');
 
     bool moved= false;
 
@@ -1729,21 +1753,6 @@ bool Robot::compute_arc(Gcode * gcode, const float offset[], const float target[
 
     // Append arc
     return this->append_arc(gcode, target, offset,  radius, is_clockwise );
-}
-
-
-float Robot::theta(float x, float y)
-{
-    float t = atanf(x / fabs(y));
-    if (y > 0) {
-        return(t);
-    } else {
-        if (t > 0) {
-            return(PI - t);
-        } else {
-            return(-PI - t);
-        }
-    }
 }
 
 void Robot::select_plane(uint8_t axis_0, uint8_t axis_1, uint8_t axis_2)

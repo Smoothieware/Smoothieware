@@ -1270,6 +1270,7 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
 
     float rate_mm_s= NAN;
     float scale= 1.0F;
+    float fr= NAN;
     float delta[n_motors];
     for (int i = 0; i < n_motors; ++i) {
         delta[i]= 0;
@@ -1278,7 +1279,7 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
     // $J is first parameter
     shift_parameter(parameters);
     if(parameters.empty()) {
-        stream->printf("usage: $J [-c] X0.01 [S0.5] - axis can be XYZABC, optional speed is scale of max_rate. -c turns on continuous jog mode\n");
+        stream->printf("usage: $J [-c] X0.01 [S0.5|Fnnn] - axis can be XYZABC, optional speed is scale of max_rate or feedrate. -c turns on continuous jog mode\n");
         return;
     }
 
@@ -1304,6 +1305,12 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
         if(ax == 'S') {
             // get speed scale
             scale= strtof(p.substr(1).c_str(), NULL);
+            fr= NAN;
+            continue;
+        }else if(ax == 'F') {
+            // OR specify feedrate (last one wins)
+            scale= 1.0F;
+            fr= strtof(p.substr(1).c_str(), NULL) / 60.0F; // we want mm/sec but F is specified in mm/min
             continue;
         }
 
@@ -1347,13 +1354,27 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
         return;
     }
 
+    // set feedrate, either scale of max or actual feedrate
+    if(isnan(fr)) {
+        fr = rate_mm_s * scale;
+    }else{
+        // make sure we do not exceed maximum
+        if(fr > rate_mm_s) fr= rate_mm_s;
+    }
+
     if(cont_mode) {
         // continuous jog mode
-        float fr= rate_mm_s*scale;
         // calculate minimum distance to travel to accomodate acceleration and feedrate
         float acc= THEROBOT->get_default_acceleration();
         float t= fr/acc; // time to reach feed rate
         float d= 0.5F * acc * powf(t, 2); // distance required to accelerate (or decelerate)
+        d = std::max(d, 0.3333F); // take minimum being 1mm overall so 0.3333mm
+        // we need to check if the feedrate is too slow, for continuous jog if it takes over 5 seconds it is too slow
+        t= d*3 / fr; // time it will take to do all three blocks
+        if(t > 5) {
+            // increase feedrate so it will not take more than 5 seconds
+            fr= (d*3)/5;
+        }
 
         // we need to move at least this distance to reach full speed
         for (int i = 0; i < n_motors; ++i) {
@@ -1402,7 +1423,7 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
         stream->printf("ok\n");
 
     }else{
-        THEROBOT->delta_move(delta, rate_mm_s*scale, n_motors);
+        THEROBOT->delta_move(delta, fr, n_motors);
         // turn off queue delay and run it now
         THECONVEYOR->force_queue();
     }

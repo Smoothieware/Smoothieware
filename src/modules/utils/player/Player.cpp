@@ -340,7 +340,11 @@ void Player::progress_command( string parameters, StreamOutput *stream )
         return;
 
     } else if(!playing_file) {
-        stream->printf("Not currently playing\r\n");
+        if(suspended) {
+            stream->printf("Suspended\n");
+        }else{
+            stream->printf("Not currently playing\n");
+        }
         return;
     }
 
@@ -372,10 +376,28 @@ void Player::progress_command( string parameters, StreamOutput *stream )
 void Player::abort_command( string parameters, StreamOutput *stream )
 {
     if(!playing_file && current_file_handler == NULL) {
-        stream->printf("Not currently playing\r\n");
+        if(!suspended) {
+            stream->printf("Not currently playing\r\n");
+        }else{
+            // only clean up from suspend
+            this->suspended= false;
+            THEROBOT->pop_state();
+            this->saved_temperatures.clear();
+            this->was_playing_file= false;
+            this->suspend_loops= 0;
+            THEKERNEL->streams->printf("Suspend cleared\n");
+        }
         return;
     }
-    suspended= false;
+    if(suspended) {
+        this->suspended= false;
+        THEROBOT->pop_state();
+        this->saved_temperatures.clear();
+        this->was_playing_file= false;
+        this->suspend_loops= 0;
+        THEKERNEL->streams->printf("Suspend cleared\n");
+    }
+
     playing_file = false;
     played_cnt = 0;
     file_size = 0;
@@ -675,10 +697,12 @@ void Player::resume_command(string parameters, StreamOutput *stream )
 
             if(THEKERNEL->is_halted()) {
                 // abort temp wait and rest of resume
-                THEKERNEL->streams->printf("Resume aborted by kill\n");
-                THEROBOT->pop_state();
-                this->saved_temperatures.clear();
-                suspended= false;
+                if(suspended) {
+                    THEKERNEL->streams->printf("Resume aborted by kill\n");
+                    THEROBOT->pop_state();
+                    this->saved_temperatures.clear();
+                    suspended= false;
+                }
                 return;
             }
         }
@@ -711,8 +735,9 @@ void Player::resume_command(string parameters, StreamOutput *stream )
     THEROBOT->absolute_mode= true;
     {
         // NOTE position was saved in WCS (for tool change which may change WCS expecially the Z)
+        // move to saed XY first then restore Z
         char buf[128];
-        snprintf(buf, sizeof(buf), "G0 X%f Y%f Z%f", saved_position[0], saved_position[1], saved_position[2]);
+        snprintf(buf, sizeof(buf), "G0 X%f Y%f G0 Z%f", saved_position[0], saved_position[1], saved_position[2]);
         struct SerialMessage message;
         message.message = buf;
         message.stream = &(StreamOutput::NullStream);

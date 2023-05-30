@@ -182,6 +182,12 @@ std::string Kernel::get_query_string()
     if(!ok) homing = false;
     bool running = false;
 
+    // current Laser power
+    Laser *plaser= nullptr;
+#ifndef NO_TOOLS_LASER
+    PublicData::get_value(laser_checksum, (void *)&plaser);
+#endif
+
     str.append("<");
     if(halted) {
         str.append("Alarm");
@@ -235,20 +241,22 @@ std::string Kernel::get_query_string()
         if(n > sizeof(buf)) n= sizeof(buf);
         str.append(buf, n);
 
-        // current Laser power
-        #ifndef NO_TOOLS_LASER
-            Laser *plaser= nullptr;
-            if(PublicData::get_value(laser_checksum, (void *)&plaser) && plaser != nullptr) {
-                float lp= plaser->get_current_power();
-                n = snprintf(buf, sizeof(buf), "|L:%1.4f", lp);
-                if(n > sizeof(buf)) n= sizeof(buf);
-                str.append(buf, n);
-                float sr= robot->get_s_value();
-                n = snprintf(buf, sizeof(buf), "|S:%1.4f", sr);
-                if(n > sizeof(buf)) n= sizeof(buf);
-                str.append(buf, n);
-            }
-        #endif
+        if(plaser != nullptr) {
+            float lp= plaser->get_current_power();
+            n = snprintf(buf, sizeof(buf), "|L:%1.4f", lp);
+            if(n > sizeof(buf)) n= sizeof(buf);
+            str.append(buf, n);
+            float sr= robot->get_s_value();
+            n = snprintf(buf, sizeof(buf), "|S:%1.4f", sr);
+            if(n > sizeof(buf)) n= sizeof(buf);
+            str.append(buf, n);
+        }else{
+            // S is spindle RPM
+            float sr= robot->get_s_value();
+            n = snprintf(buf, sizeof(buf), "|S:%1.2f", sr);
+            if(n > sizeof(buf)) n= sizeof(buf);
+            str.append(buf, n);
+        }
 
     } else {
         // return the last milestone if idle
@@ -284,6 +292,14 @@ std::string Kernel::get_query_string()
         n = snprintf(buf, sizeof(buf), "|F:%1.1f,%1.1f", fr, fro);
         if(n > sizeof(buf)) n= sizeof(buf);
         str.append(buf, n);
+
+        if(plaser == nullptr) {
+            // S is spindle RPM
+            float sr= robot->get_s_value();
+            n = snprintf(buf, sizeof(buf), "|S:%1.4f", sr);
+            if(n > sizeof(buf)) n= sizeof(buf);
+            str.append(buf, n);
+        }
     }
 
     // if not grbl mode get temperatures
