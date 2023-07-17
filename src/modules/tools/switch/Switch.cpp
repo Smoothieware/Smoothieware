@@ -72,7 +72,7 @@ void Switch::on_halt(void *arg)
             case SWPWM: this->swpwm_pin->write(switch_value/100.0F); break;
             case NONE: return;
         }
-        this->switch_state= this->failsafe;
+        this->switch_state= this->haltsetting;
     }
 }
 
