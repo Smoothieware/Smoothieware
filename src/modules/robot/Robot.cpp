@@ -304,9 +304,13 @@ void Robot::after_config()
     void *plaser= nullptr;
     if(!PublicData::get_value(laser_checksum, (void *)&plaser)) {
         s_value= 0;
+        no_laser= true;
+    }else{
+        no_laser= false;
     }
 #else
     s_value= 0;
+    no_laser= true;
 #endif
 }
 
@@ -690,12 +694,16 @@ void Robot::on_gcode_received(void *argument)
                 seconds_per_minute= 60;
                 break;
 
-            case 3: // M3 is a spindle command and maybe handled elsewhere but we want to set the sticky S value
-                if(gcode->has_letter('S')) s_value= gcode->get_value('S');
+            case 3: // M3 is a spindle command and maybe handled elsewhere but we want to set the sticky S value if no laser
+                if(no_laser) {
+                    if(gcode->has_letter('S')) s_value= gcode->get_value('S');
+                }
                 break;
 
             case 5: // M5 is a spindle command and maybe handled elsewhere but we want to set the sticky S value
-                s_value= 0;
+                if(no_laser) {
+                   s_value= 0;
+                }
                 break;
 
             case 17:
