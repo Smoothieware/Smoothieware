@@ -196,9 +196,9 @@ void StepTicker::step_tick (void)
             // we stepped so schedule an unstep
             unstep.set(m);
 
-            if(!ismoving || tickinfo.step_count == current_block->tick_info[m].steps_to_move) {
+            if(!ismoving || tickinfo.step_count == tickinfo.steps_to_move) {
                 // done
-                current_block->tick_info[m].steps_to_move = 0;
+                tickinfo.steps_to_move = 0;
                 motor[m]->stop_moving(); // let motor know it is no longer moving
             }
         }
