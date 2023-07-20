@@ -156,47 +156,47 @@ void StepTicker::step_tick (void)
     bool still_moving= false;
     // foreach motor, if it is active see if time to issue a step to that motor
     for (uint8_t m = 0; m < num_motors; m++) {
-        auto& stepinfo = current_block->tick_info[m];
+        auto& tickinfo = current_block->tick_info[m];
 
-        if(stepinfo.steps_to_move == 0) continue; // not active
+        if(tickinfo.steps_to_move == 0) continue; // not active
 
-        stepinfo.steps_per_tick += stepinfo.acceleration_change;
+        tickinfo.steps_per_tick += tickinfo.acceleration_change;
 
-        if(current_tick == stepinfo.next_accel_event) {
+        if(current_tick == tickinfo.next_accel_event) {
             if(current_tick == current_block->accelerate_until) { // We are done accelerating, deceleration becomes 0 : plateau
-                stepinfo.acceleration_change = 0;
+                tickinfo.acceleration_change = 0;
                 if(current_block->decelerate_after < current_block->total_move_ticks) {
-                    stepinfo.next_accel_event = current_block->decelerate_after;
+                    tickinfo.next_accel_event = current_block->decelerate_after;
                     if(current_tick != current_block->decelerate_after) { // We are plateauing
                         // steps/sec / tick frequency to get steps per tick
-                        stepinfo.steps_per_tick = stepinfo.plateau_rate;
+                        tickinfo.steps_per_tick = tickinfo.plateau_rate;
                     }
                 }
             }
 
             if(current_tick == current_block->decelerate_after) { // We start decelerating
-                stepinfo.acceleration_change = stepinfo.deceleration_change;
+                tickinfo.acceleration_change = tickinfo.deceleration_change;
             }
         }
 
         // protect against rounding errors and such
-        if(stepinfo.steps_per_tick <= 0) {
-            stepinfo.counter = STEPTICKER_FPSCALE; // we force completion this step by setting to 1.0
-            stepinfo.steps_per_tick = 0;
+        if(tickinfo.steps_per_tick <= 0) {
+            tickinfo.counter = STEPTICKER_FPSCALE; // we force completion this step by setting to 1.0
+            tickinfo.steps_per_tick = 0;
         }
 
-        stepinfo.counter += stepinfo.steps_per_tick;
+        tickinfo.counter += tickinfo.steps_per_tick;
 
-        if(stepinfo.counter >= STEPTICKER_FPSCALE) { // >= 1.0 step time
-            stepinfo.counter -= STEPTICKER_FPSCALE; // -= 1.0F;
-            ++stepinfo.step_count;
+        if(tickinfo.counter >= STEPTICKER_FPSCALE) { // >= 1.0 step time
+            tickinfo.counter -= STEPTICKER_FPSCALE; // -= 1.0F;
+            ++tickinfo.step_count;
 
             // step the motor
             bool ismoving= motor[m]->step(); // returns false if the moving flag was set to false externally (probes, endstops etc)
             // we stepped so schedule an unstep
             unstep.set(m);
 
-            if(!ismoving || stepinfo.step_count == current_block->tick_info[m].steps_to_move) {
+            if(!ismoving || tickinfo.step_count == current_block->tick_info[m].steps_to_move) {
                 // done
                 current_block->tick_info[m].steps_to_move = 0;
                 motor[m]->stop_moving(); // let motor know it is no longer moving
