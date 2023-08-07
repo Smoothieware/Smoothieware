@@ -3,8 +3,10 @@
 
 #include "LevelingStrategy.h"
 
+#include "Vector3.h"
 #include <string.h>
 #include <tuple>
+
 
 #define three_point_leveling_strategy_checksum CHECKSUM("three-point-leveling")
 
@@ -34,8 +36,12 @@ private:
     struct {
         bool home:1;
         bool save:1;
+        bool correct_skew:1;
     };
     float tolerance;
+
+    void legacyCompensationTransform(float *target, bool inverse);
+    void skewCorrectingCompensationTransform(float *target, bool inverse);
 };
 
 #endif

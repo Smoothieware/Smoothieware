@@ -280,6 +280,7 @@ zprobe.probe_height                          5               # How much above be
 #leveling-strategy.three-point-leveling.tolerance      0.03        # the probe tolerance in mm, anything less that this will be ignored, default is 0.03mm
 #leveling-strategy.three-point-leveling.probe_offsets  0,0,0       # the probe offsets from nozzle, must be x,y,z, default is no offset
 #leveling-strategy.three-point-leveling.save_plane     false       # set to true to allow the bed plane to be saved with M500 default is false
+#leveling-strategy.three-point-leveling.correct_skew   false       # set to true to correct skew caused by unlevel bed, rather than only correcting z offset
 
 ## Panel
 # See http://smoothieware.org/panel

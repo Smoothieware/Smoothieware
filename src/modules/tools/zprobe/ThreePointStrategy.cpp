@@ -78,6 +78,7 @@
 #define home_checksum                CHECKSUM("home_first")
 #define tolerance_checksum           CHECKSUM("tolerance")
 #define save_plane_checksum          CHECKSUM("save_plane")
+#define correct_skew_checksum        CHECKSUM("correct_skew")
 
 ThreePointStrategy::ThreePointStrategy(ZProbe *zprobe) : LevelingStrategy(zprobe)
 {
@@ -109,6 +110,7 @@ bool ThreePointStrategy::handleConfig()
     this->home= THEKERNEL->config->value(leveling_strategy_checksum, three_point_leveling_strategy_checksum, home_checksum)->by_default(true)->as_bool();
     this->tolerance= THEKERNEL->config->value(leveling_strategy_checksum, three_point_leveling_strategy_checksum, tolerance_checksum)->by_default(0.03F)->as_number();
     this->save= THEKERNEL->config->value(leveling_strategy_checksum, three_point_leveling_strategy_checksum, save_plane_checksum)->by_default(false)->as_bool();
+    this->correct_skew= THEKERNEL->config->value(leveling_strategy_checksum, three_point_leveling_strategy_checksum, correct_skew_checksum)->by_default(false)->as_bool();
     return true;
 }
 
@@ -231,7 +233,11 @@ bool ThreePointStrategy::handleGcode(Gcode *gcode)
             x= 0; y=0;
             if(gcode->has_letter('X')) x = gcode->get_value('X');
             if(gcode->has_letter('Y')) y = gcode->get_value('Y');
-            z= getZOffset(x, y);
+            if (this->plane == nullptr) {
+                z = NAN;
+            } else {
+                z= this->plane->getz(x, y);
+            }
             gcode->stream->printf("z= %f\n", z);
             // tell robot to adjust z on each move
             setAdjustFunction(true);
@@ -357,21 +363,64 @@ bool ThreePointStrategy::test_probe_points(Gcode *gcode)
 
 void ThreePointStrategy::setAdjustFunction(bool on)
 {
-    if(on) {
+    if (on) {
         // set the compensationTransform in robot
-        THEROBOT->compensationTransform= [this](float *target, bool inverse) { if(inverse) target[2] -= this->plane->getz(target[0], target[1]); else target[2] += this->plane->getz(target[0], target[1]); };
-    }else{
+        using std::placeholders::_1;
+        using std::placeholders::_2;
+        if (this->correct_skew) {
+            THEROBOT->compensationTransform = std::bind(&ThreePointStrategy::skewCorrectingCompensationTransform, this, _1, _2); 
+        } else {
+            THEROBOT->compensationTransform = std::bind(&ThreePointStrategy::legacyCompensationTransform, this, _1, _2); 
+        }
+    } else {
         // clear it
         THEROBOT->compensationTransform= nullptr;
     }
 }
 
-// find the Z offset for the point on the plane at x, y
-float ThreePointStrategy::getZOffset(float x, float y)
-{
-    if(this->plane == nullptr) return NAN;
-    return this->plane->getz(x, y);
+void ThreePointStrategy::legacyCompensationTransform(float *target, bool inverse) {
+    float planez = this->plane->getz(target[0], target[1]); 
+    if (!inverse) {
+        target[2] += planez;
+    } else {
+        target[2] -= planez;
+    }
 }
+
+void ThreePointStrategy::skewCorrectingCompensationTransform(float *target, bool inverse)
+{
+    if (this->plane == nullptr) {
+        return;
+    }
+    
+    Vector3 result;
+    if (!inverse) {
+        // Forward correction - converting uncorrected point to a corrected point
+        //
+        // To calculate the corrected point, we cast a ray from a point on the plane along the plane normal.
+        // The ray is cast a distance equal to the input distance from XY plane (i.e. equal to z coord).
+        // The starting point of the ray is the point on the plane with the input x/y coords.
+        Vector3 rayOrigin = Vector3(target[0], target[1], this->plane->getz(target[0], target[1]));
+        result = this->plane->getUpwardsNormal().mul(target[2]).add(rayOrigin);
+    } else {
+        // Inverse correction - converting corrected point to an uncorrected point   
+        //        
+        // We need to cast a ray from the corrected point towards the plane along the normal and find where it intersects
+        // and the length of the ray before intersection. Then, the uncorrected point has x, y coords of the intersection,
+        // and z coord is the length of the ray prior to intersection.
+        Vector3 rayOrigin = Vector3(target[0], target[1], target[2]);
+        Vector3 rayDirection = this->plane->getUpwardsNormal().mul(-1); // back towards plane
+        float intersectionDistance = this->plane->findRayIntersection(rayOrigin, rayDirection);
+        Vector3 intersectionPoint = rayDirection.mul(intersectionDistance).add(rayOrigin);
+        result = Vector3(intersectionPoint.data()[0], intersectionPoint.data()[1], intersectionDistance);
+    }
+    
+    target[0] = result.data()[0];
+    target[1] = result.data()[1];
+    target[2] = result.data()[2];
+}
+
+
 
 // parse a "X,Y" string return x,y
 std::tuple<float, float> ThreePointStrategy::parseXY(const char *str)

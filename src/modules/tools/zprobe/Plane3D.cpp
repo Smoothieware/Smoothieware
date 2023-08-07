@@ -1,5 +1,7 @@
 #include "Plane3D.h"
 
+#include "math.h"
+
 Plane3D::Plane3D(const Vector3 &v1, const Vector3 &v2, const Vector3 &v3)
 {
     // get the normal of the plane
@@ -45,3 +47,32 @@ Vector3 Plane3D::getNormal() const
 {
     return normal;
 }
+
+Vector3 Plane3D::getUpwardsNormal() const
+{
+    if (normal.data()[2] >= 0) {
+        return normal;
+    }
+    return normal.mul(-1);
+}
+
+float Plane3D::findRayIntersection(Vector3 rayOrigin, Vector3 rayDirection)
+{
+    // ray equation: P = O + tD (starting at origin O and travelling in direction D)
+    // plane equation: (P - P0).N = 0  (passing through P0 and with normal N)
+    // => (O + tD - P0).N = 0
+    // => t = (N.(P0 - O)) / (N.D)
+
+    float denomenator = this->normal.dot(rayDirection.unit());
+    if (denomenator == 0) {
+        return NAN; // No intersection.
+    }
+
+    Vector3 arbitraryPointOnPlane = Vector3(0, 0, this->getz(0, 0));
+    float numerator = this->normal.dot(arbitraryPointOnPlane.sub(rayOrigin));
+    float distance = numerator / denomenator;
+    return distance;
+}
+
+
+
