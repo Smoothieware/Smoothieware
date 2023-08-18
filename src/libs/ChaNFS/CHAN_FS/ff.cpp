@@ -1839,7 +1839,7 @@ void get_fileinfo (        /* No return code */
     BYTE nt, *dir;
     TCHAR *p, c;
     p = fno->fname;
-    
+
     if (dj->sect) {
         dir = dj->dir;
         nt = dir[DIR_NTres];        /* NT flag */
@@ -2464,6 +2464,7 @@ FRESULT f_read (
 
 
 #if !_FS_READONLY
+#pragma GCC diagnostic ignored "-Wcast-qual"
 /*-----------------------------------------------------------------------*/
 /* Write File                                                            */
 /*-----------------------------------------------------------------------*/

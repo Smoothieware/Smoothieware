@@ -37,6 +37,7 @@
 #define laser_module_tickle_power_checksum      CHECKSUM("laser_module_tickle_power")
 #define laser_module_max_power_checksum         CHECKSUM("laser_module_max_power")
 #define laser_module_maximum_s_value_checksum   CHECKSUM("laser_module_maximum_s_value")
+#define laser_module_proportional_power_checksum   CHECKSUM("laser_module_proportional_power")
 
 
 Laser::Laser()
@@ -66,7 +67,7 @@ void Laser::on_module_loaded()
     pwm_pin = dummy_pin->hardware_pwm();
 
     if (pwm_pin == NULL) {
-        THEKERNEL->streams->printf("Error: Laser cannot use P%d.%d (P2.0 - P2.5, P1.18, P1.20, P1.21, P1.23, P1.24, P1.26, P3.25, P3.26 only). Laser module disabled.\n", dummy_pin->port_number, dummy_pin->pin);
+        printf("Error: Laser cannot use P%d.%d (P2.0 - P2.5, P1.18, P1.20, P1.21, P1.23, P1.24, P1.26, P3.25, P3.26 only). Laser module disabled.\n", dummy_pin->port_number, dummy_pin->pin);
         delete dummy_pin;
         delete this;
         return;
@@ -90,9 +91,11 @@ void Laser::on_module_loaded()
         ttl_pin = NULL;
     }
 
+    disable_auto_power= !THEKERNEL->config->value(laser_module_proportional_power_checksum)->by_default(true)->as_bool();
 
     uint32_t period = THEKERNEL->config->value(laser_module_pwm_period_checksum)->by_default(20)->as_number();
     this->pwm_pin->period_us(period);
+    pwm_frequency= 1E6F / period;
     this->pwm_pin->write(this->pwm_inverting ? 1 : 0);
     this->laser_maximum_power = THEKERNEL->config->value(laser_module_maximum_power_checksum)->by_default(1.0f)->as_number() ;
 
@@ -197,11 +200,19 @@ void Laser::on_gcode_received(void *argument)
     // M codes execute immediately
     if (gcode->has_m) {
         if (gcode->m == 221) { // M221 S100 change laser power by percentage S
+            if(gcode->get_num_args() == 0) {
+                gcode->stream->printf("Laser power: %6.2f %%, disable auto power: %d, PWM frequency: %f Hz\n", this->scale * 100.0F, disable_auto_power, pwm_frequency);
+                return;
+            }
             if(gcode->has_letter('S')) {
                 this->scale = gcode->get_value('S') / 100.0F;
-
-            } else {
-                gcode->stream->printf("Laser power scale at %6.2f %%\n", this->scale * 100.0F);
+            }
+            if(gcode->has_letter('P')) {
+                this->disable_auto_power= gcode->get_uint('P') > 0;
+            }
+            if(gcode->has_letter('R')) {
+                pwm_frequency= gcode->get_value('R');
+                pwm_pin->period(1.0F/pwm_frequency);
             }
         }
     }

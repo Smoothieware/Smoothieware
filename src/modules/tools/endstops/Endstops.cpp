@@ -64,6 +64,7 @@ enum DEFNS {MIN_PIN, MAX_PIN, MAX_TRAVEL, FAST_RATE, SLOW_RATE, RETRACT, DIRECTI
 #define home_z_first_checksum            CHECKSUM("home_z_first")
 #define homing_order_checksum            CHECKSUM("homing_order")
 #define move_to_origin_checksum          CHECKSUM("move_to_origin_after_home")
+#define park_after_home_checksum         CHECKSUM("park_after_home")
 
 #define alpha_trim_checksum              CHECKSUM("alpha_trim_mm")
 #define beta_trim_checksum               CHECKSUM("beta_trim_mm")
@@ -106,6 +107,8 @@ enum STATES {
 Endstops::Endstops()
 {
     this->status = NOT_HOMING;
+    this->trigger_halt= false;
+    this->limits_activated= false;
 }
 
 void Endstops::on_module_loaded()
@@ -128,7 +131,7 @@ void Endstops::on_module_loaded()
     register_for_event(ON_GCODE_RECEIVED);
     register_for_event(ON_GET_PUBLIC_DATA);
     register_for_event(ON_SET_PUBLIC_DATA);
-
+    register_for_event(ON_IDLE);
 
     THEKERNEL->slow_ticker->attach(1000, this, &Endstops::read_endstops);
 }
@@ -142,7 +145,7 @@ bool Endstops::load_old_config()
         ENDSTOP_CHECKSUMS("gamma")    // Z
     };
 
-    bool limit_enabled= false;
+    limit_enabled= false;
     for (int i = X_AXIS; i <= Z_AXIS; ++i) { // X_AXIS to Z_AXIS
         homing_info_t hinfo;
 
@@ -207,10 +210,6 @@ bool Endstops::load_old_config()
 
     get_global_configs();
 
-    if(limit_enabled) {
-        register_for_event(ON_IDLE);
-    }
-
     // sanity check for deltas
     /*
     if(this->is_delta || this->is_rdelta) {
@@ -230,7 +229,7 @@ bool Endstops::load_old_config()
 // Get config using new syntax supports ABC
 bool Endstops::load_config()
 {
-    bool limit_enabled= false;
+    limit_enabled= false;
     size_t max_index= 0;
 
     std::array<homing_info_t, k_max_actuators> temp_axis_array; // needs to be at least XYZ, but allow for ABC
@@ -280,7 +279,7 @@ bool Endstops::load_config()
         // check we are not going above the number of defined actuators/axis
         if(i >= THEROBOT->get_number_registered_motors()) {
             // too many axis we only have configured n_motors
-            THEKERNEL->streams->printf("ERROR: endstop %d is greater than number of defined motors. Endstops disabled\n", i);
+            printf("ERROR: endstop %d is greater than number of defined motors. Endstops disabled\n", i);
             delete pin_info;
             return false;
         }
@@ -372,10 +371,6 @@ bool Endstops::load_config()
     // sets some endstop global configs applicable to all endstops
     get_global_configs();
 
-    if(limit_enabled) {
-        register_for_event(ON_IDLE);
-    }
-
     return true;
 }
 
@@ -416,12 +411,34 @@ void Endstops::get_global_configs()
 
     // set to true by default for deltas due to trim, false on cartesians
     this->move_to_origin_after_home = THEKERNEL->config->value(move_to_origin_checksum)->by_default(is_delta)->as_bool();
+    if(!this->move_to_origin_after_home) {
+        this->park_after_home = THEKERNEL->config->value(park_after_home_checksum)->by_default(false)->as_bool();
+    }else{
+        this->park_after_home= false;
+    }
+}
+void Endstops::on_idle(void*)
+{
+    if(trigger_halt) {
+        trigger_halt= false;
+        char d= triggered_direction ? '-' : '+';
+        char a= triggered_axis < 3 ? 'X' + triggered_axis : 'A' + triggered_axis-3;
+        THEKERNEL->streams->printf("ALARM: Hard limit %c%c\n", d, a);
+        THEKERNEL->streams->printf("// NOTICE limits are disabled until all have been cleared\n");
+
+        // disables heaters and motors
+        THEKERNEL->call_event(ON_HALT, nullptr);
+
+    } else if(this->limits_activated) {
+        this->limits_activated= false;
+        THEKERNEL->streams->printf("// NOTICE hard limits are now enabled\n");
+    }
 }
 
 bool Endstops::debounced_get(Pin *pin)
 {
     if(pin == nullptr) return false;
-    uint8_t debounce = 0;
+    uint32_t debounce = 0;
     while(pin->get()) {
         if ( ++debounce >= this->debounce_count ) {
             // pin triggered
@@ -429,52 +446,6 @@ bool Endstops::debounced_get(Pin *pin)
         }
     }
     return false;
-}
-
-// only called if limits are enabled
-void Endstops::on_idle(void *argument)
-{
-    if(this->status == LIMIT_TRIGGERED) {
-        // if we were in limit triggered see if it has been cleared
-        for(auto& i : endstops) {
-            if(i->limit_enable) {
-                if(i->pin.get()) {
-                    // still triggered, so exit
-                    i->debounce = 0;
-                    return;
-                }
-
-                if(i->debounce++ > debounce_count) { // can use less as it calls on_idle in between
-                    // clear the state
-                    this->status = NOT_HOMING;
-                }
-            }
-        }
-        return;
-
-    } else if(this->status != NOT_HOMING) {
-        // don't check while homing
-        return;
-    }
-
-    for(auto& i : endstops) {
-        if(i->limit_enable && STEPPER[i->axis_index]->is_moving()) {
-            // check min and max endstops
-            if(debounced_get(&i->pin)) {
-                // endstop triggered
-                if(!THEKERNEL->is_grbl_mode()) {
-                    THEKERNEL->streams->printf("Limit switch %c%c was hit - reset or M999 required\n", STEPPER[i->axis_index]->which_direction() ? '-' : '+', i->axis);
-                }else{
-                    THEKERNEL->streams->printf("ALARM: Hard limit %c%c\n", STEPPER[i->axis_index]->which_direction() ? '-' : '+', i->axis);
-                }
-                this->status = LIMIT_TRIGGERED;
-                i->debounce= 0;
-                // disables heaters and motors, ignores incoming Gcode and flushes block queue
-                THEKERNEL->call_event(ON_HALT, nullptr);
-                return;
-            }
-        }
-    }
 }
 
 // if limit switches are enabled, then we must move off of the endstop otherwise we won't be able to move
@@ -531,13 +502,24 @@ void Endstops::move_to_origin(axis_bitmap_t axis)
 {
     if(!is_delta && (!axis[X_AXIS] || !axis[Y_AXIS])) return; // ignore if X and Y not homing, unless delta
 
+    if(park_after_home) {
+        // do park instead of goto origin
+        this->status = MOVE_TO_ORIGIN;
+        handle_park();
+        this->status = NOT_HOMING;
+        return;
+    }
+
+    // ignore if disabled
+    if(!this->move_to_origin_after_home) return;
+
+    this->status = MOVE_TO_ORIGIN;
     // Do we need to check if we are already at 0,0? probably not as the G0 will not do anything if we are
     // float pos[3]; THEROBOT->get_axis_position(pos); if(pos[0] == 0 && pos[1] == 0) return;
 
-    this->status = MOVE_TO_ORIGIN;
     // Move to center using a regular move, use slower of X and Y fast rate in mm/sec
     float rate = std::min(homing_axis[X_AXIS].fast_rate, homing_axis[Y_AXIS].fast_rate) * 60.0F;
-    char buf[32];
+    char buf[28];
     THEROBOT->push_state();
     THEROBOT->absolute_mode = true;
     snprintf(buf, sizeof(buf), "G53 G0 X0 Y0 F%1.4f", THEROBOT->from_millimeters(rate)); // must use machine coordinates in case G92 or WCS is in effect
@@ -551,9 +533,74 @@ void Endstops::move_to_origin(axis_bitmap_t axis)
     this->status = NOT_HOMING;
 }
 
+// called in ISR contexte
+void Endstops::check_limits()
+{
+    if(this->status == LIMIT_TRIGGERED) {
+        // if we were in limit triggered see if all have been cleared
+        bool all_clear= true;
+        for(auto& i : endstops) {
+            if(i->limit_enable) {
+                if(i->pin.get()) {
+                    // still triggered, so exit
+                    i->debounce = 0;
+                    return;
+                }
+
+                if(i->debounce < debounce_ms) {
+                    ++i->debounce;
+                    all_clear= false;
+                }
+            }
+        }
+        if(all_clear) {
+            // clear the state
+            this->status = NOT_HOMING;
+            this->limits_activated= true;
+        }
+        return;
+
+    } else if(this->status != NOT_HOMING) {
+        // don't check while homing
+        return;
+    }
+
+    // check if any limit switches were hit
+    for(auto& i : endstops) {
+        if(!i->limit_enable) continue;
+        uint8_t m= i->axis_index;
+        bool moving= false;
+        if(is_corexy && m < 2) {
+            // corexy either X or Y stepper moving can result in movement towards a limit
+            moving=  STEPPER[0]->is_moving() || STEPPER[1]->is_moving();
+        } else {
+            moving= STEPPER[m]->is_moving();
+        }
+        if(moving) {
+            if(debounced_get(&i->pin)) {
+                // endstop triggered
+                this->status = LIMIT_TRIGGERED;
+                i->debounce= 0;
+
+                // we cannot call on_halt here but must defer it to on_idle,
+                // however we can stop incoming commands and stop all the motors here
+                THEKERNEL->immediate_halt();
+                trigger_halt= true;
+                // remember what axis triggered it (first one wins)
+                // TODO gives incorrect result on corexy need to use fk to figure it out
+                triggered_direction= STEPPER[m]->which_direction();
+                triggered_axis= m;
+                return;
+            }
+        }
+    }
+}
+
 // Called every millisecond in an ISR
 uint32_t Endstops::read_endstops(uint32_t dummy)
 {
+    if(limit_enabled) check_limits();
+
     if(this->status != MOVING_TO_ENDSTOP_SLOW && this->status != MOVING_TO_ENDSTOP_FAST) return 0; // not doing anything we need to monitor for
 
     // check each homing endstop
@@ -561,7 +608,9 @@ uint32_t Endstops::read_endstops(uint32_t dummy)
         if(e.pin_info == nullptr) continue; // ignore if not a homing endstop
         int m= e.axis_index;
 
-        // for corexy homing in X or Y we must only check the associated endstop, works as we only home one axis at a time for corexy
+        // for corexy homing in X or Y we must only check the associated endstop,
+        // this works as we only home one axis at a time for corexy
+        // and a straight move means both actuators move
         if(is_corexy && (m == X_AXIS || m == Y_AXIS) && !axis_to_home[m]) continue;
 
         if(STEPPER[m]->is_moving()) {
@@ -676,6 +725,7 @@ void Endstops::home(axis_bitmap_t a)
             if((axis_to_home[i] || this->is_delta || this->is_rdelta) && !homing_axis[i].pin_info->triggered) {
                 this->status = NOT_HOMING;
                 THEKERNEL->call_event(ON_HALT, nullptr);
+                THEROBOT->disable_segmentation= false;
                 return;
             }
         }
@@ -687,6 +737,7 @@ void Endstops::home(axis_bitmap_t a)
             if(axis_to_home[i] && !homing_axis[i].pin_info->triggered) {
                 this->status = NOT_HOMING;
                 THEKERNEL->call_event(ON_HALT, nullptr);
+                THEROBOT->disable_segmentation= false;
                 return;
             }
         }
@@ -922,10 +973,10 @@ void Endstops::process_home_command(Gcode* gcode)
     }
 
     // on some systems where 0,0 is bed center it is nice to have home goto 0,0 after homing
-    // default is off for cartesian on for deltas
+    // default is off for cartesian and on for deltas
     if(!is_delta) {
         // NOTE a rotary delta usually has optical or hall-effect endstops so it is safe to go past them a little bit
-        if(this->move_to_origin_after_home) move_to_origin(haxis);
+        move_to_origin(haxis);
         // if limit switches are enabled we must back off endstop after setting home
         back_off_home(haxis);
 
@@ -933,7 +984,7 @@ void Endstops::process_home_command(Gcode* gcode)
         // deltas are not left at 0,0 because of the trim settings, so move to 0,0 if requested, but we need to back off endstops first
         // also need to back off endstops if limits are enabled
         back_off_home(haxis);
-        if(this->move_to_origin_after_home) move_to_origin(haxis);
+        move_to_origin(haxis);
     }
 }
 
@@ -973,16 +1024,14 @@ void Endstops::set_homing_offset(Gcode *gcode)
     gcode->stream->printf("Homing Offset: X %5.3f Y %5.3f Z %5.3f will take effect next home\n", homing_axis[X_AXIS].home_offset, homing_axis[Y_AXIS].home_offset, homing_axis[Z_AXIS].home_offset);
 }
 
-void Endstops::handle_park(Gcode * gcode)
+void Endstops::handle_park()
 {
     // TODO: spec says if XYZ specified move to them first then move to MCS of specifed axis
     THEROBOT->push_state();
     THEROBOT->absolute_mode = true;
-    char buf[32];
-    snprintf(buf, sizeof(buf), "G53 G0 X%f Y%f", THEROBOT->from_millimeters(saved_position[X_AXIS]), THEROBOT->from_millimeters(saved_position[Y_AXIS])); // must use machine coordinates in case G92 or WCS is in effect
-    struct SerialMessage message;
-    message.message = buf;
-    message.stream = &(StreamOutput::NullStream);
+    char buf[30];
+    snprintf(buf, sizeof(buf), "G53 G0 X%1.4f Y%1.4f", THEROBOT->from_millimeters(saved_position[X_AXIS]), THEROBOT->from_millimeters(saved_position[Y_AXIS])); // must use machine coordinates in case G92 or WCS is in effect
+    struct SerialMessage message{&StreamOutput::NullStream, buf};
     THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message ); // as it is a multi G code command
     // Wait for above to finish
     THECONVEYOR->wait_for_idle();
@@ -998,7 +1047,7 @@ void Endstops::on_gcode_received(void *argument)
         switch(gcode->subcode) {
             case 0: // G28 in grbl mode will do a rapid to the predefined position otherwise it is home command
                 if(THEKERNEL->is_grbl_mode()){
-                    handle_park(gcode);
+                    handle_park();
                 }else{
                     process_home_command(gcode);
                 }
@@ -1017,7 +1066,7 @@ void Endstops::on_gcode_received(void *argument)
                 if(THEKERNEL->is_grbl_mode()) {
                     process_home_command(gcode);
                 }else{
-                    handle_park(gcode);
+                    handle_park();
                 }
                 break;
 
@@ -1120,18 +1169,16 @@ void Endstops::on_gcode_received(void *argument)
 
             case 500: // save settings
             case 503: // print settings
-                if(!is_rdelta) {
-                    gcode->stream->printf(";Home offset (mm):\nM206 ");
-                    for (auto &p : homing_axis) {
-                        if(p.pin_info == nullptr) continue; // ignore if not a homing endstop
-                        gcode->stream->printf("%c%1.2f ", p.axis, p.home_offset);
-                    }
-                    gcode->stream->printf("\n");
-
+                if(is_rdelta) {
+                    gcode->stream->printf(";Theta offset (degrees):\nM206 ");
                 }else{
-                    gcode->stream->printf(";Theta offset (degrees):\nM206 A%1.5f B%1.5f C%1.5f\n",
-                        homing_axis[X_AXIS].home_offset, homing_axis[Y_AXIS].home_offset, homing_axis[Z_AXIS].home_offset);
+                    gcode->stream->printf(";Home offset (mm):\nM206 ");
                 }
+                for (auto &p : homing_axis) {
+                    if(p.pin_info == nullptr) continue; // ignore if not a homing endstop
+                    gcode->stream->printf("%c%1.5f ", p.axis, p.home_offset);
+                }
+                gcode->stream->printf("\n");
 
                 if (this->is_delta || this->is_scara) {
                     gcode->stream->printf(";Trim (mm):\nM666 X%1.3f Y%1.3f Z%1.3f\n", trim_mm[0], trim_mm[1], trim_mm[2]);

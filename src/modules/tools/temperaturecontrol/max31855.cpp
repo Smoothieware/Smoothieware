@@ -22,7 +22,7 @@
 Max31855::Max31855() :
     spi(nullptr)
 {
-    this->read_flag=true;
+    this->read_flag = true;
 }
 
 Max31855::~Max31855()
@@ -45,10 +45,10 @@ void Max31855::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
     PinName sclk;
     if(spi_channel == 0) {
         // Channel 0
-        mosi=P0_18; miso=P0_17; sclk=P0_15;
+        mosi = P0_18; miso = P0_17; sclk = P0_15;
     } else {
         // Channel 1
-        mosi=P0_9; miso=P0_8; sclk=P0_7;
+        mosi = P0_9; miso = P0_8; sclk = P0_7;
     }
 
     delete spi;
@@ -62,13 +62,13 @@ void Max31855::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
 float Max31855::get_temperature()
 {
     // allow read from hardware via SPI on next call to on_idle()
-    this->read_flag=true;
+    this->read_flag = true;
 
     // Return an average of the last readings
-    if(readings.size()==0) return infinityf();
+    if(readings.size() == 0) return infinityf();
 
     float sum = 0;
-    for (int i=0; i<readings.size(); i++) {
+    for (int i = 0; i < readings.size(); i++) {
         sum += *readings.get_ref(i);
     }
 
@@ -87,26 +87,22 @@ void Max31855::on_idle()
     // Read 16 bits (writing something as well is required by the api)
     uint16_t data = spi->write(0);
     //  Read next 16 bits (diagnostics)
-    //	uint16_t data2 = spi->write(0);
+    //  uint16_t data2 = spi->write(0);
 
     this->spi_cs_pin.set(true);
 
     float temperature;
 
     //Process temp
-    if (data & 0x0001)
-    {
+    if (data & 0x0001) {
         // Error flag.
         temperature = infinityf();
         // Todo: Interpret data2 for more diagnostics.
-    }
-    else
-    {
+    } else {
         data = data >> 2;
         temperature = (data & 0x1FFF) / 4.f;
 
-        if (data & 0x2000)
-        {
+        if (data & 0x2000) {
             data = ~data;
             temperature = ((data & 0x1FFF) + 1) / -4.f;
         }
@@ -117,11 +113,14 @@ void Max31855::on_idle()
     }
 
     // Discard occasional errors...
-    if(!isinf(temperature))
-    {
+    if(!isinf(temperature)) {
         readings.push_back(temperature);
+
+    } else if(readings.size() > 0) {
+        // And start subtracting from valid readings so we aren't stuck with the last 'good' samples
+        readings.delete_tail();
     }
 
     // don't read again until get_temperature() is called
-    this->read_flag=false;
+    this->read_flag = false;
 }

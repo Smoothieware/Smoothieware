@@ -37,25 +37,25 @@ x_axis_max_speed                             30000            # Maximum speed in
 y_axis_max_speed                             30000            # Maximum speed in mm/min
 z_axis_max_speed                             30000            # Maximum speed in mm/min
 
-# Stepper module configuration 
+# Stepper module configuration
 # Pins are defined as  ports, and pin numbers, appending "!" to the number will invert a pin
 # See http://smoothieware.org/pin-configuration and http://smoothieware.org/pinout
 alpha_step_pin                               2.0              # Pin for alpha stepper step signal
 alpha_dir_pin                                0.5              # Pin for alpha stepper direction, add '!' to reverse direction
 alpha_en_pin                                 0.4              # Pin for alpha enable pin
-alpha_current                                1.5              # X stepper motor current
+alpha_current                                1.5              # M1 stepper motor current
 alpha_max_rate                               30000.0          # Maximum rate in mm/min
 
 beta_step_pin                                2.1              # Pin for beta stepper step signal
 beta_dir_pin                                 0.11             # Pin for beta stepper direction, add '!' to reverse direction
 beta_en_pin                                  0.10             # Pin for beta enable
-beta_current                                 1.5              # Y stepper motor current
+beta_current                                 1.5              # M2 stepper motor current
 beta_max_rate                                30000.0          # Maxmimum rate in mm/min
 
 gamma_step_pin                               2.2              # Pin for gamma stepper step signal
 gamma_dir_pin                                0.20             # Pin for gamma stepper direction, add '!' to reverse direction
 gamma_en_pin                                 0.19             # Pin for gamma enable
-gamma_current                                1.5              # Z stepper motor current
+gamma_current                                1.5              # M3 stepper motor current
 gamma_max_rate                               30000.0          # Maximum rate in mm/min
 
 ## Extruder module configuration
@@ -83,7 +83,7 @@ extruder.hotend.en_pin                          0.21          # Pin for extruder
 #extruder.hotend.retract_zlift_length            0            # Z-lift on retract in mm, 0 disables
 #extruder.hotend.retract_zlift_feedrate          6000         # Z-lift feedrate in mm/min (Note mm/min NOT mm/sec)
 
-delta_current                                    1.5          # First extruder stepper motor current
+delta_current                                    1.5          # M4 driver - typically first extruder stepper motor current
 
 # Second extruder module configuration
 #extruder.hotend2.enable                         true         # Whether to activate the extruder module at all. All configuration is ignored if false
@@ -100,12 +100,12 @@ delta_current                                    1.5          # First extruder s
 #extruder.hotend2.y_offset                       25.0         # y offset from origin in mm
 #extruder.hotend2.z_offset                       0            # z offset from origin in mm
 
-#epsilon_current                                 1.5          # Second extruder stepper motor current
+#epsilon_current                                 1.5          # M5 driver - typically second extruder stepper motor current
 
 ## Laser module configuration
 # See http://smoothieware.org/laser
 laser_module_enable                           false           # Whether to activate the laser module at all
-laser_module_pwm_pin                          2.5             # This pin will be PWMed to control the laser. 
+laser_module_pwm_pin                          2.5             # This pin will be PWMed to control the laser.
                                                               # Only pins 2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 1.18, 1.20, 1.21, 1.23, 1.24, 1.26, 3.25 and 3.26
                                                               # can be used since laser requires hardware PWM, see http://smoothieware.org/pinout
 #laser_module_ttl_pin 	                      1.30            # This pin turns on when the laser turns on, and off when the laser turns off.
@@ -137,7 +137,7 @@ temperature_control.hotend.designator        T                # Designator lette
 #temperature_control.hotend.runaway_cooling_timeout        0  # How long it can take to cool down if temp is set lower, max is 2040 seconds
 #temperature_control.hotend.runaway_range                20   # How far from the set temperature it can wander, max setting is 63°C
 
-# PID configuration 
+# PID configuration
 # See http://smoothieware.org/temperaturecontrol#pid
 #temperature_control.hotend.p_factor         13.7             # P ( proportional ) factor
 #temperature_control.hotend.i_factor         0.097            # I ( integral ) factor
@@ -242,9 +242,9 @@ gamma_homing_retract_mm                      5                # Distance to retr
 #endstop_debounce_ms                          1                # Uncomment if you get noise on your endstops, default is 1 millisecond debounce
 
 # Endstop trim options
-alpha_trim                                    0                # Software trim for alpha stepper endstop (in mm)
-beta_trim                                     0                # Software trim for beta stepper endstop (in mm)
-gamma_trim                                    0                # Software trim for gamma stepper endstop (in mm)
+alpha_trim_mm                                   0                # Software trim for alpha stepper endstop (in mm)
+beta_trim_mm                                    0                # Software trim for beta stepper endstop (in mm)
+gamma_trim_mm                                   0                # Software trim for gamma stepper endstop (in mm)
 
 # End of endstop config
 # Delete the above endstop section and uncomment next line and copy and edit Snippets/abc-endstop.config file to enable endstops for ABC axis
@@ -265,6 +265,7 @@ zprobe.probe_height                          5               # How much above be
 # Example for the delta calibration strategy
 #leveling-strategy.delta-calibration.enable   true            # Enable basic delta calibration
 #leveling-strategy.delta-calibration.radius   100             # the probe radius
+#leveling-strategy.delta-calibration.initial_height   10      # initial probe height
 
 # Example for the delta grid leveling strategy
 #leveling-strategy.delta-grid.enable          true            # Enable grid leveling
@@ -321,7 +322,7 @@ network.ip_address                           auto             # Use dhcp to get 
 #network.ip_address                           192.168.3.222   # The IP address
 #network.ip_mask                              255.255.255.0   # The ip mask
 #network.ip_gateway                           192.168.3.1     # The gateway address
-#network.mac_override                         xx.xx.xx.xx.xx.xx  # Override the mac address, only do this if you have a conflict
+#network.mac_override                         xx:xx:xx:xx:xx:xx  # Override the mac address, only do this if you have a conflict
 
 ## System configuration
 # Serial communications configuration ( baud rate defaults to 9600 if undefined )

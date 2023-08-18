@@ -5,26 +5,30 @@
       you should have received a copy of the gnu general public license along with smoothie. if not, see <http://www.gnu.org/licenses/>.
 */
 
-#pragma once
+#ifndef PT1000_H
+#define PT1000_H
 
-#include "Module.h"
+#include "TempSensor.h"
+#include "Pin.h"
 
-#include <stdint.h>
-
-class Tool : public Module
+// PT100 sensor
+class PT1000 : public TempSensor
 {
 public:
-    Tool(){};
-    virtual ~Tool() {};
+	PT1000();
+	~PT1000();
 
-    virtual void select()= 0;
-    virtual void deselect()= 0;
-    virtual const float *get_offset() const { return offset; }
-    virtual void set_offset(unsigned axis, float f) { if(axis < sizeof(offset)) offset[axis]= f; }
-    virtual uint16_t get_name() const { return identifier; }
+	// TempSensor interface.
+	void UpdateConfig(uint16_t module_checksum, uint16_t name_checksum);
+	float get_temperature();
+	void get_raw();
 
-protected:
-    float offset[3];
-    uint16_t identifier;
+private:
+    int new_PT1000_reading();
+    float adc_value_to_temperature(uint32_t adc_value);
+
+	Pin PT1000_pin;
+    float min_temp, max_temp;
 };
 
+#endif

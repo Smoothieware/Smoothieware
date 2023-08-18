@@ -31,6 +31,7 @@
 #include "max31855.h"
 #include "AD8495.h"
 #include "PT100_E3D.h"
+#include "PT1000.h"
 
 #include "MRI_Hooks.h"
 
@@ -101,7 +102,6 @@ void TemperatureControl::on_module_loaded()
 
     if(!this->readonly) {
         this->register_for_event(ON_SECOND_TICK);
-        this->register_for_event(ON_MAIN_LOOP);
         this->register_for_event(ON_SET_PUBLIC_DATA);
         this->register_for_event(ON_HALT);
     }
@@ -119,18 +119,13 @@ void TemperatureControl::on_halt(void *arg)
 
 void TemperatureControl::on_idle(void *arg)
 {
-    sensor->on_idle();
-}
-
-
-void TemperatureControl::on_main_loop(void *argument)
-{
     if (this->temp_violated) {
         this->temp_violated = false;
         THEKERNEL->streams->printf("ERROR: MINTEMP or MAXTEMP triggered on %s. Check your temperature sensors!\n", designator.c_str());
         THEKERNEL->streams->printf("HALT asserted - reset or M999 required\n");
         THEKERNEL->call_event(ON_HALT, nullptr);
     }
+    sensor->on_idle();
 }
 
 // Get configuration from the config file
@@ -188,6 +183,8 @@ void TemperatureControl::load_config()
         sensor = new AD8495();
     } else if(sensor_type.compare("pt100_e3d") == 0) {
         sensor = new PT100_E3D();
+    } else if(sensor_type.compare("PT1000") == 0) {
+        sensor = new PT1000();
     } else {
         sensor = new TempSensor(); // A dummy implementation
     }
@@ -239,7 +236,9 @@ void TemperatureControl::on_gcode_received(void *argument)
 
         if( gcode->m == this->get_m_code ) {
             char buf[32]; // should be big enough for any status
-            int n = snprintf(buf, sizeof(buf), "%s:%3.1f /%3.1f @%d ", this->designator.c_str(), this->get_temperature(), ((target_temperature <= 0) ? 0.0 : target_temperature), this->o);
+            float cur_temp= this->get_temperature();
+            if(isinf(cur_temp)) cur_temp= -100; // Pronterface doesn't like inf
+            int n = snprintf(buf, sizeof(buf), "%s:%3.1f /%3.1f @%d ", this->designator.c_str(), cur_temp, ((target_temperature <= 0) ? 0.0 : target_temperature), this->o);
             gcode->txt_after_ok.append(buf, n);
             return;
         }
@@ -309,7 +308,7 @@ void TemperatureControl::on_gcode_received(void *argument)
             }
 
         } else if (gcode->m == 500 || gcode->m == 503) { // M500 saves some volatile settings to config override file, M503 just prints the settings
-            gcode->stream->printf(";PID settings:\nM301 S%d P%1.4f I%1.4f D%1.4f X%1.4f Y%d\n", this->pool_index, this->p_factor, this->i_factor / this->PIDdt, this->d_factor * this->PIDdt, this->i_max, this->heater_pin.max_pwm());
+            gcode->stream->printf(";PID settings, i_max, max_pwm:\nM301 S%d P%1.4f I%1.4f D%1.4f X%1.4f Y%d\n", this->pool_index, this->p_factor, this->i_factor / this->PIDdt, this->d_factor * this->PIDdt, this->i_max, this->heater_pin.max_pwm());
 
             gcode->stream->printf(";Max temperature setting:\nM143 S%d P%1.4f\n", this->pool_index, this->max_temp);
 

@@ -25,6 +25,7 @@ ProbeScreen::ProbeScreen()
     this->do_probe= false;
     this->do_status= false;
     this->new_result= false;
+    this->busy= false;
 }
 
 void ProbeScreen::on_exit()
@@ -32,6 +33,7 @@ void ProbeScreen::on_exit()
     this->do_probe= false;
     this->do_status= false;
     this->new_result= false;
+    this->busy= false;
     delete this;
 }
 
@@ -72,7 +74,7 @@ void ProbeScreen::clicked_menu_entry(uint16_t line)
 {
     this->do_status= false;
     switch ( line ) {
-        case 0: THEPANEL->enter_screen(this->parent); return;
+        case 0: if(!this->busy) THEPANEL->enter_screen(this->parent); return;
         case 1: this->do_status= true; this->tcnt= 1; break;
         case 2: this->do_probe= true; break;
     }
@@ -83,19 +85,23 @@ void ProbeScreen::on_main_loop()
 {
     if (this->do_probe) {
         this->do_probe= false;
+        this->busy= true;
         StringStream string_stream;
         Gcode gcode("G30", &string_stream);
         THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcode);
         this->result= string_stream.getOutput();
         this->new_result= true;
+        this->busy= false;
 
     }else if (this->do_status && --this->tcnt == 0) {
         // this will refresh the results every 10 main loop iterations
         this->tcnt= 10; // update every 10 times
+        this->busy= true;
         StringStream string_stream;
         Gcode gcode("M119", &string_stream);
         THEKERNEL->call_event(ON_GCODE_RECEIVED, &gcode);
         this->result= string_stream.getOutput();
         this->new_result= true;
+        this->busy= false;
     }
 }

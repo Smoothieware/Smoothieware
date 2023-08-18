@@ -3,6 +3,8 @@
 If you encounter an issue with SmoothieWare, you are welcome to
 [submit an issue](https://github.com/Smoothieware/Smoothieware/issues)
 
+**YOU MUST** provide the complete output from the version command or M115, the config and the output from M503, otherwise the issue will be summarily closed.
+
 **Please note** while other projects will use github issues as a general discussion forum, we try to restrict the issues to **actual** issues only. If you want to discuss new features, ask questions, or anything else that is not an issue, please go to the Smoothie forums, mailing lists, IRC, social media etc.
 
 **DO NOT ASK QUESTIONS HERE** they will not be answered and the issue will be summarily closed.

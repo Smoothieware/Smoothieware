@@ -14,7 +14,7 @@ mm_max_arc_error                             0.01             # The maximum erro
 # Arm solution configuration : Cartesian robot. Translates mm positions into stepper positions
 # See http://smoothieware.org/stepper-motors
 alpha_steps_per_mm                           80               # Steps per mm for alpha ( X ) stepper
-beta_steps_per_mm                            80               # Steps per mm for beta ( Y ) stepper
+beta_steps_per_mm                            333.3333         # Steps per mm for beta ( Y ) stepper
 gamma_steps_per_mm                           1600             # Steps per mm for gamma ( Z ) stepper
 
 # Planner module configuration : Look-ahead and acceleration configuration
@@ -29,7 +29,7 @@ x_axis_max_speed                             30000            # Maximum speed in
 y_axis_max_speed                             30000            # Maximum speed in mm/min
 z_axis_max_speed                             300              # Maximum speed in mm/min
 
-# Stepper module configuration 
+# Stepper module configuration
 # Pins are defined as  ports, and pin numbers, appending "!" to the number will invert a pin
 # See http://smoothieware.org/pin-configuration and http://smoothieware.org/pinout
 alpha_step_pin                               2.0              # Pin for alpha stepper step signal
@@ -98,7 +98,7 @@ delta_current                                    1.5          # First extruder s
 ## Laser module configuration
 # See http://smoothieware.org/laser
 laser_module_enable                           false           # Whether to activate the laser module at all
-laser_module_pwm_pin                          2.5             # This pin will be PWMed to control the laser. 
+laser_module_pwm_pin                          2.5             # This pin will be PWMed to control the laser.
                                                               # Only pins 2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 1.18, 1.20, 1.21, 1.23, 1.24, 1.26, 3.25 and 3.26
                                                               # can be used since laser requires hardware PWM, see http://smoothieware.org/pinout
 #laser_module_ttl_pin 	                      1.30            # This pin turns on when the laser turns on, and off when the laser turns off.
@@ -130,7 +130,7 @@ temperature_control.hotend.designator        T                # Designator lette
 #temperature_control.hotend.runaway_cooling_timeout        0  # How long it can take to cool down if temp is set lower, max is 2040 seconds
 #temperature_control.hotend.runaway_range                20   # How far from the set temperature it can wander, max setting is 63°C
 
-# PID configuration 
+# PID configuration
 # See http://smoothieware.org/temperaturecontrol#pid
 #temperature_control.hotend.p_factor         13.7             # P ( proportional ) factor
 #temperature_control.hotend.i_factor         0.097            # I ( integral ) factor
@@ -185,6 +185,17 @@ switch.fan.output_type                       pwm              # PWM output setta
 #switch.misc.output_pin                      2.4              # Pin this module controls
 #switch.misc.output_type                     digital          # Digital means this is just an on or off pin
 
+#switch.bltouch.enable                    true         #
+#switch.bltouch.output_pin                2.4          # sw pwm can use any digital pin
+#switch.bltouch.input_on_command          M280         #
+#switch.bltouch.input_off_command         M281         #
+#switch.bltouch.output_type               swpwm        # sw pwm must be low frequency
+#switch.bltouch.pwm_period_ms             20           # 50Hz
+#switch.bltouch.startup_state             false        # start up in the stow state
+#switch.bltouch.startup_value             7.43         # On boot it will go into stow mode, also set with the M281
+#switch.bltouch.default_on_value          3.3          # if M280 is issued without S this is the value it will set it to
+
+
 ## Temperatureswitch
 # See http://smoothieware.org/temperatureswitch
 # Automatically toggle a switch at a specified temperature. Different ones of these may be defined to monitor different temperatures and switch different swithxes
@@ -236,12 +247,6 @@ gamma_slow_homing_rate_mm_s                  2                # Gamma/Z slow hom
 alpha_homing_retract_mm                      5                # Distance to retract from the endstop after it is hit for alpha/X
 beta_homing_retract_mm                       5                # Distance to retract from the endstop after it is hit for beta/Y
 gamma_homing_retract_mm                      1                # Distance to retract from the endstop after it is hit for gamma/Z
-
-
-# Optional enable limit switches, actions will stop if any enabled limit switch is triggered (all are set for delta)
-#alpha_limit_enable                          false            # Set to true to enable X min and max limit switches
-#beta_limit_enable                           false            # Set to true to enable Y min and max limit switches
-#gamma_limit_enable                          false            # Set to true to enable Z min and max limit switches
 
 # Optional order in which axis will home, default is they all home at the same time,
 # If this is set it will force each axis to home one at a time in the specified order
@@ -323,7 +328,7 @@ network.ip_address                           auto             # Use dhcp to get 
 #network.ip_address                           192.168.3.222   # The IP address
 #network.ip_mask                              255.255.255.0   # The ip mask
 #network.ip_gateway                           192.168.3.1     # The gateway address
-#network.mac_override                         xx.xx.xx.xx.xx.xx  # Override the mac address, only do this if you have a conflict
+#network.mac_override                         xx:xx:xx:xx:xx:xx  # Override the mac address, only do this if you have a conflict
 
 ## System configuration
 # Serial communications configuration ( baud rate defaults to 9600 if undefined )

@@ -7,7 +7,7 @@
 #include "Pwm.h"
 
 
-#define printErrorandExit(...) THEKERNEL->streams->printf(__VA_ARGS__); // exit(1);
+#define printErrorandExit(...) printf(__VA_ARGS__); // exit(1);
 
 #include <vector>
 #include <stdio.h>

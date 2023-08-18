@@ -26,7 +26,7 @@ class ZProbe: public Module
 {
 
 public:
-    ZProbe() : invert_override(false),invert_probe(false) {};
+    ZProbe() : invert_override(false) {};
     virtual ~ZProbe() {};
 
     void on_module_loaded();
@@ -47,7 +47,7 @@ public:
 
 private:
     void config_load();
-    void probe_XYZ(Gcode *gc, float x, float y, float z);
+    void probe_XYZ(Gcode *gc);
     uint32_t read_probe(uint32_t dummy);
 
     float slow_feedrate;
@@ -67,7 +67,6 @@ private:
         bool probing:1;
         bool reverse_z:1;
         bool invert_override:1;
-        bool invert_probe:1;
         volatile bool probe_detected:1;
     };
 };

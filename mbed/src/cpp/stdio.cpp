@@ -69,6 +69,9 @@ FileHandle::~FileHandle() {
 #if DEVICE_SERIAL
 extern int stdio_uart_inited;
 extern serial_t stdio_uart;
+#else
+extern "C" int UART_Write(const unsigned char*, unsigned int);
+extern "C" int UART_ReadChar();
 #endif
 
 static void init_serial() {
@@ -186,6 +189,8 @@ extern "C" int PREFIX(_write)(FILEHANDLE fh, const unsigned char *buffer, unsign
         for (unsigned int i = 0; i < length; i++) {
             serial_putc(&stdio_uart, buffer[i]);
         }
+#else
+        n= UART_Write(buffer, length);
 #endif
         n = length;
     } else {
@@ -211,6 +216,10 @@ extern "C" int PREFIX(_read)(FILEHANDLE fh, unsigned char *buffer, unsigned int 
         // only read a character at a time from stdin
 #if DEVICE_SERIAL
         *buffer = serial_getc(&stdio_uart);
+#else
+        int c= UART_ReadChar();
+        if(c == -1) return -1;
+        *buffer= c;
 #endif
         n = 1;
     } else {

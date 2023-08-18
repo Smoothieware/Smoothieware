@@ -113,7 +113,9 @@ void MainMenuScreen::display_menu_line(uint16_t line)
 {
     switch ( line ) {
         case 0: THEPANEL->lcd->printf("DRO"); break;
-        case 1: if(THEKERNEL->is_halted()) THEPANEL->lcd->printf("Clear HALT"); else THEPANEL->lcd->printf(THEPANEL->is_playing() ? "Abort" : "Play"); break;
+        case 1: if(THEKERNEL->is_halted()) THEPANEL->lcd->printf("Clear HALT");
+                else if(THEKERNEL->get_feed_hold()) THEPANEL->lcd->printf("Clear Hold");
+                else THEPANEL->lcd->printf(THEPANEL->is_playing() ? "Abort" : "Play"); break;
         case 2: THEPANEL->lcd->printf("Jog"); break;
         case 3: THEPANEL->lcd->printf("Prepare"); break;
         case 4: THEPANEL->lcd->printf("Custom"); break;
@@ -129,7 +131,10 @@ void MainMenuScreen::clicked_menu_entry(uint16_t line)
         case 0: THEPANEL->enter_screen(this->watch_screen); break;
         case 1:
             if(THEKERNEL->is_halted()){
-                send_command("M999");
+                THEKERNEL->call_event(ON_HALT, (void *)1); // clears on_halt
+                THEPANEL->enter_screen(this->watch_screen);
+            }else if(THEKERNEL->get_feed_hold()){
+                THEKERNEL->set_feed_hold(false);
                 THEPANEL->enter_screen(this->watch_screen);
             }else if(THEPANEL->is_playing()) abort_playing();
              else THEPANEL->enter_screen(this->file_screen); break;

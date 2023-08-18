@@ -32,15 +32,17 @@ class Robot : public Module {
         Robot();
         void on_module_loaded();
         void on_gcode_received(void* argument);
+        void after_config();
 
         void reset_axis_position(float position, int axis);
         void reset_axis_position(float x, float y, float z);
         void reset_actuator_position(const ActuatorCoordinates &ac);
         void reset_position_from_current_actuator_position();
+        void reset_compensated_machine_position();
         float get_seconds_per_minute() const { return seconds_per_minute; }
         float get_z_maxfeedrate() const { return this->max_speeds[Z_AXIS]; }
         float get_default_acceleration() const { return default_acceleration; }
-        void setToolOffset(const float offset[N_PRIMARY_AXIS]);
+        void set_tool_offset(const float offset[N_PRIMARY_AXIS]);
         float get_feed_rate() const;
         float get_s_value() const { return s_value; }
         void set_s_value(float s) { s_value= s; }
@@ -94,6 +96,7 @@ class Robot : public Module {
             uint8_t plane_axis_0:2;                           // Current plane ( XY, XZ, YZ )
             uint8_t plane_axis_1:2;
             uint8_t plane_axis_2:2;
+            bool no_laser:1;
         };
 
     private:
@@ -113,13 +116,12 @@ class Robot : public Module {
         void process_move(Gcode *gcode, enum MOTION_MODE_T);
         bool is_homed(uint8_t i) const;
 
-        float theta(float x, float y);
         void select_plane(uint8_t axis_0, uint8_t axis_1, uint8_t axis_2);
-        void clearToolOffset();
+        void clear_tool_offset();
         int get_active_extruder() const;
 
         std::array<wcs_t, MAX_WCS> wcs_offsets; // these are persistent once saved with M500
-        uint8_t current_wcs{0}; // 0 means G54 is enabled this is persistent once saved with M500
+        uint8_t current_wcs{0}; // 0 means G54 is enabled this is persistent once saved with M500
         wcs_t g92_offset;
         wcs_t tool_offset; // used for multiple extruders, sets the tool offset for the current extruder applied first
         std::tuple<float, float, float, uint8_t> last_probe_position{0,0,0,0};
@@ -141,7 +143,6 @@ class Robot : public Module {
         float s_values[8];                                   // block S values
 		int   s_count;
         float s_value;                                       // modal S value
-        float arc_milestone[3];                              // used as start of an arc command
 
         // Number of arc generation iterations by small angle approximation before exact arc trajectory
         // correction. This parameter may be decreased if there are issues with the accuracy of the arc

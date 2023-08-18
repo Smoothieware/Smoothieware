@@ -30,7 +30,6 @@ public:
         bool use_dhcp:1;
     };
 
-
 private:
     void init();
     void setup_servers();
