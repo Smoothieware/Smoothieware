@@ -458,11 +458,17 @@ void ZProbe::probe_XYZ(Gcode *gcode)
     probe_detected= false;
     debounce= 0;
 
+    // turn off any compensation transform so Z does not move as XY home
+    auto savect= THEROBOT->compensationTransform;
+    THEROBOT->compensationTransform= nullptr;
+
     // do a delta move which will stop as soon as the probe is triggered, or the distance is reached
     float delta[3]= {x, y, z};
     if(!THEROBOT->delta_move(delta, rate, 3)) {
         gcode->stream->printf("error:No move detected or too small\n");
         probing= false;
+        // restore compensationTransform
+        THEROBOT->compensationTransform= savect;
         return;
     }
 
@@ -478,6 +484,9 @@ void ZProbe::probe_XYZ(Gcode *gcode)
     THEROBOT->get_axis_position(pos, 3);
 
     uint8_t probeok= this->probe_detected ? 1 : 0;
+
+    // restore compensationTransform
+    THEROBOT->compensationTransform= savect;
 
     // print results using the GRBL format
     gcode->stream->printf("[PRB:%1.3f,%1.3f,%1.3f:%d]\n", THEROBOT->from_millimeters(pos[X_AXIS]), THEROBOT->from_millimeters(pos[Y_AXIS]), THEROBOT->from_millimeters(pos[Z_AXIS]), probeok);
