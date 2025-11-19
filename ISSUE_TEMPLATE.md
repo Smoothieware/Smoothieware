@@ -9,6 +9,8 @@ If you encounter an issue with SmoothieWare, you are welcome to
 
 **DO NOT ASK QUESTIONS HERE** they will not be answered and the issue will be summarily closed.
 
+Please use the discussions to ask questions and make comments if they are not bugs.
+
 Before you do that for the first time though please take a moment to read the
 following section *completely*. Thank you! :)
 
