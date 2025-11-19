@@ -802,10 +802,6 @@ void Endstops::process_home_command(Gcode* gcode)
     // First wait for the queue to be empty
     THECONVEYOR->wait_for_idle();
 
-    // turn off any compensation transform so Z does not move as XY home
-    auto savect= THEROBOT->compensationTransform;
-    THEROBOT->compensationTransform= nullptr;
-
     // deltas always home Z axis only, which moves all three actuators
     bool home_in_z_only = this->is_delta || this->is_rdelta;
 
@@ -854,6 +850,10 @@ void Endstops::process_home_command(Gcode* gcode)
         THEKERNEL->streams->printf("WARNING: Nothing to home\n");
         return;
     }
+
+    // turn off any compensation transform so Z does not move as XY home
+    auto savect= THEROBOT->compensationTransform;
+    THEROBOT->compensationTransform= nullptr;
 
     // do the actual homing
     if(homing_order != 0 && !is_scara) {
