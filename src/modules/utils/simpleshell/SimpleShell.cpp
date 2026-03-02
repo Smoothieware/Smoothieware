@@ -1390,6 +1390,8 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
 
         THECONVEYOR->wait_for_idle();
 
+        if(THEKERNEL->is_halted()) return;
+
         // turn off any compensation transform so Z does not move as we jog
         auto savect= THEROBOT->compensationTransform;
         THEROBOT->reset_compensated_machine_position();
@@ -1406,6 +1408,8 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
         // tell it to run the second block until told to stop
         if(!THECONVEYOR->set_continuous_mode(true)) {
             stream->printf("error:Not enough memory to run continuous mode\n");
+            THECONVEYOR->set_hold(false);
+            THECONVEYOR->flush_queue();
             return;
         }
 
