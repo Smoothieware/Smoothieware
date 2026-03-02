@@ -1349,6 +1349,17 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
         return;
     }
 
+    if(THEKERNEL->is_halted()) {
+        // if we are in ALARM state and cont mode we send relevant error response
+        if(THEKERNEL->is_grbl_mode()) {
+            stream->printf("error:Alarm lock\n");
+        } else {
+            stream->printf("!!\n");
+        }
+        return;
+    }
+
+
     // There is a race condition where a quick press/release could send the ^Y before the $J -c is executed
     // this would result in continuous movement, not a good thing.
     // so check if stop request is true and abort if it is, this means we must leave stop request false after this
@@ -1389,8 +1400,6 @@ void SimpleShell::jog(string parameters, StreamOutput *stream)
         // stream->printf("distance: %f, time:%f, X%f Y%f Z%f, speed:%f\n", d, t, delta[0], delta[1], delta[2], fr);
 
         THECONVEYOR->wait_for_idle();
-
-        if(THEKERNEL->is_halted()) return;
 
         // turn off any compensation transform so Z does not move as we jog
         auto savect= THEROBOT->compensationTransform;
