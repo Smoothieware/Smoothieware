@@ -1240,7 +1240,7 @@ void Endstops::on_get_public_data(void* argument)
 
     } else if(pdr->second_element_is(get_homing_status_checksum)) {
         bool *homing = static_cast<bool *>(pdr->get_data_ptr());
-        *homing = this->status != NOT_HOMING;
+        *homing = (this->status != NOT_HOMING && this->status != LIMIT_TRIGGERED);
         pdr->set_taken();
 
     } else if(pdr->second_element_is(get_homed_status_checksum)) {
