@@ -591,10 +591,16 @@ void Robot::on_gcode_received(void *argument)
                         delta_move(deltas, this->seek_rate / seconds_per_minute, 3);
                     } else {
                         // as per linuxcnc spec, sets the tool offset
+                        // However as machine_position stores the mpos with the old tool position we need to update that as well
+                        // so the next move (regardless of abs/rel) does what is expected
+                        float ox = x, oy = y, oz = z;
                         if(gcode->has_letter('X')) x = deltas[X_AXIS];
                         if(gcode->has_letter('Y')) y = deltas[Y_AXIS];
                         if(gcode->has_letter('Z')) z = deltas[Z_AXIS];
-                     }
+                        ox = x - ox; oy = y - oy; oz = z - oz;
+                        machine_position[X_AXIS] += ox; machine_position[Y_AXIS] += oy; machine_position[Z_AXIS] += oz;
+                        //compensated_machine_position[X_AXIS] += ox; compensated_machine_position[Y_AXIS] += oy; compensated_machine_position[Z_AXIS] += oz;
+                    }
                     tool_offset = wcs_t(x, y, z);
                 }
                 break;
