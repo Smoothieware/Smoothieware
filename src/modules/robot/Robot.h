@@ -63,6 +63,7 @@ class Robot : public Module {
         bool delta_move(const float delta[], float rate_mm_s, uint8_t naxis);
         uint8_t register_motor(StepperMotor*);
         uint8_t get_number_registered_motors() const {return n_motors; }
+        void enable_backlash_compensation(bool flg);
 
         BaseSolution* arm_solution;                           // Selected Arm solution ( millimeters to step calculation )
 

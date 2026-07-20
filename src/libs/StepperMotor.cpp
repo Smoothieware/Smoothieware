@@ -33,6 +33,9 @@ StepperMotor::StepperMotor(Pin &step, Pin &dir, Pin &en) : step_pin(step), dir_p
     enable(false);
     unstep(); // initialize step pin
     set_direction(false); // initialize dir pin
+    last_direction = false;
+    backlash_mm = 0.0F;
+    backlash_enabled = false;
 
     this->register_for_event(ON_HALT);
     this->register_for_event(ON_ENABLE);
@@ -120,4 +123,16 @@ void StepperMotor::manual_step(bool dir)
 
     // keep track of actuators actual position in steps
     this->current_position_steps += (dir ? -1 : 1);
+}
+
+// checks if the direction has changed and if so returns the number of steps needed to compensate for backlash
+// always a positive number of steps
+int32_t StepperMotor::get_backlash_steps(int32_t st)
+{
+    bool d = (st < 0);
+    if(d == last_direction) return 0;
+    last_direction = d;
+
+    if(!backlash_enabled) return 0;
+    return lroundf(backlash_mm * steps_per_mm);
 }

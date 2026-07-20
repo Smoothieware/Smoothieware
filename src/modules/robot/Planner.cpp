@@ -58,16 +58,19 @@ bool Planner::append_block( ActuatorCoordinates &actuator_pos, uint8_t n_motors,
     bool has_steps = false;
     for (size_t i = 0; i < n_motors; i++) {
         int32_t steps = THEROBOT->actuators[i]->steps_to_target(actuator_pos[i]);
+        int32_t bl_steps = 0; // backlash compensation steps
+
         // Update current position
         if(steps != 0) {
             THEROBOT->actuators[i]->update_last_milestones(actuator_pos[i], steps);
             has_steps = true;
+            bl_steps = THEROBOT->actuators[i]->get_backlash_steps(steps);
         }
 
         // find direction
         block->direction_bits[i] = (steps < 0) ? 1 : 0;
-        // save actual steps in block
-        block->steps[i] = labs(steps);
+        // save actual steps in block, add in backlash compensation
+        block->steps[i] = labs(steps)+bl_steps;
     }
 
     // sometimes even though there is a detectable movement it turns out there are no steps to be had from such a small move
