@@ -931,8 +931,8 @@ void Robot::on_gcode_received(void *argument)
                 break;
 
             case 425: // backlash compensation settings
-                if (gcode->has_letter('F')) {
-                    bool f = gcode->get_int('F') != 0;
+                if (gcode->has_letter('P')) {
+                    bool f = gcode->get_int('P') != 0;
                     enable_backlash_compensation(f);
                     gcode->stream->printf("Backlash compensation %s\n", f?"Enabled":"Disabled");
                     if(!f) {
@@ -946,7 +946,7 @@ void Robot::on_gcode_received(void *argument)
                     if(gcode->has_letter(axis)) {
                         actuators[i]->set_backlash_mm(gcode->get_value(axis));
                     }
-                    gcode->stream->printf("%c%1.5f ", axis, actuators[i]->get_backlash_mm());
+                    gcode->stream->printf("%c%1.5f (%d) ", axis, actuators[i]->get_backlash_mm(), actuators[i]->get_backlash_enabled());
                 }
                 gcode->stream->printf("\nNote these values are not saved with M500\n");
                 break;

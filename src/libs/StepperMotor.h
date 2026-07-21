@@ -58,6 +58,7 @@ class StepperMotor  : public Module {
         float get_backlash_mm() const { return backlash_mm; }
         void set_backlash_mm(float bl) { backlash_mm = bl; }
         void enable_backlash(bool flg) { backlash_enabled = flg; }
+        bool get_backlash_enabled() const { return backlash_enabled; }
 
     private:
         void on_halt(void *argument);
