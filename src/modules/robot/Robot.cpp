@@ -56,6 +56,7 @@
 #define  save_g92_checksum                   CHECKSUM("save_g92")
 #define  save_g54_checksum                   CHECKSUM("save_g54")
 #define  set_g92_checksum                    CHECKSUM("set_g92")
+#define  backlash_enable_checksum            CHECKSUM("backlash_enable")
 
 // arm solutions
 #define  arm_solution_checksum               CHECKSUM("arm_solution")
@@ -284,6 +285,11 @@ void Robot::load_config()
     }
 #endif
 
+    // see if we want to enable backlash comp by default
+    if(THEKERNEL->config->value(backlash_enable_checksum)->by_default(false)->as_bool()) {
+        enable_backlash_compensation(true);
+    }
+
     //this->clearToolOffset();
 
     soft_endstop_enabled = THEKERNEL->config->value(soft_endstop_checksum, enable_checksum)->by_default(false)->as_bool();
@@ -483,6 +489,12 @@ void Robot::check_max_actuator_speeds()
             THEKERNEL->streams->printf("WARNING: actuator %d rate exceeds base_stepping_frequency * ..._steps_per_mm: %f, setting to %f\n", i, step_freq, actuators[i]->get_max_rate());
         }
     }
+}
+
+bool Robot::get_backlash_enabled() const
+{
+    // as they either are all enabled or none enabled we only look at first actuator
+    return actuators[0]->get_backlash_enabled();
 }
 
 void Robot::enable_backlash_compensation(bool flg)

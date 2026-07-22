@@ -856,6 +856,7 @@ void Endstops::process_home_command(Gcode* gcode)
     THEROBOT->compensationTransform= nullptr;
 
     // we don't want backlash compensation during homing
+    bool saveblc = THEROBOT->get_backlash_enabled();
     THEROBOT->enable_backlash_compensation(false);
 
     // do the actual homing
@@ -891,7 +892,8 @@ void Endstops::process_home_command(Gcode* gcode)
         home(haxis);
     }
 
-    THEROBOT->enable_backlash_compensation(true);
+    // restire backlash comp if it was enabled
+    if(saveblc) THEROBOT->enable_backlash_compensation(true);
 
     // restore compensationTransform
     THEROBOT->compensationTransform= savect;

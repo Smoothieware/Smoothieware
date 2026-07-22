@@ -81,8 +81,8 @@ class StepperMotor  : public Module {
         volatile struct {
             uint8_t motor_id:8;
             volatile bool direction:1;
-            volatile bool last_direction:1;
             volatile bool moving:1;
+            volatile uint8_t last_direction:2;
             bool backlash_enabled:1;
             bool selected:1;
             bool extruder:1;

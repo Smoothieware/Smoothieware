@@ -33,7 +33,7 @@ StepperMotor::StepperMotor(Pin &step, Pin &dir, Pin &en) : step_pin(step), dir_p
     enable(false);
     unstep(); // initialize step pin
     set_direction(false); // initialize dir pin
-    last_direction = false;
+    last_direction = 0;  // no initial direction set yet
     backlash_mm = 0.0F;
     backlash_enabled = false;
 
@@ -129,10 +129,15 @@ void StepperMotor::manual_step(bool dir)
 // always a positive number of steps
 int32_t StepperMotor::get_backlash_steps(int32_t st)
 {
-    bool d = (st < 0);
-    if(d == last_direction) return 0;
+    uint8_t d = (st < 0) ? 1 : 2;
+    uint8_t l = last_direction;
+
+    if(d == last_direction) return 0;  // not a change in direction
     last_direction = d;
 
+    // we ignore the very first move as we don't know what the last direction would have been
+    if(l == 0) return 0;
     if(!backlash_enabled) return 0;
+
     return lroundf(backlash_mm * steps_per_mm);
 }
