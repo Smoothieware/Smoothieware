@@ -288,6 +288,7 @@ void Robot::load_config()
     // see if we want to enable backlash comp by default
     if(THEKERNEL->config->value(backlash_enable_checksum)->by_default(false)->as_bool()) {
         enable_backlash_compensation(true);
+        THEKERNEL->streams->printf("\nWARNING: Backlash compensation is ON\n");
     }
 
     //this->clearToolOffset();
