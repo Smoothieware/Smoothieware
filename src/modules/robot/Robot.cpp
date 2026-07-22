@@ -947,13 +947,13 @@ void Robot::on_gcode_received(void *argument)
                 if (gcode->has_letter('P')) {
                     bool f = gcode->get_int('P') != 0;
                     enable_backlash_compensation(f);
-                    gcode->stream->printf("Backlash compensation %s\n", f?"Enabled":"Disabled");
                     if(!f) {
                         // we need to reset the axis positions as the steps will be out of wack
                         reset_axis_position(machine_position[0], machine_position[1], machine_position[2]);
                     }
                 }
 
+                gcode->stream->printf("Backlash compensation is %s\n", get_backlash_enabled()?"Enabled":"Disabled");
                 for (int i = 0; i < n_motors; ++i) {
                     char axis = (i <= Z_AXIS ? 'X' + i : 'A' + (i - A_AXIS));
                     if(gcode->has_letter(axis)) {
