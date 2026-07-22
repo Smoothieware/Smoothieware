@@ -143,7 +143,7 @@ void Robot::on_module_loaded()
     CHECKSUM(X "_steps_per_mm"),    \
     CHECKSUM(X "_max_rate"),        \
     CHECKSUM(X "_acceleration"),    \
-    CHECKSUM(X "_backlash")         \
+    CHECKSUM(X "_backlash_mm")      \
 }
 
 void Robot::load_config()
