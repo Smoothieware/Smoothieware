@@ -892,7 +892,7 @@ void Endstops::process_home_command(Gcode* gcode)
         home(haxis);
     }
 
-    // restire backlash comp if it was enabled
+    // restore backlash comp if it was enabled
     if(saveblc) THEROBOT->enable_backlash_compensation(true);
 
     // restore compensationTransform
