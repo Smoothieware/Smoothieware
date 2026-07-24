@@ -503,10 +503,6 @@ void Robot::enable_backlash_compensation(bool flg)
     for (size_t i = 0; i < n_motors; i++) {
         actuators[i]->enable_backlash(flg);
     }
-    if(!flg) {
-        // we need to reset the axis positions as the steps will be out of wack
-        reset_axis_position(machine_position[0], machine_position[1], machine_position[2]);
-    }
 }
 
 //A GCode has been received
