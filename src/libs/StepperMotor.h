@@ -57,7 +57,7 @@ class StepperMotor  : public Module {
         int32_t get_backlash_steps(int32_t st);
         float get_backlash_mm() const { return backlash_mm; }
         void set_backlash_mm(float bl) { backlash_mm = bl; }
-        void enable_backlash(bool flg) { backlash_enabled = flg; if(!flg) last_direction= 0; }
+        void enable_backlash(bool flg) { backlash_enabled = flg; }
         bool get_backlash_enabled() const { return backlash_enabled; }
 
     private:
