@@ -855,12 +855,6 @@ void Endstops::process_home_command(Gcode* gcode)
     auto savect= THEROBOT->compensationTransform;
     THEROBOT->compensationTransform= nullptr;
 
-#ifdef BACKLASH
-    // we don't want backlash compensation during homing
-    bool saveblc = THEROBOT->get_backlash_enabled();
-    THEROBOT->enable_backlash_compensation(false);
-#endif
-
     // do the actual homing
     if(homing_order != 0 && !is_scara) {
         // if an order has been specified do it in the specified order
@@ -893,11 +887,6 @@ void Endstops::process_home_command(Gcode* gcode)
         // they could all home at the same time
         home(haxis);
     }
-
-#ifdef BACKLASH
-    // restore backlash comp if it was enabled
-    if(saveblc) THEROBOT->enable_backlash_compensation(true);
-#endif
 
     // restore compensationTransform
     THEROBOT->compensationTransform= savect;

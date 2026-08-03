@@ -71,8 +71,13 @@ bool Planner::append_block( ActuatorCoordinates &actuator_pos, uint8_t n_motors,
 
         // find direction
         block->direction_bits[i] = (steps < 0) ? 1 : 0;
-        // save actual steps in block, add in backlash compensation
-        block->steps[i] = labs(steps)+bl_steps;
+        // save actual steps in block
+        block->steps[i] = labs(steps);
+#ifdef BACKLASH
+        // add in backlash compensation, and remember how many steps we used
+        block->steps[i] += bl_steps;
+        block->backlash_steps[i] = (bl_steps * ((steps<0)?-1:1));
+#endif
     }
 
     // sometimes even though there is a detectable movement it turns out there are no steps to be had from such a small move
