@@ -66,6 +66,7 @@ bool Planner::append_block( ActuatorCoordinates &actuator_pos, uint8_t n_motors,
             has_steps = true;
 #ifdef BACKLASH
             bl_steps = THEROBOT->actuators[i]->get_backlash_steps(steps);
+            if(bl_steps > 0) distance += THEROBOT->actuators[i]->get_backlash_mm(); // we need to also increase distance so speed is correct
 #endif
         }
 
