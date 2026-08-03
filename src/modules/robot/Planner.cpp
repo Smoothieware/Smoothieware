@@ -64,7 +64,9 @@ bool Planner::append_block( ActuatorCoordinates &actuator_pos, uint8_t n_motors,
         if(steps != 0) {
             THEROBOT->actuators[i]->update_last_milestones(actuator_pos[i], steps);
             has_steps = true;
+#ifdef BACKLASH
             bl_steps = THEROBOT->actuators[i]->get_backlash_steps(steps);
+#endif
         }
 
         // find direction

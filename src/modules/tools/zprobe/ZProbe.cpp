@@ -349,14 +349,18 @@ void ZProbe::on_gcode_received(void *argument)
         auto savect= THEROBOT->compensationTransform;
         THEROBOT->compensationTransform= nullptr;
 
+#ifdef BACKLASH
         // we don't want backlash compensation during probing
         bool saveblc = THEROBOT->get_backlash_enabled();
         THEROBOT->enable_backlash_compensation(false);
+#endif
 
         probe_XYZ(gcode);
 
+#ifdef BACKLASH
         // restore backlash comp if it was enabled
         if(saveblc) THEROBOT->enable_backlash_compensation(true);
+#endif
 
         // restore compensationTransform
         THEROBOT->compensationTransform= savect;

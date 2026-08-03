@@ -257,7 +257,9 @@ void Robot::load_config()
         actuators[a]->change_steps_per_mm(THEKERNEL->config->value(motor_checksums[a][3])->by_default(a == 2 ? 2560.0F : 80.0F)->as_number());
         actuators[a]->set_max_rate(THEKERNEL->config->value(motor_checksums[a][4])->by_default(30000.0F)->as_number() / 60.0F); // it is in mm/min and converted to mm/sec
         actuators[a]->set_acceleration(THEKERNEL->config->value(motor_checksums[a][5])->by_default(NAN)->as_number()); // mm/secs²
+#ifdef BACKLASH
         actuators[a]->set_backlash_mm(THEKERNEL->config->value(motor_checksums[a][6])->by_default(0.0F)->as_number()); // mm
+#endif
     }
 
     check_max_actuator_speeds(); // check the configs are sane
@@ -285,11 +287,13 @@ void Robot::load_config()
     }
 #endif
 
+#ifdef BACKLASH
     // see if we want to enable backlash comp by default
     if(THEKERNEL->config->value(backlash_enable_checksum)->by_default(false)->as_bool()) {
         enable_backlash_compensation(true);
         THEKERNEL->streams->printf("\nWARNING: Backlash compensation is ON\n");
     }
+#endif
 
     //this->clearToolOffset();
 
@@ -492,6 +496,7 @@ void Robot::check_max_actuator_speeds()
     }
 }
 
+#ifdef BACKLASH
 bool Robot::get_backlash_enabled() const
 {
     // as they either are all enabled or none enabled we only look at first actuator
@@ -504,6 +509,7 @@ void Robot::enable_backlash_compensation(bool flg)
         actuators[i]->enable_backlash(flg);
     }
 }
+#endif
 
 //A GCode has been received
 //See if the current Gcode line has some orders for us
@@ -943,6 +949,7 @@ void Robot::on_gcode_received(void *argument)
                 THEKERNEL->conveyor->wait_for_idle();
                 break;
 
+#ifdef BACKLASH
             case 425: // backlash compensation settings
                 if (gcode->has_letter('P')) {
                     bool f = gcode->get_int('P') != 0;
@@ -959,7 +966,7 @@ void Robot::on_gcode_received(void *argument)
                 }
                 gcode->stream->printf("\nNote these values are not saved with M500\n");
                 break;
-
+#endif
             case 500: // M500 saves some volatile settings to config override file
             case 503: { // M503 just prints the settings
                 gcode->stream->printf(";Steps per unit:\nM92 ");

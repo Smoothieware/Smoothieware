@@ -54,11 +54,13 @@ class StepperMotor  : public Module {
         bool is_extruder() const { return extruder; }
         void set_extruder(bool b) { extruder= b; }
         int32_t steps_to_target(float);
+#ifdef BACKLASH
         int32_t get_backlash_steps(int32_t st);
         float get_backlash_mm() const { return backlash_mm; }
         void set_backlash_mm(float bl) { backlash_mm = bl; }
         void enable_backlash(bool flg) { backlash_enabled = flg; }
         bool get_backlash_enabled() const { return backlash_enabled; }
+#endif
 
     private:
         void on_halt(void *argument);
@@ -76,7 +78,9 @@ class StepperMotor  : public Module {
         volatile int32_t current_position_steps;
         int32_t last_milestone_steps;
         float   last_milestone_mm;
+#ifdef BACKLASH
         float   backlash_mm;
+#endif
 
         volatile struct {
             uint8_t motor_id:8;
