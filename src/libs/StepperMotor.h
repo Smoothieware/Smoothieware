@@ -24,6 +24,8 @@ class StepperMotor  : public Module {
         inline void unstep() { step_pin.set(0); }
         // called from step ticker ISR
         inline void set_direction(bool f) { dir_pin.set(f); direction= f; }
+        // called from step ticker ISR
+        inline void inc_steps(int32_t s) { current_position_steps += s; }
 
         void enable(bool state) { en_pin.set(!state); };
         bool is_enabled() const { return !en_pin.get(); };
@@ -53,9 +55,14 @@ class StepperMotor  : public Module {
         void set_selected(bool b) { selected= b; }
         bool is_extruder() const { return extruder; }
         void set_extruder(bool b) { extruder= b; }
-
         int32_t steps_to_target(float);
-
+#ifdef BACKLASH
+        int32_t get_backlash_steps(int32_t st);
+        float get_backlash_mm() const { return backlash_mm; }
+        void set_backlash_mm(float bl) { backlash_mm = bl; }
+        void enable_backlash(bool flg) { backlash_enabled = flg; }
+        bool get_backlash_enabled() const { return backlash_enabled; }
+#endif
 
     private:
         void on_halt(void *argument);
@@ -73,11 +80,16 @@ class StepperMotor  : public Module {
         volatile int32_t current_position_steps;
         int32_t last_milestone_steps;
         float   last_milestone_mm;
+#ifdef BACKLASH
+        float   backlash_mm;
+#endif
 
         volatile struct {
             uint8_t motor_id:8;
             volatile bool direction:1;
             volatile bool moving:1;
+            volatile uint8_t last_direction:2;
+            bool backlash_enabled:1;
             bool selected:1;
             bool extruder:1;
         };

@@ -77,8 +77,13 @@ else
 # 3D build excludes these
 export EXCLUDE_MODULES = tools/drillingcycles tools/spindle
 endif
-
 endif
+endif
+
+ifeq "$(BACKLASH)" "1"
+DEFINES += -DBACKLASH
+$(info **NOTE** Including BACKLASH compensation)
+
 endif
 
 ifneq "$(INCLUDE_MODULE)" ""

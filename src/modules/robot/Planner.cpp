@@ -56,18 +56,34 @@ bool Planner::append_block( ActuatorCoordinates &actuator_pos, uint8_t n_motors,
 
     // Direction bits
     bool has_steps = false;
+#ifdef BACKLASH
+    float sos = 0.0F;
+#endif
     for (size_t i = 0; i < n_motors; i++) {
         int32_t steps = THEROBOT->actuators[i]->steps_to_target(actuator_pos[i]);
+#ifdef BACKLASH
+        int32_t bl_steps = 0; // backlash compensation steps
+#endif
+
         // Update current position
         if(steps != 0) {
             THEROBOT->actuators[i]->update_last_milestones(actuator_pos[i], steps);
             has_steps = true;
+#ifdef BACKLASH
+            bl_steps = THEROBOT->actuators[i]->get_backlash_steps(steps);
+            if(bl_steps > 0) sos += powf(THEROBOT->actuators[i]->get_backlash_mm(), 2);
+#endif
         }
 
         // find direction
         block->direction_bits[i] = (steps < 0) ? 1 : 0;
         // save actual steps in block
         block->steps[i] = labs(steps);
+#ifdef BACKLASH
+        // add in backlash compensation, and remember how many steps we used
+        block->steps[i] += bl_steps;
+        block->backlash_steps[i] = (bl_steps * ((steps<0)?-1:1));
+#endif
     }
 
     // sometimes even though there is a detectable movement it turns out there are no steps to be had from such a small move
@@ -76,6 +92,13 @@ bool Planner::append_block( ActuatorCoordinates &actuator_pos, uint8_t n_motors,
         // we still return true so the tiny move will still be accumulated and eventually create steps
         return true;
     }
+
+#ifdef BACKLASH
+    // we need to also increase distance so speed is correct
+    if(sos > 0.0F) {
+        distance += sqrtf(sos);
+    }
+#endif
 
     // info needed by laser
     block->s_value = roundf(s_value*(1<<11)); // 1.11 fixed point
