@@ -8,6 +8,7 @@
 #pragma once
 
 #include <array>
+#include <cstddef>
 
 #ifndef MAX_ROBOT_ACTUATORS
     #ifdef CNC
