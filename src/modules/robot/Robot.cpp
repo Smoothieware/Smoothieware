@@ -56,6 +56,7 @@
 #define  save_g92_checksum                   CHECKSUM("save_g92")
 #define  save_g54_checksum                   CHECKSUM("save_g54")
 #define  set_g92_checksum                    CHECKSUM("set_g92")
+#define  backlash_enable_checksum            CHECKSUM("backlash_enable")
 
 // arm solutions
 #define  arm_solution_checksum               CHECKSUM("arm_solution")
@@ -142,7 +143,8 @@ void Robot::on_module_loaded()
     CHECKSUM(X "_en_pin"),          \
     CHECKSUM(X "_steps_per_mm"),    \
     CHECKSUM(X "_max_rate"),        \
-    CHECKSUM(X "_acceleration")     \
+    CHECKSUM(X "_acceleration"),    \
+    CHECKSUM(X "_backlash_mm")      \
 }
 
 void Robot::load_config()
@@ -209,7 +211,7 @@ void Robot::load_config()
     this->s_value = THEKERNEL->config->value(laser_module_default_power_checksum)->by_default(0.8F)->as_number();
 
     // Make our Primary XYZ StepperMotors, and potentially A B C
-    uint16_t const motor_checksums[][6] = {
+    uint16_t const motor_checksums[][7] = {
         ACTUATOR_CHECKSUMS("alpha"), // X
         ACTUATOR_CHECKSUMS("beta"),  // Y
         ACTUATOR_CHECKSUMS("gamma"), // Z
@@ -255,6 +257,9 @@ void Robot::load_config()
         actuators[a]->change_steps_per_mm(THEKERNEL->config->value(motor_checksums[a][3])->by_default(a == 2 ? 2560.0F : 80.0F)->as_number());
         actuators[a]->set_max_rate(THEKERNEL->config->value(motor_checksums[a][4])->by_default(30000.0F)->as_number() / 60.0F); // it is in mm/min and converted to mm/sec
         actuators[a]->set_acceleration(THEKERNEL->config->value(motor_checksums[a][5])->by_default(NAN)->as_number()); // mm/secs²
+#ifdef BACKLASH
+        actuators[a]->set_backlash_mm(THEKERNEL->config->value(motor_checksums[a][6])->by_default(0.0F)->as_number()); // mm
+#endif
     }
 
     check_max_actuator_speeds(); // check the configs are sane
@@ -279,6 +284,14 @@ void Robot::load_config()
     // initialize any extra axis to machine position
     for (size_t i = A_AXIS; i < n_motors; i++) {
         actuators[i]->change_last_milestone(machine_position[i]);
+    }
+#endif
+
+#ifdef BACKLASH
+    // see if we want to enable backlash comp by default
+    if(THEKERNEL->config->value(backlash_enable_checksum)->by_default(false)->as_bool()) {
+        enable_backlash_compensation(true);
+        THEKERNEL->streams->printf("\nWARNING: Backlash compensation is ON\n");
     }
 #endif
 
@@ -482,6 +495,21 @@ void Robot::check_max_actuator_speeds()
         }
     }
 }
+
+#ifdef BACKLASH
+bool Robot::get_backlash_enabled() const
+{
+    // as they either are all enabled or none enabled we only look at first actuator
+    return actuators[0]->get_backlash_enabled();
+}
+
+void Robot::enable_backlash_compensation(bool flg)
+{
+    for (size_t i = 0; i < n_motors; i++) {
+        actuators[i]->enable_backlash(flg);
+    }
+}
+#endif
 
 //A GCode has been received
 //See if the current Gcode line has some orders for us
@@ -921,6 +949,24 @@ void Robot::on_gcode_received(void *argument)
                 THEKERNEL->conveyor->wait_for_idle();
                 break;
 
+#ifdef BACKLASH
+            case 425: // backlash compensation settings
+                if (gcode->has_letter('P')) {
+                    bool f = gcode->get_int('P') != 0;
+                    enable_backlash_compensation(f);
+                }
+
+                gcode->stream->printf("Backlash compensation is %s\n", get_backlash_enabled()?"Enabled":"Disabled");
+                for (int i = 0; i < n_motors; ++i) {
+                    char axis = (i <= Z_AXIS ? 'X' + i : 'A' + (i - A_AXIS));
+                    if(gcode->has_letter(axis)) {
+                        actuators[i]->set_backlash_mm(gcode->get_value(axis));
+                    }
+                    gcode->stream->printf("%c%1.5f (%d) ", axis, actuators[i]->get_backlash_mm(), actuators[i]->get_backlash_enabled());
+                }
+                gcode->stream->printf("\nNote these values are not saved with M500\n");
+                break;
+#endif
             case 500: // M500 saves some volatile settings to config override file
             case 503: { // M503 just prints the settings
                 gcode->stream->printf(";Steps per unit:\nM92 ");
