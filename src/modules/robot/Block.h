@@ -70,14 +70,20 @@ class Block {
 
         static uint8_t n_actuators;
 
+        // Flag ownership. The Cortex-M3 changes a bit field by reading its whole byte, modifying one bit and writing the
+        // byte back, so two contexts must never write bits of the same byte: one could silently undo the other's change.
+        // The main loop (planner) is the only writer of the bits in this first byte.
         struct {
             bool recalculate_flag:1;             // Planner flag to recalculate trapezoids on entry junction
             bool nominal_length_flag:1;          // Planner flag for nominal speed always reached
             bool is_ready:1;
             bool primary_axis:1;                 // set if this move is a primary axis
             bool is_g123:1;                      // set if this is a G1, G2 or G3
-            volatile bool is_ticking:1;          // set when this block is being actively ticked by the stepticker
             volatile bool locked:1;              // set to true when the critical data is being updated, stepticker will have to skip if this is set
-            uint16_t s_value:12;                 // for laser 1.11 Fixed point
         };
+        // The step interrupt is the only writer of is_ticking, and it has a byte to itself (it used to be padding in front
+        // of s_value, so Block does not grow). The planner stops at a ticking block instead of relying on the interrupt
+        // clearing recalculate_flag.
+        volatile bool is_ticking;                // set when this block is being actively ticked by the stepticker
+        uint16_t s_value:12;                     // for laser 1.11 Fixed point
 };
