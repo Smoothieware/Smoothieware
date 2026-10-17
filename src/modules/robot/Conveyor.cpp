@@ -253,7 +253,6 @@ bool Conveyor::get_next_block(Block **block)
         // reset variable parts of the block
         b->reset(static_cast<Block::tickinfo_t*>(saved_block));
         b->is_ticking= true;
-        b->recalculate_flag= false;
         this->current_feedrate= b->nominal_speed;
         *block= b;
         return true;
@@ -268,7 +267,6 @@ bool Conveyor::get_next_block(Block **block)
         if(!b->is_ready) __debugbreak(); // should never happen
 
         b->is_ticking= true;
-        b->recalculate_flag= false;
         this->current_feedrate= b->nominal_speed;
         *block= b;
         return true;

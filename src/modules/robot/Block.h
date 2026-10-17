@@ -70,14 +70,39 @@ class Block {
 
         static uint8_t n_actuators;
 
+        // Layout of the last 4 bytes of Block, right after the tick_info pointer. GCC on the Cortex-M3 allocates
+        // bit fields from bit 0, the rightmost bit of each byte. With the 4-byte tick_info pointer, these make 8 bytes.
+        //
+        //              bit 7     bit 6     bit 5     bit 4     bit 3     bit 2     bit 1     bit 0
+        //           +---------+---------+---------+---------+---------+---------+---------+---------+
+        //   byte 0  |  unused |  unused |  locked | is_g123 | primary |  ready  | nominal |  recalc |   set by the planner
+        //           +---------+---------+---------+---------+---------+---------+---------+---------+
+        //
+        //           +---------+---------+---------+---------+---------+---------+---------+---------+
+        //   byte 1  |                          is_ticking  (the whole byte)                         |   set by the step ISR, alone in its byte
+        //           +---------+---------+---------+---------+---------+---------+---------+---------+
+        //
+        //           +---------+---------+---------+---------+---------+---------+---------+---------+
+        //   byte 2  |    s7   |    s6   |    s5   |    s4   |    s3   |    s2   |    s1   |    s0   |   s_value, low 8 bits
+        //           +---------+---------+---------+---------+---------+---------+---------+---------+
+        //   byte 3  |  unused |  unused |  unused |  unused |   s11   |   s10   |    s9   |    s8   |   s_value, high 4 bits
+        //           +---------+---------+---------+---------+---------+---------+---------+---------+
+        //
+        // recalc = recalculate_flag, nominal = nominal_length_flag, ready = is_ready, primary = primary_axis.
+        // s_value is the laser power in 1.11 fixed point, 12 bits wide.
+        //
+        // Rule: the planner and the step ISR never share a byte. The Cortex-M3 changes a bit field by reading its
+        // whole byte, changing one bit and writing the byte back, so two writers on one byte can erase each other.
         struct {
             bool recalculate_flag:1;             // Planner flag to recalculate trapezoids on entry junction
             bool nominal_length_flag:1;          // Planner flag for nominal speed always reached
             bool is_ready:1;
             bool primary_axis:1;                 // set if this move is a primary axis
             bool is_g123:1;                      // set if this is a G1, G2 or G3
-            volatile bool is_ticking:1;          // set when this block is being actively ticked by the stepticker
             volatile bool locked:1;              // set to true when the critical data is being updated, stepticker will have to skip if this is set
+        };
+        volatile bool is_ticking;                // set when this block is being actively ticked by the stepticker
+        struct {
             uint16_t s_value:12;                 // for laser 1.11 Fixed point
         };
 };
