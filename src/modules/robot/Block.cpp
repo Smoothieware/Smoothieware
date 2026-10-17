@@ -203,6 +203,10 @@ void Block::calculate_trapezoid( float entryspeed, float exitspeed )
     uint32_t deceleration_ticks = floorf( time_to_decelerate * STEP_TICKER_FREQUENCY );
     uint32_t total_move_ticks   = floorf( total_move_time    * STEP_TICKER_FREQUENCY );
 
+    // Each value is floored on its own, so the deceleration can come out longer than the whole move.
+    // decelerate_after is unsigned: without this clamp it would wrap to ~4 billion and the block would never decelerate.
+    if (deceleration_ticks > total_move_ticks) deceleration_ticks = total_move_ticks;
+
     // Now deduce the plateau time for those new values expressed in tick
     //uint32_t plateau_ticks = total_move_ticks - acceleration_ticks - deceleration_ticks;
 
