@@ -255,7 +255,7 @@ void Planner::recalculate()
     current     = queue.item_ref(block_index);
 
     if (!queue.is_empty()) {
-        while ((block_index != queue.tail_i) && current->recalculate_flag) {
+        while ((block_index != queue.tail_i) && current->recalculate_flag && !current->is_ticking) {
             entry_speed = current->reverse_pass(entry_speed);
 
             block_index = queue.prev(block_index);
