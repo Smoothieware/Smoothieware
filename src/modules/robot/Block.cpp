@@ -216,6 +216,12 @@ void Block::calculate_trapezoid( float entryspeed, float exitspeed )
     // we have a potential race condition here as we could get interrupted anywhere in the middle of this call, we need to lock
     // the updates to the blocks to get around it
     this->locked= true;
+    // is_ticking was tested at the top, but the maths above takes a while and the step ticker may have started this block since.
+    // The ticker only starts unlocked blocks and can't be preempted by us, so after locking one of us has won: if it's ticking now, leave it alone
+    if (is_ticking) {
+        this->locked= false;
+        return;
+    }
     // Now figure out the two acceleration ramp change events in ticks
     this->accelerate_until = acceleration_ticks;
     this->decelerate_after = total_move_ticks - deceleration_ticks;
