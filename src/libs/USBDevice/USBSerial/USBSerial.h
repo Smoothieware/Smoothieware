@@ -25,6 +25,7 @@
 
 #include "Module.h"
 #include "StreamOutput.h"
+#include "libs/RealtimeFilter.h"
 
 class USBSerial_Receiver {
 protected:
@@ -67,13 +68,13 @@ protected:
     // this makes it trivial to detect if there's a new line available
     volatile int nl_in_rx;
 
+    // decides what to do with each received character, only used from the receive interrupt
+    RealtimeFilter realtime;
+
 
     volatile struct {
         volatile bool attach:1;
         bool attached:1;
-        bool halt_flag:1;
-        bool query_flag:1;
-        bool last_char_was_cr:1;
         // if we receive a line that's longer than the buffer, to avoid a deadlock
         // we must flush the buffer.
         // then to avoid delivering the tail of a line to Smoothie we must keep
