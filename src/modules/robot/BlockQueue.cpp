@@ -21,8 +21,13 @@ BlockQueue::BlockQueue(unsigned int length)
     head_i = tail_i = 0;
     isr_tail_i = tail_i;
     void *v= AHB0.alloc(sizeof(Block) * length);
+    if (v == nullptr) {
+        // not enough memory: stay empty with length 0, the caller can try resize() with a smaller length
+        ring = nullptr;
+        this->length = 0;
+        return;
+    }
     ring = new(v) Block[length];
-    // TODO: handle allocation failure
     this->length = length;
 }
 
@@ -169,6 +174,8 @@ bool BlockQueue::resize(unsigned int length)
 
         // Note: we don't use realloc so we can fall back to the existing ring if allocation fails
         void *v= AHB0.alloc(sizeof(Block) * length);
+        if (v == nullptr)
+            return false; // placement new on a null pointer would write to address 0
         Block* newring = new(v) Block[length];
 
         if (newring != nullptr)
