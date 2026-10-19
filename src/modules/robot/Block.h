@@ -78,6 +78,9 @@ class Block {
         float max_exit_speed();
         void debug() const;
         void ready() { is_ready= true; }
+        // called by the Conveyor, in the step interrupt, each time the block is handed to the step ticker: it is now
+        // running (the planner must not move its entry/exit speeds any more) and has no pending recalculation
+        void begin_ticking() { is_ticking= true; recalculate_flag= false; }
         void clear();
 
     private:

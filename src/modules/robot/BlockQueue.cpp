@@ -38,66 +38,6 @@ BlockQueue::~BlockQueue()
 }
 
 /*
- * index accessors (protected)
- */
-
-unsigned int BlockQueue::next(unsigned int item) const
-{
-    if (length == 0)
-        return 0;
-
-    if (++item >= length)
-        return 0;
-
-    return item;
-}
-
-unsigned int BlockQueue::prev(unsigned int item) const
-{
-    if (length == 0)
-        return 0;
-
-    if (item == 0)
-        return (length - 1);
-    else
-        return (item - 1);
-}
-
-/*
- * reference accessors
- */
-
-Block& BlockQueue::item(unsigned int i)
-{
-    return *item_ref(i);
-}
-
-Block& BlockQueue::head()
-{
-    return *item_ref(head_i);
-}
-
-Block& BlockQueue::tail()
-{
-    return *item_ref(tail_i);
-}
-
-Block* BlockQueue::head_ref()
-{
-    return item_ref(head_i);
-}
-
-Block* BlockQueue::tail_ref()
-{
-    return item_ref(tail_i);
-}
-
-Block* BlockQueue::item_ref(unsigned int i)
-{
-    return reinterpret_cast<Block *>(arena + ((unsigned int)offsets[i] << 3));
-}
-
-/*
  * arena placement
  */
 
@@ -155,15 +95,6 @@ bool BlockQueue::is_full() const
         return true;
     unsigned int start;
     return !can_place_after(head_end, &start);
-}
-
-bool BlockQueue::is_empty() const
-{
-    //__disable_irq();
-    bool r = (head_i == tail_i);
-    //__enable_irq();
-
-    return r;
 }
 
 unsigned int BlockQueue::used_bytes() const

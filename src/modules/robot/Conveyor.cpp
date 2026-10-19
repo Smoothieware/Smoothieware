@@ -56,6 +56,9 @@
  * When isr_tail_i != tail, we clean up the tail block (performing ISR-unsafe delete operations) and consume it (increment tail pointer), returning it to the pool of clean, unused blocks which HEAD is allowed to prepare for queueing
  *
  * Thus, our two ringbuffers exist sharing the one ring of blocks, and we safely marshall used blocks from ISR context to IDLE context for safe cleanup.
+ *
+ * BlockQueue names each of these steps (isr_has_block / isr_block / isr_finish_block for the interrupt,
+ * has_finished_block / tail_ref / consume_tail for idle), so this file never touches the indexes directly.
  */
 
 
@@ -109,7 +112,7 @@ void Conveyor::on_idle(void*)
     }
 
     // we can garbage collect the block queue here
-    if (queue.tail_i != queue.isr_tail_i) {
+    if (queue.has_finished_block()) {
         if (queue.is_empty()) {
             __debugbreak();
         } else {
@@ -226,9 +229,7 @@ bool Conveyor::get_next_block(Block **block)
 
     if(flush){
         // mark entire queue for GC if flush flag is asserted
-        while (queue.isr_tail_i != queue.head_i) {
-            queue.isr_tail_i = queue.next(queue.isr_tail_i);
-        }
+        queue.isr_finish_all();
         flush = false;
         // the queued moves are gone: the compensations restart their direction chain from the real motor state
         THEKERNEL->planner->compensation.on_flush(THEROBOT->actuators.data(), THEROBOT->get_number_registered_motors());
@@ -238,14 +239,13 @@ bool Conveyor::get_next_block(Block **block)
     // default the feedrate to zero if there is no block available
     this->current_feedrate= 0;
 
-    if(THEKERNEL->is_halted() || queue.isr_tail_i == queue.head_i) return false; // we do not have anything to give
+    if(THEKERNEL->is_halted() || !queue.isr_has_block()) return false; // we do not have anything to give
 
     if(continuous_mode > 1){
         // keep feeding the second in the queue
-        Block *b= queue.item_ref(queue.isr_tail_i);
+        Block *b= queue.isr_block();
         // nothing to reset: the interrupt never writes a block, it restarts from the block data every time
-        b->is_ticking= true;
-        b->recalculate_flag= false;
+        b->begin_ticking();
         this->current_feedrate= b->nominal_speed;
         // the first fetch after block_finished() moved on to the next queue block is a real queue fetch, not a re-feed
         refeed= (b == last_fed);
@@ -257,13 +257,12 @@ bool Conveyor::get_next_block(Block **block)
     // wait for queue to fill up, optimizes planning
     if(!allow_fetch) return false;
 
-    Block *b= queue.item_ref(queue.isr_tail_i);
+    Block *b= queue.isr_block();
     // we cannot use this now if it is being updated
     if(!b->locked) {
         if(!b->is_ready) __debugbreak(); // should never happen
 
-        b->is_ticking= true;
-        b->recalculate_flag= false;
+        b->begin_ticking();
         this->current_feedrate= b->nominal_speed;
         refeed= false;
         last_fed= b;
@@ -280,7 +279,7 @@ void Conveyor::block_finished()
 {
     if(continuous_mode <= 1){
         // we increment the isr_tail_i so we can get the next block
-        queue.isr_tail_i= queue.next(queue.isr_tail_i);
+        queue.isr_finish_block();
         if(continuous_mode == 1) continuous_mode= 2;
     }
 }
@@ -304,10 +303,8 @@ void Conveyor::flush_queue()
 void Conveyor::dump_queue()
 {
     int i = 0;
-    unsigned int index = queue.tail_i;
-    while(index != queue.head_i) {
+    for(unsigned int index = queue.first_index(); !queue.is_end_index(index); index = queue.next_index(index)) {
         THEKERNEL->streams->printf("block %03d > ", ++i);
-        queue.item_ref(index)->debug();
-        index = queue.next(index);
+        queue.block_at(index)->debug();
     }
 }
