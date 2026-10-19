@@ -21,6 +21,10 @@ StepperMotor::StepperMotor(Pin &step, Pin &dir, Pin &en) : step_pin(step), dir_p
 
     steps_per_mm         = 1.0F;
     max_rate             = 50.0F;
+#ifdef FILAMENT_ADVANCE
+    lead_time            = 0.0F;
+    min_reversal         = FilamentAdvance::DEFAULT_MIN_REVERSAL_STEPS;
+#endif
 
     last_milestone_steps = 0;
     last_milestone_mm    = 0.0F;

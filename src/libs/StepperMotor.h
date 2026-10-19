@@ -9,6 +9,7 @@
 
 #include "Module.h"
 #include "Pin.h"
+#include "FilamentAdvance.h" // defines FILAMENT_ADVANCE (3D printer builds only)
 
 class StepperMotor  : public Module {
     public:
@@ -45,9 +46,19 @@ class StepperMotor  : public Module {
         int32_t get_last_milestone_steps(void) const { return last_milestone_steps; }
         float get_current_position(void) const { return (float)current_position_steps/steps_per_mm; }
         int32_t get_current_step(void) const { return current_position_steps; }
+        // backlash: moves the step counter without stepping, so the counter shows the nominal position (called from the step interrupt)
+        void adjust_position(int32_t steps) { current_position_steps += steps; }
         float get_max_rate(void) const { return max_rate; }
         void set_max_rate(float mr) { max_rate= mr; }
         void set_acceleration(float a) { acceleration= a; }
+#ifdef FILAMENT_ADVANCE
+        // Filament advance (pressure advance) time constant in seconds, extruders only, 0 = off. See FilamentAdvance.h
+        float get_lead_time() const { return lead_time; }
+        void set_lead_time(float k) { lead_time= k; }
+        // Smallest reversal (in steps) worth making when the shaped rate crosses zero; smaller ones are skipped. 0 = never skip.
+        float get_min_reversal() const { return min_reversal; }
+        void set_min_reversal(float steps) { min_reversal= steps; }
+#endif
         float get_acceleration() const { return acceleration; }
         bool is_selected() const { return selected; }
         void set_selected(bool b) { selected= b; }
@@ -69,6 +80,10 @@ class StepperMotor  : public Module {
         float steps_per_mm;
         float max_rate; // this is not really rate it is in mm/sec, misnamed used in Robot and Extruder
         float acceleration;
+#ifdef FILAMENT_ADVANCE
+        float lead_time; // seconds, see FilamentAdvance.h
+        float min_reversal; // steps, see FilamentAdvance::Input::min_reversal_steps
+#endif
 
         volatile int32_t current_position_steps;
         int32_t last_milestone_steps;

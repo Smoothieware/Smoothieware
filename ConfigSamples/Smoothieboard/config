@@ -23,6 +23,8 @@ acceleration                                 3000             # Acceleration in 
 #z_acceleration                              500              # Acceleration for Z only moves in mm/s^2, 0 uses acceleration which is the default. DO NOT SET ON A DELTA
 junction_deviation                           0.05             # See http://smoothieware.org/motion-control#junction-deviation
 #z_junction_deviation                        0.0              # For Z only moves, -1 uses junction_deviation, zero disables junction_deviation on z moves DO NOT SET ON A DELTA
+#alpha_backlash_mm                            0.0              # Backlash (slack of the drive train) in mm per motor, 0 = off; also beta_, gamma_ ... zeta_ (M425 sets it)
+#backlash_takeup_rate                         -1               # mm/s of motor travel for the first steps of a reversal that take up the slack, -1 = motor max rate, 0 = spread over the move
 
 # Cartesian axis speed limits
 x_axis_max_speed                             30000            # Maximum speed in mm/min
@@ -56,6 +58,8 @@ extruder.hotend.enable                          true          # Whether to activ
 extruder.hotend.steps_per_mm                    140           # Steps per mm for extruder stepper
 extruder.hotend.acceleration                    500           # Acceleration for the stepper motor mm/sec²
 extruder.hotend.max_speed                       50            # Maximum speed in mm/s
+#extruder.hotend.pressure_advance                0             # Filament advance time constant in seconds (see M900), 0 = off. Typically 0.02 to 0.1, tune with a calibration print
+#extruder.hotend.pressure_advance_min_reversal  2.5           # Smallest backward move (in steps) worth a direction change, smaller ones are skipped (see M900 R). 0 = make every reversal
 
 extruder.hotend.step_pin                        2.3           # Pin for extruder step signal
 extruder.hotend.dir_pin                         0.22          # Pin for extruder dir signal ( add '!' to reverse direction )

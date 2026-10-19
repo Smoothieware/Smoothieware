@@ -621,7 +621,9 @@ void SimpleShell::mem_command( string parameters, StreamOutput *stream)
         AHB1.debug(stream);
     }
 
-    stream->printf("Block size: %u bytes, Tickinfo size: %u bytes\n", sizeof(Block), sizeof(Block::tickinfo_t) * Block::n_actuators);
+    stream->printf("Block record: up to %u bytes (header %u, plus %u per moving motor and %u more if compensated), queue arena: %u of %u bytes in use, %u block slots\n",
+                   (unsigned)Block::bytes_needed(), (unsigned)sizeof(Block), (unsigned)sizeof(Block::tickinfo_t), (unsigned)sizeof(Block::tickext_t),
+                   THECONVEYOR->get_queue_used_bytes(), THECONVEYOR->get_queue_arena_bytes(), THECONVEYOR->get_queue_length());
 }
 
 static uint32_t getDeviceType()

@@ -230,7 +230,7 @@ float Laser::current_speed_ratio(const Block *block) const
 
     // figure out the ratio of its speed, from 0 to 1 based on where it is on the trapezoid,
     // this is based on the fraction it is of the requested rate (nominal rate)
-    float ratio = block->get_trapezoid_rate(pm) / block->nominal_rate;
+    float ratio = StepTicker::getInstance()->get_current_rate(pm) / block->nominal_rate;
 
     return ratio;
 }

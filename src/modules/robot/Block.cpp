@@ -11,6 +11,10 @@
 #include <cmath>
 #include <string>
 #include "Block.h"
+#include "MotionCompensation.h"
+#include "Planner.h"
+#include "Robot.h"
+#include "StepperMotor.h"
 #include "Planner.h"
 #include "Conveyor.h"
 #include "Gcode.h"
@@ -36,7 +40,104 @@ double Block::fp_scale= 0;
 Block::Block()
 {
     tick_info= nullptr;
+    steps= nullptr;
+    shaper_state= nullptr;
+    active_mask= 0;
+    active_count= 0;
+    ext_mask= 0;
+    ext_count= 0;
+    ext_info= nullptr;
+    is_ready= false; // the rest is set by bind()
+}
+
+// header, then steps and shaper_state (one entry per registered motor), then the axis records (8 byte aligned) of the
+// motors that move; the whole record is a multiple of 8 bytes
+static size_t round_up_8(size_t n) { return (n + 7) & ~(size_t)7; }
+
+static size_t fixed_bytes(size_t n)
+{
+    return round_up_8(round_up_8(sizeof(Block)) + n * sizeof(uint32_t) + n * sizeof(int32_t));
+}
+
+size_t Block::bytes_needed()
+{
+    return fixed_bytes(n_actuators) + (size_t)n_actuators * (sizeof(tickinfo_t) + sizeof(tickext_t));
+}
+
+size_t Block::bytes_dense()
+{
+    return fixed_bytes(n_actuators) + (size_t)n_actuators * sizeof(tickinfo_t);
+}
+
+size_t Block::bytes_used() const
+{
+    return fixed_bytes(n_actuators) + (size_t)active_count * sizeof(tickinfo_t) + (size_t)ext_count * sizeof(tickext_t);
+}
+
+void Block::bind()
+{
+    uint8_t *base = reinterpret_cast<uint8_t *>(this);
+    uint8_t *p = base + round_up_8(sizeof(Block));
+    steps = reinterpret_cast<uint32_t *>(p);
+    p += n_actuators * sizeof(uint32_t);
+    shaper_state = reinterpret_cast<int32_t *>(p);
+    tick_info = reinterpret_cast<tickinfo_t *>(base + fixed_bytes(n_actuators));
     clear();
+}
+
+const Block::tickext_t Block::k_no_ext = { 0, 0, 0, Block::NO_EVENT, Block::NO_EVENT, 0 };
+
+void Block::set_active(const int32_t *correction)
+{
+    active_mask = 0;
+    active_count = 0;
+    ext_mask = 0;
+    ext_count = 0;
+    for (uint8_t m = 0; m < n_actuators; ++m) {
+        if (steps[m] == 0) continue;
+        active_mask |= (1u << m);
+        tickinfo_t &ti = tick_info[active_count++];
+        ti.steps_per_tick = 0;
+        ti.acceleration_change = 0;
+        ti.deceleration_change = 0;
+        ti.plateau_rate = 0;
+        ti.steps_to_move = 0;
+        ti.next_accel_event = 0;
+        if (shaped_motors[m] || correction[m] != 0) ext_mask |= (1u << m);
+    }
+    // the extension records follow the axis records
+    ext_info = reinterpret_cast<tickext_t *>(tick_info + active_count);
+    for (uint8_t m = 0; m < n_actuators; ++m) {
+        if (!has_ext(m)) continue;
+        tickext_t &ex = ext_info[ext_count++];
+        ex = k_no_ext;
+        ex.position_correction_steps = correction[m];
+    }
+}
+
+Block::tickext_t *Block::ext(uint8_t m)
+{
+    return const_cast<tickext_t *>(&ext_of(m));
+}
+
+const Block::tickext_t &Block::ext_of(uint8_t m) const
+{
+    if (!has_ext(m)) return k_no_ext;
+    uint8_t slot = 0;
+    for (uint8_t i = 0; i < m; ++i) slot += (ext_mask >> i) & 1u;
+    return ext_info[slot];
+}
+
+const Block::tickinfo_t *Block::axis(uint8_t m) const
+{
+    uint8_t slot = 0;
+    for (uint8_t i = 0; i < m; ++i) slot += (active_mask >> i) & 1u;
+    return &tick_info[slot];
+}
+
+Block::tickinfo_t *Block::axis(uint8_t m)
+{
+    return const_cast<tickinfo_t *>(static_cast<const Block *>(this)->axis(m));
 }
 
 void Block::init(uint8_t n)
@@ -49,7 +150,11 @@ void Block::clear()
 {
     is_ready            = false;
 
-    this->steps.fill(0);
+    for(int i = 0; i < n_actuators; ++i) steps[i] = 0;
+    active_mask         = 0;
+    ext_mask            = 0;
+    ext_count           = 0;
+    active_count        = 0;
 
     steps_event_count   = 0;
     nominal_rate        = 0.0F;
@@ -62,6 +167,8 @@ void Block::clear()
     accelerate_until    = 0;
     decelerate_after    = 0;
     direction_bits      = 0;
+    shaped_motors       = 0;
+    for(int i = 0; i < n_actuators; ++i) shaper_state[i] = 0;
     recalculate_flag    = false;
     nominal_length_flag = false;
     max_entry_speed     = 0.0F;
@@ -71,34 +178,6 @@ void Block::clear()
     s_value             = 0.0F;
 
     total_move_ticks= 0;
-    if(tick_info == nullptr) {
-        // we create this once for this block
-        tick_info= new tickinfo_t[n_actuators]; //(tickinfo_t *)malloc(sizeof(tickinfo_t) * n_actuators);
-        if(tick_info == nullptr) {
-            // if we ran out of memory in AHB0 just stop here
-            __debugbreak();
-        }
-    }
-
-    for(int i = 0; i < n_actuators; ++i) {
-        tick_info[i].steps_per_tick= 0;
-        tick_info[i].counter= 0;
-        tick_info[i].acceleration_change= 0;
-        tick_info[i].deceleration_change= 0;
-        tick_info[i].plateau_rate= 0;
-        tick_info[i].steps_to_move= 0;
-        tick_info[i].step_count= 0;
-        tick_info[i].next_accel_event= 0;
-    }
-}
-
-// Only used for continuous mode to reuse the same block over and over
-void Block::reset(tickinfo_t *saved)
-{
-    for(int i = 0; i < n_actuators; ++i) {
-        if(saved[i].steps_to_move == 0) continue;
-        tick_info[i]= saved[i];
-    }
 }
 
 void Block::debug() const
@@ -141,7 +220,7 @@ void Block::debug() const
 //                              +-------------+
 //                                  time -->
 */
-void Block::calculate_trapezoid( float entryspeed, float exitspeed )
+void Block::calculate_trapezoid( float entryspeed, float exitspeed, const Block *previous )
 {
     // if block is currently executing, don't touch anything!
     if (is_ticking) return;
@@ -228,7 +307,7 @@ void Block::calculate_trapezoid( float entryspeed, float exitspeed )
     this->exit_speed = exitspeed;
 
     // prepare the block for stepticker
-    this->prepare(acceleration_in_steps, deceleration_in_steps);
+    this->prepare(acceleration_in_steps, deceleration_in_steps, previous);
 
     this->locked= false;
 }
@@ -312,8 +391,9 @@ float Block::max_exit_speed()
 
 // prepare block for the step ticker, called everytime the block changes
 // this is done during planning so does not delay tick generation and step ticker can simply grab the next block during the interrupt
-void Block::prepare(float acceleration_in_steps, float deceleration_in_steps)
+void Block::prepare(float acceleration_in_steps, float deceleration_in_steps, const Block *previous)
 {
+    for(int i = 0; i < n_actuators; ++i) this->shaper_state[i] = 0; // set below for every motor a compensation reshapes
 
     float inv = 1.0F / this->steps_event_count;
 
@@ -327,19 +407,18 @@ void Block::prepare(float acceleration_in_steps, float deceleration_in_steps)
 
     for (uint8_t m = 0; m < n_actuators; m++) {
         uint32_t steps = this->steps[m];
-        this->tick_info[m].steps_to_move = steps;
-        if(steps == 0) continue;
+        if(steps == 0) continue; // no axis record for a motor that does not move
+        tickinfo_t &ti = *this->axis(m);
+        ti.steps_to_move = steps;
 
         float aratio = inv * steps;
 
-        this->tick_info[m].steps_per_tick = (int64_t)round((((double)this->initial_rate * aratio) / STEP_TICKER_FREQUENCY) * STEPTICKER_FPSCALE); // steps/sec / tick frequency to get steps per tick in 2.62 fixed point
-        this->tick_info[m].counter = 0; // 2.62 fixed point
-        this->tick_info[m].step_count = 0;
-        this->tick_info[m].next_accel_event = this->total_move_ticks + 1;
+        ti.steps_per_tick = (int64_t)round((((double)this->initial_rate * aratio) / STEP_TICKER_FREQUENCY) * STEPTICKER_FPSCALE); // steps/sec / tick frequency to get steps per tick in 2.62 fixed point
+        ti.next_accel_event = this->total_move_ticks + 1;
 
         double acceleration_change = 0;
         if(this->accelerate_until != 0) { // If the next accel event is the end of accel
-            this->tick_info[m].next_accel_event = this->accelerate_until;
+            ti.next_accel_event = this->accelerate_until;
             acceleration_change = acceleration_per_tick;
 
         } else if(this->decelerate_after == 0 /*&& this->accelerate_until == 0*/) {
@@ -348,34 +427,34 @@ void Block::prepare(float acceleration_in_steps, float deceleration_in_steps)
 
         } else if(this->decelerate_after != this->total_move_ticks /*&& this->accelerate_until == 0*/) {
             // If the next event is the start of decel ( don't set this if the next accel event is accel end )
-            this->tick_info[m].next_accel_event = this->decelerate_after;
+            ti.next_accel_event = this->decelerate_after;
         }
 
         // already converted to fixed point just needs scaling by ratio
         //#define STEPTICKER_TOFP(x) ((int64_t)round((double)(x)*STEPTICKER_FPSCALE))
-        this->tick_info[m].acceleration_change= (int64_t)round(acceleration_change * aratio);
-        this->tick_info[m].deceleration_change= -(int64_t)round(deceleration_per_tick * aratio);
-        this->tick_info[m].plateau_rate= (int64_t)round(((this->maximum_rate * aratio) / STEP_TICKER_FREQUENCY) * STEPTICKER_FPSCALE);
+        ti.acceleration_change= (int64_t)round(acceleration_change * aratio);
+        ti.deceleration_change= -(int64_t)round(deceleration_per_tick * aratio);
+        ti.plateau_rate= (int64_t)round(((this->maximum_rate * aratio) / STEP_TICKER_FREQUENCY) * STEPTICKER_FPSCALE);
+
+        // A compensation that reshapes this motor's rates overwrites what changes (nothing for the other motors)
+        if(this->shaped_motors[m]) {
+            THEKERNEL->planner->compensation.shape_motor(this, m, previous, aratio, acceleration_in_steps, deceleration_in_steps,
+                                                        acceleration_change, deceleration_per_tick);
+        } else if(this->correction_steps(m) != 0) {
+            THEKERNEL->planner->compensation.takeup_motor(this, m); // backlash: front-load the slack steps
+        }
 
         #if 0
         THEKERNEL->streams->printf("spt: %08lX %08lX, ac: %08lX %08lX, dc: %08lX %08lX, pr: %08lX %08lX\n",
-            (uint32_t)(this->tick_info[m].steps_per_tick>>32), // 2.62 fixed point
-            (uint32_t)(this->tick_info[m].steps_per_tick&0xFFFFFFFF), // 2.62 fixed point
-            (uint32_t)(this->tick_info[m].acceleration_change>>32), // 2.62 fixed point signed
-            (uint32_t)(this->tick_info[m].acceleration_change&0xFFFFFFFF), // 2.62 fixed point signed
-            (uint32_t)(this->tick_info[m].deceleration_change>>32), // 2.62 fixed point
-            (uint32_t)(this->tick_info[m].deceleration_change&0xFFFFFFFF), // 2.62 fixed point
-            (uint32_t)(this->tick_info[m].plateau_rate>>32), // 2.62 fixed point
-            (uint32_t)(this->tick_info[m].plateau_rate&0xFFFFFFFF) // 2.62 fixed point
+            (uint32_t)(ti.steps_per_tick>>32), // 2.62 fixed point
+            (uint32_t)(ti.steps_per_tick&0xFFFFFFFF), // 2.62 fixed point
+            (uint32_t)(ti.acceleration_change>>32), // 2.62 fixed point signed
+            (uint32_t)(ti.acceleration_change&0xFFFFFFFF), // 2.62 fixed point signed
+            (uint32_t)(ti.deceleration_change>>32), // 2.62 fixed point
+            (uint32_t)(ti.deceleration_change&0xFFFFFFFF), // 2.62 fixed point
+            (uint32_t)(ti.plateau_rate>>32), // 2.62 fixed point
+            (uint32_t)(ti.plateau_rate&0xFFFFFFFF) // 2.62 fixed point
         );
         #endif
     }
-}
-
-// returns current rate (steps/sec) for the given actuator
-float Block::get_trapezoid_rate(int i) const
-{
-    // convert steps per tick from fixed point to float and convert to steps/sec
-    // FIXME steps_per_tick can change at any time, potential race condition if it changes while being read here
-    return STEPTICKER_FROMFP(tick_info[i].steps_per_tick) * STEP_TICKER_FREQUENCY;
 }

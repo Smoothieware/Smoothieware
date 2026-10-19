@@ -9,6 +9,7 @@
 #define PLANNER_H
 
 #include "ActuatorCoordinates.h"
+#include "MotionCompensation.h"
 class Block;
 
 class Planner
@@ -16,6 +17,9 @@ class Planner
 public:
     Planner();
     float max_allowable_speed( float acceleration, float target_velocity, float distance);
+
+    // hooks for the compensations that add or reshape the steps of a motor (backlash), see MotionCompensation.h
+    MotionCompensation compensation;
 
     friend class Robot; // for acceleration, junction deviation, minimum_planner_speed
 

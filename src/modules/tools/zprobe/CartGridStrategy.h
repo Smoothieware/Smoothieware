@@ -2,6 +2,8 @@
 
 #include "LevelingStrategy.h"
 
+#include <stdint.h>
+#include <string>
 #include <string.h>
 #include <tuple>
 

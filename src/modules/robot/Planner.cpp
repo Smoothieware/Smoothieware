@@ -45,6 +45,21 @@ void Planner::config_load()
     this->junction_deviation = THEKERNEL->config->value(junction_deviation_checksum)->by_default(0.05F)->as_number();
     this->z_junction_deviation = THEKERNEL->config->value(z_junction_deviation_checksum)->by_default(NAN)->as_number(); // disabled by default
     this->minimum_planner_speed = THEKERNEL->config->value(minimum_planner_speed_checksum)->by_default(0.0f)->as_number();
+
+    // backlash (slack of the drive train) per motor in mm, 0 = off. Extruders have none.
+    const float backlash_mm[] = {
+        THEKERNEL->config->value(CHECKSUM("alpha_backlash_mm"))->by_default(0.0F)->as_number(),
+        THEKERNEL->config->value(CHECKSUM("beta_backlash_mm"))->by_default(0.0F)->as_number(),
+        THEKERNEL->config->value(CHECKSUM("gamma_backlash_mm"))->by_default(0.0F)->as_number(),
+        THEKERNEL->config->value(CHECKSUM("delta_backlash_mm"))->by_default(0.0F)->as_number(),
+        THEKERNEL->config->value(CHECKSUM("epsilon_backlash_mm"))->by_default(0.0F)->as_number(),
+        THEKERNEL->config->value(CHECKSUM("zeta_backlash_mm"))->by_default(0.0F)->as_number()
+    };
+    compensation.backlash.set_takeup_rate(THEKERNEL->config->value(CHECKSUM("backlash_takeup_rate"))->by_default(-1.0F)->as_number());
+    for (size_t i = 0; i < THEROBOT->actuators.size() && i < 6; i++) {
+        if (THEROBOT->actuators[i]->is_extruder()) continue;
+        compensation.backlash.set_backlash_mm(i, backlash_mm[i]);
+    }
 }
 
 
@@ -56,6 +71,7 @@ bool Planner::append_block( ActuatorCoordinates &actuator_pos, uint8_t n_motors,
 
     // Direction bits
     bool has_steps = false;
+    int32_t correction[k_max_actuators] = {};
     for (size_t i = 0; i < n_motors; i++) {
         int32_t steps = THEROBOT->actuators[i]->steps_to_target(actuator_pos[i]);
         // Update current position
@@ -66,8 +82,11 @@ bool Planner::append_block( ActuatorCoordinates &actuator_pos, uint8_t n_motors,
 
         // find direction
         block->direction_bits[i] = (steps < 0) ? 1 : 0;
-        // save actual steps in block
-        block->steps[i] = labs(steps);
+        // save actual steps in block; a compensation (backlash) may add steps that take up slack but are not position
+        uint32_t extra = compensation.commit(i, THEROBOT->actuators[i]->get_steps_per_mm(), steps);
+        block->steps[i] = labs(steps) + extra;
+        // the step counter is corrected when the block starts, so it shows the nominal position and not the slack
+        correction[i] = (steps < 0) ? (int32_t)extra : -(int32_t)extra;
     }
 
     // sometimes even though there is a detectable movement it turns out there are no steps to be had from such a small move
@@ -106,10 +125,17 @@ bool Planner::append_block( ActuatorCoordinates &actuator_pos, uint8_t n_motors,
         }
     }
 
+    // Compensation hook: mark the motors whose step rate this block reshapes
+    compensation.begin_block(block, n_motors);
+
+    // the steps are final and the shaped motors known: give every moving motor its axis record, and the compensated
+    // ones their extension record (which also stores the backlash slack correction)
+    block->set_active(correction);
+
     block->acceleration = acceleration; // save in block
 
     // Max number of steps, for all axes
-    auto mi = std::max_element(block->steps.begin(), block->steps.end());
+    auto mi = std::max_element(block->steps, block->steps + Block::n_actuators);
     block->steps_event_count = *mi;
 
     block->millimeters = distance;
@@ -171,6 +197,14 @@ bool Planner::append_block( ActuatorCoordinates &actuator_pos, uint8_t n_motors,
             }
         }
     }
+    // Compensation hook: a junction between blocks that reshape different motors is taken as if the machine stopped
+    if (!THECONVEYOR->is_queue_empty()) {
+        Block *prev_block = THECONVEYOR->queue.item_ref(THECONVEYOR->queue.prev(THECONVEYOR->queue.head_i));
+        if (compensation.needs_stop_junction(prev_block, block)) {
+            vmax_junction = minimum_planner_speed;
+        }
+    }
+
     block->max_entry_speed = vmax_junction;
 
     // Initialize block entry speed. Compute based on deceleration to user-defined minimum_planner_speed.
@@ -251,6 +285,10 @@ void Planner::recalculate()
 
     float entry_speed = minimum_planner_speed;
 
+    // The block that runs before the one we are calculating, nullptr if the queue holds none. Filament advance
+    // needs it to know where the previous block left the extruder.
+    const Block* predecessor = nullptr;
+
     block_index = queue.head_i;
     current     = queue.item_ref(block_index);
 
@@ -273,6 +311,9 @@ void Planner::recalculate()
 
         float exit_speed = current->max_exit_speed();
 
+        // current is the first block that gets (re)calculated, it follows a block that is not touched this time
+        if (block_index != queue.tail_i) predecessor = queue.item_ref(queue.prev(block_index));
+
         while (block_index != queue.head_i) {
             previous    = current;
             block_index = queue.next(block_index);
@@ -282,7 +323,8 @@ void Planner::recalculate()
             // so this block can decide if it's accel or decel limited and update its fields as appropriate
             exit_speed = current->forward_pass(exit_speed);
 
-            previous->calculate_trapezoid(previous->entry_speed, current->entry_speed);
+            compensation.calculate_trapezoid(previous, previous->entry_speed, current->entry_speed, predecessor);
+            predecessor = previous;
         }
     }
 
@@ -293,7 +335,7 @@ void Planner::recalculate()
 
     // now current points to the head item
     // which has not had calculate_trapezoid run yet
-    current->calculate_trapezoid(current->entry_speed, minimum_planner_speed);
+    compensation.calculate_trapezoid(current, current->entry_speed, minimum_planner_speed, predecessor);
 }
 
 

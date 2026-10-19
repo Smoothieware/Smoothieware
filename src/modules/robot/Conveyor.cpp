@@ -28,6 +28,7 @@
 #include "mbed.h"
 
 #define planner_queue_size_checksum CHECKSUM("planner_queue_size")
+#define planner_queue_bytes_checksum CHECKSUM("planner_queue_bytes")
 #define queue_delay_time_ms_checksum CHECKSUM("queue_delay_time_ms")
 
 /*
@@ -65,6 +66,7 @@ Conveyor::Conveyor()
     flush= false;
     continuous_mode = 0;
     hold_queue= false;
+    refeed= false;
 }
 
 void Conveyor::on_module_loaded()
@@ -75,6 +77,7 @@ void Conveyor::on_module_loaded()
     // Attach to the end_of_move stepper event
     //THEKERNEL->step_ticker->finished_fnc = std::bind( &Conveyor::all_moves_finished, this);
     queue_size = THEKERNEL->config->value(planner_queue_size_checksum)->by_default(32)->as_number();
+    queue_bytes = THEKERNEL->config->value(planner_queue_bytes_checksum)->by_default(0)->as_number(); // 0 = queue_size blocks
     queue_delay_time_ms = THEKERNEL->config->value(queue_delay_time_ms_checksum)->by_default(100)->as_number();
 }
 
@@ -82,8 +85,11 @@ void Conveyor::on_module_loaded()
 void Conveyor::start(uint8_t n)
 {
     Block::init(n); // set the number of motors which determines how big the tick info vector is
-    queue.resize(queue_size);
-    running = true;
+    // a failed allocation leaves running false (no queue checks); the queue then reports itself full, so a first move blocks silently
+    running = queue.resize(queue_size, queue_bytes);
+    // a planner_queue_bytes that is too small (or too large for the 16 bit offsets) falls back to the default size
+    if (!running && queue_bytes != 0)
+        running = queue.resize(queue_size, 0);
 }
 
 void Conveyor::on_halt(void* argument)
@@ -203,25 +209,10 @@ bool Conveyor::set_continuous_mode(bool f)
     if(f) {
         if(queue.is_empty() || !hold_queue) return false;
 
-        // copy the tickinfo of the second block on the queue
-        auto n_actuators= THEROBOT->get_number_registered_motors();
-        Block* b= queue.item_ref(queue.next(queue.tail_i));
-        Block::tickinfo_t *saved= new Block::tickinfo_t[n_actuators];
-        if(saved == nullptr) return false;
-        for(int i = 0; i < n_actuators; ++i) {
-            saved[i]= b->tick_info[i];
-        }
-
-        saved_block= saved;
         continuous_mode= 1;
 
     }else{
         continuous_mode= 0;
-        if(saved_block != nullptr) {
-            Block::tickinfo_t *saved= static_cast<Block::tickinfo_t *>(saved_block);
-            delete [] saved;
-            saved_block= nullptr;
-        }
     }
     return true;
 }
@@ -239,6 +230,8 @@ bool Conveyor::get_next_block(Block **block)
             queue.isr_tail_i = queue.next(queue.isr_tail_i);
         }
         flush = false;
+        // the queued moves are gone: the compensations restart their direction chain from the real motor state
+        THEKERNEL->planner->compensation.on_flush(THEROBOT->actuators.data(), THEROBOT->get_number_registered_motors());
     }
 
 
@@ -250,11 +243,13 @@ bool Conveyor::get_next_block(Block **block)
     if(continuous_mode > 1){
         // keep feeding the second in the queue
         Block *b= queue.item_ref(queue.isr_tail_i);
-        // reset variable parts of the block
-        b->reset(static_cast<Block::tickinfo_t*>(saved_block));
+        // nothing to reset: the interrupt never writes a block, it restarts from the block data every time
         b->is_ticking= true;
         b->recalculate_flag= false;
         this->current_feedrate= b->nominal_speed;
+        // the first fetch after block_finished() moved on to the next queue block is a real queue fetch, not a re-feed
+        refeed= (b == last_fed);
+        last_fed= b;
         *block= b;
         return true;
     }
@@ -270,6 +265,8 @@ bool Conveyor::get_next_block(Block **block)
         b->is_ticking= true;
         b->recalculate_flag= false;
         this->current_feedrate= b->nominal_speed;
+        refeed= false;
+        last_fed= b;
         *block= b;
         return true;
     }

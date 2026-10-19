@@ -35,6 +35,7 @@ class StepTicker{
         float get_frequency() const { return frequency; }
         void unstep_tick();
         const Block *get_current_block() const { return current_block; }
+        float get_current_rate(uint8_t m) const;
 
         void step_tick (void);
         void handle_finish (void);
@@ -54,6 +55,22 @@ class StepTicker{
         uint32_t period;
         std::array<StepperMotor*, k_max_actuators> motor;
         std::bitset<k_max_actuators> unstep;
+
+        // What the interrupt changes while it runs a block, one entry per motor. It lives here, not in the block,
+        // so that a queued block is read-only for the interrupt: start_next_block() copies the starting values in.
+        struct motor_state_t {
+            int64_t steps_per_tick;     // 2.62 fixed point, current rate
+            int64_t counter;            // 2.62 fixed point
+            int64_t acceleration_change;// 2.62 fixed point signed, current slope
+            uint32_t steps_to_move;     // 0 = this motor is not moving (any more) in this block
+            uint32_t step_count;
+            uint32_t next_accel_event;
+            int64_t decel_start_rate_delta; // 2.62 fixed point signed, added to the rate when the deceleration begins
+            uint32_t reversal_tick;     // tick at which the motor reverses, Block::NO_EVENT = never
+            int64_t takeup_rate;        // 2.62 fixed point, backlash take-up: extra rate until takeup_end_tick, 0 = none
+            uint32_t takeup_end_tick;   // first tick without the take-up rate, Block::NO_EVENT = never
+        };
+        std::array<motor_state_t, k_max_actuators> state{};
 
         Block *current_block;
         uint32_t current_tick{0};

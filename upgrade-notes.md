@@ -117,3 +117,51 @@ NOTE on a delta this needs to be the total hieght (or greater) than yur towers N
 8. Due to a mistake in the previous versions of the firmware the E direction was reversed, so you must invert your dir pin for your extruders (or reverse the extruder plug) from how they were before.
 
 
+
+
+Filament advance (pressure advance)
+===================================
+
+Smoothie can now push the extruder slightly ahead while the print head speeds up and hold it back while it slows
+down, which sharpens corners and evens out line width. It is off by default, nothing changes unless you enable it.
+
+```
+extruder.hotend.pressure_advance      0.05     # time constant K in seconds, 0 = off
+extruder.hotend.pressure_advance_min_reversal  2.5   # smallest backward move (steps) worth a direction change, 0 = never skip
+```
+
+It can also be set at run time with `M900 K0.05` (and `M900 R2.5` for the reversal threshold) (add `P1` etc. for another extruder; `M900` alone prints the value) and
+saved with `M500`. Retracts, primes and pure extruder moves are never affected. When it is on, the head slows to
+the planner's minimum speed where a printed line starts or ends (the same place most slicers already stop).
+See `src/modules/robot/FilamentAdvance.h` for how it works.
+CNC builds (`make CNC=1`) do not contain this feature at all, so they need no more flash or RAM than before.
+
+
+Backlash compensation
+=====================
+
+Each motor can now be given the slack of its drive train, which the planner adds to the steps of a move that reverses
+direction on that motor. Off by default (0 = no compensation), nothing changes unless you set it.
+
+```
+alpha_backlash_mm      0.10     # also beta_, gamma_, delta_, epsilon_, zeta_backlash_mm; extruders are ignored
+```
+
+At run time `M425 X0.1 Y0.1 Z0 A0 B0` sets it (`M425` alone prints it) and `M500` saves it. The slack is added to the
+motor's steps of the reversing move, so that motor runs a little faster during that move; the speed and acceleration
+limits take the extra distance into account. The slack steps are taken up first: they are issued at an extra step rate
+at the start of the move (`backlash_takeup_rate`, mm/s of motor travel, default the motor's maximum rate; `0` spreads the
+slack over the whole move as the first version did), then the motor rejoins the planned profile. The step interrupt does
+one more add and compare per moving motor per tick. Not tested on a machine.
+
+The planner queue now stores blocks in a byte arena in the main heap instead of 32 fixed `Block` objects in AHB0: `planner_queue_size` (default 32) is the number of slots, `planner_queue_bytes` (default 0) the arena size in bytes, and `mem` shows its use. 0 means room for 31 blocks in which every motor moves plus the largest record; a value below 3 times the largest record, or too large for the 16-bit offsets or the heap, falls back to the default. Computed (not measured on a board) totals at the default size against upstream: 3 motors -224 B, 4 motors -576 B, 5 motors -928 B, 6 motors -1,280 B; AHB0 use of the queue falls to zero and heap use rises by 1.5 to 2.2 KB. A queue of only short or one-motor blocks needs far less (`planner_queue_bytes`); with compensation on the largest records are bigger, so the default arena holds fewer blocks (27 for advance on a delta printer, 21 with backlash on X Y Z too).
+
+Known limits of backlash compensation (outside review 2026-10-18, see the PR text): after a halt in the middle of a reversal the reported position can differ from the real one by up to the backlash value; `M92`, `G92.4` and manual stepping do not reconcile the stored direction.
+
+- Backlash blocks that carry slack steps are now joined to their neighbours at minimum speed (slower reversals, no step-rate jump); a motor with slack and no own acceleration is capped by the default acceleration; backlash values above 100 mm are ignored; an arena that is too small is replaced by the default size.
+
+- `M425 P0` / `M425 P1` switch all backlash compensation off/on without losing the configured values, and a bare `M425` prints the state and values. homing, probing, jogging and halt forget the tracked motor directions, so the first move after them gets no slack steps (safe but not exact).
+
+- Block records and the step interrupt now carry the generic compensation fields (`shaped_motors`, `shaper_state`, `reversal_tick`, `decel_start_rate_delta`, `takeup_rate`, `takeup_end_tick`) in every build, including `CNC`: the fields are stored only in the 32 B extension record of a compensated moving motor, so a block without compensation is unchanged in size. With compensation off the step output is unchanged.
+
+- A queued block now stores its per-motor axis record only for the motors that move in it, so the average block is smaller than the previous bullet suggests; `mem` prints the largest record size. Blocks are variable-size in the arena (the queue reserves the largest while one is filled).

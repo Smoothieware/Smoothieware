@@ -26,6 +26,8 @@
 #include "ExtruderPublicAccess.h"
 
 #include <mri.h>
+#include <algorithm>
+#include "FilamentAdvance.h" // defines FILAMENT_ADVANCE (3D printer builds only)
 
 #define steps_per_mm_checksum                CHECKSUM("steps_per_mm")
 #define filament_diameter_checksum           CHECKSUM("filament_diameter")
@@ -34,6 +36,8 @@
 #define dir_pin_checksum                     CHECKSUM("dir_pin")
 #define en_pin_checksum                      CHECKSUM("en_pin")
 #define max_speed_checksum                   CHECKSUM("max_speed")
+#define pressure_advance_checksum            CHECKSUM("pressure_advance")
+#define pressure_advance_min_reversal_checksum CHECKSUM("pressure_advance_min_reversal")
 #define x_offset_checksum                    CHECKSUM("x_offset")
 #define y_offset_checksum                    CHECKSUM("y_offset")
 #define z_offset_checksum                    CHECKSUM("z_offset")
@@ -116,6 +120,12 @@ void Extruder::config_load()
     motor_id = THEROBOT->register_motor(stepper_motor);
 
     stepper_motor->set_max_rate(THEKERNEL->config->value(extruder_checksum, this->identifier, max_speed_checksum)->by_default(1000)->as_number());
+#ifdef FILAMENT_ADVANCE
+    // Filament advance time constant in seconds, 0 (the default) switches it off. See FilamentAdvance.h
+    stepper_motor->set_lead_time(THEKERNEL->config->value(extruder_checksum, this->identifier, pressure_advance_checksum)->by_default(0.0F)->as_number());
+    // Smallest reversal worth making, in steps; 0 = make every reversal. Default: FilamentAdvance::DEFAULT_MIN_REVERSAL_STEPS
+    stepper_motor->set_min_reversal(std::max(0.0F, THEKERNEL->config->value(extruder_checksum, this->identifier, pressure_advance_min_reversal_checksum)->by_default(FilamentAdvance::DEFAULT_MIN_REVERSAL_STEPS)->as_number()));
+#endif
     stepper_motor->set_acceleration(acceleration);
     stepper_motor->change_steps_per_mm(steps_per_millimeter);
     stepper_motor->set_selected(false); // not selected by default
@@ -299,6 +309,22 @@ void Extruder::on_gcode_received(void *argument)
             // extruder acceleration M204 Ennn mm/sec^2 (Pnnn sets the specific extruder for M500)
             stepper_motor->set_acceleration(gcode->get_value('E'));
 
+#ifdef FILAMENT_ADVANCE
+        } else if (gcode->m == 900 && ( (this->selected && !gcode->has_letter('P')) || (gcode->has_letter('P') && gcode->get_value('P') == this->identifier)) ) {
+            // M900 Knnn - set the filament advance (pressure advance) time constant to nnn seconds, 0 turns it off (a negative value is treated as 0)
+            // Only blocks planned after this command use the new value; blocks already queued keep the one they were planned with
+            // M900 Rnnn - smallest backward move (steps) worth a direction change, smaller ones are skipped, 0 = never skip
+            if(gcode->has_letter('K')) {
+                this->stepper_motor->set_lead_time(std::max(0.0F, gcode->get_value('K')));
+            }
+            if(gcode->has_letter('R')) {
+                this->stepper_motor->set_min_reversal(std::max(0.0F, gcode->get_value('R')));
+            }
+            if(!gcode->has_letter('K') && !gcode->has_letter('R')) {
+                gcode->stream->printf("Filament advance K: %g seconds, smallest reversal R: %g steps\n", this->stepper_motor->get_lead_time(), this->stepper_motor->get_min_reversal());
+            }
+#endif
+
         } else if (gcode->m == 207 && ( (this->selected && !gcode->has_letter('P')) || (gcode->has_letter('P') && gcode->get_value('P') == this->identifier)) ) {
             // M207 - set retract length S[positive mm] F[feedrate mm/min] Z[additional zlift/hop] Q[zlift feedrate mm/min]
             if(gcode->has_letter('S')) retract_length = gcode->get_value('S');
@@ -331,6 +357,9 @@ void Extruder::on_gcode_received(void *argument)
             gcode->stream->printf(";E Filament diameter:\nM200 D%1.4f P%d\n", this->filament_diameter, this->identifier);
             gcode->stream->printf(";E retract length, feedrate:\nM207 S%1.4f F%1.4f Z%1.4f Q%1.4f P%d\n", this->retract_length, this->retract_feedrate * 60.0F, this->retract_zlift_length, this->retract_zlift_feedrate * 60.0F, this->identifier);
             gcode->stream->printf(";E retract recover length, feedrate:\nM208 S%1.4f F%1.4f P%d\n", this->retract_recover_length, this->retract_recover_feedrate * 60.0F, this->identifier);
+#ifdef FILAMENT_ADVANCE
+            gcode->stream->printf(";E filament advance time constant (seconds) and smallest reversal (steps):\nM900 K%1.4f R%1.4f P%d\n", stepper_motor->get_lead_time(), stepper_motor->get_min_reversal(), this->identifier);
+#endif
             gcode->stream->printf(";E acceleration mm/sec²:\nM204 E%1.4f P%d\n", stepper_motor->get_acceleration(), this->identifier);
             gcode->stream->printf(";E max feed rate mm/sec:\nM203 E%1.4f P%d\n", stepper_motor->get_max_rate(), this->identifier);
             if(this->max_volumetric_rate > 0) {

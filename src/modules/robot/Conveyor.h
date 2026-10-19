@@ -30,6 +30,8 @@ public:
     // returns next available block writes it to block and returns true
     bool get_next_block(Block **block);
     void block_finished();
+    // true when the block last returned by get_next_block() is the continuous-mode block being fed again, not a block taken from the queue
+    bool is_refeed() const { return refeed; }
 
     void dump_queue(void);
     void flush_queue(void);
@@ -37,6 +39,9 @@ public:
     void force_queue() { check_queue(true); }
     bool set_continuous_mode(bool f);
     void set_hold(bool f) { hold_queue= f; }
+    unsigned int get_queue_used_bytes() const { return queue.used_bytes(); }
+    unsigned int get_queue_arena_bytes() const { return queue.get_arena_bytes(); }
+    unsigned int get_queue_length() const { return queue.get_length(); }
 
     friend class Planner; // for queue
 
@@ -46,11 +51,12 @@ private:
 
     using  Queue_t= BlockQueue;
     Queue_t queue;  // Queue of Blocks
-    void *saved_block;
 
     uint32_t queue_delay_time_ms;
     size_t queue_size;
+    size_t queue_bytes;
     float current_feedrate{0}; // actual nominal feedrate that current block is running at in mm/sec
+    const Block *last_fed{nullptr}; // block returned by the previous get_next_block(), only touched by the ISR
 
     volatile struct {
         volatile bool running:1;
@@ -58,6 +64,7 @@ private:
         volatile bool flush:1;
         volatile bool hold_queue:1;
         volatile uint8_t continuous_mode:2;
+        volatile bool refeed:1; // set by get_next_block(), see is_refeed()
     };
 
 };

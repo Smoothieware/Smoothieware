@@ -921,6 +921,26 @@ void Robot::on_gcode_received(void *argument)
                 THEKERNEL->conveyor->wait_for_idle();
                 break;
 
+            case 425: // M425 Xnnn Ynnn Znnn Annn Pn - set the backlash (slack of the drive train) in mm, 0 turns that motor off; P0/P1 disables/enables it all; bare M425 reports
+                if(gcode->has_letter('P')) THEKERNEL->planner->compensation.backlash.set_enabled(gcode->get_value('P') != 0.0F);
+                for (int i = 0; i < n_motors; ++i) {
+                    if(actuators[i]->is_extruder()) continue; // backlash is for positioning axes
+                    char axis = (i <= Z_AXIS ? 'X' + i : 'A' + (i - A_AXIS));
+                    if(gcode->has_letter(axis)) {
+                        THEKERNEL->planner->compensation.backlash.set_backlash_mm(i, gcode->get_value(axis));
+                    }
+                }
+                if(gcode->get_num_args() == 0) {
+                    gcode->stream->printf("Backlash %s:", THEKERNEL->planner->compensation.backlash.is_enabled() ? "on" : "off");
+                    for (int i = 0; i < n_motors; ++i) {
+                        if(actuators[i]->is_extruder()) continue;
+                        char axis = (i <= Z_AXIS ? 'X' + i : 'A' + (i - A_AXIS));
+                        gcode->stream->printf(" %c%1.5f", axis, THEKERNEL->planner->compensation.backlash.get_backlash_mm(i));
+                    }
+                    gcode->stream->printf("\n");
+                }
+                break;
+
             case 500: // M500 saves some volatile settings to config override file
             case 503: { // M503 just prints the settings
                 gcode->stream->printf(";Steps per unit:\nM92 ");
@@ -941,6 +961,14 @@ void Robot::on_gcode_received(void *argument)
                 gcode->stream->printf("\n");
 
                 gcode->stream->printf(";X- Junction Deviation, Z- Z junction deviation, S - Minimum Planner speed mm/sec:\nM205 X%1.5f Z%1.5f S%1.5f\n", THEKERNEL->planner->junction_deviation, isnan(THEKERNEL->planner->z_junction_deviation) ? -1 : THEKERNEL->planner->z_junction_deviation, THEKERNEL->planner->minimum_planner_speed);
+
+                gcode->stream->printf(";Backlash (slack of the drive train) in mm:\nM425 ");
+                for (int i = 0; i < n_motors; ++i) {
+                    if(actuators[i]->is_extruder()) continue;
+                    char axis = (i <= Z_AXIS ? 'X' + i : 'A' + (i - A_AXIS));
+                    gcode->stream->printf("%c%1.5f ", axis, THEKERNEL->planner->compensation.backlash.get_backlash_mm(i));
+                }
+                gcode->stream->printf("\n");
 
                 gcode->stream->printf(";Max cartesian feedrates in mm/sec:\nM203 X%1.5f Y%1.5f Z%1.5f S%1.5f\n", this->max_speeds[X_AXIS], this->max_speeds[Y_AXIS], this->max_speeds[Z_AXIS], this->max_speed);
 
@@ -1231,6 +1259,8 @@ void Robot::reset_actuator_position(const ActuatorCoordinates &ac)
 // TODO maybe we should only reset axis that are being homed unless this is due to a ON_HALT
 void Robot::reset_position_from_current_actuator_position()
 {
+    // called after the motors moved outside the planner (homing, probing, jogging, halt): the tracked directions may be stale, so the next move gets no slack steps
+    THEKERNEL->planner->compensation.backlash.forget_directions();
     ActuatorCoordinates actuator_pos;
     for (size_t i = X_AXIS; i < n_motors; i++) {
         // NOTE actuator::current_position is curently NOT the same as actuator::machine_position after an abrupt abort
@@ -1432,6 +1462,14 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
         float d = fabsf(actuator_pos[actuator] - actuators[actuator]->get_last_milestone());
         if(d < 0.00001F || !actuators[actuator]->is_selected()) continue; // no realistic movement for this actuator
 
+        // backlash: the slack steps after a reversal are motion of this motor too, so they count against its limits
+        uint32_t extra_steps = THEKERNEL->planner->compensation.extra_steps(actuator, actuators[actuator]->get_steps_per_mm(), actuators[actuator]->steps_to_target(actuator_pos[actuator]));
+        // The block will carry whole steps, so the limit uses the rounded nominal travel when that is larger.
+        if(extra_steps != 0) {
+            float spm = actuators[actuator]->get_steps_per_mm();
+            d = std::max(d, fabsf((float)actuators[actuator]->steps_to_target(actuator_pos[actuator])) / spm) + extra_steps / spm;
+        }
+
         float actuator_rate = d * isecs;
         if (actuator_rate > actuators[actuator]->get_max_rate()) {
             rate_mm_s *= (actuators[actuator]->get_max_rate() / actuator_rate);
@@ -1444,6 +1482,8 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
         // adjust acceleration to lowest found, for all actuators as this also corrects
         // the math for a tiny X move and large A move
         float ma =  actuators[actuator]->get_acceleration(); // in mm/sec²
+        // a motor that runs extra backlash steps travels more than the block, so the default acceleration must limit it too
+        if(isnan(ma) && extra_steps != 0) ma = default_acceleration;
         if(!isnan(ma)) {  // if axis does not have acceleration set then it uses the default_acceleration
             float ca = (d / distance) * acceleration;
             if (ca > ma) {
