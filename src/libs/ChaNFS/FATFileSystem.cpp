@@ -18,7 +18,16 @@ DWORD get_fattime (void) {
     return 999;
 }
 
+// "<drive>:/" plus a long file name (_MAX_LFN is 255) plus the terminator
+#define FATFS_PATH_MAX 260
+
 namespace mbed {
+
+// Builds "<drive>:/<name>" into buf, returns false (buf unusable) if it does not fit
+static bool make_path(char *buf, size_t size, int fsid, const char *name) {
+    int len = snprintf(buf, size, "%d:/%s", fsid, name);
+    return len >= 0 && (size_t)len < size;
+}
 
 #if FFSDEBUG_ENABLED
 static const char *FR_ERRORS[] = {
@@ -66,8 +75,11 @@ FATFileSystem::~FATFileSystem() {
 
 FileHandle *FATFileSystem::open(const char* name, int flags) {
     FFSDEBUG("open(%s) on filesystem [%s], drv [%d]\n", name, _name, _fsid);
-    char n[64];
-    sprintf(n, "%d:/%s", _fsid, name);
+    char n[FATFS_PATH_MAX];
+    if(!make_path(n, sizeof(n), _fsid, name)) {
+        FFSDEBUG("open(): path too long\n");
+        return NULL;
+    }
 
     /* POSIX flags -> FatFS open mode */
     BYTE openmode;
@@ -127,8 +139,11 @@ int FATFileSystem::format() {
 }
 
 DirHandle *FATFileSystem::opendir(const char *name) {
-    char n[64];
-    sprintf(n, "%d:/%s", _fsid, name);
+    char n[FATFS_PATH_MAX];
+    if(!make_path(n, sizeof(n), _fsid, name)) {
+        FFSDEBUG("opendir(): path too long\n");
+        return NULL;
+    }
     DIR_t dir;
     FRESULT res = f_opendir(&dir, n);
     if(res != 0) {
