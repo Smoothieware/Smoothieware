@@ -1300,7 +1300,7 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     if(soft_endstop_enabled) {
         for (int i = 0; i <= Z_AXIS; ++i) {
             if(!is_homed(i)) continue;
-            // only a move that goes further past a limit is an error, so an axis that ended up outside (jog, G92, WCS change) can always be moved back in
+            // only a move that goes further past a limit is an error, so an axis that ended up outside (soft endstops were off, or the limits changed) can always be moved back in
             float from = compensated_machine_position[i];
             if( (!isnan(soft_endstop_min[i]) && transformed_target[i] < soft_endstop_min[i] && transformed_target[i] < from) ||
                 (!isnan(soft_endstop_max[i]) && transformed_target[i] > soft_endstop_max[i] && transformed_target[i] > from) ) {
