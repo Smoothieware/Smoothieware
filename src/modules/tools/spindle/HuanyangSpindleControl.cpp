@@ -5,7 +5,7 @@
       You should have received a copy of the GNU General Public License along with Smoothie. If not, see <http://www.gnu.org/licenses/>.
 */
 
-/* 
+/*
     Hunayang RS485 communication protocol
 
     originally found on cnczone.nl, posted by Rikkepic:
@@ -20,7 +20,7 @@
     PD164   1   RS485 Baud rate: 9600
     PD165   3   RS485 Mode: RTU, 8N1
 
-    == Function Read == 
+    == Function Read ==
 
     ADDR    CMD     LEN     PAR     DATA        CRC
     0x01    0x01    0x03    0xA5    0x00 0x00   0x2C 0x6D       Read PD165 (165=0xA5)
@@ -76,7 +76,7 @@
 #include "gpio.h"
 #include "Modbus.h"
 
-void HuanyangSpindleControl::turn_on() 
+void HuanyangSpindleControl::turn_on()
 {
     // prepare data for the spindle off command
     char turn_on_msg[6] = { 0x01, 0x03, 0x01, 0x01, 0x00, 0x00 };
@@ -90,7 +90,7 @@ void HuanyangSpindleControl::turn_on()
     modbus->delay(1);
     // send the actual message
     modbus->serial->write(turn_on_msg, sizeof(turn_on_msg));
-    // wait a calculated time for the data to be sent 
+    // wait a calculated time for the data to be sent
     modbus->delay((int) ceil(sizeof(turn_on_msg) * modbus->delay_time));
     // disable transmitter
     modbus->dir_output->clear();
@@ -100,7 +100,8 @@ void HuanyangSpindleControl::turn_on()
 
 }
 
-void HuanyangSpindleControl::turn_off() 
+// FIXME this cannot call delay() as it calls on_idle and this can be called from on_idle so recursion
+void HuanyangSpindleControl::turn_off()
 {
     // prepare data for the spindle off command
     char turn_off_msg[6] = { 0x01, 0x03, 0x01, 0x08, 0x00, 0x00 };
@@ -114,7 +115,7 @@ void HuanyangSpindleControl::turn_off()
     modbus->delay(1);
     // send the actual message
     modbus->serial->write(turn_off_msg, sizeof(turn_off_msg));
-    // wait a calculated time for the data to be sent 
+    // wait a calculated time for the data to be sent
     modbus->delay((int) ceil(sizeof(turn_off_msg) * modbus->delay_time));
     // disable transmitter
     modbus->dir_output->clear();
@@ -124,13 +125,13 @@ void HuanyangSpindleControl::turn_off()
 
 }
 
-void HuanyangSpindleControl::set_speed(int target_rpm) 
+void HuanyangSpindleControl::set_speed(int target_rpm)
 {
 
     // prepare data for the set speed command
     char set_speed_msg[7] = { 0x01, 0x05, 0x02, 0x00, 0x00, 0x00, 0x00 };
     // convert RPM into Hz
-    unsigned int hz = target_rpm / 60 * 100; 
+    unsigned int hz = target_rpm / 60 * 100;
     set_speed_msg[3] = (hz >> 8);
     set_speed_msg[4] = hz & 0xFF;
     // calculate CRC16 checksum
@@ -143,7 +144,7 @@ void HuanyangSpindleControl::set_speed(int target_rpm)
     modbus->delay(1);
     // send the actual message
     modbus->serial->write(set_speed_msg, sizeof(set_speed_msg));
-    // wait a calculated time for the data to be sent 
+    // wait a calculated time for the data to be sent
     modbus->delay((int) ceil(sizeof(set_speed_msg) * modbus->delay_time));
     // disable transmitter
     modbus->dir_output->clear();
@@ -152,7 +153,7 @@ void HuanyangSpindleControl::set_speed(int target_rpm)
 
 }
 
-void HuanyangSpindleControl::report_speed() 
+void HuanyangSpindleControl::report_speed()
 {
     // clear RX buffer before start
     while(modbus->serial->readable()){
@@ -171,7 +172,7 @@ void HuanyangSpindleControl::report_speed()
     modbus->delay(1);
     // send the actual message
     modbus->serial->write(get_speed_msg, sizeof(get_speed_msg));
-    // wait a calculated time for the data to be sent 
+    // wait a calculated time for the data to be sent
     modbus->delay((int) ceil(sizeof(get_speed_msg) * modbus->delay_time));
     // disable transmitter
     modbus->dir_output->clear();
@@ -182,7 +183,7 @@ void HuanyangSpindleControl::report_speed()
     modbus->delay((int) ceil(8 * modbus->delay_time));
     // prepare an array for the answer
     char speed[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-   
+
     // read the answer into the buffer
     for(int i=0; i<8; i++) {
         speed[i] = modbus->serial->getc();

@@ -14,7 +14,7 @@ mm_max_arc_error                             0.01             # The maximum erro
 # Arm solution configuration : Cartesian robot. Translates mm positions into stepper positions
 # See http://smoothieware.org/stepper-motors
 alpha_steps_per_mm                           80               # Steps per mm for alpha ( X ) stepper
-beta_steps_per_mm                            80               # Steps per mm for beta ( Y ) stepper
+beta_steps_per_mm                            333.3333         # Steps per mm for beta ( Y ) stepper
 gamma_steps_per_mm                           1600             # Steps per mm for gamma ( Z ) stepper
 
 # Planner module configuration : Look-ahead and acceleration configuration
@@ -54,7 +54,6 @@ gamma_max_rate                               300.0            # Maximum rate in 
 # See http://smoothieware.org/extruder
 extruder.hotend.enable                          true          # Whether to activate the extruder module at all. All configuration is ignored if false
 extruder.hotend.steps_per_mm                    140           # Steps per mm for extruder stepper
-extruder.hotend.default_feed_rate               600           # Default rate ( mm/minute ) for moves where only the extruder moves
 extruder.hotend.acceleration                    500           # Acceleration for the stepper motor mm/sec²
 extruder.hotend.max_speed                       50            # Maximum speed in mm/s
 
@@ -80,7 +79,6 @@ delta_current                                    1.5          # First extruder s
 # Second extruder module configuration
 #extruder.hotend2.enable                         true         # Whether to activate the extruder module at all. All configuration is ignored if false
 #extruder.hotend2.steps_per_mm                   140          # Steps per mm for extruder stepper
-#extruder.hotend2.default_feed_rate              600          # Default rate ( mm/minute ) for moves where only the extruder moves
 #extruder.hotend2.acceleration                   500          # Acceleration for the stepper motor, as of 0.6, arbitrary ratio
 #extruder.hotend2.max_speed                      50           # mm/s
 
@@ -328,7 +326,7 @@ network.ip_address                           auto             # Use dhcp to get 
 #network.ip_address                           192.168.3.222   # The IP address
 #network.ip_mask                              255.255.255.0   # The ip mask
 #network.ip_gateway                           192.168.3.1     # The gateway address
-#network.mac_override                         xx.xx.xx.xx.xx.xx  # Override the mac address, only do this if you have a conflict
+#network.mac_override                         xx:xx:xx:xx:xx:xx  # Override the mac address, only do this if you have a conflict
 
 ## System configuration
 # Serial communications configuration ( baud rate defaults to 9600 if undefined )

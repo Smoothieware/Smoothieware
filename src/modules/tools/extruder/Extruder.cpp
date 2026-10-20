@@ -27,7 +27,6 @@
 
 #include <mri.h>
 
-#define default_feed_rate_checksum           CHECKSUM("default_feed_rate")
 #define steps_per_mm_checksum                CHECKSUM("steps_per_mm")
 #define filament_diameter_checksum           CHECKSUM("filament_diameter")
 #define acceleration_checksum                CHECKSUM("acceleration")

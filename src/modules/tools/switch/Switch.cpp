@@ -72,7 +72,7 @@ void Switch::on_halt(void *arg)
             case SWPWM: this->swpwm_pin->write(switch_value/100.0F); break;
             case NONE: return;
         }
-        this->switch_state= this->failsafe;
+        this->switch_state= this->haltsetting;
     }
 }
 
@@ -168,7 +168,7 @@ void Switch::on_config_reload(void *argument)
             }
             delete pin;
             if(this->pwm_pin == nullptr) {
-                THEKERNEL->streams->printf("Selected Switch output pin is not PWM capable - disabled");
+                printf("Selected Switch output pin is not PWM capable - disabled\n");
                 this->output_type= NONE;
             }
 
@@ -280,6 +280,13 @@ void Switch::on_config_reload(void *argument)
     // for commands we need to replace _ for space
     std::replace(output_on_command.begin(), output_on_command.end(), '_', ' '); // replace _ with space
     std::replace(output_off_command.begin(), output_off_command.end(), '_', ' '); // replace _ with space
+
+    // Special handling of $J STOP to stop continuous jog
+    // $J STOP is a special command executed in pinpoll tick
+    this->handle_stop_cmd = false;
+    if(is_input && output_off_command == "$J STOP") {
+        this->handle_stop_cmd = true;
+    }
 }
 
 bool Switch::match_input_on_gcode(const Gcode *gcode) const
@@ -335,7 +342,7 @@ void Switch::on_gcode_received(void *argument)
                 if(v > 100) v= 100;
                 else if(v < 0) v= 0;
                 this->pwm_pin->write(v/100.0F);
-                this->switch_state= (ROUND2DP(v) != ROUND2DP(this->switch_value));
+                this->switch_state= !(ROUND2DP(v) <= ROUND2DP(this->switch_value));
             } else {
                 this->pwm_pin->write(this->default_on_value/100.0F);
                 this->switch_state= true;
@@ -350,7 +357,7 @@ void Switch::on_gcode_received(void *argument)
                 if(v > 100) v= 100;
                 else if(v < 0) v= 0;
                 this->swpwm_pin->write(v/100.0F);
-                this->switch_state= (ROUND2DP(v) != ROUND2DP(this->switch_value));
+                this->switch_state= !(ROUND2DP(v) <= ROUND2DP(this->switch_value));
             } else {
                 this->swpwm_pin->write(this->default_on_value/100.0F);
                 this->switch_state= true;
@@ -491,6 +498,13 @@ uint32_t Switch::pinpoll_tick(uint32_t dummy)
             }
         }
     }
+
+    // Special handling of $J STOP to stop continuous jog
+    if(this->handle_stop_cmd && this->switch_changed && !this->switch_state) {
+        THEKERNEL->set_stop_request(true);
+        this->switch_changed = false;
+    }
+
     return 0;
 }
 

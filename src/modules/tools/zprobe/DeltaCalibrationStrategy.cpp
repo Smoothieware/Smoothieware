@@ -99,7 +99,7 @@ bool DeltaCalibrationStrategy::probe_delta_points(Gcode *gcode)
     float bedht= findBed();
     if(isnan(bedht)) return false;
 
-    gcode->stream->printf("initial Bed ht is %f mm\n", bedht);
+    gcode->stream->printf("probe delta pints. initial Bed ht is %f mm\n", bedht);
 
     // check probe ht
     float mm;

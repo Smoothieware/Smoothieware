@@ -322,7 +322,7 @@ network.ip_address                           auto             # Use dhcp to get 
 #network.ip_address                           192.168.3.222   # The IP address
 #network.ip_mask                              255.255.255.0   # The ip mask
 #network.ip_gateway                           192.168.3.1     # The gateway address
-#network.mac_override                         xx.xx.xx.xx.xx.xx  # Override the mac address, only do this if you have a conflict
+#network.mac_override                         xx:xx:xx:xx:xx:xx  # Override the mac address, only do this if you have a conflict
 
 ## System configuration
 # Serial communications configuration ( baud rate defaults to 9600 if undefined )

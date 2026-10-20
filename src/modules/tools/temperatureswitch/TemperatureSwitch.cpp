@@ -93,7 +93,7 @@ TemperatureSwitch* TemperatureSwitch::load_config(uint16_t modcs)
         switchname = THEKERNEL->config->value(temperatureswitch_checksum, modcs, temperatureswitch_type_checksum)->by_default("")->as_string();
         if(switchname.empty()) {
             // no switch specified so invalid entry
-            THEKERNEL->streams->printf("WARNING TEMPERATURESWITCH: no switch specified\n");
+            printf("WARNING TEMPERATURESWITCH: no switch specified\n");
             return nullptr;
         }
     }

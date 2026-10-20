@@ -101,6 +101,7 @@ void NVIC_DeInit(void)
  * - Hard Fault Status Register
  * - Debug Fault Status Register
  *******************************************************************************/
+#pragma GCC diagnostic ignored "-Waggressive-loop-optimizations"
 void NVIC_SCBDeInit(void)
 {
 	uint8_t tmp;

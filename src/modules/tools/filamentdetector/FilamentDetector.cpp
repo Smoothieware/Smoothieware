@@ -19,6 +19,7 @@
 #include "utils.h"
 #include "Gcode.h"
 #include "ExtruderPublicAccess.h"
+#include "PlayerPublicAccess.h"
 
 #include "InterruptIn.h" // mbed
 #include "us_ticker_api.h" // mbed
@@ -31,14 +32,15 @@
 #define bulge_pin_checksum          CHECKSUM("bulge_pin")
 #define seconds_per_check_checksum  CHECKSUM("seconds_per_check")
 #define pulses_per_mm_checksum      CHECKSUM("pulses_per_mm")
+#define leave_heaters_on_checksum   CHECKSUM("leave_heaters_on")
 
 FilamentDetector::FilamentDetector()
 {
-    suspended= false;
     filament_out_alarm= false;
     bulge_detected= false;
     active= true;
     e_last_moved= NAN;
+    was_retract= false;
 }
 
 FilamentDetector::~FilamentDetector()
@@ -88,6 +90,9 @@ void FilamentDetector::on_module_loaded()
     // the number of pulses per mm of filament moving through the detector, can be fractional
     pulses_per_mm= THEKERNEL->config->value(filament_detector_checksum, pulses_per_mm_checksum)->by_default(1)->as_number();
 
+    // leave heaters on when it suspends
+    leave_heaters_on= THEKERNEL->config->value(filament_detector_checksum, leave_heaters_on_checksum )->by_default(false)->as_bool();
+
     // register event-handlers
     if (this->encoder_pin != nullptr) {
         //This event is only valid if we are using the encodeer.
@@ -111,15 +116,14 @@ void FilamentDetector::send_command(std::string msg, StreamOutput *stream)
 // needed to detect when we resume
 void FilamentDetector::on_console_line_received( void *argument )
 {
-    if(!suspended) return;
+    if(!active) return;
 
     SerialMessage new_message = *static_cast<SerialMessage *>(argument);
     string possible_command = new_message.message;
     string cmd = shift_parameter(possible_command);
-    if(cmd == "resume" || cmd == "M601") {
+    if(cmd == "resume") {
         this->pulses= 0;
         e_last_moved= NAN;
-        suspended= false;
     }
 }
 
@@ -134,7 +138,7 @@ void FilamentDetector::on_gcode_received(void *argument)
 {
     Gcode *gcode = static_cast<Gcode *>(argument);
     if (gcode->has_m) {
-        if (gcode->m == 404) { // set filament detector parameters S seconds per check, P pulses per mm
+        if (gcode->m == 404) { // temporarily set filament detector parameters S seconds per check, P pulses per mm, H leave heaters on
             if(gcode->has_letter('S')){
                 seconds_per_check= gcode->get_value('S');
                 seconds_passed= 0;
@@ -142,9 +146,14 @@ void FilamentDetector::on_gcode_received(void *argument)
             if(gcode->has_letter('P')){
                 pulses_per_mm= gcode->get_value('P');
             }
-            gcode->stream->printf("// pulses per mm: %f, seconds per check: %d\n", pulses_per_mm, seconds_per_check);
+            if(gcode->has_letter('H')){
+                leave_heaters_on= gcode->get_value('H') >= 1;
+            }
+
+            gcode->stream->printf("// pulses per mm: %f, seconds per check: %d, heaters: %s\n", pulses_per_mm, seconds_per_check, leave_heaters_on?"on":"off");
 
         } else if (gcode->m == 405) { // disable filament detector
+            this->pulses= 0;
             active= false;
             e_last_moved= get_emove();
 
@@ -161,11 +170,29 @@ void FilamentDetector::on_gcode_received(void *argument)
             }
 
             gcode->stream->printf("Encoder pulses: %u\n", pulses.load());
-            if(this->suspended) gcode->stream->printf("Filament detector triggered\n");
+            if(is_suspended()) gcode->stream->printf("Filament detector triggered/suspended\n");
             gcode->stream->printf("Filament detector is %s\n", active?"enabled":"disabled");
+            gcode->stream->printf("Leave heaters on is %s\n", leave_heaters_on?"true":"false");
+
+        }else if (gcode->m == 601) { // resume resets
+            this->pulses= 0;
+            e_last_moved= NAN;
         }
     }
 }
+
+bool FilamentDetector::is_suspended() const
+{
+    void *returned_data;
+
+    bool ok = PublicData::get_value( player_checksum, is_suspended_checksum, &returned_data );
+    if (ok) {
+        bool b = *static_cast<bool *>(returned_data);
+        return b;
+    }
+    return false;
+}
+
 
 void FilamentDetector::on_main_loop(void *argument)
 {
@@ -178,10 +205,9 @@ void FilamentDetector::on_main_loop(void *argument)
             THEKERNEL->streams->printf("// Filament Detector has detected a filament jam\n");
         }
 
-        if(!suspended) {
-            this->suspended= true;
+        if(!is_suspended()) {
             // fire suspend command
-            this->send_command( "M600", &(StreamOutput::NullStream) );
+            this->send_command(leave_heaters_on?"M600.1":"M600", &(StreamOutput::NullStream));
         }
     }
 }
@@ -202,7 +228,7 @@ void FilamentDetector::on_pin_rise()
 
 void FilamentDetector::check_encoder()
 {
-    if(suspended) return; // already suspended
+    if(is_suspended()) return; // already suspended
     if(!active) return;  // not enabled
 
     uint32_t pulse_cnt= this->pulses.exchange(0); // atomic load and reset
@@ -216,8 +242,19 @@ void FilamentDetector::check_encoder()
 
     float delta= e_moved - e_last_moved;
     e_last_moved= e_moved;
-    if(delta < 0) {
+    if(delta == 0) {
+        // no movemement
+        return;
+
+    }else if(delta < 0) {
+        // if E is reset then we will be negative, this usually happens after a retract
         // we ignore retracts for the purposes of jam detection
+        was_retract= true;
+        return;
+
+    }else if(delta > 0 && was_retract) {
+        // ignore first extrude after a retract
+        was_retract= false;
         return;
     }
 
@@ -234,7 +271,7 @@ void FilamentDetector::check_encoder()
 
 uint32_t FilamentDetector::button_tick(uint32_t dummy)
 {
-    if(!bulge_pin.connected() || suspended || !active) return 0;
+    if(!bulge_pin.connected() || !active || is_suspended()) return 0;
 
     if(bulge_pin.get()) {
         // we got a trigger from the bulge detector

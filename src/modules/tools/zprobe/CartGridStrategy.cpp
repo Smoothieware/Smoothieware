@@ -159,7 +159,7 @@ bool CartGridStrategy::handleConfig()
     this->height_limit = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, height_limit_checksum)->by_default(NAN)->as_number();
     this->dampening_start = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, dampening_start_checksum)->by_default(NAN)->as_number();
 
-    if(!isnan(this->height_limit) && !isnan(this->dampening_start)) {
+    if(!isnan(this->height_limit) && !isnan(this->dampening_start) && this->height_limit > 0.0001F) {
         this->damping_interval = height_limit - dampening_start;
     } else {
         this->damping_interval = NAN;
@@ -170,7 +170,7 @@ bool CartGridStrategy::handleConfig()
     this->x_size = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, x_size_checksum)->by_default(0.0F)->as_number();
     this->y_size = THEKERNEL->config->value(leveling_strategy_checksum, cart_grid_leveling_strategy_checksum, y_size_checksum)->by_default(0.0F)->as_number();
     if (this->x_size == 0.0F || this->y_size == 0.0F) {
-        THEKERNEL->streams->printf("Error: Invalid config, x_size and y_size must be defined\n");
+        printf("Error: Invalid config, x_size and y_size must be defined\n");
         return false;
     }
 
@@ -218,7 +218,7 @@ bool CartGridStrategy::handleConfig()
     grid = (float *)AHB0.alloc(configured_grid_x_size * configured_grid_y_size * sizeof(float));
 
     if(grid == nullptr) {
-        THEKERNEL->streams->printf("Error: Not enough memory\n");
+        printf("Error: Not enough memory\n");
         return false;
     }
 
@@ -386,13 +386,19 @@ bool CartGridStrategy::handleGcode(Gcode *gcode)
             if(!before_probe.empty()) {
                 Gcode gc(before_probe, &(StreamOutput::NullStream));
                 THEKERNEL->call_event(ON_GCODE_RECEIVED, &gc);
+                THEKERNEL->conveyor->wait_for_idle();
             }
 
             THEROBOT->disable_segmentation= true;
             if(!doProbe(gcode)) {
                 gcode->stream->printf("Probe failed to complete, check the initial probe height and/or initial_height settings\n");
             } else {
-                gcode->stream->printf("Probe completed. Enter M374 to save this grid\n");
+                gcode->stream->printf("Probe completed.");
+                if(!only_by_two_corners) {
+                    gcode->stream->printf(" Enter M374 to save this grid\n");
+                }else{
+                    gcode->stream->printf("\n");
+                }
             }
             THEROBOT->disable_segmentation= false;
 
@@ -448,6 +454,11 @@ bool CartGridStrategy::handleGcode(Gcode *gcode)
         } else if(gcode->m == 375) { // M375: load grid, M375.1 display grid
             if(gcode->subcode == 1) {
                 print_bed_level(gcode->stream);
+                if(THEROBOT->compensationTransform == nullptr){
+                    gcode->stream->printf("Grid is currently disabled\n");
+                }else{
+                    gcode->stream->printf("Grid is currently enabled\n");
+                }
             } else {
                 __disable_irq();
                 if(load_grid(gcode->stream)) setAdjustFunction(true);
@@ -587,9 +598,9 @@ bool CartGridStrategy::doProbe(Gcode *gc)
             if(use_wcs) {
                 float xo = gc->get_value('X'); // offset current start position
                 float yo = gc->get_value('Y');
-                // NOTE as we are positioning the probe we need to reverse offset for the probe offset
-                this->x_start = THEROBOT->get_axis_position(X_AXIS) + xo + X_PROBE_OFFSET_FROM_EXTRUDER;
-                this->y_start = THEROBOT->get_axis_position(Y_AXIS) + yo + Y_PROBE_OFFSET_FROM_EXTRUDER;
+                // NOTE we are positioning the head, in case there is a probe offset
+                this->x_start = THEROBOT->get_axis_position(X_AXIS) + xo;
+                this->y_start = THEROBOT->get_axis_position(Y_AXIS) + yo;
             }else{
                 this->x_start = gc->get_value('X'); // override default probe start point
                 this->y_start = gc->get_value('Y'); // override default probe start point
@@ -657,6 +668,8 @@ bool CartGridStrategy::doProbe(Gcode *gc)
     float max_delta= fabs(z_reference);
 
     // probe all the points of the grid
+    int probe_cnt = current_grid_y_size * current_grid_x_size;
+    int ncnt= 0;
     for (int yCount = 0; yCount < this->current_grid_y_size; yCount++) {
         float yProbe = this->y_start + (this->y_size / (this->current_grid_y_size - 1)) * yCount;
         int xStart, xStop, xInc;
@@ -678,7 +691,7 @@ bool CartGridStrategy::doProbe(Gcode *gc)
             }
 
             float measured_z = zprobe->getProbeHeight() - mm - z_reference; // this is the delta z from bed at 0,0
-            gc->stream->printf("DEBUG: X%1.3f, Y%1.3f, Z%1.3f\n", xProbe, yProbe, measured_z);
+            gc->stream->printf("DEBUG: X%1.3f, Y%1.3f, Z%1.3f, %d/%d\n", xProbe, yProbe, measured_z, ++ncnt, probe_cnt);
             grid[xCount + (this->current_grid_x_size * yCount)] = measured_z;
             if(fabs(measured_z) > max_delta) max_delta= fabs(measured_z);
         }
@@ -706,13 +719,13 @@ void CartGridStrategy::doCompensation(float *target, bool inverse)
 {
     // Adjust print surface height by linear interpolation over the bed_level array.
     // offset scale: 1 for default (use offset as is)
-    float scale = 1.0;
+    float scale = 1.0F;
     if (!isnan(this->damping_interval)) {
         // if the height is below our compensation limit:
         if(target[Z_AXIS] <= this->height_limit) {
             // scale the offset as necessary:
             if(target[Z_AXIS] >= this->dampening_start) {
-                scale = (1.0 - ((target[Z_AXIS] - this->dampening_start) / this->damping_interval));
+                scale = (1.0F - ((target[Z_AXIS] - this->dampening_start) / this->damping_interval));
             } // else leave scale at 1.0;
         } else {
             return; // if Z is higher than max, no compensation
@@ -732,7 +745,7 @@ void CartGridStrategy::doCompensation(float *target, bool inverse)
 
     // we need to make sure that floor_x and floor_y are always < grid_size-1
     float grid_x = std::max(0.001F, std::min(this->current_grid_x_size - 1.001F, (x_target - this->x_start) / (this->x_size / (this->current_grid_x_size - 1))));
-    float grid_y = std::max(0.001F, std::min(this->current_grid_x_size - 1.001F, (y_target - this->y_start) / (this->y_size / (this->current_grid_y_size - 1))));
+    float grid_y = std::max(0.001F, std::min(this->current_grid_y_size - 1.001F, (y_target - this->y_start) / (this->y_size / (this->current_grid_y_size - 1))));
     int floor_x = floorf(grid_x);
     int floor_y = floorf(grid_y);
     float ratio_x = grid_x - floor_x;
@@ -749,9 +762,9 @@ void CartGridStrategy::doCompensation(float *target, bool inverse)
     if(isnan(offset)) return;
 
     if (inverse) {
-        target[Z_AXIS] -= offset * scale;
+        target[Z_AXIS] -= (offset * scale);
     } else {
-        target[Z_AXIS] += offset * scale;
+        target[Z_AXIS] += (offset * scale);
     }
 
 #if 0

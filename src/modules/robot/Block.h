@@ -63,6 +63,7 @@ class Block {
             uint32_t step_count;
             uint32_t next_accel_event;
         };
+        void reset(tickinfo_t *saved);
 
         // need info for each active motor
         tickinfo_t *tick_info;
