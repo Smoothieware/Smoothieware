@@ -70,5 +70,6 @@ class Switch : public Module {
             bool      failsafe:1;
             bool      haltsetting:1;
             bool      handle_stop_cmd:1;
+            bool      handle_fault_cmd:1;
         };
 };

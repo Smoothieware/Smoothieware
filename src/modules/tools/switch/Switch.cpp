@@ -271,7 +271,6 @@ void Switch::on_config_reload(void *argument)
         }
     }
 
-
     if(this->output_type == SIGMADELTA) {
         // SIGMADELTA
         THEKERNEL->slow_ticker->attach(1000, this->sigmadelta_pin, &Pwm::on_tick);
@@ -287,7 +286,7 @@ void Switch::on_config_reload(void *argument)
     if(is_input && output_off_command == "$J STOP") {
         this->handle_stop_cmd = true;
     }
-}
+ }
 
 bool Switch::match_input_on_gcode(const Gcode *gcode) const
 {
@@ -434,7 +433,18 @@ void Switch::on_main_loop(void *argument)
 {
     if(this->switch_changed) {
         if(this->switch_state) {
-            if(!this->output_on_command.empty()) this->send_gcode( this->output_on_command, &(StreamOutput::NullStream) );
+            if(!this->output_on_command.empty()) {
+                if(this->output_on_command.substr(0, 5) == "FAULT") {
+                    // handle a FAULT command
+                    if(!THEKERNEL->is_halted()) {
+                        THEKERNEL->call_event(ON_HALT, nullptr);
+                        THEKERNEL->streams->printf("A FAULT has been detected: %s\n", this->output_on_command.c_str());
+                    }
+
+                } else {
+                    this->send_gcode( this->output_on_command, &(StreamOutput::NullStream) );
+                }
+            }
 
             if(this->output_type == SIGMADELTA) {
                 this->sigmadelta_pin->pwm(this->switch_value); // this requires the value has been set otherwise it switches on to whatever it last was
@@ -499,8 +509,8 @@ uint32_t Switch::pinpoll_tick(uint32_t dummy)
         }
     }
 
-    // Special handling of $J STOP to stop continuous jog
     if(this->handle_stop_cmd && this->switch_changed && !this->switch_state) {
+        // Special handling of $J STOP to stop continuous jog
         THEKERNEL->set_stop_request(true);
         this->switch_changed = false;
     }
@@ -521,4 +531,3 @@ void Switch::send_gcode(std::string msg, StreamOutput *stream)
     message.stream = stream;
     THEKERNEL->call_event(ON_CONSOLE_LINE_RECEIVED, &message );
 }
-
