@@ -182,10 +182,7 @@ void SerialConsole::on_module_loaded()
     int baud = THEKERNEL->config->value(uart0_checksum, baud_rate_setting_checksum)->by_default(DEFAULT_SERIAL_BAUD_RATE)->as_number();
     init_uart(baud);
 
-    query_flag = false;
-    halt_flag = false;
     lf_count = 0;
-    last_char_was_cr = false;
 
     // We only call the command dispatcher in the main loop, nowhere else
     this->register_for_event(ON_MAIN_LOOP);
@@ -198,24 +195,7 @@ void SerialConsole::on_module_loaded()
 // Called on interrupt, meaning we have received a char
 void SerialConsole::on_serial_char_received(char received)
 {
-    if(received == '?') {
-        query_flag = true;
-        return;
-    }
-    if(received == 'X' - 'A' + 1) { // ^X
-        halt_flag = true;
-        return;
-    }
-    if(received == 'Y' - 'A' + 1) { // ^Y
-        THEKERNEL->set_stop_request(true); // generic stop what you are doing request
-        return;
-    }
-    if(received == '\n' && last_char_was_cr) {
-        // ignore the \n of a \r\n pair
-        last_char_was_cr = false;
-        return;
-    }
-    last_char_was_cr = (received == '\r');
+    if(realtime.handle(received)) return;
 
     // convert CR to NL (for host OSs that don't send NL)
     if( received == '\r' ) { received = '\n'; }
@@ -226,12 +206,10 @@ void SerialConsole::on_serial_char_received(char received)
 
 void SerialConsole::on_idle(void * argument)
 {
-    if(query_flag) {
-        query_flag = false;
+    if(realtime.take_query()) {
         puts(THEKERNEL->get_query_string().c_str());
     }
-    if(halt_flag) {
-        halt_flag = false;
+    if(realtime.take_halt()) {
         THEKERNEL->call_event(ON_HALT, nullptr);
         char c;
         while(this->buffer.get(c)) ; // flush the recieve buffer, hopefully upstream has stopped sending

@@ -39,9 +39,6 @@ USBSerial::USBSerial(USB *u): USBCDC(u), rxbuf(256), txbuf(128 + 8)
     nl_in_rx = 0;
     attach = attached = false;
     flush_to_nl = false;
-    halt_flag = false;
-    query_flag = false;
-    last_char_was_cr = false;
 }
 
 bool USBSerial::ensure_tx_space(int space)
@@ -201,41 +198,7 @@ bool USBSerial::USBEvent_EPOut(uint8_t bEP, uint8_t bEPStatus)
             continue;
         }
 
-        if(b == 'X' - 'A' + 1) { // ^X
-            //THEKERNEL->set_feed_hold(false); // required to free stuff up
-            halt_flag = true;
-            continue;
-        }
-
-        if(b == 'Y' - 'A' + 1) { // ^Y
-            THEKERNEL->set_stop_request(true); // generic stop what you are doing request
-            continue;
-        }
-
-        if(b == '?') { // ?
-            query_flag = true;
-            continue;
-        }
-
-        if(THEKERNEL->is_feed_hold_enabled()) {
-            if(b == '!') { // safe pause
-                THEKERNEL->set_feed_hold(true);
-                continue;
-            }
-
-            if(b == '~') { // safe resume
-                THEKERNEL->set_feed_hold(false);
-                continue;
-            }
-        }
-
-        if(b == '\n' && last_char_was_cr) {
-            // handle \r\n as single line terminator
-            last_char_was_cr= false;
-            continue;
-        }
-
-        last_char_was_cr = (b=='\r');
+        if(realtime.handle(b)) continue;
 
         if (flush_to_nl == false)
             rxbuf.iqueue(b);
@@ -301,8 +264,7 @@ void USBSerial::on_module_loaded()
 
 void USBSerial::on_idle(void *argument)
 {
-    if(halt_flag) {
-        halt_flag = false;
+    if(realtime.take_halt()) {
         THEKERNEL->call_event(ON_HALT, nullptr);
         if(THEKERNEL->is_grbl_mode()) {
             puts("ALARM: Abort during cycle\r\n");
@@ -313,8 +275,7 @@ void USBSerial::on_idle(void *argument)
         nl_in_rx = 0;
     }
 
-    if(query_flag) {
-        query_flag = false;
+    if(realtime.take_query()) {
         puts(THEKERNEL->get_query_string().c_str());
     }
 }
@@ -341,6 +302,7 @@ void USBSerial::on_main_loop(void *argument)
             txbuf.flush();
             rxbuf.flush();
             nl_in_rx = 0;
+            realtime.reset();
         }
     }
 

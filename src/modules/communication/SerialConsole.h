@@ -15,6 +15,7 @@
 
 #include "libs/TSRingBuffer.h"
 #include "libs/StreamOutput.h"
+#include "libs/RealtimeFilter.h"
 
 class SerialConsole : public Module, public StreamOutput {
     public:
@@ -33,10 +34,9 @@ class SerialConsole : public Module, public StreamOutput {
 
         TSRingBuffer<char, 256> buffer;   // Receive buffer
 
+        RealtimeFilter realtime;          // decides what to do with each received character, only used from the receive interrupt
+
         struct {
-          bool query_flag:1;
-          bool halt_flag:1;
-          bool last_char_was_cr:1;
           uint8_t uartn:2;
           uint8_t lf_count:8;
         };
