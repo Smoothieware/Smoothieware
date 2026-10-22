@@ -82,7 +82,18 @@ void Conveyor::on_module_loaded()
 void Conveyor::start(uint8_t n)
 {
     Block::init(n); // set the number of motors which determines how big the tick info vector is
-    queue.resize(queue_size);
+    // planner_queue_size may be too big for the memory available, use the biggest queue that fits instead of crashing
+    size_t wanted = queue_size;
+    while(!queue.resize(queue_size)) {
+        if(queue_size <= 2) {
+            THEKERNEL->streams->printf("ERROR: not enough memory for the planner queue, not starting\n");
+            return;
+        }
+        queue_size /= 2;
+    }
+    if(queue_size != wanted) {
+        THEKERNEL->streams->printf("WARNING: planner_queue_size %d does not fit in memory, using %d\n", (int)wanted, (int)queue_size);
+    }
     running = true;
 }
 
