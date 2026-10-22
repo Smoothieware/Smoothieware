@@ -24,6 +24,7 @@
 
 #define AD8495_pin_checksum            CHECKSUM("ad8495_pin")
 #define AD8495_offset_checksum         CHECKSUM("ad8495_offset")
+#define AD8495_multiplier_checksum     CHECKSUM("ad8495_mult")
 
 AD8495::AD8495()
 {
@@ -41,6 +42,8 @@ void AD8495::UpdateConfig(uint16_t module_checksum, uint16_t name_checksum)
     // Thermistor pin for ADC readings
     this->AD8495_pin.from_string(THEKERNEL->config->value(module_checksum, name_checksum, AD8495_pin_checksum)->required()->as_string());
     this->AD8495_offset = THEKERNEL->config->value(module_checksum, name_checksum, AD8495_offset_checksum)->by_default(0)->as_number(); // Stated offset. For Adafruit board it is 250C. If pin 2(REF) of amplifier is connected to 0V then there is 0C offset.
+    this->AD8495_mult = THEKERNEL->config->value(module_checksum, name_checksum, AD8495_multiplier_checksum)->by_default(5000)->as_number();  // Stated multiplier. For classic AD8495 5000 uV/1C.
+    this->AD8495_mult = this->AD8495_mult / 1000000.0;
 	
     THEKERNEL->adc->enable_pin(&AD8495_pin);
 }
@@ -60,11 +63,12 @@ void AD8495::get_raw()
 
     int adc_value= new_AD8495_reading();
     const uint32_t max_adc_value= THEKERNEL->adc->get_max_value();
-    float t=((float)adc_value)/(((float)max_adc_value)/3.3*0.005);
+    float t=((float)adc_value)/(((float)max_adc_value)/3.3*this->AD8495_mult);
 
     t = t - this->AD8495_offset;
 	
-    THEKERNEL->streams->printf("adc= %d, max_adc= %lu, temp= %f, offset = %f\n", adc_value,max_adc_value,t, this->AD8495_offset);
+    THEKERNEL->streams->printf("adc= %d, max_adc= %lu, temp= %f, offset = %f\n, multiplier= %f", adc_value,max_adc_value,t, this->AD8495_offset, this->AD8495_mult);
+
 
     // reset the min/max
     min_temp= max_temp= t;
@@ -76,7 +80,7 @@ float AD8495::adc_value_to_temperature(uint32_t adc_value)
     if ((adc_value >= max_adc_value))
         return infinityf();
 
-    float t=((float)adc_value)/(((float)max_adc_value)/3.3*0.005);
+    float t=((float)adc_value)/(((float)max_adc_value)/3.3*this->AD8495_mult);
 
     t=t-this->AD8495_offset;
 	

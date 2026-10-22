@@ -35,6 +35,7 @@ class AD8495 : public TempSensor
 
         Pin  AD8495_pin;
         float AD8495_offset;
+        float AD8495_mult;
         
         float min_temp, max_temp;
 };
