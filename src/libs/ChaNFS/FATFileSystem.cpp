@@ -13,20 +13,47 @@
 //#include "Debug.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 DWORD get_fattime (void) {
     return 999;
 }
 
-// "<drive>:/" plus a long file name (_MAX_LFN is 255) plus the terminator
-#define FATFS_PATH_MAX 260
+// Longest path built on the stack (as before, "<drive>:/" plus a short name). Longer paths go to the heap.
+#define FATFS_PATH_STACK 64
+// Sanity cap so a corrupt or hostile name cannot eat the heap: "<drive>:/" plus a long file name (_MAX_LFN is 255) and some directories
+#define FATFS_PATH_LIMIT 1024
 
 namespace mbed {
 
-// Builds "<drive>:/<name>" into buf, returns false (buf unusable) if it does not fit
-static bool make_path(char *buf, size_t size, int fsid, const char *name) {
-    int len = snprintf(buf, size, "%d:/%s", fsid, name);
-    return len >= 0 && (size_t)len < size;
+// FatFs uses drive 0 when the path has no "<digit>:" prefix (_FS_RPATH is 0), so for drive 0 the name can be handed over as is.
+// A name that itself starts with "<digit>:" would be read as a drive number, so that one still gets the prefix (and fails as before).
+static bool needs_prefix(int fsid, const char *name) {
+    return fsid != 0 || (name[0] >= '0' && name[0] <= '9' && name[1] == ':');
+}
+
+// Calls fn with the path to give to FatFs and returns its result, or NULL if the path cannot be built.
+// The buffer lives in this function only, so the common case (drive 0) uses no stack for the path at all.
+template <typename F>
+static __attribute__((noinline)) void *with_prefixed_path(int fsid, const char *name, F fn) {
+    char small[FATFS_PATH_STACK];
+    size_t need = strlen(name) + 4; // "N:/" and the terminator
+    if(need > FATFS_PATH_LIMIT) return NULL;
+    char *buf = small;
+    if(need > sizeof(small)) {
+        buf = (char *)malloc(need);
+        if(buf == NULL) return NULL;
+    }
+    snprintf(buf, need, "%d:/%s", fsid, name);
+    void *r = fn(buf);
+    if(buf != small) free(buf);
+    return r;
+}
+
+template <typename F>
+static void *with_path(int fsid, const char *name, F fn) {
+    if(needs_prefix(fsid, name)) return with_prefixed_path(fsid, name, fn);
+    return fn(name[0] == '\0' ? "/" : name);
 }
 
 #if FFSDEBUG_ENABLED
@@ -75,12 +102,6 @@ FATFileSystem::~FATFileSystem() {
 
 FileHandle *FATFileSystem::open(const char* name, int flags) {
     FFSDEBUG("open(%s) on filesystem [%s], drv [%d]\n", name, _name, _fsid);
-    char n[FATFS_PATH_MAX];
-    if(!make_path(n, sizeof(n), _fsid, name)) {
-        FFSDEBUG("open(): path too long\n");
-        return NULL;
-    }
-
     /* POSIX flags -> FatFS open mode */
     BYTE openmode;
     if(flags & O_RDWR) {
@@ -98,16 +119,18 @@ FileHandle *FATFileSystem::open(const char* name, int flags) {
         }
     }
 
-    FIL_t fh;
-    FRESULT res = f_open(&fh, n, openmode);
-    if(res) {
-        FFSDEBUG("f_open('w') failed (%d, %s)\n", res, FR_ERRORS[res]);
-        return NULL;
-    }
-    if(flags & O_APPEND) {
-        f_lseek(&fh, fh.fsize);
-    }
-    return new FATFileHandle(fh);
+    return (FileHandle *)with_path(_fsid, name, [=](const char *n) -> void * {
+        FIL_t fh;
+        FRESULT res = f_open(&fh, n, openmode);
+        if(res) {
+            FFSDEBUG("f_open('w') failed (%d, %s)\n", res, FR_ERRORS[res]);
+            return NULL;
+        }
+        if(flags & O_APPEND) {
+            f_lseek(&fh, fh.fsize);
+        }
+        return new FATFileHandle(fh);
+    });
 }
 
 int FATFileSystem::remove(const char *filename) {
@@ -139,17 +162,14 @@ int FATFileSystem::format() {
 }
 
 DirHandle *FATFileSystem::opendir(const char *name) {
-    char n[FATFS_PATH_MAX];
-    if(!make_path(n, sizeof(n), _fsid, name)) {
-        FFSDEBUG("opendir(): path too long\n");
-        return NULL;
-    }
-    DIR_t dir;
-    FRESULT res = f_opendir(&dir, n);
-    if(res != 0) {
-        return NULL;
-    }
-    return new FATDirHandle(dir);
+    return (DirHandle *)with_path(_fsid, name, [](const char *n) -> void * {
+        DIR_t dir;
+        FRESULT res = f_opendir(&dir, n);
+        if(res != 0) {
+            return NULL;
+        }
+        return new FATDirHandle(dir);
+    });
 }
 
 int FATFileSystem::mkdir(const char *name, mode_t mode) {
